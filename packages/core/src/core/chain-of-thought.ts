@@ -1,31 +1,20 @@
-import type { LLMClient } from "./llm-client";
-import type {
-  ActionHandler,
-  ChainOfThoughtContext,
-  CoTAction,
-  LLMStructuredResponse,
-} from "../types";
-import { queryValidator } from "./validation";
-import { Logger } from "./logger";
-import { EventEmitter } from "events";
-import {
-  GoalManager,
-  type HorizonType,
-  type GoalStatus,
-  type Goal,
-} from "./goal-manager";
-import { StepManager, type Step, type StepType } from "./step-manager";
-import { LogLevel } from "../types";
-import { injectTags } from "./utils";
-import { systemPromptAction } from "./actions/system-prompt";
-import Ajv from "ajv";
-import type { VectorDB, EpisodicMemory, Documentation } from "./vector-db";
-import { ChromaVectorDB } from "./vector-db";
+import type { LLMClient } from './llm-client';
+import type { ActionHandler, ChainOfThoughtContext, CoTAction, LLMStructuredResponse } from '../types';
+import { queryValidator } from './validation';
+import { Logger } from './logger';
+import { EventEmitter } from 'events';
+import { GoalManager, type HorizonType, type GoalStatus, type Goal } from './goal-manager';
+import { StepManager, type Step, type StepType } from './step-manager';
+import { LogLevel } from '../types';
+import { injectTags } from './utils';
+import { systemPromptAction } from './actions/system-prompt';
+import Ajv from 'ajv';
+import type { VectorDB, EpisodicMemory, Documentation } from './vector-db';
 
 // Todo: remove these when we bundle
-import * as fs from "fs";
-import * as path from "path";
-import type { AnySchema, JSONSchemaType } from "ajv";
+import * as fs from 'fs';
+import * as path from 'path';
+import type { AnySchema, JSONSchemaType } from 'ajv';
 
 const ajv = new Ajv();
 
@@ -39,10 +28,7 @@ export class ChainOfThought extends EventEmitter {
   memory: VectorDB;
 
   private actionRegistry = new Map<string, ActionHandler>();
-  private actionExamples = new Map<
-    string,
-    { description: string; example: string }
-  >();
+  private actionExamples = new Map<string, { description: string; example: string }>();
 
   private actionSchemas = new Map<string, JSONSchemaType<any>>();
 
@@ -57,7 +43,7 @@ export class ChainOfThought extends EventEmitter {
     super();
     this.stepManager = new StepManager();
     this.context = initialContext ?? {
-      worldState: "",
+      worldState: '',
     };
     this.snapshots = [];
     this.logger = new Logger({
@@ -66,32 +52,60 @@ export class ChainOfThought extends EventEmitter {
       enableTimestamp: true,
     });
 
-    this.contextLogPath = path.join(process.cwd(), "logs", "context.log");
-    // Ensure logs directory exists
-    const logsDir = path.dirname(this.contextLogPath);
-    if (!fs.existsSync(logsDir)) {
-      fs.mkdirSync(logsDir, { recursive: true });
+    this.contextLogPath = path.join(process.cwd(), 'logs', 'context.log');
+    if (!fs.existsSync(path.dirname(this.contextLogPath))) {
+      fs.mkdirSync(path.dirname(this.contextLogPath), { recursive: true });
     }
-    // Log initial context
-    this.logContext("INITIAL_CONTEXT");
+    this.logContext('INITIAL_CONTEXT');
 
     this.goalManager = new GoalManager();
-
     this.registerDefaultActions();
 
-    // Initialize single memory system
-    this.memory = new ChromaVectorDB("agent_memory", {
-      chromaUrl: config.chromaUrl,
-      logLevel: config.logLevel,
+    // Remplacer l'initialisation de ChromaDB par un mock simple
+    this.memory = {
+      findSimilarEpisodes: async () => [],
+      findSimilarDocuments: async () => [],
+      storeEpisode: async () => {},
+      storeDocument: async () => {},
+    } as VectorDB;
+
+    // Ajouter des exemples d'actions
+    this.actionExamples.set('CONNECT_WALLET', {
+      description: 'Connect to the game wallet',
+      example: JSON.stringify({
+        type: 'CONNECT_WALLET',
+        payload: {},
+      }),
+    });
+
+    this.actionExamples.set('GRAPHQL_FETCH', {
+      description: 'Fetch game data using GraphQL',
+      example: JSON.stringify({
+        type: 'GRAPHQL_FETCH',
+        payload: {
+          query: 'query GetPlayerResources { resources { type amount farmingRate xpLevel xpProgress } }',
+        },
+      }),
+    });
+
+    this.actionExamples.set('FARM_RESOURCE', {
+      description: 'Start farming a resource',
+      example: JSON.stringify({
+        type: 'FARM_RESOURCE',
+        payload: {
+          resourceType: 1,
+          duration: 120,
+        },
+      }),
     });
   }
 
   private registerDefaultActions() {
-    this.actionRegistry.set("SYSTEM_PROMPT", systemPromptAction);
+    this.actionRegistry.set('SYSTEM_PROMPT', systemPromptAction);
   }
 
   public async planStrategy(objective: string): Promise<void> {
-    this.logger.debug("planStrategy", "Planning strategy for objective", {
+    this.logger.debug('planStrategy', 'Planning strategy for objective', {
       objective,
     });
 
@@ -138,8 +152,7 @@ export class ChainOfThought extends EventEmitter {
 
     try {
       const response = await this.llmClient.analyze(prompt, {
-        system:
-          "You are a strategic planning system that creates hierarchical goal structures.",
+        system: 'You are a strategic planning system that creates hierarchical goal structures.',
       });
 
       const goals = JSON.parse(response.toString());
@@ -147,20 +160,16 @@ export class ChainOfThought extends EventEmitter {
       console.log(goals);
 
       // Create goals in order: long-term first, then medium, then short
-      for (const horizon of [
-        "long_term",
-        "medium_term",
-        "short_term",
-      ] as const) {
+      for (const horizon of ['long_term', 'medium_term', 'short_term'] as const) {
         for (const goalData of goals[horizon]) {
           const newGoal = this.goalManager.addGoal({
-            horizon: horizon.split("_")[0] as HorizonType,
-            status: "pending",
+            horizon: horizon.split('_')[0] as HorizonType,
+            status: 'pending',
             ...goalData,
             created_at: Date.now(),
           });
 
-          this.emit("goal:created", {
+          this.emit('goal:created', {
             id: newGoal.id,
             description: newGoal.description,
           });
@@ -168,14 +177,9 @@ export class ChainOfThought extends EventEmitter {
       }
 
       // Add a planning step
-      this.addStep(
-        `Strategy planned for objective: ${objective}`,
-        "planning",
-        ["strategy-planning"],
-        { goals }
-      );
+      this.addStep(`Strategy planned for objective: ${objective}`, 'planning', ['strategy-planning'], { goals });
     } catch (error) {
-      this.logger.error("planStrategy", "Failed to plan strategy", { error });
+      this.logger.error('planStrategy', 'Failed to plan strategy', { error });
       throw error;
     }
   }
@@ -192,8 +196,7 @@ export class ChainOfThought extends EventEmitter {
 
     return readyGoals.sort((a, b) => {
       // First sort by horizon
-      const horizonDiff =
-        horizonPriority[a.horizon] - horizonPriority[b.horizon];
+      const horizonDiff = horizonPriority[a.horizon] - horizonPriority[b.horizon];
       if (horizonDiff !== 0) return -horizonDiff;
 
       // Then by explicit priority
@@ -201,9 +204,7 @@ export class ChainOfThought extends EventEmitter {
     });
   }
 
-  private async canExecuteGoal(
-    goal: Goal
-  ): Promise<{ possible: boolean; reason: string }> {
+  private async canExecuteGoal(goal: Goal): Promise<{ possible: boolean; reason: string }> {
     const prompt = `
       <goal_execution_check>
       Goal: ${goal.description}
@@ -236,20 +237,15 @@ export class ChainOfThought extends EventEmitter {
 
     try {
       const response = await this.llmClient.analyze(prompt, {
-        system:
-          "You are a goal feasibility analyzer that checks if goals can be executed given current conditions.",
+        system: 'You are a goal feasibility analyzer that checks if goals can be executed given current conditions.',
       });
 
       console.log(response);
 
       return JSON.parse(response.toString());
     } catch (error) {
-      this.logger.error(
-        "canExecuteGoal",
-        "Failed to check goal executability",
-        { error }
-      );
-      return { possible: false, reason: "Error checking goal executability" };
+      this.logger.error('canExecuteGoal', 'Failed to check goal executability', { error });
+      return { possible: false, reason: 'Error checking goal executability' };
     }
   }
 
@@ -286,8 +282,7 @@ export class ChainOfThought extends EventEmitter {
 
     try {
       const response = await this.llmClient.analyze(prompt, {
-        system:
-          "You are a goal refinement system that breaks down complex goals into actionable steps.",
+        system: 'You are a goal refinement system that breaks down complex goals into actionable steps.',
       });
 
       const subGoals = JSON.parse(response.toString());
@@ -297,14 +292,14 @@ export class ChainOfThought extends EventEmitter {
         this.goalManager.addGoal({
           ...subGoal,
           parentGoal: goal.id,
-          status: "pending",
+          status: 'pending',
         });
       }
 
       // Update original goal status
-      this.goalManager.updateGoalStatus(goal.id, "active");
+      this.goalManager.updateGoalStatus(goal.id, 'active');
     } catch (error) {
-      this.logger.error("refineGoal", "Failed to refine goal", { error });
+      this.logger.error('refineGoal', 'Failed to refine goal', { error });
       throw error;
     }
   }
@@ -313,7 +308,7 @@ export class ChainOfThought extends EventEmitter {
     const prioritizedGoals = this.getPrioritizedGoals();
 
     if (!prioritizedGoals.length) {
-      this.logger.debug("executeNextGoal", "No ready goals available");
+      this.logger.debug('executeNextGoal', 'No ready goals available');
       return;
     }
 
@@ -322,14 +317,14 @@ export class ChainOfThought extends EventEmitter {
       const { possible, reason } = await this.canExecuteGoal(currentGoal);
 
       if (!possible) {
-        this.logger.debug("executeNextGoal", "Goal cannot be executed", {
+        this.logger.debug('executeNextGoal', 'Goal cannot be executed', {
           goalId: currentGoal.id,
           reason,
         });
 
         // If it's a medium/long term goal, try to refine it
-        if (currentGoal.horizon !== "short") {
-          this.logger.debug("executeNextGoal", "Attempting to refine goal", {
+        if (currentGoal.horizon !== 'short') {
+          this.logger.debug('executeNextGoal', 'Attempting to refine goal', {
             goalId: currentGoal.id,
           });
           await this.refineGoal(currentGoal);
@@ -338,7 +333,7 @@ export class ChainOfThought extends EventEmitter {
 
         // Mark as blocked and continue to next goal
         this.goalManager.blockGoalHierarchy(currentGoal.id, reason);
-        this.emit("goal:blocked", {
+        this.emit('goal:blocked', {
           id: currentGoal.id,
           reason,
         });
@@ -346,7 +341,7 @@ export class ChainOfThought extends EventEmitter {
       }
 
       // We found an executable goal
-      this.emit("goal:started", {
+      this.emit('goal:started', {
         id: currentGoal.id,
         description: currentGoal.description,
       });
@@ -364,7 +359,7 @@ export class ChainOfThought extends EventEmitter {
           // Instead of throwing error, block the goal and continue
           const blockReason = `Goal validation failed: Success criteria not met for ${currentGoal.description}`;
           this.goalManager.blockGoalHierarchy(currentGoal.id, blockReason);
-          this.emit("goal:blocked", {
+          this.emit('goal:blocked', {
             id: currentGoal.id,
             reason: blockReason,
           });
@@ -377,14 +372,10 @@ export class ChainOfThought extends EventEmitter {
         break;
       } catch (error) {
         // Handle unexpected errors during execution
-        this.logger.error(
-          "executeNextGoal",
-          "Unexpected error during goal execution",
-          {
-            goalId: currentGoal.id,
-            error,
-          }
-        );
+        this.logger.error('executeNextGoal', 'Unexpected error during goal execution', {
+          goalId: currentGoal.id,
+          error,
+        });
 
         await this.handleGoalFailure(currentGoal, error);
 
@@ -395,7 +386,7 @@ export class ChainOfThought extends EventEmitter {
   }
 
   private async handleGoalCompletion(goal: Goal): Promise<void> {
-    this.goalManager.updateGoalStatus(goal.id, "completed");
+    this.goalManager.updateGoalStatus(goal.id, 'completed');
 
     // Update context based on goal completion
     const contextUpdate = await this.determineContextUpdates(goal);
@@ -408,12 +399,10 @@ export class ChainOfThought extends EventEmitter {
       const parentGoal = this.goalManager.getGoalById(goal.parentGoal);
       if (parentGoal) {
         const siblingGoals = this.goalManager.getChildGoals(parentGoal.id);
-        const allCompleted = siblingGoals.every(
-          (g) => g.status === "completed"
-        );
+        const allCompleted = siblingGoals.every((g) => g.status === 'completed');
 
         if (allCompleted) {
-          this.goalManager.updateGoalStatus(parentGoal.id, "ready");
+          this.goalManager.updateGoalStatus(parentGoal.id, 'ready');
         }
       }
     }
@@ -422,19 +411,17 @@ export class ChainOfThought extends EventEmitter {
     const dependentGoals = this.goalManager.getDependentGoals(goal.id);
     for (const depGoal of dependentGoals) {
       if (this.goalManager.arePrerequisitesMet(depGoal.id)) {
-        this.goalManager.updateGoalStatus(depGoal.id, "ready");
+        this.goalManager.updateGoalStatus(depGoal.id, 'ready');
       }
     }
 
-    this.emit("goal:completed", {
+    this.emit('goal:completed', {
       id: goal.id,
-      result: "Goal success criteria met",
+      result: 'Goal success criteria met',
     });
   }
 
-  private async determineContextUpdates(
-    goal: any
-  ): Promise<Partial<ChainOfThoughtContext> | null> {
+  private async determineContextUpdates(goal: any): Promise<Partial<ChainOfThoughtContext> | null> {
     const prompt = `
       <context_update_analysis>
       Completed Goal: ${goal.description}
@@ -452,33 +439,25 @@ export class ChainOfThought extends EventEmitter {
 
     try {
       const response = await this.llmClient.analyze(prompt, {
-        system:
-          "You are a context analysis system that determines state changes after goal completion.",
+        system: 'You are a context analysis system that determines state changes after goal completion.',
       });
 
       return JSON.parse(response.toString());
     } catch (error) {
-      this.logger.error(
-        "determineContextUpdates",
-        "Failed to determine context updates",
-        { error }
-      );
+      this.logger.error('determineContextUpdates', 'Failed to determine context updates', { error });
       return null;
     }
   }
 
-  private async handleGoalFailure(
-    goal: Goal,
-    error: Error | unknown
-  ): Promise<void> {
-    this.goalManager.updateGoalStatus(goal.id, "failed");
+  private async handleGoalFailure(goal: Goal, error: Error | unknown): Promise<void> {
+    this.goalManager.updateGoalStatus(goal.id, 'failed');
 
     // If this was a sub-goal, mark parent as blocked
     if (goal.parentGoal) {
-      this.goalManager.updateGoalStatus(goal.parentGoal, "blocked");
+      this.goalManager.updateGoalStatus(goal.parentGoal, 'blocked');
     }
 
-    this.emit("goal:failed", {
+    this.emit('goal:failed', {
       id: goal.id,
       error,
     });
@@ -490,7 +469,7 @@ export class ChainOfThought extends EventEmitter {
       Goal: ${goal.description}
       
       Success Criteria:
-      ${goal.success_criteria.map((c: string) => `- ${c}`).join("\n")}
+      ${goal.success_criteria.map((c: string) => `- ${c}`).join('\n')}
       
       Current Context:
       ${JSON.stringify(this.context, null, 2)}
@@ -509,34 +488,23 @@ export class ChainOfThought extends EventEmitter {
 
     try {
       const response = await this.llmClient.analyze(prompt, {
-        system:
-          "You are a goal validation system that carefully checks success criteria against the current context.",
+        system: 'You are a goal validation system that carefully checks success criteria against the current context.',
       });
 
       const result = JSON.parse(response.toString());
 
       if (result.success) {
-        this.addStep(
-          `Goal validated as successful: ${result.reason}`,
-          "system",
-          ["goal-validation"]
-        );
+        this.addStep(`Goal validated as successful: ${result.reason}`, 'system', ['goal-validation']);
       } else {
-        this.addStep(`Goal validation failed: ${result.reason}`, "system", [
-          "goal-validation",
-        ]);
+        this.addStep(`Goal validation failed: ${result.reason}`, 'system', ['goal-validation']);
       }
 
       // Record the outcome score
-      this.goalManager.recordGoalOutcome(
-        goal.id,
-        result.outcomeScore,
-        result.reason
-      );
+      this.goalManager.recordGoalOutcome(goal.id, result.outcomeScore, result.reason);
 
       return result.success;
     } catch (error) {
-      this.logger.error("validateGoalSuccess", "Goal validation failed", {
+      this.logger.error('validateGoalSuccess', 'Goal validation failed', {
         error,
       });
       return false;
@@ -549,12 +517,12 @@ export class ChainOfThought extends EventEmitter {
       this.context,
       null,
       2
-    )}\n${"=".repeat(80)}\n`;
+    )}\n${'='.repeat(80)}\n`;
 
     try {
       fs.appendFileSync(this.contextLogPath, logEntry);
     } catch (error) {
-      this.logger.error("logContext", "Failed to write context log", { error });
+      this.logger.error('logContext', 'Failed to write context log', { error });
     }
   }
 
@@ -565,12 +533,7 @@ export class ChainOfThought extends EventEmitter {
    * @param tags Optional tags or categories to label the step.
    * @param meta Additional metadata to store in the step.
    */
-  public addStep(
-    content: string,
-    type: StepType = "action",
-    tags?: string[],
-    meta?: Record<string, any>
-  ): Step {
+  public addStep(content: string, type: StepType = 'action', tags?: string[], meta?: Record<string, any>): Step {
     const newStep: Step = {
       id: this.generateUniqueId(),
       type,
@@ -581,7 +544,7 @@ export class ChainOfThought extends EventEmitter {
     } as Step;
 
     const step = this.stepManager.addStep(newStep);
-    this.emit("step", step);
+    this.emit('step', step);
     return step;
   }
 
@@ -593,13 +556,8 @@ export class ChainOfThought extends EventEmitter {
    * @param tags Optional tags for the step.
    * @param meta Optional metadata.
    */
-  public insertStep(
-    index: number,
-    content: string,
-    tags?: string[],
-    meta?: Record<string, any>
-  ): Step {
-    this.logger.debug("insertStep", "Inserting step at index", {
+  public insertStep(index: number, content: string, tags?: string[], meta?: Record<string, any>): Step {
+    this.logger.debug('insertStep', 'Inserting step at index', {
       index,
       content,
       tags,
@@ -607,16 +565,14 @@ export class ChainOfThought extends EventEmitter {
     });
 
     if (index < 0 || index > this.stepManager.getSteps().length) {
-      const error = `Invalid index: ${index}. Index must be between 0 and ${
-        this.stepManager.getSteps().length
-      }`;
-      this.logger.error("insertStep", error);
+      const error = `Invalid index: ${index}. Index must be between 0 and ${this.stepManager.getSteps().length}`;
+      this.logger.error('insertStep', error);
       throw new Error(error);
     }
 
     const newStep: Step = {
       id: this.generateUniqueId(),
-      type: "action",
+      type: 'action',
       content,
       timestamp: Date.now(),
       tags,
@@ -633,17 +589,17 @@ export class ChainOfThought extends EventEmitter {
    * @param newContent The new textual content.
    */
   public updateStepContent(stepId: string, newContent: string): void {
-    this.logger.debug("updateStepContent", "Updating step content", {
+    this.logger.debug('updateStepContent', 'Updating step content', {
       stepId,
       newContent,
     });
 
     const step = this.stepManager.getStepById(stepId);
-    if (step && "content" in step) {
+    if (step && 'content' in step) {
       (step as { content: string; timestamp: number }).content = newContent;
       (step as { content: string; timestamp: number }).timestamp = Date.now();
     } else {
-      this.logger.warn("updateStepContent", "Step not found or invalid type", {
+      this.logger.warn('updateStepContent', 'Step not found or invalid type', {
         stepId,
       });
     }
@@ -668,26 +624,26 @@ export class ChainOfThought extends EventEmitter {
    * @param newContext Partial context to merge into the existing context.
    */
   public mergeContext(newContext: Partial<ChainOfThoughtContext>): void {
-    this.logger.debug("mergeContext", "Merging new context", { newContext });
+    this.logger.debug('mergeContext', 'Merging new context', { newContext });
 
     this.context = {
       ...this.context,
       ...newContext,
     };
 
-    this.logContext("MERGE_CONTEXT");
+    this.logContext('MERGE_CONTEXT');
   }
 
   /**
    * Add (push) a context snapshot to keep track of changes over time.
    */
   public snapshotContext(): void {
-    this.logger.debug("snapshotContext", "Creating context snapshot");
+    this.logger.debug('snapshotContext', 'Creating context snapshot');
 
     const snapshot = JSON.parse(JSON.stringify(this.context));
     this.snapshots.push(snapshot);
 
-    this.logContext("SNAPSHOT_CREATED");
+    this.logContext('SNAPSHOT_CREATED');
   }
 
   /**
@@ -703,7 +659,7 @@ export class ChainOfThought extends EventEmitter {
     example?: { description: string; example: string },
     schema?: JSONSchemaType<any>
   ): void {
-    this.logger.debug("registerAction", "Registering custom action", { type });
+    this.logger.debug('registerAction', 'Registering custom action', { type });
     this.actionRegistry.set(type, handler);
 
     // Store the example snippet if provided
@@ -721,24 +677,17 @@ export class ChainOfThought extends EventEmitter {
    * @param action The action to be executed.
    */
   public async executeAction(action: CoTAction): Promise<string> {
-    this.logger.debug("executeAction", "Executing action", { action });
-    this.emit("action:start", action);
+    this.logger.debug('executeAction', 'Executing action', { action });
+    this.emit('action:start', action);
 
-    const actionStep = this.addStep(
-      `Executing action: ${action.type}`,
-      "action",
-      ["action-execution"],
-      { action }
-    );
+    const actionStep = this.addStep(`Executing action: ${action.type}`, 'action', ['action-execution'], { action });
 
     try {
       // Validate the result against the schema
       if (this.actionSchemas.has(action.type)) {
-        const validate = ajv.compile(
-          this.actionSchemas.get(action.type) as AnySchema
-        );
+        const validate = ajv.compile(this.actionSchemas.get(action.type) as AnySchema);
         if (!validate(action.payload)) {
-          return "Invalid action result - try schema validation again";
+          return 'Invalid action result - try schema validation again';
         }
       }
 
@@ -751,12 +700,8 @@ export class ChainOfThought extends EventEmitter {
 
       // Format the result for better readability
       const formattedResult =
-        typeof result === "object"
-          ? `${action.type} completed successfully:\n${JSON.stringify(
-              result,
-              null,
-              2
-            )}`
+        typeof result === 'object'
+          ? `${action.type} completed successfully:\n${JSON.stringify(result, null, 2)}`
           : result;
 
       // Update the action step
@@ -776,7 +721,7 @@ export class ChainOfThought extends EventEmitter {
         },
       });
 
-      this.emit("action:complete", { action, result: formattedResult });
+      this.emit('action:complete', { action, result: formattedResult });
       return formattedResult;
     } catch (error) {
       // Update the action step with the error
@@ -784,7 +729,7 @@ export class ChainOfThought extends EventEmitter {
         content: `Action failed: ${error}`,
         meta: { ...actionStep.meta, error },
       });
-      this.emit("action:error", { action, error });
+      this.emit('action:error', { action, error });
       throw error;
     }
   }
@@ -795,7 +740,7 @@ export class ChainOfThought extends EventEmitter {
    */
   private generateUniqueId(): string {
     // Quick example ID generator
-    return "step-" + Math.random().toString(36).substring(2, 15);
+    return 'step-' + Math.random().toString(36).substring(2, 15);
   }
 
   /**
@@ -804,14 +749,12 @@ export class ChainOfThought extends EventEmitter {
    * @throws Error if the step with the given ID doesn't exist
    */
   public removeStep(stepId: string): void {
-    this.logger.debug("removeStep", "Removing step", { stepId });
+    this.logger.debug('removeStep', 'Removing step', { stepId });
 
-    const index = this.stepManager
-      .getSteps()
-      .findIndex((step) => step.id === stepId);
+    const index = this.stepManager.getSteps().findIndex((step) => step.id === stepId);
     if (index === -1) {
       const error = `Step with ID ${stepId} not found`;
-      this.logger.error("removeStep", error);
+      this.logger.error('removeStep', error);
       throw new Error(error);
     }
     this.stepManager.removeStep(stepId);
@@ -824,11 +767,8 @@ export class ChainOfThought extends EventEmitter {
    * 3. Validates and parses the response
    * 4. Executes or applies the returned plan & actions
    */
-  public async callAndProcess(
-    query: string,
-    maxRetries: number = 3
-  ): Promise<LLMStructuredResponse> {
-    this.logger.debug("callAndProcess", "Starting LLM call", {
+  public async callAndProcess(query: string, maxRetries: number = 3): Promise<LLMStructuredResponse> {
+    this.logger.debug('callAndProcess', 'Starting LLM call', {
       maxRetries,
     });
 
@@ -847,40 +787,32 @@ export class ChainOfThought extends EventEmitter {
         try {
           llmResponse = JSON.parse(llmRawResponse) as LLMStructuredResponse;
         } catch (err) {
-          this.logger.error(
-            "callAndProcess",
-            "Failed to parse LLM response as JSON",
-            {
-              error: err instanceof Error ? err.message : String(err),
-              response: llmRawResponse,
-            }
-          );
+          this.logger.error('callAndProcess', 'Failed to parse LLM response as JSON', {
+            error: err instanceof Error ? err.message : String(err),
+            response: llmRawResponse,
+          });
           attempts++;
           continue;
         }
 
         // Validate the response structure
         if (!queryValidator(llmResponse)) {
-          this.logger.error(
-            "callAndProcess",
-            "LLM response failed validation",
-            {
-              response: llmResponse,
-            }
-          );
+          this.logger.error('callAndProcess', 'LLM response failed validation', {
+            response: llmResponse,
+          });
           attempts++;
           continue;
         }
 
         // 3. Extract the plan and add it as a step
         if (llmResponse.plan) {
-          this.addStep(`${llmResponse.plan}`, "planning", ["llm-plan"]);
+          this.addStep(`${llmResponse.plan}`, 'planning', ['llm-plan']);
         }
 
         // If we get here, everything worked
         return llmResponse;
       } catch (err) {
-        this.logger.error("callAndProcess", "Error in LLM processing", {
+        this.logger.error('callAndProcess', 'Error in LLM processing', {
           error: err instanceof Error ? err.message : String(err),
           attempt: attempts + 1,
         });
@@ -890,7 +822,7 @@ export class ChainOfThought extends EventEmitter {
 
     // If we get here, we've exhausted all retries
     const error = `Failed to get valid LLM response after ${maxRetries} attempts`;
-    this.logger.error("callAndProcess", error);
+    this.logger.error('callAndProcess', error);
     throw new Error(error);
   }
 
@@ -899,9 +831,7 @@ export class ChainOfThought extends EventEmitter {
    */
   private getAvailableActions(): string {
     const actions = Array.from(this.actionRegistry.keys());
-    return `Available actions:\n${actions
-      .map((action) => `- ${action}`)
-      .join("\n")}`;
+    return `Available actions:\n${actions.map((action) => `- ${action}`).join('\n')}`;
   }
 
   /**
@@ -909,7 +839,7 @@ export class ChainOfThought extends EventEmitter {
    * You can adapt the instructions, tone, or style as needed.
    */
   private buildPrompt(tags: Record<string, string> = {}): string {
-    this.logger.debug("buildPrompt", "Building LLM prompt");
+    this.logger.debug('buildPrompt', 'Building LLM prompt');
 
     // You can control how many steps or which steps to send
     // For example, let's just send the last few steps:
@@ -924,7 +854,7 @@ Example JSON:
 ${example}
 `;
       })
-      .join("\n\n");
+      .join('\n\n');
 
     // Format memory context
     const pastExperiences = this.context.pastExperiences
@@ -934,11 +864,11 @@ ${example}
 Previous Experience:
 - Action: ${exp.action}
 - Outcome: ${exp.outcome}
-- Importance: ${exp.importance || "N/A"}
+- Importance: ${exp.importance || 'N/A'}
 `
           )
-          .join("\n")
-      : "No relevant past experiences";
+          .join('\n')
+      : 'No relevant past experiences';
 
     const relevantKnowledge = this.context.relevantKnowledge
       ? this.context.relevantKnowledge
@@ -948,11 +878,11 @@ Related Knowledge:
 - ${doc.title}
 - Category: ${doc.category}
 - Content: ${doc.content}
-- Tags: ${doc.tags.join(", ")}
+- Tags: ${doc.tags.join(', ')}
 `
           )
-          .join("\n")
-      : "No relevant knowledge found";
+          .join('\n')
+      : 'No relevant knowledge found';
 
     const prompt = `
     <global_context>
@@ -1054,7 +984,7 @@ ${relevantKnowledge}
   }
 
   private async callModel(prompt: string): Promise<string> {
-    this.logger.debug("callModel", "Sending prompt to LLM");
+    this.logger.debug('callModel', 'Sending prompt to LLM');
 
     const response = await this.llmClient.analyze(prompt, {
       system: `"You are a reasoning system that outputs structured JSON only."`,
@@ -1063,28 +993,25 @@ ${relevantKnowledge}
     // Make sure we're dealing with a string
     let responseStr: string;
 
-    if (typeof response === "string") {
+    if (typeof response === 'string') {
       responseStr = response;
-    } else if (typeof response === "object") {
+    } else if (typeof response === 'object') {
       responseStr = JSON.stringify(response);
     } else {
       const error = `Unexpected response type from LLM: ${typeof response}`;
-      this.logger.error("callModel", error);
+      this.logger.error('callModel', error);
       throw new Error(error);
     }
 
-    this.logger.debug("callModel", "Received LLM response", {
+    this.logger.debug('callModel', 'Received LLM response', {
       response: JSON.parse(responseStr),
     });
 
     return responseStr;
   }
 
-  public async think(
-    userQuery: string,
-    maxIterations: number = 10
-  ): Promise<void> {
-    this.emit("think:start", { query: userQuery });
+  public async think(userQuery: string, maxIterations: number = 10): Promise<void> {
+    this.emit('think:start', { query: userQuery });
 
     try {
       // Consult single memory instance for both types of memories
@@ -1099,30 +1026,26 @@ ${relevantKnowledge}
         relevantKnowledge: relevantDocs,
       });
 
-      this.logger.debug("think", "Retrieved memory context", {
+      this.logger.debug('think', 'Retrieved memory context', {
         experienceCount: similarExperiences.length,
         docCount: relevantDocs.length,
       });
 
-      this.logger.debug("think", "Beginning to think", {
+      this.logger.debug('think', 'Beginning to think', {
         userQuery,
         maxIterations,
       });
 
       // Initialize with user query
-      this.addStep(`User  Query: ${userQuery}`, "task", ["user-query"]);
+      this.addStep(`User  Query: ${userQuery}`, 'task', ['user-query']);
 
       let currentIteration = 0;
       let isComplete = false;
       const llmResponse = await this.callAndProcess(userQuery);
       let pendingActions: CoTAction[] = [...llmResponse.actions];
 
-      while (
-        !isComplete &&
-        currentIteration < maxIterations &&
-        pendingActions.length > 0
-      ) {
-        this.logger.debug("think", "Processing iteration", {
+      while (!isComplete && currentIteration < maxIterations && pendingActions.length > 0) {
+        this.logger.debug('think', 'Processing iteration', {
           currentIteration,
         });
 
@@ -1132,19 +1055,17 @@ ${relevantKnowledge}
         // Process one action at a time
         if (pendingActions.length > 0) {
           const currentAction = pendingActions.shift()!;
-          this.logger.debug("think", "Processing action", {
+          this.logger.debug('think', 'Processing action', {
             action: currentAction,
             remainingActions: pendingActions.length,
           });
 
           // Validate action before execution
           if (!currentAction.type || !currentAction.payload) {
-            this.logger.error("think", "Invalid action structure", {
+            this.logger.error('think', 'Invalid action structure', {
               action: currentAction,
             });
-            throw new Error(
-              `Invalid action structure: ${JSON.stringify(currentAction)}`
-            );
+            throw new Error(`Invalid action structure: ${JSON.stringify(currentAction)}`);
           }
 
           try {
@@ -1155,12 +1076,10 @@ ${relevantKnowledge}
 
             // If the result seems important, store as knowledge
             if (this.calculateImportance(result) > 0.7) {
-              await this.storeKnowledge(
-                `Learning from ${currentAction.type}`,
-                result,
-                "action_learning",
-                [currentAction.type, "automated_learning"]
-              );
+              await this.storeKnowledge(`Learning from ${currentAction.type}`, result, 'action_learning', [
+                currentAction.type,
+                'automated_learning',
+              ]);
             }
 
             const updateContext = this.buildPrompt({
@@ -1175,7 +1094,7 @@ ${relevantKnowledge}
              ${JSON.stringify({
                query: userQuery,
                currentSteps: this.stepManager.getSteps(),
-               lastAction: currentAction.toString() + " RESULT:" + result,
+               lastAction: currentAction.toString() + ' RESULT:' + result,
              })},
              <verification_rules>
               Analyze using Chain of Verification:
@@ -1223,42 +1142,30 @@ Do not include any text outside the JSON object. Do not include backticks, backs
 
               if (completion.newActions) {
                 // Extract actions from each plan in newActions
-                const extractedActions = completion.newActions.flatMap(
-                  (plan: any) => plan.actions || []
-                );
+                const extractedActions = completion.newActions.flatMap((plan: any) => plan.actions || []);
                 pendingActions.unshift(...extractedActions);
               }
 
               if (isComplete || !completion.shouldContinue) {
-                this.addStep(
-                  `Goal ${isComplete ? "achieved" : "failed"}: ${
-                    completion.reason
-                  }`,
-                  "system",
-                  ["completion"]
-                );
-                this.emit("think:complete", { query: userQuery });
+                this.addStep(`Goal ${isComplete ? 'achieved' : 'failed'}: ${completion.reason}`, 'system', [
+                  'completion',
+                ]);
+                this.emit('think:complete', { query: userQuery });
                 return;
               } else {
-                this.addStep(
-                  `Action completed, continuing execution: ${completion.reason}`,
-                  "system",
-                  ["continuation"]
-                );
+                this.addStep(`Action completed, continuing execution: ${completion.reason}`, 'system', [
+                  'continuation',
+                ]);
               }
             } catch (error) {
-              this.logger.error(
-                "solveQuery",
-                "Error parsing completion check",
-                {
-                  error: error instanceof Error ? error.message : String(error),
-                  completionCheck,
-                }
-              );
+              this.logger.error('solveQuery', 'Error parsing completion check', {
+                error: error instanceof Error ? error.message : String(error),
+                completionCheck,
+              });
               continue;
             }
           } catch (error) {
-            this.emit("think:error", { query: userQuery, error });
+            this.emit('think:error', { query: userQuery, error });
             throw error;
           }
         }
@@ -1268,21 +1175,17 @@ Do not include any text outside the JSON object. Do not include backticks, backs
 
       if (currentIteration >= maxIterations) {
         const error = `Failed to solve query "${userQuery}" within ${maxIterations} iterations`;
-        this.logger.error("solveQuery", error);
-        this.emit("think:timeout", { query: userQuery });
+        this.logger.error('solveQuery', error);
+        this.emit('think:timeout', { query: userQuery });
       }
     } catch (error) {
-      this.emit("think:error", { query: userQuery, error });
+      this.emit('think:error', { query: userQuery, error });
       throw error;
     }
   }
 
-  private async formatActionOutcome(
-    action: string,
-    result: string | Record<string, any>
-  ): Promise<string> {
-    const resultStr =
-      typeof result === "string" ? result : JSON.stringify(result, null, 2);
+  private async formatActionOutcome(action: string, result: string | Record<string, any>): Promise<string> {
+    const resultStr = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
 
     const summary = await this.llmClient.analyze(
       `
@@ -1302,8 +1205,7 @@ Do not include any text outside the JSON object. Do not include backticks, backs
       Return only the summary text, no additional formatting or explanation.
       `,
       {
-        system:
-          "You are a result summarizer. Create clear, concise summaries of action results.",
+        system: 'You are a result summarizer. Create clear, concise summaries of action results.',
       }
     );
 
@@ -1320,80 +1222,60 @@ Do not include any text outside the JSON object. Do not include backticks, backs
       const formattedOutcome = await this.formatActionOutcome(action, result);
 
       // Calculate importance if not provided
-      const calculatedImportance =
-        importance ?? this.calculateImportance(formattedOutcome);
+      const calculatedImportance = importance ?? this.calculateImportance(formattedOutcome);
 
       // Store the experience
       await this.memory.storeEpisode({
         timestamp: new Date(),
-        action: action + " RESULT: " + result,
+        action: action + ' RESULT: ' + result,
         outcome: formattedOutcome,
         context: this.context,
         importance: calculatedImportance,
-        emotions: this.determineEmotions(
-          action + " RESULT: " + result,
-          formattedOutcome,
-          calculatedImportance
-        ),
+        emotions: this.determineEmotions(action + ' RESULT: ' + result, formattedOutcome, calculatedImportance),
       });
 
-      this.emit("memory:experience_stored", {
+      this.emit('memory:experience_stored', {
         experience: {
           id: crypto.randomUUID(),
-          action: action + " RESULT: " + result,
+          action: action + ' RESULT: ' + result,
           outcome: formattedOutcome,
           timestamp: new Date(),
           context: this.context,
           importance: calculatedImportance,
-          emotions: this.determineEmotions(
-            action + " RESULT: " + result,
-            formattedOutcome,
-            calculatedImportance
-          ),
+          emotions: this.determineEmotions(action + ' RESULT: ' + result, formattedOutcome, calculatedImportance),
         },
       });
     } catch (error) {
-      this.logger.error("storeExperience", "Failed to store experience", {
+      this.logger.error('storeExperience', 'Failed to store experience', {
         error,
       });
     }
   }
 
-  private determineEmotions(
-    action: string,
-    result: string | Record<string, any>,
-    importance: number
-  ): string[] {
+  private determineEmotions(action: string, result: string | Record<string, any>, importance: number): string[] {
     const emotions: string[] = [];
-    const resultStr =
-      typeof result === "string" ? result : JSON.stringify(result);
+    const resultStr = typeof result === 'string' ? result : JSON.stringify(result);
 
     // Success/failure emotions
-    if (
-      resultStr.toLowerCase().includes("error") ||
-      resultStr.toLowerCase().includes("failed")
-    ) {
-      emotions.push("frustrated");
-      if (importance > 0.7) emotions.push("concerned");
+    if (resultStr.toLowerCase().includes('error') || resultStr.toLowerCase().includes('failed')) {
+      emotions.push('frustrated');
+      if (importance > 0.7) emotions.push('concerned');
     } else {
-      emotions.push("satisfied");
-      if (importance > 0.7) emotions.push("excited");
+      emotions.push('satisfied');
+      if (importance > 0.7) emotions.push('excited');
     }
 
     // Learning emotions
-    if (
-      resultStr.toLowerCase().includes("learned") ||
-      resultStr.toLowerCase().includes("discovered")
-    ) {
-      emotions.push("curious");
+    if (resultStr.toLowerCase().includes('learned') || resultStr.toLowerCase().includes('discovered')) {
+      emotions.push('curious');
     }
 
     // Action-specific emotions
-    if (action.includes("QUERY") || action.includes("FETCH")) {
-      emotions.push("analytical");
+    if (action.includes('QUERY') || action.includes('FETCH')) {
+      emotions.push('analytical');
     }
-    if (action.includes("TRANSACTION") || action.includes("EXECUTE")) {
-      emotions.push("focused");
+    if (action.includes('TRANSACTION') || action.includes('EXECUTE')) {
+      emotions.push('focused');
     }
 
     return emotions;
@@ -1402,25 +1284,18 @@ Do not include any text outside the JSON object. Do not include backticks, backs
   private calculateImportance(result: string): number {
     const keyTerms = {
       high: [
-        "error",
-        "critical",
-        "important",
-        "success",
-        "discovered",
-        "learned",
-        "achieved",
-        "completed",
-        "milestone",
+        'error',
+        'critical',
+        'important',
+        'success',
+        'discovered',
+        'learned',
+        'achieved',
+        'completed',
+        'milestone',
       ],
-      medium: [
-        "updated",
-        "modified",
-        "changed",
-        "progress",
-        "partial",
-        "attempted",
-      ],
-      low: ["checked", "verified", "queried", "fetched", "routine", "standard"],
+      medium: ['updated', 'modified', 'changed', 'progress', 'partial', 'attempted'],
+      low: ['checked', 'verified', 'queried', 'fetched', 'routine', 'standard'],
     };
 
     const resultLower = result.toLowerCase();
@@ -1442,9 +1317,7 @@ Do not include any text outside the JSON object. Do not include backticks, backs
 
     // Calculate complexity score based on result length and structure
     const complexityScore = Math.min(
-      result.length / 1000 +
-        result.split("\n").length / 20 +
-        (JSON.stringify(result).match(/{/g)?.length || 0) / 10,
+      result.length / 1000 + result.split('\n').length / 20 + (JSON.stringify(result).match(/{/g)?.length || 0) / 10,
       0.3
     );
 
@@ -1452,12 +1325,7 @@ Do not include any text outside the JSON object. Do not include backticks, backs
     return Math.min(termScore + complexityScore, 1);
   }
 
-  private async storeKnowledge(
-    title: string,
-    content: string,
-    category: string,
-    tags: string[]
-  ): Promise<void> {
+  private async storeKnowledge(title: string, content: string, category: string, tags: string[]): Promise<void> {
     try {
       await this.memory.storeDocument({
         title,
@@ -1467,7 +1335,7 @@ Do not include any text outside the JSON object. Do not include backticks, backs
         lastUpdated: new Date(),
       });
 
-      this.emit("memory:knowledge_stored", {
+      this.emit('memory:knowledge_stored', {
         document: {
           id: crypto.randomUUID(),
           title,
@@ -1478,7 +1346,7 @@ Do not include any text outside the JSON object. Do not include backticks, backs
         },
       });
     } catch (error) {
-      this.logger.error("storeKnowledge", "Failed to store knowledge", {
+      this.logger.error('storeKnowledge', 'Failed to store knowledge', {
         error,
       });
     }
@@ -1488,35 +1356,27 @@ Do not include any text outside the JSON object. Do not include backticks, backs
 // Add type definitions for the events
 export interface ChainOfThoughtEvents {
   step: (step: Step) => void;
-  "action:start": (action: CoTAction) => void;
-  "action:complete": (data: { action: CoTAction; result: string }) => void;
-  "action:error": (data: { action: CoTAction; error: Error | unknown }) => void;
-  "think:start": (data: { query: string }) => void;
-  "think:complete": (data: { query: string }) => void;
-  "think:timeout": (data: { query: string }) => void;
-  "think:error": (data: { query: string; error: Error | unknown }) => void;
-  "goal:created": (goal: { id: string; description: string }) => void;
-  "goal:updated": (goal: { id: string; status: GoalStatus }) => void;
-  "goal:completed": (goal: { id: string; result: any }) => void;
-  "goal:failed": (goal: { id: string; error: Error | unknown }) => void;
-  "goal:started": (goal: { id: string; description: string }) => void;
-  "goal:blocked": (goal: { id: string; reason: string }) => void;
-  "memory:experience_stored": (data: { experience: EpisodicMemory }) => void;
-  "memory:knowledge_stored": (data: { document: Documentation }) => void;
-  "memory:experience_retrieved": (data: {
-    experiences: EpisodicMemory[];
-  }) => void;
-  "memory:knowledge_retrieved": (data: { documents: Documentation[] }) => void;
+  'action:start': (action: CoTAction) => void;
+  'action:complete': (data: { action: CoTAction; result: string }) => void;
+  'action:error': (data: { action: CoTAction; error: Error | unknown }) => void;
+  'think:start': (data: { query: string }) => void;
+  'think:complete': (data: { query: string }) => void;
+  'think:timeout': (data: { query: string }) => void;
+  'think:error': (data: { query: string; error: Error | unknown }) => void;
+  'goal:created': (goal: { id: string; description: string }) => void;
+  'goal:updated': (goal: { id: string; status: GoalStatus }) => void;
+  'goal:completed': (goal: { id: string; result: any }) => void;
+  'goal:failed': (goal: { id: string; error: Error | unknown }) => void;
+  'goal:started': (goal: { id: string; description: string }) => void;
+  'goal:blocked': (goal: { id: string; reason: string }) => void;
+  'memory:experience_stored': (data: { experience: EpisodicMemory }) => void;
+  'memory:knowledge_stored': (data: { document: Documentation }) => void;
+  'memory:experience_retrieved': (data: { experiences: EpisodicMemory[] }) => void;
+  'memory:knowledge_retrieved': (data: { documents: Documentation[] }) => void;
 }
 
 // Add type safety to event emitter
 export declare interface ChainOfThought {
-  on<K extends keyof ChainOfThoughtEvents>(
-    event: K,
-    listener: ChainOfThoughtEvents[K]
-  ): this;
-  emit<K extends keyof ChainOfThoughtEvents>(
-    event: K,
-    ...args: Parameters<ChainOfThoughtEvents[K]>
-  ): boolean;
+  on<K extends keyof ChainOfThoughtEvents>(event: K, listener: ChainOfThoughtEvents[K]): this;
+  emit<K extends keyof ChainOfThoughtEvents>(event: K, ...args: Parameters<ChainOfThoughtEvents[K]>): boolean;
 }

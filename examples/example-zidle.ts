@@ -34,6 +34,49 @@ const graphqlFetchSchema: JSONSchemaType<GraphQLPayload> = {
   additionalProperties: false,
 };
 
+// Définir un schéma pour l'action CONNECT_WALLET
+const connectWalletSchema: JSONSchemaType<any> = {
+  type: 'object',
+  properties: {},
+  additionalProperties: false,
+};
+
+// Ajout des interfaces pour les NFTs
+interface CharacterNFT {
+  tokenId: number;
+  level: number;
+  isActive: boolean;
+}
+
+interface WalletPayload {
+  address: string;
+}
+
+interface MintNFTPayload {
+  address: string;
+  name: string;
+}
+
+// Ajout des schémas
+const mintNFTSchema: JSONSchemaType<MintNFTPayload> = {
+  type: 'object',
+  properties: {
+    address: { type: 'string' },
+    name: { type: 'string' },
+  },
+  required: ['address', 'name'],
+  additionalProperties: false,
+};
+
+const walletSchema: JSONSchemaType<WalletPayload> = {
+  type: 'object',
+  properties: {
+    address: { type: 'string' },
+  },
+  required: ['address'],
+  additionalProperties: false,
+};
+
 // Mock actions (replace with actual game API calls)
 const farmResourceAction = async (payload: any) => {
   const { resourceType, duration } = payload;
@@ -67,6 +110,35 @@ const graphqlAction = async (payload: any) => {
   return JSON.stringify(result);
 };
 
+const connectWalletAction = async () => {
+  const wallet = {
+    success: true,
+    address: env.WALLET_ADDRESS || '0x...' + Math.random().toString(16).substring(2, 8),
+  };
+  return JSON.stringify(wallet);
+};
+
+// Ajout des actions mock
+const mintNFTAction = async (payload: MintNFTPayload) => {
+  const nft = {
+    success: true,
+    tokenId: Math.floor(Math.random() * 1000),
+    name: payload.name,
+    owner: env.WALLET_ADDRESS,
+    contract: env.NFT_CONTRACT,
+  };
+  return JSON.stringify(nft);
+};
+
+const checkNFTAction = async (payload: WalletPayload) => {
+  const hasNFT = Math.random() > 0.5;
+  return JSON.stringify({
+    hasNFT,
+    tokenId: hasNFT ? Math.floor(Math.random() * 1000) : null,
+    address: env.WALLET_ADDRESS,
+  });
+};
+
 async function main() {
   // Initialize LLM client
   const llmClient = new LLMClient({
@@ -90,7 +162,7 @@ async function main() {
         duration: 60,
       }),
     },
-    graphqlFetchSchema as JSONSchemaType<any>
+    farmResourceSchema
   );
 
   dreams.registerAction(
@@ -102,7 +174,40 @@ async function main() {
         query: 'query GetPlayerResources { resources { type amount farmingRate xpLevel xpProgress } }',
       }),
     },
-    graphqlFetchSchema as JSONSchemaType<any>
+    graphqlFetchSchema
+  );
+
+  dreams.registerAction(
+    'CONNECT_WALLET',
+    connectWalletAction,
+    {
+      description: 'Connect wallet to start playing',
+      example: JSON.stringify({}),
+    },
+    connectWalletSchema
+  );
+
+  dreams.registerAction(
+    'CHECK_NFT',
+    checkNFTAction,
+    {
+      description: 'Check if wallet has a character NFT',
+      example: JSON.stringify({ address: '0x123...' }),
+    },
+    walletSchema
+  );
+
+  dreams.registerAction(
+    'MINT_NFT',
+    mintNFTAction,
+    {
+      description: 'Mint a new character NFT',
+      example: JSON.stringify({
+        address: '0x123...',
+        name: 'Farmer#1',
+      }),
+    },
+    mintNFTSchema
   );
 
   // Add event handlers for monitoring
