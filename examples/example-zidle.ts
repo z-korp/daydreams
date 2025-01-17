@@ -77,17 +77,6 @@ const walletSchema: JSONSchemaType<WalletPayload> = {
   additionalProperties: false,
 };
 
-// Mock actions (replace with actual game API calls)
-const farmResourceAction = async (payload: any) => {
-  const { resourceType, duration } = payload;
-  const result = {
-    success: true,
-    resourceGained: Math.floor(Math.random() * 100 * duration),
-    xpGained: Math.floor(duration * 1.5),
-  };
-  return JSON.stringify(result);
-};
-
 const graphqlAction = async (payload: any) => {
   const result = {
     resources: [
@@ -108,35 +97,6 @@ const graphqlAction = async (payload: any) => {
     ],
   };
   return JSON.stringify(result);
-};
-
-const connectWalletAction = async () => {
-  const wallet = {
-    success: true,
-    address: env.WALLET_ADDRESS || '0x...' + Math.random().toString(16).substring(2, 8),
-  };
-  return JSON.stringify(wallet);
-};
-
-// Ajout des actions mock
-const mintNFTAction = async (payload: MintNFTPayload) => {
-  const nft = {
-    success: true,
-    tokenId: Math.floor(Math.random() * 1000),
-    name: payload.name,
-    owner: env.WALLET_ADDRESS,
-    contract: env.NFT_CONTRACT,
-  };
-  return JSON.stringify(nft);
-};
-
-const checkNFTAction = async (payload: WalletPayload) => {
-  const hasNFT = Math.random() > 0.5;
-  return JSON.stringify({
-    hasNFT,
-    tokenId: hasNFT ? Math.floor(Math.random() * 1000) : null,
-    address: env.WALLET_ADDRESS,
-  });
 };
 
 async function main() {
@@ -171,7 +131,8 @@ async function main() {
     {
       description: 'Fetch current game state data',
       example: JSON.stringify({
-        query: 'query GetPlayerResources { resources { type amount farmingRate xpLevel xpProgress } }',
+        query:
+          'query GetPlayerResources { resources { type amount farmingRate xpLevel xpProgress } }',
       }),
     },
     graphqlFetchSchema
