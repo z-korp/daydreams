@@ -18,6 +18,7 @@ export const queryValidator = (
         "MINT_NFT",
         "CHECK_NFT",
         "FARM_RESOURCE",
+        "ANALYZE_TWITTER",
       ].includes(action.type)
     )
       return false;

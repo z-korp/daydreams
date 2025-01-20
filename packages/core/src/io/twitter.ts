@@ -2,7 +2,7 @@ import { Scraper, SearchMode, type Tweet } from "agent-twitter-client";
 import type { JSONSchemaType } from "ajv";
 import { Logger } from "../core/logger";
 import { LogLevel } from "../types";
-
+import chalk from "chalk";
 interface TwitterCredentials {
   username: string;
   password: string;
@@ -85,6 +85,7 @@ export class TwitterClient {
    * Create an input that monitors a user's timeline
    */
   public createTimelineInput(username: string, interval: number = 60000) {
+    chalk.green(`twitter_timeline_${username}`);
     return {
       name: `twitter_timeline_${username}`,
       handler: async () => {

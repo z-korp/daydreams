@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - CHROMA_URL=http://chroma:8000
+      - NODE_ENV=production
+    env_file:
+      - .env
+    depends_on:
+      - chroma
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/packages/core/node_modules
+
+  chroma:
+    image: chromadb/chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    restart: unless-stopped
+
+volumes:
+  chroma_data:

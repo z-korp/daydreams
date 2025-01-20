@@ -855,7 +855,8 @@ export class ChainOfThought extends EventEmitter {
           attempts++;
           continue;
         }
-
+        console.log("///////////////////////////////////////////////////////////llmResponse");
+        console.log(llmResponse);
         // Validate the response structure
         if (!queryValidator(llmResponse)) {
           this.logger.error(
