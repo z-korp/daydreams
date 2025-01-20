@@ -4,333 +4,190 @@ import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { LogLevel } from "../packages/core/src/types";
 import chalk from "chalk";
 
-interface KnowledgeDocument {
+interface Collection {
   id: string;
-  title: string;
-  category: string;
-  content: string;
-  tags: string[];
-  lastUpdated: Date;
-  source?: string;
-  relatedIds?: string[];
-}
-
-interface KnowledgeSummary {
-  categories: {
-    [key: string]: {
-      documentCount: number;
-      keyTopics: string[];
-      recentUpdates: string[];
-    };
+  name: string;
+  metadata: {
+    description: string;
+    [key: string]: any;
   };
-  topTags: { tag: string; count: number }[];
-  recentActivity: {
-    title: string;
-    category: string;
-    timestamp: Date;
-  }[];
+  dimension: number | null;
 }
 
-async function exploreChromaDB(baseUrl: string) {
-  console.log(chalk.cyan("\n🔍 Starting ChromaDB Exploration..."));
+async function getCollectionContent(baseUrl: string, collection: Collection) {
+  const peekUrl = `${baseUrl}/api/v2/tenants/default_tenant/databases/default_database/collections/${collection.id}/get`;
+  console.log(chalk.blue(`\nFetching content for collection ${collection.name}...`));
+
+  const peekResponse = await fetch(peekUrl, {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({
+      limit: 1000,
+      include: ["metadatas", "documents", "embeddings"]
+    })
+  });
+
+  if (!peekResponse.ok) {
+    const errorText = await peekResponse.text();
+    throw new Error(`HTTP error! status: ${peekResponse.status}, body: ${errorText}`);
+  }
+
+  const content = await peekResponse.json();
+  return { collection, content };
+}
+
+async function findLargestCollection(baseUrl: string) {
+  console.log(chalk.cyan("\n🔍 Analyzing all collections..."));
 
   try {
-    // 1. Liste des tenants
-    console.log(chalk.blue("\n📊 Fetching tenants..."));
-    const tenantsResponse = await fetch(`${baseUrl}/api/v2/tenants`);
-    const tenants = await tenantsResponse.json();
-    console.log(chalk.green("✓ Tenants:"), JSON.stringify(tenants, null, 2));
+    const collectionsUrl = `${baseUrl}/api/v2/tenants/default_tenant/databases/default_database/collections`;
+    const collectionsResponse = await fetch(collectionsUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
 
-    // 2. Liste des databases
-    const tenant = "default_tenant";
-    console.log(chalk.blue(`\n📚 Fetching databases for tenant: ${tenant}`));
-    const databasesResponse = await fetch(`${baseUrl}/api/v2/tenants/${tenant}/databases`);
-    const databases = await databasesResponse.json();
-    console.log(chalk.green("✓ Databases:"), JSON.stringify(databases, null, 2));
-
-    // 3. Liste des collections
-    const database = "default_database";
-    console.log(chalk.blue(`\n📁 Fetching collections...`));
-    const collectionsResponse = await fetch(`${baseUrl}/api/v2/tenants/${tenant}/databases/${database}/collections`);
+    if (!collectionsResponse.ok) {
+      throw new Error(`HTTP error! status: ${collectionsResponse.status}`);
+    }
+    
     const collections = await collectionsResponse.json();
-    console.log(chalk.green("✓ Collections:"), JSON.stringify(collections, null, 2));
+    
+    // Récupérer le contenu de chaque collection
+    const collectionSizes = await Promise.all(
+      collections.map(async (collection: Collection) => {
+        try {
+          const { content } = await getCollectionContent(baseUrl, collection);
+          const size = content.ids?.length || 0;
+          console.log(chalk.gray(`Collection ${collection.name}: ${size} documents`));
+          return {
+            collection,
+            size,
+            content
+          };
+        } catch (error) {
+          console.warn(chalk.yellow(`Warning: Could not fetch content for ${collection.name}`));
+          return {
+            collection,
+            size: 0,
+            content: null
+          };
+        }
+      })
+    );
 
-    return collections;
+    // Trier par taille et prendre la plus grande
+    const largest = collectionSizes.sort((a, b) => b.size - a.size)[0];
+    
+    console.log(chalk.green(`\n📊 Largest collection is ${largest.collection.name} with ${largest.size} documents`));
+    
+    return {
+      collection: largest.collection,
+      content: largest.content
+    };
+
   } catch (error) {
-    console.error(chalk.red("\n❌ Error exploring ChromaDB:"), error);
+    console.error(chalk.red("\n❌ Error:"), error);
     throw error;
   }
+}
+
+async function analyzeCollectionContent(content: any) {
+  console.log(chalk.cyan("\n📊 Analyzing Collection Content"));
+
+  console.log(chalk.gray("Content keys:"), Object.keys(content));
+
+  const { ids, metadatas, documents } = content;
+  
+  if (!ids || ids.length === 0) {
+    console.log(chalk.yellow("No documents found in collection"));
+    return;
+  }
+
+  console.log(chalk.green(`\nFound ${ids.length} documents`));
+
+  // Analyser les types de métadonnées
+  const metadataKeys = new Set<string>();
+  metadatas?.forEach((metadata: any) => {
+    if (metadata) {
+      Object.keys(metadata).forEach(key => metadataKeys.add(key));
+    }
+  });
+
+  console.log(chalk.yellow("\n📑 Metadata Fields:"));
+  console.log(Array.from(metadataKeys).join(", "));
+
+  // Échantillon de documents
+  console.log(chalk.yellow("\n📄 Sample Documents:"));
+  for (let i = 0; i < Math.min(5, ids.length); i++) {
+    console.log(chalk.blue(`\nDocument ${i + 1}:`));
+    console.log("ID:", ids[i]);
+    console.log("Metadata:", metadatas?.[i] || "No metadata");
+    console.log("Content Preview:", documents?.[i]?.substring(0, 200) + "..." || "No content");
+  }
+
+  // Statistiques sur les métadonnées
+  console.log(chalk.yellow("\n📊 Metadata Statistics:"));
+  Array.from(metadataKeys).forEach(key => {
+    const valuesSet = new Set(
+      metadatas
+        ?.filter((m: any) => m && m[key])
+        .map((m: any) => m[key]) || []
+    );
+    console.log(`${key}: ${valuesSet.size} unique values`);
+  });
+
+  return {
+    documentCount: ids?.length || 0,
+    metadataFields: Array.from(metadataKeys),
+    sampleDocuments: ids?.slice(0, 5).map((id: string, index: number) => ({
+      id,
+      metadata: metadatas?.[index] || null,
+      contentPreview: documents?.[index]?.substring(0, 200) || null
+    })) || []
+  };
 }
 
 async function main() {
   try {
     const chromaUrl = "http://localhost:8000";
 
-    // Debug: Explorer ChromaDB avant de commencer
-    console.log(chalk.cyan("\n🔍 Starting ChromaDB Debug..."));
-    const collections = await exploreChromaDB(chromaUrl);
+    // Trouver et analyser la plus grande collection
+    const { collection, content } = await findLargestCollection(chromaUrl);
     
-    // Initialize Vector DB
-    const vectorDb = new ChromaVectorDB("knowledge_base", {
-      chromaUrl,
-      logLevel: LogLevel.DEBUG,
-    });
+    // Analyser le contenu
+    const analysis = await analyzeCollectionContent(content);
 
-    // Initialize LLM client
-    const llmClient = new LLMClient({
-      provider: "anthropic",
-      apiKey: env.ANTHROPIC_API_KEY,
-    });
-
-    console.log(chalk.cyan("\n🤖 Starting Knowledge Base Analysis..."));
-
-    // Debug: Afficher les collections disponibles
-    console.log(chalk.yellow("\n📚 Available Collections:"));
-    if (collections?.collections?.length > 0) {
-      for (const collection of collections.collections) {
-        console.log(chalk.blue(`\n Collection: ${collection.name}`));
-        console.log(` ID: ${collection.id}`);
-        
-        // Peek dans la collection
-        const peekUrl = `${chromaUrl}/api/v2/tenants/default_tenant/databases/default_database/collections/${collection.id}/get`;
-        const peekResponse = await fetch(peekUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ limit: 5, include: ["metadatas", "documents"] })
-        });
-        const peekResults = await peekResponse.json();
-        
-        console.log(chalk.green(` Documents: ${peekResults.ids?.length || 0}`));
-        if (peekResults.ids?.length > 0) {
-          console.log(chalk.cyan("\n Sample Documents:"));
-          for (let i = 0; i < Math.min(2, peekResults.ids.length); i++) {
-            console.log(chalk.yellow(`\n Document ${i + 1}:`));
-            console.log(` ID: ${peekResults.ids[i]}`);
-            console.log(` Metadata:`, peekResults.metadatas[i]);
-            console.log(` Content (preview):`, 
-              peekResults.documents[i]?.substring(0, 100) + '...');
-          }
-        }
-      }
-    }
-
-    // Fetch initial documents
-    console.log(chalk.cyan("\n📥 Fetching documents from collection..."));
-    const collection = await vectorDb.getCollection();
-    const results = await collection.peek({ limit: 20 });
-    
-    console.log(chalk.blue(`\n📚 Found ${results.ids.length} documents in the knowledge base`));
-
-    // Debug: Afficher les métadonnées brutes
-    console.log(chalk.yellow("\n🔍 Raw Metadata Sample:"));
-    for (let i = 0; i < Math.min(3, results.ids.length); i++) {
-      console.log(chalk.blue(`\nDocument ${i + 1}:`));
-      console.log(`ID: ${results.ids[i]}`);
-      console.log(`Metadata:`, results.metadatas[i]);
-      console.log(`Content Preview: ${results.documents[i]?.substring(0, 100)}...`);
-    }
-
-    // Initialize summary structure
-    const summary: KnowledgeSummary = {
-      categories: {},
-      topTags: [],
-      recentActivity: [],
-    };
-
-    // Process documents
-    const tagCount: { [key: string]: number } = {};
-    console.log(chalk.cyan("\n📊 Processing documents..."));
-
-    for (let i = 0; i < results.ids.length; i++) {
-      try {
-        const metadata = results.metadatas[i];
-        if (!metadata) {
-          console.log(chalk.yellow(`Skipping document ${i}: No metadata`));
-          continue;
-        }
-
-        // Debug: Log document processing
-        console.log(chalk.blue(`\nProcessing document ${i + 1}/${results.ids.length}:`));
-        console.log(`ID: ${results.ids[i]}`);
-        console.log(`Raw Metadata:`, metadata);
-
-        const document = {
-          id: results.ids[i],
-          title: metadata.title as string || "Untitled",
-          category: metadata.category as string || "Uncategorized",
-          content: results.documents[i] || "",
-          tags: ((metadata.tags as string) || "").split(",").filter(Boolean),
-          lastUpdated: new Date(metadata.lastUpdated as string || Date.now()),
-          source: metadata.source as string,
-          relatedIds: ((metadata.relatedIds as string) || "").split(",").filter(Boolean)
-        };
-
-        console.log(chalk.green("Processed Document:"), {
-          title: document.title,
-          category: document.category,
-          tags: document.tags,
-          lastUpdated: document.lastUpdated
-        });
-
-        // Process categories
-        if (!summary.categories[document.category]) {
-          summary.categories[document.category] = {
-            documentCount: 0,
-            keyTopics: [],
-            recentUpdates: [],
-          };
-        }
-
-        summary.categories[document.category].documentCount++;
-        summary.categories[document.category].recentUpdates.push(document.title);
-
-        // Process tags
-        document.tags.forEach(tag => {
-          if (tag.trim()) {
-            tagCount[tag.trim()] = (tagCount[tag.trim()] || 0) + 1;
-          }
-        });
-
-        // Add to recent activity
-        summary.recentActivity.push({
-          title: document.title,
-          category: document.category,
-          timestamp: document.lastUpdated,
-        });
-      } catch (error) {
-        console.warn(chalk.yellow(`Warning: Could not process document: ${error}`));
-        continue;
-      }
-    }
-
-    // Sort and limit recent activity
-    summary.recentActivity.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-    summary.recentActivity = summary.recentActivity.slice(0, 10);
-
-    // Process top tags
-    summary.topTags = Object.entries(tagCount)
-      .map(([tag, count]) => ({ tag, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-
-    // Debug: Log processed summary
-    console.log(chalk.yellow("\n📊 Processed Summary:"));
-    console.log(JSON.stringify(summary, null, 2));
-
-    // Get recent episodes
-    console.log(chalk.cyan("\n📜 Fetching recent episodes..."));
-    const recentEpisodes = await vectorDb.getRecentEpisodes(5);
-    console.log(chalk.green("Recent Episodes:"), recentEpisodes);
-
-    // Get similar documents for each top tag
-    console.log(chalk.cyan("\n🔍 Finding similar documents..."));
-    const similarDocuments = [];
-    for (const { tag } of summary.topTags.slice(0, 3)) {
-      try {
-        console.log(chalk.blue(`Searching for documents with tag: ${tag}`));
-        const docs = await vectorDb.findSimilarDocuments(tag, 3);
-        console.log(chalk.green(`Found ${docs.length} documents for tag ${tag}`));
-        similarDocuments.push(...docs);
-      } catch (error) {
-        console.warn(chalk.yellow(`Warning: Could not fetch documents for tag ${tag}: ${error}`));
-      }
-    }
-
-    // Generate insights using LLM
-    const insightPrompt = `
-      Analyze this knowledge base summary and provide key insights:
-      
-      Knowledge Base Summary:
-      ${JSON.stringify(summary, null, 2)}
-      
-      Recent Episodes:
-      ${JSON.stringify(recentEpisodes, null, 2)}
-      
-      Related Documents:
-      ${JSON.stringify(similarDocuments, null, 2)}
-      
-      Please focus on:
-      1. Patterns in the knowledge distribution
-      2. Most active categories
-      3. Emerging topics based on tags
-      4. Recent activity trends
-      5. Connections between episodes and documents
-      
-      Format your response in markdown with clear sections.
-    `;
-
-    console.log(chalk.cyan("\n🤖 Generating AI insights..."));
-    const insights = await llmClient.complete(insightPrompt);
-
-    // Print final summary
-    console.log(chalk.green("\n📊 Final Knowledge Base Summary:"));
-    
-    // Categories
-    console.log(chalk.yellow("\n📁 Categories:"));
-    Object.entries(summary.categories).forEach(([category, data]) => {
-      console.log(chalk.blue(`\n${category}:`));
-      console.log(`   Documents: ${data.documentCount}`);
-      console.log(`   Recent Updates: ${data.recentUpdates.slice(0, 3).join(", ")}`);
-    });
-
-    // Top Tags
-    console.log(chalk.yellow("\n🏷️  Top Tags:"));
-    summary.topTags.forEach(({ tag, count }) => {
-      console.log(`   ${tag}: ${count} occurrences`);
-    });
-
-    // Recent Activity
-    console.log(chalk.yellow("\n⚡ Recent Activity:"));
-    summary.recentActivity.forEach(({ title, category, timestamp }) => {
-      console.log(`   ${timestamp.toLocaleDateString()} - ${title} (${category})`);
-    });
-
-    // Recent Episodes
-    console.log(chalk.yellow("\n🔄 Recent Episodes:"));
-    recentEpisodes.forEach(episode => {
-      console.log(`\n   Action: ${episode.action}`);
-      console.log(`   Outcome: ${episode.outcome}`);
-      console.log(`   Date: ${episode.timestamp.toLocaleDateString()}`);
-      if (episode.emotions?.length) {
-        console.log(`   Emotions: ${episode.emotions.join(", ")}`);
-      }
-    });
-
-    // AI Insights
-    console.log(chalk.yellow("\n🤖 AI Insights:"));
-    console.log(insights);
-
-    // Export summary to file
+    // Export des résultats
     const fs = require('fs');
-    const exportPath = './knowledge_summary.json';
+    const exportPath = './collection_analysis.json';
     fs.writeFileSync(
       exportPath,
       JSON.stringify({
-        summary,
-        recentEpisodes,
-        similarDocuments,
-        insights,
-        debug: {
-          collections,
-          rawResults: results,
-        }
+        collection,
+        analysis,
+        rawContent: content
       }, null, 2)
     );
-    console.log(chalk.green(`\n✅ Summary exported to ${exportPath}`));
+    console.log(chalk.green(`\n✅ Analysis exported to ${exportPath}`));
 
   } catch (error) {
-    console.error(chalk.red("\n❌ Error analyzing knowledge base:"), error);
+    console.error(chalk.red("\n❌ Error:"), error);
     process.exit(1);
   }
 }
 
 // Handle shutdown
 process.on("SIGINT", () => {
-  console.log(chalk.yellow("\nShutting down knowledge base analyzer..."));
+  console.log(chalk.yellow("\nShutting down analysis..."));
   process.exit(0);
 });
 
 main().catch((error) => {
   console.error(chalk.red("Fatal error:"), error);
-  process.exit(1);
+  process.exit(1); 
 }); 
