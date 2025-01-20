@@ -31,15 +31,52 @@ interface KnowledgeSummary {
   }[];
 }
 
+async function exploreChromaDB(baseUrl: string) {
+  console.log(chalk.cyan("\n🔍 Starting ChromaDB Exploration..."));
+
+  try {
+    // 1. Liste des tenants
+    console.log(chalk.blue("\n📊 Fetching tenants..."));
+    const tenantsResponse = await fetch(`${baseUrl}/api/v2/tenants`);
+    const tenants = await tenantsResponse.json();
+    console.log(chalk.green("✓ Tenants:"), JSON.stringify(tenants, null, 2));
+
+    // 2. Liste des databases
+    const tenant = "default_tenant";
+    console.log(chalk.blue(`\n📚 Fetching databases for tenant: ${tenant}`));
+    const databasesResponse = await fetch(`${baseUrl}/api/v2/tenants/${tenant}/databases`);
+    const databases = await databasesResponse.json();
+    console.log(chalk.green("✓ Databases:"), JSON.stringify(databases, null, 2));
+
+    // 3. Liste des collections
+    const database = "default_database";
+    console.log(chalk.blue(`\n📁 Fetching collections...`));
+    const collectionsResponse = await fetch(`${baseUrl}/api/v2/tenants/${tenant}/databases/${database}/collections`);
+    const collections = await collectionsResponse.json();
+    console.log(chalk.green("✓ Collections:"), JSON.stringify(collections, null, 2));
+
+    return collections;
+  } catch (error) {
+    console.error(chalk.red("\n❌ Error exploring ChromaDB:"), error);
+    throw error;
+  }
+}
+
 async function main() {
   try {
+    const chromaUrl = "http://localhost:8000";
+
+    // Debug: Explorer ChromaDB avant de commencer
+    console.log(chalk.cyan("\n🔍 Starting ChromaDB Debug..."));
+    const collections = await exploreChromaDB(chromaUrl);
+    
     // Initialize Vector DB
     const vectorDb = new ChromaVectorDB("knowledge_base", {
-      chromaUrl: "http://localhost:8000",
+      chromaUrl,
       logLevel: LogLevel.DEBUG,
     });
 
-    // Initialize LLM client for potential analysis
+    // Initialize LLM client
     const llmClient = new LLMClient({
       provider: "anthropic",
       apiKey: env.ANTHROPIC_API_KEY,
@@ -47,11 +84,51 @@ async function main() {
 
     console.log(chalk.cyan("\n🤖 Starting Knowledge Base Analysis..."));
 
+    // Debug: Afficher les collections disponibles
+    console.log(chalk.yellow("\n📚 Available Collections:"));
+    if (collections?.collections?.length > 0) {
+      for (const collection of collections.collections) {
+        console.log(chalk.blue(`\n Collection: ${collection.name}`));
+        console.log(` ID: ${collection.id}`);
+        
+        // Peek dans la collection
+        const peekUrl = `${chromaUrl}/api/v2/tenants/default_tenant/databases/default_database/collections/${collection.id}/get`;
+        const peekResponse = await fetch(peekUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ limit: 5, include: ["metadatas", "documents"] })
+        });
+        const peekResults = await peekResponse.json();
+        
+        console.log(chalk.green(` Documents: ${peekResults.ids?.length || 0}`));
+        if (peekResults.ids?.length > 0) {
+          console.log(chalk.cyan("\n Sample Documents:"));
+          for (let i = 0; i < Math.min(2, peekResults.ids.length); i++) {
+            console.log(chalk.yellow(`\n Document ${i + 1}:`));
+            console.log(` ID: ${peekResults.ids[i]}`);
+            console.log(` Metadata:`, peekResults.metadatas[i]);
+            console.log(` Content (preview):`, 
+              peekResults.documents[i]?.substring(0, 100) + '...');
+          }
+        }
+      }
+    }
+
     // Fetch initial documents
+    console.log(chalk.cyan("\n📥 Fetching documents from collection..."));
     const collection = await vectorDb.getCollection();
     const results = await collection.peek({ limit: 20 });
     
     console.log(chalk.blue(`\n📚 Found ${results.ids.length} documents in the knowledge base`));
+
+    // Debug: Afficher les métadonnées brutes
+    console.log(chalk.yellow("\n🔍 Raw Metadata Sample:"));
+    for (let i = 0; i < Math.min(3, results.ids.length); i++) {
+      console.log(chalk.blue(`\nDocument ${i + 1}:`));
+      console.log(`ID: ${results.ids[i]}`);
+      console.log(`Metadata:`, results.metadatas[i]);
+      console.log(`Content Preview: ${results.documents[i]?.substring(0, 100)}...`);
+    }
 
     // Initialize summary structure
     const summary: KnowledgeSummary = {
@@ -62,11 +139,20 @@ async function main() {
 
     // Process documents
     const tagCount: { [key: string]: number } = {};
+    console.log(chalk.cyan("\n📊 Processing documents..."));
 
     for (let i = 0; i < results.ids.length; i++) {
       try {
         const metadata = results.metadatas[i];
-        if (!metadata) continue;
+        if (!metadata) {
+          console.log(chalk.yellow(`Skipping document ${i}: No metadata`));
+          continue;
+        }
+
+        // Debug: Log document processing
+        console.log(chalk.blue(`\nProcessing document ${i + 1}/${results.ids.length}:`));
+        console.log(`ID: ${results.ids[i]}`);
+        console.log(`Raw Metadata:`, metadata);
 
         const document = {
           id: results.ids[i],
@@ -78,6 +164,13 @@ async function main() {
           source: metadata.source as string,
           relatedIds: ((metadata.relatedIds as string) || "").split(",").filter(Boolean)
         };
+
+        console.log(chalk.green("Processed Document:"), {
+          title: document.title,
+          category: document.category,
+          tags: document.tags,
+          lastUpdated: document.lastUpdated
+        });
 
         // Process categories
         if (!summary.categories[document.category]) {
@@ -120,14 +213,23 @@ async function main() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
+    // Debug: Log processed summary
+    console.log(chalk.yellow("\n📊 Processed Summary:"));
+    console.log(JSON.stringify(summary, null, 2));
+
     // Get recent episodes
+    console.log(chalk.cyan("\n📜 Fetching recent episodes..."));
     const recentEpisodes = await vectorDb.getRecentEpisodes(5);
+    console.log(chalk.green("Recent Episodes:"), recentEpisodes);
 
     // Get similar documents for each top tag
+    console.log(chalk.cyan("\n🔍 Finding similar documents..."));
     const similarDocuments = [];
     for (const { tag } of summary.topTags.slice(0, 3)) {
       try {
+        console.log(chalk.blue(`Searching for documents with tag: ${tag}`));
         const docs = await vectorDb.findSimilarDocuments(tag, 3);
+        console.log(chalk.green(`Found ${docs.length} documents for tag ${tag}`));
         similarDocuments.push(...docs);
       } catch (error) {
         console.warn(chalk.yellow(`Warning: Could not fetch documents for tag ${tag}: ${error}`));
@@ -157,10 +259,11 @@ async function main() {
       Format your response in markdown with clear sections.
     `;
 
+    console.log(chalk.cyan("\n🤖 Generating AI insights..."));
     const insights = await llmClient.complete(insightPrompt);
 
-    // Print summary
-    console.log(chalk.green("\n📊 Knowledge Base Summary:"));
+    // Print final summary
+    console.log(chalk.green("\n📊 Final Knowledge Base Summary:"));
     
     // Categories
     console.log(chalk.yellow("\n📁 Categories:"));
@@ -206,7 +309,11 @@ async function main() {
         summary,
         recentEpisodes,
         similarDocuments,
-        insights
+        insights,
+        debug: {
+          collections,
+          rawResults: results,
+        }
       }, null, 2)
     );
     console.log(chalk.green(`\n✅ Summary exported to ${exportPath}`));
