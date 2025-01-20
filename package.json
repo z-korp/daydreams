@@ -7,7 +7,8 @@
     "task": "bun run examples/example-basic.ts",
     "twitter": "bun run examples/example-twitter.ts",
     "zidle": "bun run examples/example-zidle.ts",
-    "analyze-twitter": "bun run examples/example-twitter-analyzer.ts"
+    "analyze-twitter": "bun run examples/example-twitter-analyzer.ts",
+    "analyze-knowledge": "bun run examples/example-knowledge-summary.ts"
   },
   "dependencies": {
     "@types/node": "^22.10.5",
