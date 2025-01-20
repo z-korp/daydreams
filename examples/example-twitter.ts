@@ -10,12 +10,13 @@ import chalk from "chalk";
 import { defaultCharacter } from "../packages/core/src/core/character";
 import { JSONSchemaType } from "ajv";
 import { Consciousness } from "../packages/core/src/core/consciousness";
+import { ChainOfThought } from "../packages/core/src/core/chain-of-thought";
 
 async function main() {
   // Initialize core dependencies
   const vectorDb = new ChromaVectorDB("twitter_agent", {
     chromaUrl: "http://localhost:8000",
-    logLevel: LogLevel.DEBUG,
+    logLevel: LogLevel.ERROR,
   });
 
   const roomManager = new RoomManager(vectorDb);
@@ -59,14 +60,82 @@ async function main() {
     logLevel: LogLevel.ERROR,
   });
 
-  // Register Twitter inputs
+  // Initialize ChainOfThought for goal management
+  const dreams = new ChainOfThought(llmClient, {
+    worldState: {
+      role: "Twitter Bot",
+      capabilities: [
+        "Monitor Twitter mentions",
+        "Generate thoughtful replies",
+        "Post original thoughts",
+      ],
+    },
+  });
+
+  // Register actions for Twitter interactions
+  dreams.registerAction(
+    "POST_TWEET",
+    async (payload: { content: string }) => {
+      return twitter.createTweetOutput().handler({ content: payload.content });
+    },
+    {
+      description: "Post a new tweet",
+      example: JSON.stringify({ content: "Hello, world!" }),
+    }
+  );
+
+  dreams.registerAction(
+    "REPLY_TO_TWEET",
+    async (payload: { content: string; inReplyTo: string }) => {
+      return twitter.createTweetOutput().handler(payload);
+    },
+    {
+      description: "Reply to a specific tweet",
+      example: JSON.stringify({ 
+        content: "Thanks for reaching out!",
+        inReplyTo: "123456789"
+      }),
+    }
+  );
+
+  // Add goal-related event handlers
+  dreams.on("goal:created", ({ id, description }) => {
+    console.log(chalk.cyan("\n🎯 New goal created:"), { id, description });
+  });
+
+  dreams.on("goal:updated", ({ id, status }) => {
+    console.log(chalk.yellow("\n📝 Goal status updated:"), { id, status });
+  });
+
+  dreams.on("goal:completed", ({ id, result }) => {
+    console.log(chalk.green("\n✨ Goal completed:"), { id, result });
+  });
+
+  dreams.on("goal:failed", ({ id, error }) => {
+    console.log(chalk.red("\n💥 Goal failed:"), {
+      id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  });
+
+  // Modify Twitter mentions handler to use goals
   core.registerInput({
     name: "twitter_mentions",
     handler: async () => {
       console.log(chalk.blue("🔍 Checking Twitter mentions..."));
       const mentions = await twitter.createMentionsInput(60000).handler();
+      
+      // Create a goal for each mention
+      mentions.forEach(mention => {
+        dreams.goalManager.addGoal({
+          description: `Reply to tweet: ${mention.id}`,
+          horizon: "short",
+          priority: 2,
+          dependencies: [],
+          metadata: { tweetId: mention.id, content: mention.content }
+        });
+      });
 
-      // The processor will analyze these mentions and may suggest replies
       return mentions;
     },
     response: {
@@ -77,12 +146,21 @@ async function main() {
     interval: 60000,
   });
 
-  // Register consciousness input
+  // Modify consciousness input to use goals
   core.registerInput({
     name: "consciousness_thoughts",
     handler: async () => {
       console.log(chalk.blue("🧠 Generating thoughts..."));
       const thought = await consciousness.start();
+      
+      dreams.goalManager.addGoal({
+        description: "Share original thought",
+        horizon: "medium",
+        priority: 1,
+        dependencies: [],
+        metadata: { content: thought.content }
+      });
+
       return thought;
     },
     response: {
@@ -93,50 +171,17 @@ async function main() {
     interval: 300000, // Check for new thoughts every 5 minutes
   });
 
-  // Register Twitter output for thoughts
-  core.registerOutput({
-    name: "twitter_thought",
-    handler: async (data: unknown) => {
-      const thoughtData = data as { content: string };
-      return twitter.createTweetOutput().handler({
-        content: thoughtData.content,
-      });
-    },
-    response: {
-      success: "boolean",
-      tweetId: "string",
-    },
-    schema: {
-      type: "object" as const,
-      properties: {
-        content: { type: "string" as const, nullable: false },
-      },
-      required: ["content"],
-      additionalProperties: false,
-    } as any,
-  });
-
-  // Register Twitter output for auto-replies
-  core.registerOutput({
-    name: "twitter_reply",
-    handler: async (data: unknown) => {
-      const tweetData = data as { content: string; inReplyTo: string };
-      return twitter.createTweetOutput().handler(tweetData);
-    },
-    response: {
-      success: "boolean",
-      tweetId: "string",
-    },
-    schema: {
-      type: "object" as const,
-      properties: {
-        content: { type: "string" as const, nullable: false },
-        inReplyTo: { type: "string" as const, nullable: false },
-      },
-      required: ["content", "inReplyTo"],
-      additionalProperties: false,
-    } as any,
-  });
+  // Execute goals periodically
+  setInterval(async () => {
+    const readyGoals = dreams.goalManager.getReadyGoals();
+    if (readyGoals.length > 0) {
+      try {
+        await dreams.executeNextGoal();
+      } catch (error) {
+        console.error(chalk.red("Error executing goal:"), error);
+      }
+    }
+  }, 30000); // Check every 30 seconds
 
   // Keep the process running
   console.log(chalk.cyan("🤖 Bot is now running and monitoring Twitter..."));
