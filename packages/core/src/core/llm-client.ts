@@ -128,7 +128,7 @@ export class LLMClient {
     const controller = new AbortController();
     const timeoutId = globalThis.setTimeout(
       () => controller.abort(),
-      this.config.timeout,
+      this.config.timeout
     );
 
     try {
@@ -151,7 +151,7 @@ export class LLMClient {
         temperature: this.config.temperature,
         messages: [{ role: "user", content: prompt }],
       },
-      { signal },
+      { signal }
     );
 
     return {
@@ -160,8 +160,8 @@ export class LLMClient {
       usage: {
         prompt_tokens: response.usage.input_tokens,
         completion_tokens: response.usage.output_tokens,
-        total_tokens: response.usage.input_tokens +
-          response.usage.output_tokens,
+        total_tokens:
+          response.usage.input_tokens + response.usage.output_tokens,
       },
       metadata: {
         stop_reason: response.stop_reason,

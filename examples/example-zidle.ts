@@ -2,9 +2,12 @@ import { env } from '../packages/core/src/core/env';
 import { LLMClient } from '../packages/core/src/core/llm-client';
 import { ChainOfThought } from '../packages/core/src/core/chain-of-thought';
 import { ZIDLE_CONTEXT } from './zidle-context-easy';
-import * as readline from 'readline';
+import { starknetTransactionAction } from '../packages/core/src/core/actions/starknet-transaction';
+import { starknetReadAction } from '../packages/core/src/core/actions/starknet-read';
 import chalk from 'chalk';
 import { JSONSchemaType } from 'ajv';
+import { starknetTransactionSchema } from '../packages/core/src/core/validation';
+import { config } from 'process';
 
 interface FarmResourcePayload {
   resourceType: 1 | 2;
@@ -34,13 +37,6 @@ const graphqlFetchSchema: JSONSchemaType<GraphQLPayload> = {
   additionalProperties: false,
 };
 
-// Définir un schéma pour l'action CONNECT_WALLET
-const connectWalletSchema: JSONSchemaType<any> = {
-  type: 'object',
-  properties: {},
-  additionalProperties: false,
-};
-
 // Ajout des interfaces pour les NFTs
 interface CharacterNFT {
   tokenId: number;
@@ -57,48 +53,6 @@ interface MintNFTPayload {
   name: string;
 }
 
-// Ajout des schémas
-const mintNFTSchema: JSONSchemaType<MintNFTPayload> = {
-  type: 'object',
-  properties: {
-    address: { type: 'string' },
-    name: { type: 'string' },
-  },
-  required: ['address', 'name'],
-  additionalProperties: false,
-};
-
-const walletSchema: JSONSchemaType<WalletPayload> = {
-  type: 'object',
-  properties: {
-    address: { type: 'string' },
-  },
-  required: ['address'],
-  additionalProperties: false,
-};
-
-const graphqlAction = async (payload: any) => {
-  const result = {
-    resources: [
-      {
-        type: 1,
-        amount: Math.floor(Math.random() * 2000),
-        farmingRate: 1,
-        xpLevel: Math.floor(Math.random() * 5) + 1,
-        xpProgress: Math.floor(Math.random() * 100),
-      },
-      {
-        type: 2,
-        amount: Math.floor(Math.random() * 2000),
-        farmingRate: 1,
-        xpLevel: Math.floor(Math.random() * 5) + 1,
-        xpProgress: Math.floor(Math.random() * 100),
-      },
-    ],
-  };
-  return JSON.stringify(result);
-};
-
 async function main() {
   // Initialize LLM client
   const llmClient = new LLMClient({
@@ -107,68 +61,41 @@ async function main() {
   });
 
   // Initialize ChainOfThought with zIdle context
-  const dreams = new ChainOfThought(llmClient, {
-    worldState: ZIDLE_CONTEXT,
-  });
-
-  // Register available actions
-  dreams.registerAction(
-    'FARM_RESOURCE',
-    farmResourceAction,
+  const dreams = new ChainOfThought(
+    llmClient,
     {
-      description: 'Farm a specific resource for a duration',
-      example: JSON.stringify({
-        resourceType: 1,
-        duration: 60,
-      }),
+      worldState: ZIDLE_CONTEXT,
     },
-    farmResourceSchema
-  );
-
-  dreams.registerAction(
-    'GRAPHQL_FETCH',
-    graphqlAction,
-    {
-      description: 'Fetch current game state data',
-      example: JSON.stringify({
-        query:
-          'query GetPlayerResources { resources { type amount farmingRate xpLevel xpProgress } }',
-      }),
-    },
-    graphqlFetchSchema
-  );
-
-  dreams.registerAction(
-    'CONNECT_WALLET',
-    connectWalletAction,
-    {
-      description: 'Connect wallet to start playing',
-      example: JSON.stringify({}),
-    },
-    connectWalletSchema
+    { chromaUrl: 'http://localhost:8000' }
   );
 
   dreams.registerAction(
     'CHECK_NFT',
-    checkNFTAction,
+    starknetReadAction,
     {
       description: 'Check if wallet has a character NFT',
-      example: JSON.stringify({ address: '0x123...' }),
+      example: JSON.stringify({
+        contractAddress: env.NFT_CONTRACT,
+        entrypoint: 'token_of_owner_by_index',
+        calldata: [env.STARKNET_ADDRESS, 0, 0],
+      }),
     },
-    walletSchema
+    starknetTransactionSchema as JSONSchemaType<any>
   );
 
   dreams.registerAction(
     'MINT_NFT',
-    mintNFTAction,
+    starknetTransactionAction,
     {
       description: 'Mint a new character NFT',
       example: JSON.stringify({
-        address: '0x123...',
-        name: 'Farmer#1',
+        contractAddress:
+          '0xaf35f90afa36a49d2bc63e783d0f086e03cd14fe5328fc47bab5e39c60c16b',
+        entrypoint: 'create',
+        calldata: ['Farmer#123'],
       }),
     },
-    mintNFTSchema
+    starknetTransactionSchema as JSONSchemaType<any>
   );
 
   // Add event handlers for monitoring
