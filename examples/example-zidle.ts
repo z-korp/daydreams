@@ -78,7 +78,7 @@ async function main() {
       example: JSON.stringify({
         contractAddress: env.NFT_CONTRACT,
         entrypoint: "token_of_owner_by_index",
-        calldata: [env.STARKNET_ADDRESS, 0, 0],
+        calldata: [env.STARKNET_ADDRESS, 1, 0],
       }),
     },
     starknetTransactionSchema as JSONSchemaType<any>
