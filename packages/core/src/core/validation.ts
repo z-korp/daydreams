@@ -17,7 +17,8 @@ export const queryValidator = (
         "EXECUTE_TRANSACTION",
         "MINT_NFT",
         "CHECK_NFT",
-        "FARM_RESOURCE",
+        "MINE_RCS",
+        "HARVEST_RCS",
       ].includes(action.type)
     )
       return false;
