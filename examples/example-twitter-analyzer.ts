@@ -12,33 +12,33 @@ import { defaultCharacter } from "../packages/core/src/core/character";
 import { Core } from "../packages/core/src/core/core";
 
 // Define interfaces for our analysis
-//interface TweetAnalysis {
-//  sentiment: "positive" | "negative" | "neutral";
-//  topics: string[];
-//  engagement: number;
-//}
+interface TweetAnalysis {
+  sentiment: "positive" | "negative" | "neutral";
+  topics: string[];
+  engagement: number;
+}
 
-//interface TwitterAccountAnalysis {
-//  handle: string;
-//  tweetCount: number;
-//  followerCount: number;
-//  analyses: TweetAnalysis[];
-//  topTopics: string[];
-//  overallSentiment: string;
-//  engagementRate: number;
-//}
+interface TwitterAccountAnalysis {
+  handle: string;
+  tweetCount: number;
+  followerCount: number;
+  analyses: TweetAnalysis[];
+  topTopics: string[];
+  overallSentiment: string;
+  engagementRate: number;
+}
 
 // Schema for tweet analysis
-//const tweetAnalysisSchema: JSONSchemaType<TweetAnalysis> = {
-//  type: "object",
-//  properties: {
-//    sentiment: { type: "string", enum: ["positive", "negative", "neutral"] },
-  //  topics: { type: "array", items: { type: "string" } },
-//    engagement: { type: "number" },
-//  },
-//  required: ["sentiment", "topics", "engagement"],
-//  additionalProperties: false,
-//};
+const tweetAnalysisSchema: JSONSchemaType<TweetAnalysis> = {
+  type: "object",
+  properties: {
+    sentiment: { type: "string", enum: ["positive", "negative", "neutral"] },
+    topics: { type: "array", items: { type: "string" } },
+    engagement: { type: "number" },
+  },
+  required: ["sentiment", "topics", "engagement"],
+  additionalProperties: false,
+};
 
 // Define the world state interface
 interface TwitterWorldState {
@@ -99,47 +99,70 @@ const worldState: TwitterWorldState = {
 };
 
 // Définir les schémas pour les actions
-// interface TwitterAnalysisPayload {
-// username: string;
-//  tweetLimit: number;
-//}
+interface TwitterAnalysisPayload {
+  username: string;
+  tweetLimit: number;
+}
 
-//  const twitterAnalysisSchema: JSONSchemaType<TwitterAnalysisPayload> = {
-//   type: "object",
-//   properties: {
-//     username: { type: "string" },
-//     tweetLimit: { type: "number", minimum: 1, maximum: 200 }
-//   },
-//   required: ["username", "tweetLimit"],
-//   additionalProperties: false
-//};
+const twitterAnalysisSchema: JSONSchemaType<TwitterAnalysisPayload> = {
+ type: "object",
+ properties: {
+   username: { type: "string" },
+   tweetLimit: { type: "number", minimum: 1, maximum: 200 }
+ },
+ required: ["username", "tweetLimit"],
+ additionalProperties: false
+};
+
+interface TwitterAnalysis {
+  sentiment: "positive" | "negative" | "neutral";
+  topics: string[];
+  engagement: {
+    likes: number;
+    retweets: number;
+    replies: number;
+  };
+  mainThemes: string[];
+  style: {
+    tone: string;
+    formality: string;
+    language: string[];
+  };
+  patterns: {
+    postingFrequency?: string;
+    commonHashtags: string[];
+    mentionedUsers: string[];
+    mediaUsage: string;
+  };
+}
+
+async function analyzeTweets(llmClient: LLMClient, tweets: any[]) {
+  const prompt = `
+    Analyze these tweets and provide insights about:
+    1. Overall sentiment and tone
+    2. Main topics and themes
+    3. Writing style and language use
+    4. Engagement patterns
+    5. Content strategy observations
+    
+    Tweets to analyze:
+    ${JSON.stringify(tweets, null, 2)}
+    
+    Provide your analysis in a structured format.
+  `;
+
+  const analysis = await llmClient.complete(prompt);
+  return analysis;
+}
 
 async function main() {
   try {
-    // Initialize LLM client
+    // Initialize clients
     const llmClient = new LLMClient({
       provider: "anthropic",
       apiKey: env.ANTHROPIC_API_KEY,
     });
 
-    // Initialize ChainOfThought with Twitter context
-    const dreams = new ChainOfThought(
-      llmClient,
-      {
-        worldState: `{
-          "inputs": ${JSON.stringify(worldState.inputs)},
-          "outputs": ${JSON.stringify(worldState.outputs)},
-          "context": {
-            "lastTweetId": null,
-            "analyzedUsers": [],
-            "personalityProfiles": {}
-          }
-        }`,
-      },
-      { chromaUrl: "http://localhost:8000" }
-    );
-
-    // Initialize Twitter client
     const twitter = new TwitterClient(
       {
         username: env.TWITTER_USERNAME,
@@ -149,162 +172,61 @@ async function main() {
       LogLevel.DEBUG
     );
 
-    // Register Twitter analysis action
-     dreams.registerAction(
-      "ANALYZE_TWITTER",
-      async (action) => {
+    const vectorDb = new ChromaVectorDB("twitter_analysis", {
+      chromaUrl: "http://localhost:8000",
+      logLevel: LogLevel.DEBUG,
+    });
 
-        // Fetch timeline data
-        const timeline = await twitter.createTimelineInput(worldState.inputs.timeline.name, 10).handler();
-        
-        // Update last tweet ID if not set
-        if (!worldState.context.lastTweetId) {
-          worldState.context.lastTweetId = timeline[0]?.metadata?.tweetId;
-          return JSON.stringify(timeline);
-        }
+    console.log(chalk.cyan("🔍 Starting Twitter Analysis..."));
 
-        // Filter for new tweets only
-        const newTweets = timeline.filter(tweet => 
-          tweet.metadata?.tweetId && tweet.metadata.tweetId > worldState.context.lastTweetId!
-        );
+    // Fetch tweets
+    const tweets = await twitter.createTimelineInput().handler();
+    console.log(chalk.blue(`\nFetched ${tweets.length} tweets`));
 
-        return JSON.stringify(newTweets);
-      },
+    // Analyze tweets
+    console.log(chalk.yellow("\n📊 Analyzing tweets..."));
+    const analysis = await analyzeTweets(llmClient, tweets);
+
+    // Store analysis in VectorDB
+    await vectorDb.store(
+      JSON.stringify(analysis),
       {
-        description: "Analyze Twitter user's personality from their tweets",
-        example: JSON.stringify({
-          username: "example_user", 
-          tweetLimit: 100
-        })
+        type: "twitter_analysis",
+        timestamp: new Date().toISOString(),
+        tweetCount: tweets.length
       }
     );
 
-    // Add event handlers for monitoring
-    dreams.on("think:start", ({ query }) => {
-      console.log(chalk.blue("\n🤔 Analyzing Twitter activity:"), query);
-      console.log(chalk.gray("\nDebugging Chain of Thought:"));
-      console.log(chalk.gray("- Current context:"), dreams.context);
-      console.log(chalk.gray("- Recent steps:"), dreams.stepManager.getSteps().slice(-5));
-      console.log(chalk.gray("- Active goals:"), dreams.goalManager.getReadyGoals());
-      dreams.goalManager.addGoal({
-        description: query,
-        horizon: "short",
-        priority: 1,
-        status: "pending",
-        success_criteria: "Analyze Twitter user's personality from their tweets",
-        created_at: new Date(),
-        dependencies: []
-      });
-      console.log(chalk.gray("- Action registry:"), Array.from(dreams.actionRegistry.keys()));
-    });
+    // Print analysis
+    console.log(chalk.green("\n✨ Analysis Results:"));
+    console.log(analysis);
 
-    dreams.on("think:error", ({ query, error }) => {
-      console.log(chalk.red("\n❌ Analysis failed:"), {
-        type: "think",
-        query,
-        error,
-      });
-    });
-
-    dreams.on("action:start", (action) => {
-      console.log(chalk.yellow("\n🔍 Executing analysis:"), {
-        type: action.type,
-        payload: action.payload,
-      });
-    });
-
-    dreams.on("action:complete", ({ action, result }) => {
-      console.log(chalk.green("\n✅ Analysis completed:"), {
-        type: action.type,
-        result,
-      });
-    });
-
-    dreams.on("action:error", ({ action, error }) => {
-      console.log(chalk.red("\n❌ Analysis failed:"), {
-        type: action.type,
-        error,
-      });
-    });
-
-    // Add these goal-related event handlers after your existing event handlers
-    dreams.on("goal:created", ({ id, description }) => {
-      console.log(chalk.cyan("\n🎯 New goal created:"), { id, description });
-    });
-
-    dreams.on("goal:updated", ({ id, status }) => {
-      console.log(chalk.yellow("\n📝 Goal status updated:"), { id, status });
-    });
-
-    dreams.on("goal:completed", ({ id, result }) => {
-      console.log(chalk.green("\n✨ Goal completed:"), { id, result });
-    });
-
-    dreams.on("goal:failed", ({ id, error }) => {
-      console.log(chalk.red("\n💥 Goal failed:"), { 
-        id, 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    });
-
-    // Start the analysis
-    console.log(chalk.cyan('\n👤 Enter Twitter username to analyze:'));
-    const userInput = await getCliInput('> ');
-    
-    if (!userInput.trim()) {
-      throw new Error('No username provided');
-    }
-
-    console.log(chalk.cyan("\n🤖 Starting Twitter analyzer..."));
-
-    // Initial analysis with more specific prompt
-    const result = await dreams.think(
-      `Task: Analyze Twitter user ${userInput}'s activity.
-      Required steps:
-      1. Fetch recent tweets using ANALYZE_TWITTER action
-      2. Analyze communication patterns and personality traits
-      3. Generate a comprehensive profile
-      
-      Please follow the exact response format with plan and actions.`
+    // Export results
+    const fs = require('fs');
+    const exportPath = './twitter_analysis.json';
+    fs.writeFileSync(
+      exportPath,
+      JSON.stringify({
+        timestamp: new Date().toISOString(),
+        tweets: tweets,
+        analysis: analysis
+      }, null, 2)
     );
-
-    console.log(chalk.green("\n✨ Initial analysis completed!"));
-    console.log("Profile:", result);
-
-    // Continue monitoring for new tweets
-    //setInterval(async () => {
-    //  await dreams.think(
-     //   `Check for new tweets from ${userInput} and update their personality profile if needed.`
-      //);
-    //}, 5 * 60 * 1000); // Check every 5 minutes
+    console.log(chalk.green(`\n✅ Analysis exported to ${exportPath}`));
 
   } catch (error) {
-    console.error(chalk.red("Fatal error:"), error);
+    console.error(chalk.red("\n❌ Error:"), error);
     process.exit(1);
   }
 }
 
 // Handle shutdown
-process.on("SIGINT", async () => {
-  console.log(chalk.yellow("\nShutting down Twitter analyzer..."));
+process.on("SIGINT", () => {
+  console.log(chalk.yellow("\nShutting down analysis..."));
   process.exit(0);
 });
 
 main().catch((error) => {
   console.error(chalk.red("Fatal error:"), error);
   process.exit(1);
-}); 
-
-function getCliInput(prompt: string): Promise<string> {
-    const readline = require('readline').createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
-
-    return new Promise((resolve) => {
-        readline.question(prompt, (input: string) => {
-            readline.close();
-            resolve(input);
-        });
-    });
-}
+});

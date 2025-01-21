@@ -73,30 +73,30 @@ async function main() {
   });
 
   // Register actions for Twitter interactions
-  dreams.registerAction(
-    "POST_TWEET",
-    async (payload: { content: string }) => {
-      return twitter.createTweetOutput().handler({ content: payload.content });
-    },
-    {
-      description: "Post a new tweet",
-      example: JSON.stringify({ content: "Hello, world!" }),
-    }
-  );
+  //dreams.registerAction(
+  //  "POST_TWEET",
+  //  async (payload: { content: string }) => {
+  //    return twitter.createTweetOutput().handler({ content: payload.content });
+  //  },
+  //  {
+  //    description: "Post a new tweet",
+  //    example: JSON.stringify({ content: "Hello, world!" }),
+  //  }
+  //);
 
-  dreams.registerAction(
-    "REPLY_TO_TWEET",
-    async (payload: { content: string; inReplyTo: string }) => {
-      return twitter.createTweetOutput().handler(payload);
-    },
-    {
-      description: "Reply to a specific tweet",
-      example: JSON.stringify({ 
-        content: "Thanks for reaching out!",
-        inReplyTo: "123456789"
-      }),
-    }
-  );
+  //dreams.registerAction(
+  //  "REPLY_TO_TWEET",
+  //  async (payload: { content: string; inReplyTo: string }) => {
+  //    return twitter.createTweetOutput().handler(payload);
+  //  },
+  //  {
+  //    description: "Reply to a specific tweet",
+  //    example: JSON.stringify({ 
+  //        content: "Thanks for reaching out!",
+  //        inReplyTo: "123456789"
+  //      }),
+  //  }
+  //);
 
   // Add goal-related event handlers
   dreams.on("goal:created", ({ id, description }) => {

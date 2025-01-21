@@ -153,8 +153,6 @@ async function main() {
      dreams.registerAction(
       "ANALYZE_TWITTER",
       async (action) => {
-        // Log the action
-        chalk.purple(action);
 
         // Fetch timeline data
         const timeline = await twitter.createTimelineInput(worldState.inputs.timeline.name, 10).handler();

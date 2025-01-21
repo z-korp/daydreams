@@ -1,5 +1,10 @@
 ![Daydreams](./banner.png)
 
+- twitter analyzer ok mais en boucle
+- example twitter ?
+- example knowledge summary ok
+- analyzergoal check un tweet
+
 # Daydreams
 
 Daydreams is a generative agent library for playing anything onchain. It is chain agnostic and can be used to perform onchain tasks - including play any onchain game - by simply injecting context. Base, Solana, Ethereum, Starknet, etc
