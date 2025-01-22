@@ -1,10 +1,5 @@
 ![Daydreams](./banner.png)
 
-- twitter analyzer ok mais en boucle
-- example twitter ?
-- example knowledge summary ok
-- analyzergoal check un tweet
-
 # Daydreams
 
 Daydreams is a generative agent library for playing anything onchain. It is chain agnostic and can be used to perform onchain tasks - including play any onchain game - by simply injecting context. Base, Solana, Ethereum, Starknet, etc
@@ -229,3 +224,13 @@ The Daydreams protocol is intentionally open and modular, enabling easy customiz
 ### Swarm Collaboration
 
 - Other agents subscribe, retrieving the newly shared CoT embedding and integrating it into their memory store, thus spreading successful strategies network-wide.
+
+## Contributors
+
+<a href="https://github.com/daydreamsai/daydreams/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=daydreamsai/daydreams" alt="Daydreams contributors" />
+</a>
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=daydreamsai/daydreams&type=Date)](https://star-history.com/#daydreamsai/daydreams&Date)
