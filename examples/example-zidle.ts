@@ -27,7 +27,7 @@ const graphqlFetchSchema: JSONSchemaType<GraphQLPayload> = {
 async function main() {
   // Initialize LLM client
   const llmClient = new LLMClient({
-    model: "anthropic/claude-3.5-haiku-20241022:beta",
+    model: "anthropic/claude-3.5-haiku-20241022:beta", // "deepseek/deepseek-r1"
   });
 
   const memory = new ChromaVectorDB("agent_memory");
@@ -64,7 +64,7 @@ async function main() {
       description: "Fetch data from the Eternum GraphQL API",
       example: JSON.stringify({
         query:
-          "query GetRealmInfo { eternumRealmModels(where: { realm_id: 42 }) { edges { node { ... on eternum_Realm { entity_id level } } } }",
+          "query ZidleXPModels {zidleMinerModels(where: { token_id: $TOKEN_ID_LOW }) {totalCount edges { node { resource_type xp } } } }",
       }),
     },
     graphqlFetchSchema as JSONSchemaType<any>

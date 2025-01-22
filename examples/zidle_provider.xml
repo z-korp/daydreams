@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <provider_guide>
+  <processing_rules>
+    <rule>Each <action> maps to a meta_action (EXECUTE_READ, EXECUTE_TRANSACTION, or GRAPHQL_FETCH)</rule>
+    <rule>The daydream_action determines which system action to use</rule>
+    <rule>Parameters from the XML need to be transformed to match the Dreams action schema</rule>
+    <rule>Always follow the rules in <important_rules>, especially checking NFT first</rule>
+  </processing_rules>
+
   <important_rules>
     <rule>All actions require CHECK_NFT to be called first to get token_id_low</rule>
     <rule>Always verify transaction responses before proceeding</rule>
@@ -7,11 +14,11 @@
     <rule>Never use token_id_high, always use token_id_low</rule>
   </important_rules>
 
-  <available_functions>
-    <function name="check_nft">
+  <available_actions>
+    <action name="CHECK_NFT">
       <purpose>Check if wallet has NFT. Must be called first.</purpose>
       <implementation>
-        <meta_action>EXECUTE_READ</meta_action>
+        <daydream_action>EXECUTE_READ</daydream_action>
         <contract>$CHARACTER_NFT</contract>
         <entrypoint>token_of_owner_by_index</entrypoint>
         <params>
@@ -21,12 +28,12 @@
         </params>
       </implementation>
       <returns>u256 [token_id_low, token_id_high]</returns>
-    </function>
+    </action>
 
-    <function name="mine_rcs">
+    <action name="MINE_RCS">
       <purpose>Start mining a resource</purpose>
       <implementation>
-        <meta_action>EXECUTE_TRANSACTION</meta_action>
+        <daydream_action>EXECUTE_TRANSACTION</daydream_action>
         <contract>$RESOURCES_SYSTEM</contract>
         <entrypoint>mine</entrypoint>
         <params>
@@ -35,12 +42,12 @@
           <param position="2" value="$RESOURCE_SUBTYPE" description="sub resource tier" />
         </params>
       </implementation>
-    </function>
+    </action>
 
-    <function name="harvest_rcs">
+    <action name="HARVEST_RCS">
       <purpose>Harvest currently mined resource</purpose>
       <implementation>
-        <meta_action>EXECUTE_TRANSACTION</meta_action>
+        <daydream_action>EXECUTE_TRANSACTION</daydream_action>
         <contract>$RESOURCES_SYSTEM</contract>
         <entrypoint>harvest</entrypoint>
         <params>
@@ -48,14 +55,14 @@
           <param position="1" value="$RESOURCE_TYPE" description="same as mining type" />
         </params>
       </implementation>
-    </function>
-  </available_functions>
+    </action>
+  </available_actions>
 
   <available_queries>
-    <query name="check_mining">
+    <query name="CHECK_MINING">
       <purpose>Check if NFT is currently mining any resource</purpose>
       <implementation>
-        <meta_action>GRAPHQL_FETCH</meta_action>
+        <daydream_action>GRAPHQL_FETCH</daydream_action>
         <query>
           query ZidleMinerModels {
             zidleMinerModels(where: { token_id: $TOKEN_ID_LOW, timestampGT: "0" }) {
@@ -80,10 +87,10 @@
       </result_interpretation>
     </query>
 
-    <query name="check_xp">
+    <query name="CHECK_XP">
       <purpose>Get current XP levels for each resource type</purpose>
       <implementation>
-        <meta_action>GRAPHQL_FETCH</meta_action>
+        <daydream_action>GRAPHQL_FETCH</daydream_action>
         <query>
           query ZidleXPModels {
             zidleMinerModels(where: { token_id: $TOKEN_ID_LOW }) {
