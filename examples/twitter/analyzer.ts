@@ -1,194 +1,253 @@
-import { Core } from "../../packages/core/src/core/core";
-import { TwitterClient } from "../../packages/core/src/io/twitter";
+/**
+ * Example demonstrating a Twitter bot using the Daydreams package.
+ * This bot can:
+ * - Monitor Twitter mentions and auto-reply
+ * - Generate autonomous thoughts and tweet them
+ * - Maintain conversation memory using ChromaDB
+ * - Process inputs through a character-based personality
+ */
+
+
+import { RoomManager } from "../../packages/core/src/core/room-manager";
+import { ChromaVectorDB } from "../../packages/core/src/core/vector-db";
 import { LLMClient } from "../../packages/core/src/core/llm-client";
 import { env } from "../../packages/core/src/core/env";
 import { LogLevel } from "../../packages/core/src/types";
-import { ChainOfThought } from "../../packages/core/src/core/chain-of-thought";
-import { TWITTER_CONTEXT } from "./twitter-context";
 import chalk from "chalk";
 
+
+import { ChainOfThought } from "../../packages/core/src/core/chain-of-thought";
+import { TwitterClient } from "../../packages/core/src/io/twitter";
+import { TWITTER_CONTEXT } from "./twitter-context";
+
+
 async function main() {
+  const loglevel = LogLevel.ERROR;
+
   // Initialize LLM client
   const llmClient = new LLMClient({
-    provider: "anthropic",
-    apiKey: env.ANTHROPIC_API_KEY,
+    model: "deepseek/deepseek-r1",
+  });
+  const memory = new ChromaVectorDB("shared_memory");
+  const roomManager = new RoomManager(memory);
+
+
+  const dreams = new ChainOfThought(
+    llmClient,
+    memory,
+    {
+      worldState: TWITTER_CONTEXT,
+    }
+  );
+
+  // Add event handlers
+  dreams.on("think:start", ({ query }) => {
+    console.log(chalk.blue("\n🤔 Analyzing Twitter data:"), query);
   });
 
-  // Initialize Twitter client
+  dreams.on("think:complete", ({ result }) => {
+    console.log(chalk.green("\n✅ Analysis completed:"), result);
+  });
+
+  // Set up Twitter client
   const twitter = new TwitterClient(
     {
       username: env.TWITTER_USERNAME,
       password: env.TWITTER_PASSWORD,
       email: env.TWITTER_EMAIL,
     },
-    LogLevel.DEBUG
+    loglevel
   );
 
-  // Initialize ChainOfThought with Twitter context
-  const dreams = new ChainOfThought(llmClient, {
-    worldState: TWITTER_CONTEXT,
-  });
+  // Target account to analyze
+  const targetAccount = "zkorp_";
+  if (!targetAccount) {
+    throw new Error("TARGET_TWITTER_ACCOUNT environment variable is required");
+  }
 
-  // Register tweet fetching action
-  dreams.registerAction(
-    "FETCH_TWEETS",
-    async (payload: { username: string, count: number }) => {
-      console.log(chalk.blue("\n🔍 Fetching tweets from:"), payload.username);
-      const tweets = await twitter.getUserTweets(payload.username, payload.count);
-      return { tweets };
-    },
-    {
-      description: "Fetch recent tweets from specified user",
-      example: JSON.stringify({ username: "example_user", count: 10 }),
-    }
-  );
+  console.log(chalk.cyan(`🔍 Starting analysis of @${targetAccount}...`));
 
-  // Register single tweet analysis action
-  dreams.registerAction(
-    "ANALYZE_TWEET",
-    async (payload: { tweet: any }) => {
-      console.log(chalk.blue("\n📊 Analyzing tweet:"), payload.tweet.text);
-      return {
-        id: payload.tweet.id,
-        text: payload.tweet.text,
-        analysis: {
-          length: payload.tweet.text.length,
-          hashtags: extractHashtags(payload.tweet.text),
-          mentions: extractMentions(payload.tweet.text),
-          urls: extractUrls(payload.tweet.text),
-          hasEmojis: containsEmojis(payload.tweet.text)
+  async function isTwitterAnalyzed(tweetId: string): Promise<boolean> {
+    try {
+      const results = await memory.findSimilar(tweetId,1,{tweetId:tweetId});
+      // Log the document content for debugging
+      chalk.bgCyan("\n🔍 Checking each result:");
+      
+      return results.some((doc) => {
+        try {
+         
+          const storedData = JSON.parse(doc.content); 
+
+          return storedData.metadata.tweetId === tweetId;
+
+        } catch (e) {
+          chalk.red("\n❌ Error analyzing document:", e);
+          return false;
         }
-      };
-    },
-    {
-      description: "Analyze single tweet content",
-      example: JSON.stringify({ tweet: { id: "123", text: "Example tweet #test" } }),
+      });
+    } catch (error) {
+      console.error("Error checking tweet analysis:", error);
+      return false;
     }
-  );
+  }
 
-  // Register analysis action
-  dreams.registerAction(
-    "ANALYZE_TWEETS",
-    async (payload: { tweets: any[] }) => {
-      console.log(chalk.blue("\n📊 Analyzing tweets..."));
-      return {
-        styleAnalysis: {
-          avgLength: calculateAverageLength(payload.tweets),
-          commonEmojis: extractCommonEmojis(payload.tweets),
-          hashtagUsage: analyzeHashtags(payload.tweets),
-          tone: "analyzing...", // Will be determined by LLM
-        },
-        contentAnalysis: {
-          topics: "analyzing...", // Will be determined by LLM
-          patterns: "analyzing...", // Will be determined by LLM
-        },
-      };
-    },
-    {
-      description: "Analyze tweet patterns and style",
-      example: JSON.stringify({ tweets: ["Example tweet 1", "Example tweet 2"] }),
-    }
-  );
-
-  // Add event handlers for monitoring
-  dreams.on("think:start", ({ query }) => {
-    console.log(chalk.blue("\n🤔 Starting analysis:"), query);
-  });
-
-  dreams.on("action:start", (action) => {
-    console.log(chalk.yellow("\n🔍 Executing analysis:"), {
-      type: action.type,
-      payload: action.payload,
-    });
-  });
-
-  dreams.on("action:complete", ({ action, result }) => {
-    console.log(chalk.green("\n✅ Analysis completed:"), {
-      type: action.type,
-      result: JSON.stringify(result, null, 2),
-    });
-  });
-
-  dreams.on("action:error", ({ action, error }) => {
-    console.log(chalk.red("\n❌ Analysis failed:"), {
-      type: action.type,
-      error,
-    });
-  });
+  // Fonction pour sauvegarder l'analyse d'un tweet
+  async function saveAnalysis(tweet: any, analysis: any) {
+   chalk.bgCyan("\n💾 Saving analysis for tweet:", tweet.metadata.tweetId);
+    
+    const analysisDoc = {
+      id: tweet.metadata.tweetId,
+      content: JSON.stringify(analysis),
+      metadata: {
+        type: "tweet_analysis", 
+        timestamp: new Date().toISOString(),
+        tweetId: tweet.metadata.tweetId
+      }
+    };
+    
+    await memory.store(JSON.stringify(analysisDoc), { tweetId: tweet.metadata.tweetId });
+    
+    console.log("\n✅ Successfully saved analysis for tweet:", tweet.metadata.tweetId);
+  }
 
   try {
-    console.log(chalk.cyan("\n🤖 Starting Twitter Analyzer..."));
+    const timelineData = await twitter.createTimelineInput(targetAccount, 10);
+    const tweets = await timelineData.handler();
+    console.log(chalk.blue(`📥 Retrieved ${tweets.length} tweets`));
 
-    // Create fetch goal
-    dreams.goalManager.addGoal({
-      description: "Fetch recent tweets",
-      horizon: "short",
-      priority: 1,
-      dependencies: [],
-      status: "pending",
-      success_criteria: ["Fetch 10 recent tweets from target account"],
-      created_at: new Date().getTime(),
-      metadata: {
-        action: "FETCH_TWEETS",
-        params: {
-          username: env.TARGET_TWITTER_ACCOUNT,
-          count: 10
+    const unanalyzedTweets = await Promise.all(
+      tweets.map(async (tweet) => {
+        if (!tweet.metadata.tweetId) return null;
+        const isAnalyzed = await isTwitterAnalyzed(tweet.metadata.tweetId);  
+        return isAnalyzed ? null : tweet;
+      })
+    );
+
+    const tweetsToAnalyze = unanalyzedTweets.filter(t => t !== null);
+    console.log(chalk.blue(`📊 Processing ${tweetsToAnalyze.length} new tweets`));
+
+    // Analyze each unanalyzed tweet
+    for (const tweet of tweetsToAnalyze) {
+      console.log(chalk.yellow("\n-------------------"));
+    
+      console.log(chalk.blue("Tweet Details:"));
+      console.log(chalk.cyan("Content:"), tweet.content);
+    
+      // Basic analysis
+      const analysis = {
+        length: tweet.content.length,
+        hashtags: extractHashtags(tweet.content),
+        mentions: extractMentions(tweet.content),
+        urls: extractUrls(tweet.content),
+        hasEmojis: containsEmojis(tweet.content),
+        type: tweet.type,
+        timestamp: tweet.metadata.timestamp,
+        engagement: {
+          likes: tweet.metadata.metrics.likes,
+          retweets: tweet.metadata.metrics.retweets,
+          replies: tweet.metadata.metrics.replies,
+          quotes: tweet.metadata.metrics.retweets
         }
-      }
-    });
+      };
 
-    // Create analysis goals after fetch
-    dreams.on("goal:completed", async ({ result }) => {
-      if (result?.tweets) {
-        result.tweets.forEach((tweet: any) => {
-          dreams.goalManager.addGoal({
-            description: `Analyze tweet ${tweet.id}`,
-            horizon: "short",
-            priority: 2,
-            dependencies: [],
-            status: "pending",
-            success_criteria: ["Complete tweet analysis"],
-            created_at: new Date().getTime(),
-            metadata: {
-              action: "ANALYZE_TWEET",
-              params: { tweet }
-            }
-          });
-        });
-      }
-    });
+      // LLM Analysis avec plus de contexte
+      const llmAnalysis = await llmClient.analyze(
+        `
+        Analyze this tweet and provide insights about:
+        1. Tone (formal, casual, etc.)
+        2. Purpose (inform, engage, promote, etc.)
+        3. Key topics or themes
+        4. Writing style characteristics
+        5. Engagement analysis based on metrics
 
-    // Execute goals periodically
-    setInterval(async () => {
-      const readyGoals = dreams.goalManager.getReadyGoals();
-      if (readyGoals.length > 0) {
-        try {
-          await dreams.executeNextGoal();
-        } catch (error) {
-          console.error(chalk.red("Error executing goal:"), error);
+        Tweet: "${tweet.content}"
+        Metrics: 
+        - Likes: ${tweet.metadata.metrics.likes}
+        - Retweets: ${tweet.metadata.metrics.retweets}
+        - Replies: ${tweet.metadata.metrics.replies}
+        - Quotes: ${tweet.metadata.metrics.retweets}
+        Posted at: ${tweet.metadata.timestamp}
+        `,
+        {
+          system: "You are a tweet analyst. Provide concise, structured analysis of tweets.",
+          
+          
         }
-      }
-    }, 5000);
+      );
+
+      console.log(chalk.magenta("Deep Analysis:"), llmAnalysis);
+
+      // Save the analysis
+      await saveAnalysis(tweet, {
+        basicAnalysis: analysis,
+        llmAnalysis: llmAnalysis
+      });
+    }
+
+    // Global analysis
+    console.log(chalk.yellow("\n=== Global Analysis ==="));
+    const globalStats = {
+      totalTweets: tweets.length,
+      averageEngagement: calculateAverageEngagement(tweets),
+      mostUsedHashtags: getMostUsedHashtags(tweets),
+      postingPattern: analyzePostingPattern(tweets)
+    };
+    console.log(chalk.cyan("Global Stats:"), globalStats);
+
+    console.log(chalk.green("\n✅ Analysis complete!"));
 
   } catch (error) {
-    console.error(chalk.red("Fatal error:"), error);
+    console.error(chalk.red("Error during analysis:"), error);
     process.exit(1);
   }
 }
 
-// Utility functions for analysis
-function calculateAverageLength(tweets: any[]): number {
-  return tweets.reduce((acc, tweet) => acc + tweet.text.length, 0) / tweets.length;
+function calculateAverageEngagement(tweets: any[]): any {
+  const totals = tweets.reduce((acc, tweet) => ({
+    likes: acc.likes + tweet.metadata.metrics.likes,
+    retweets: acc.retweets + tweet.metadata.metrics.retweets,
+    replies: acc.replies + tweet.metadata.metrics.replies,
+    quotes: acc.quotes + tweet.metadata.metrics.quotes
+  }), { likes: 0, retweets: 0, replies: 0, quotes: 0 });
+
+  return {
+    avgLikes: totals.likes / tweets.length,
+    avgRetweets: totals.retweets / tweets.length,
+    avgReplies: totals.replies / tweets.length,
+    avgQuotes: totals.quotes / tweets.length
+  };
 }
 
-function extractCommonEmojis(tweets: any[]): string[] {
-  // Implement emoji extraction logic
-  return [];
+function getMostUsedHashtags(tweets: any[]): Record<string, number> {
+  const hashtags: Record<string, number> = {};
+  tweets.forEach(tweet => {
+    extractHashtags(tweet.content).forEach(tag => {
+      hashtags[tag] = (hashtags[tag] || 0) + 1;
+    });
+  });
+  return Object.fromEntries(
+    Object.entries(hashtags)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+  );
 }
 
-function analyzeHashtags(tweets: any[]): string[] {
-  // Implement hashtag analysis logic
-  return [];
+function analyzePostingPattern(tweets: any[]): any {
+  const timestamps = tweets
+    .map(tweet => new Date(tweet.metadata.timestamp))
+    .sort((a, b) => a.getTime() - b.getTime());
+
+  const intervals: number[] = [];
+  for (let i = 1; i < timestamps.length; i++) {
+    intervals.push(timestamps[i].getTime() - timestamps[i-1].getTime());
+  }
+
+  return {
+    averageInterval: intervals.reduce((a, b) => a + b, 0) / intervals.length,
+    firstTweet: timestamps[0],
+    lastTweet: timestamps[timestamps.length - 1],
+    totalDuration: timestamps[timestamps.length - 1].getTime() - timestamps[0].getTime()
+  };
 }
 
 // Utility functions
@@ -212,7 +271,7 @@ function containsEmojis(text: string): boolean {
   return emojiRegex.test(text);
 }
 
-// Run the analyzer
+// Run the example
 main().catch((error) => {
   console.error(chalk.red("Fatal error:"), error);
   process.exit(1);

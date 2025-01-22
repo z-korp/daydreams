@@ -5,6 +5,8 @@
     "goal": "bun run examples/example-goal.ts",
     "task": "bun run examples/example-basic.ts",
     "twitter": "bun run examples/example-twitter.ts",
+    "twitter2": "bun run examples/twitter/analyzer.ts",
+    "generator": "bun run examples/twitter/generator.ts",
     "test": "bun run packages/core"
   },
   "dependencies": {
