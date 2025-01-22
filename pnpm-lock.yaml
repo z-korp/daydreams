@@ -1146,10 +1146,6 @@ packages:
     resolution: {integrity: sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ==}
     engines: {node: '>=0.10.0'}
 
-<<<<<<< HEAD
-  tar-fs@2.1.2:
-    resolution: {integrity: sha512-EsaAXwxmx8UB7FRKqeozqEPop69DXcmYwTQwXvyAPF352HJsPdkVhvTaDPYqfNgruveJIJy3TA2l+2zj8LJIJA==}
-=======
   swr@2.3.0:
     resolution: {integrity: sha512-NyZ76wA4yElZWBHzSgEJc28a0u6QZvhb6w0azeL2k7+Q1gAzVK+IqQYXhVOC/mzi+HZIozrZvBVeSeOZNR2bqA==}
     peerDependencies:
@@ -1157,7 +1153,6 @@ packages:
 
   tar-fs@2.1.1:
     resolution: {integrity: sha512-V0r2Y9scmbDRLCNex/+hYzvp/zyYjvFbHPNgVTKfQvVrb6guiE/fxP+XblDNR011utopbkex2nM4dHNV6GDsng==}
->>>>>>> upstream/main
 
   tar-fs@3.0.8:
     resolution: {integrity: sha512-ZoROL70jptorGAlgAYiLoBLItEKw/fUxg9BSYK/dF/GAGYFJOJJJMvjPAKDJraCXFwadD456FCuvLWgfhMsPwg==}
@@ -2405,9 +2400,6 @@ snapshots:
 
   strip-json-comments@2.0.1: {}
 
-<<<<<<< HEAD
-  tar-fs@2.1.2:
-=======
   swr@2.3.0(react@19.0.0):
     dependencies:
       dequal: 2.0.3
@@ -2415,7 +2407,6 @@ snapshots:
       use-sync-external-store: 1.4.0(react@19.0.0)
 
   tar-fs@2.1.1:
->>>>>>> upstream/main
     dependencies:
       chownr: 1.1.4
       mkdirp-classic: 0.5.3

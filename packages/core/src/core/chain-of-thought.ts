@@ -16,11 +16,8 @@ import { generateUniqueId, injectTags } from "./utils";
 import { systemPromptAction } from "./actions/system-prompt";
 import Ajv from "ajv";
 import type { VectorDB, EpisodicMemory, Documentation } from "./vector-db";
-<<<<<<< HEAD
-=======
 
 import { zodToJsonSchema } from "zod-to-json-schema";
->>>>>>> upstream/main
 
 // Todo: remove these when we bundle
 import * as fs from "fs";
@@ -100,22 +97,8 @@ export class ChainOfThought extends EventEmitter {
     this.goalManager = new GoalManager();
     this.registerDefaultActions();
 
-<<<<<<< HEAD
-    // Remplacer l'initialisation de ChromaDB par un mock simple
-    this.memory = {
-      findSimilarEpisodes: async () => [],
-      findSimilarDocuments: async () => [],
-      storeEpisode: async () => {},
-      storeDocument: async () => {},
-    } as VectorDB;
-  }
-
-  private registerDefaultActions() {
-    this.actionRegistry.set("SYSTEM_PROMPT", systemPromptAction);
-=======
     // Initialize single memory system
     this.memory = memory;
->>>>>>> upstream/main
   }
 
   public async planStrategy(objective: string): Promise<void> {
