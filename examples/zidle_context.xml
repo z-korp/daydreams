@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+
 <zidle_context>
   <game_rules>
     - One NFT per wallet required
@@ -10,19 +10,118 @@
   <game_mechanics>
     <level_system>
       <constants>
-      - Max Level: 99
-      - Base XP: 100
-      - XP Curve: BASE_XP + 10 * level * level
+        <max_level>99</max_level>
       </constants>
-      <level_thresholds>
-        <threshold level="1">110 XP</threshold>
-        <threshold level="2">140 XP</threshold>
-        <threshold level="3">190 XP</threshold>
-        <threshold level="4">260 XP</threshold>
-        <threshold level="10">1100 XP</threshold>
-        <threshold level="50">25100 XP</threshold>
-        <threshold level="99">98110 XP</threshold>
-      </level_thresholds>
+      <xp_table>
+        <level value="0" required_xp="0" />
+        <level value="1" required_xp="110" />
+        <level value="2" required_xp="140" />
+        <level value="3" required_xp="190" />
+        <level value="4" required_xp="260" />
+        <level value="5" required_xp="350" />
+        <level value="6" required_xp="460" />
+        <level value="7" required_xp="590" />
+        <level value="8" required_xp="740" />
+        <level value="9" required_xp="910" />
+        <level value="10" required_xp="1100" />
+        <level value="11" required_xp="1310" />
+        <level value="12" required_xp="1540" />
+        <level value="13" required_xp="1790" />
+        <level value="14" required_xp="2060" />
+        <level value="15" required_xp="2350" />
+        <level value="16" required_xp="2660" />
+        <level value="17" required_xp="2990" />
+        <level value="18" required_xp="3340" />
+        <level value="19" required_xp="3710" />
+        <level value="20" required_xp="4100" />
+        <level value="21" required_xp="4510" />
+        <level value="22" required_xp="4940" />
+        <level value="23" required_xp="5390" />
+        <level value="24" required_xp="5860" />
+        <level value="25" required_xp="6350" />
+        <level value="26" required_xp="6860" />
+        <level value="27" required_xp="7390" />
+        <level value="28" required_xp="7940" />
+        <level value="29" required_xp="8510" />
+        <level value="30" required_xp="9100" />
+        <level value="31" required_xp="9710" />
+        <level value="32" required_xp="10340" />
+        <level value="33" required_xp="10990" />
+        <level value="34" required_xp="11660" />
+        <level value="35" required_xp="12350" />
+        <level value="36" required_xp="13060" />
+        <level value="37" required_xp="13790" />
+        <level value="38" required_xp="14540" />
+        <level value="39" required_xp="15310" />
+        <level value="40" required_xp="16100" />
+        <level value="41" required_xp="16910" />
+        <level value="42" required_xp="17740" />
+        <level value="43" required_xp="18590" />
+        <level value="44" required_xp="19460" />
+        <level value="45" required_xp="20350" />
+        <level value="46" required_xp="21260" />
+        <level value="47" required_xp="22190" />
+        <level value="48" required_xp="23140" />
+        <level value="49" required_xp="24110" />
+        <level value="50" required_xp="25100" />
+        <level value="51" required_xp="26110" />
+        <level value="52" required_xp="27140" />
+        <level value="53" required_xp="28190" />
+        <level value="54" required_xp="29260" />
+        <level value="55" required_xp="30350" />
+        <level value="56" required_xp="31460" />
+        <level value="57" required_xp="32590" />
+        <level value="58" required_xp="33740" />
+        <level value="59" required_xp="34910" />
+        <level value="60" required_xp="36100" />
+        <level value="61" required_xp="37310" />
+        <level value="62" required_xp="38540" />
+        <level value="63" required_xp="39790" />
+        <level value="64" required_xp="41060" />
+        <level value="65" required_xp="42350" />
+        <level value="66" required_xp="43660" />
+        <level value="67" required_xp="44990" />
+        <level value="68" required_xp="46340" />
+        <level value="69" required_xp="47710" />
+        <level value="70" required_xp="49100" />
+        <level value="71" required_xp="50510" />
+        <level value="72" required_xp="51940" />
+        <level value="73" required_xp="53390" />
+        <level value="74" required_xp="54860" />
+        <level value="75" required_xp="56350" />
+        <level value="76" required_xp="57860" />
+        <level value="77" required_xp="59390" />
+        <level value="78" required_xp="60940" />
+        <level value="79" required_xp="62510" />
+        <level value="80" required_xp="64100" />
+        <level value="81" required_xp="65710" />
+        <level value="82" required_xp="67340" />
+        <level value="83" required_xp="68990" />
+        <level value="84" required_xp="70660" />
+        <level value="85" required_xp="72350" />
+        <level value="86" required_xp="74060" />
+        <level value="87" required_xp="75790" />
+        <level value="88" required_xp="77540" />
+        <level value="89" required_xp="79310" />
+        <level value="90" required_xp="81100" />
+        <level value="91" required_xp="82910" />
+        <level value="92" required_xp="84740" />
+        <level value="93" required_xp="86590" />
+        <level value="94" required_xp="88460" />
+        <level value="95" required_xp="90350" />
+        <level value="96" required_xp="92260" />
+        <level value="97" required_xp="94190" />
+        <level value="98" required_xp="96140" />
+        <level value="99" required_xp="98110" />
+      </xp_table>
+      <helper>
+        <level_determination>
+          To find current level, look up the highest level where current_xp >= required_xp
+        </level_determination>
+        <next_level>
+          To find XP needed for next level, subtract current_xp from next level's required_xp
+        </next_level>
+      </helper>
     </level_system>
 
     <resource_types>
@@ -153,114 +252,6 @@
 
   </game_mechanics>
 
-  <available_actions>
-    <action name="CHECK_NFT">
-      <purpose>Check if wallet has NFT</purpose>
-      <input>
-        <param name="address">WALLET_ADDRESS</param>
-      </input>
-      <returns>u256 [token_id_low, token_id_high]</returns>
-      <note>Use token_id_low for all other actions</note>
-    </action>
-
-    <action name="MINT_NFT">
-      <purpose>Create new character NFT</purpose>
-      <input>
-        <param name="address">WALLET_ADDRESS</param>
-        <param name="name">string</param>
-      </input>
-      <returns>success boolean</returns>
-    </action>
-
-    <action name="MINE_RCS">
-      <purpose>Start mining a resource</purpose>
-      <input>
-        <param name="token_id">token_id_low (u128 from CHECK_NFT[0])</param>
-        <param name="rcs_type">
-          1: Wood
-          2: Food
-          3: Mineral
-        </param>
-        <param name="rcs_sub_type">
-          Resource tier ID from resource_types:
-          - For rcs_type=1: use wood.id (1=Pine, 2=Oak, etc.)
-          - For rcs_type=2: use food.id (1=Berries, 2=Wheat, etc.)
-          - For rcs_type=3: use mineral.id (1=Coal, 2=Copper, etc.)
-        </param>
-      </input>
-    </action>
-
-    <action name="HARVEST_RCS">
-      <purpose>Harvest currently mined resource</purpose>
-      <input>
-        <param name="token_id">token_id_low (u128 from CHECK_NFT[0])</param>
-        <param name="rcs_type">Same as mining sub_type</param>
-      </input>
-    </action>
-  </available_actions>
-
-  <available_queries>
-    <query name="CHECK_MINING">
-      <preriquisites>CHECK_NFT action have to have been done before</preriquisites>
-      <purpose>Check if NFT is currently mining any resource</purpose>
-      <params>
-        <param name="token_id">token_id_low from CHECK_NFT[0]</param>
-      </params>
-      <graphql>
-        query ZidleMinerModels {
-          zidleMinerModels(where: { token_id: token_id_low, timestampGT: "0" }) {
-            edges {
-              node {
-                token_id
-                resource_type
-                xp
-              }
-            }
-          totalCount
-          }
-        }
-      </graphql>
-      <result_interpretation>
-        <case condition="totalCount == 0">
-          Not currently mining any resource
-        </case>
-        <case condition="totalCount > 0">
-          Currently mining:
-          - resource_type: identifies resource category (1: Wood, 2: Food, 3: Mineral)
-        </case>
-      </result_interpretation>
-    </query>
-
-    <query name="CHECK_XP">
-      <purpose>Get current XP levels for each resource type</purpose>
-      <params>
-        <param name="token_id">token_id_low from CHECK_NFT[0]</param>
-      </params>
-      <graphql>
-        query ZidleXPModels {
-          zidleMinerModels(where: { token_id: TOKEN_ID_LOW }) {
-            totalCount
-            edges {
-              node {
-                resource_type
-                xp
-              }
-            }
-          }
-        }
-      </graphql>
-      <result_interpretation>
-        <case condition="totalCount == 0">
-          New character: all resource types start at 0 XP
-        </case>
-        <case condition="totalCount > 0">
-          Each edge in edges array represents a resource type:
-          - xp: current experience points for that resource type (1: Wood, 2: Food, 3: Mineral)
-        </case>
-      </result_interpretation>
-    </query>
-  </available_queries>
-
   <game_flow>
     <initialization>
       <step>1. **Always start with CHECK_NFT.** Verify NFT existence before any action.</step>
@@ -293,15 +284,4 @@
       - Balance between XP gains and gathering time.
     </optimization_notes>
   </game_flow>
-
-  <error_handling>
-    <guidelines>
-      - Verify NFT exists before any action
-      - Implement retries for failed connections
-      - Handle mining cooldowns
-      - Wait 5 seconds before retrying failed actions
-      - Maximum 3 retry attempts per action
-      - Verify player meets level requirements before selecting resource
-    </guidelines>
-  </error_handling>
 </zidle_context>

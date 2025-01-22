@@ -1,7 +1,6 @@
-import { env } from "../packages/core/src/core/env";
 import { LLMClient } from "../packages/core/src/core/llm-client";
 import { ChainOfThought } from "../packages/core/src/core/chain-of-thought";
-import { ZIDLE_CONTEXT } from "./zidle-context-easy";
+import { PROVIDER_GUIDE, ZIDLE_CONTEXT } from "./zidle";
 import { starknetTransactionAction } from "../packages/core/src/core/actions/starknet-transaction";
 import { starknetReadAction } from "../packages/core/src/core/actions/starknet-read";
 import chalk from "chalk";
@@ -10,25 +9,11 @@ import { starknetTransactionSchema } from "../packages/core/src/core/validation"
 import { graphqlAction } from "../packages/core/src/core/actions/graphql";
 import ManifestParser from "./zidle/manifest_parser";
 import manifest from "./zidle/manifest.json";
-
-interface FarmResourcePayload {
-  resourceType: 1 | 2 | 3;
-  duration: number;
-}
+import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 
 interface GraphQLPayload {
   query: string;
 }
-
-const mineResourceSchema: JSONSchemaType<FarmResourcePayload> = {
-  type: "object",
-  properties: {
-    resourceType: { type: "number", enum: [1, 2, 3] },
-    duration: { type: "number", minimum: 1, maximum: 3600 },
-  },
-  required: ["resourceType", "duration"],
-  additionalProperties: false,
-};
 
 const graphqlFetchSchema: JSONSchemaType<GraphQLPayload> = {
   type: "object",
@@ -42,20 +27,35 @@ const graphqlFetchSchema: JSONSchemaType<GraphQLPayload> = {
 async function main() {
   // Initialize LLM client
   const llmClient = new LLMClient({
-    provider: "anthropic",
-    apiKey: env.ANTHROPIC_API_KEY,
+    model: "anthropic/claude-3.5-haiku-20241022:beta",
   });
 
-  // Initialize ChainOfThought with zIdle context
-  const dreams = new ChainOfThought(
-    llmClient,
-    {
-      worldState: ZIDLE_CONTEXT,
-    },
-    { chromaUrl: "http://localhost:8000" }
-  );
+  const memory = new ChromaVectorDB("agent_memory");
+  await memory.purge(); // Clear previous session data
 
   const dojo_parser = new ManifestParser(JSON.stringify(manifest));
+
+  // Load initial context documents
+  await memory.storeDocument({
+    title: "Game Rules",
+    content: ZIDLE_CONTEXT,
+    category: "rules",
+    tags: ["game-mechanics", "rules"],
+    lastUpdated: new Date(),
+  });
+
+  await memory.storeDocument({
+    title: "Provider Guide",
+    content: PROVIDER_GUIDE,
+    category: "actions",
+    tags: ["actions", "provider-guide"],
+    lastUpdated: new Date(),
+  });
+
+  // Initialize the main reasoning engine
+  const dreams = new ChainOfThought(llmClient, memory, {
+    worldState: ZIDLE_CONTEXT,
+  });
 
   dreams.registerAction(
     "GRAPHQL_FETCH",
@@ -71,61 +71,28 @@ async function main() {
   );
 
   dreams.registerAction(
-    "CHECK_NFT",
+    "EXECUTE_TRANSACTION",
+    starknetTransactionAction,
+    {
+      description: "Execute a transaction on the Starknet blockchain",
+      example: JSON.stringify({
+        contractAddress: "0x1234567890abcdef",
+        entrypoint: "execute",
+        calldata: [1, 2, 3],
+      }),
+    },
+    starknetTransactionSchema as JSONSchemaType<any>
+  );
+
+  dreams.registerAction(
+    "EXECUTE_READ",
     starknetReadAction,
     {
-      description: "Check if wallet has a character NFT",
+      description: "Call a read-only function on the Starknet blockchain",
       example: JSON.stringify({
-        contractAddress: env.NFT_CONTRACT,
-        entrypoint: "token_of_owner_by_index",
-        calldata: [env.STARKNET_ADDRESS, 1, 0],
-      }),
-    },
-    starknetTransactionSchema as JSONSchemaType<any>
-  );
-
-  dreams.registerAction(
-    "MINT_NFT",
-    starknetTransactionAction,
-    {
-      description: "Mint a new character NFT",
-      example: JSON.stringify({
-        contractAddress:
-          "0xaf35f90afa36a49d2bc63e783d0f086e03cd14fe5328fc47bab5e39c60c16b",
-        entrypoint: "create",
-        calldata: ["Farmer#123"],
-      }),
-    },
-    starknetTransactionSchema as JSONSchemaType<any>
-  );
-
-  dreams.registerAction(
-    "MINE_RCS",
-    starknetTransactionAction,
-    {
-      description:
-        "Mine resources with character NFT. Note: ERC721 returns u256 (low, high), but dojo expects u128 (only low)",
-      example: JSON.stringify({
-        contractAddress: dojo_parser.getAddressByTag("zidle-resources"),
-        entrypoint: "mine",
-        // For dojo contract, we only use the low part of the u256 token_id
-        calldata: ["$TOKEN_ID_LOW", "$RESOURCE_TYPE", "1"],
-      }),
-    },
-    starknetTransactionSchema as JSONSchemaType<any>
-  );
-
-  dreams.registerAction(
-    "HARVEST_RCS",
-    starknetTransactionAction,
-    {
-      description:
-        "Harvest mined resources. Note: ERC721 returns u256 (low, high), but dojo expects u128 (only low)",
-      example: JSON.stringify({
-        contractAddress: dojo_parser.getAddressByTag("zidle-resources"),
-        entrypoint: "harvest",
-        // For dojo contract, we only use the low part of the u256 token_id
-        calldata: ["$TOKEN_ID_LOW", "$RESOURCE_TYPE"],
+        contractAddress: "0x1234567890abcdef",
+        entrypoint: "read",
+        calldata: [1, 2, 3],
       }),
     },
     starknetTransactionSchema as JSONSchemaType<any>

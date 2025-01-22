@@ -18,7 +18,7 @@
     "agent-twitter-client": "^0.0.16",
     "ai": "^4.1.0",
     "ajv": "^8.17.1",
-    "chromadb": "^1.9.4",
+    "chromadb": "^1.10.2",
     "chromadb-default-embed": "^2.13.2",
     "openai": "^4.76.0",
     "starknet": "^6.11.0",

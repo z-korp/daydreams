@@ -4,6 +4,7 @@ import { env } from "./env";
 import { Logger } from "./logger";
 import { Room } from "./room";
 import { LogLevel, type SearchResult } from "../types";
+import console from "console";
 
 // ======================= INTERFACES & TYPES =======================
 

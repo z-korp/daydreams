@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<provider_guide>
+  <important_rules>
+    <rule>All actions require CHECK_NFT to be called first to get token_id_low</rule>
+    <rule>Always verify transaction responses before proceeding</rule>
+    <rule>Follow error handling guidelines for retries</rule>
+    <rule>Never use token_id_high, always use token_id_low</rule>
+  </important_rules>
+
+  <available_functions>
+    <function name="check_nft">
+      <purpose>Check if wallet has NFT. Must be called first.</purpose>
+      <implementation>
+        <meta_action>EXECUTE_READ</meta_action>
+        <contract>$CHARACTER_NFT</contract>
+        <entrypoint>token_of_owner_by_index</entrypoint>
+        <params>
+          <param position="0" value="$WALLET_ADDRESS" />
+          <param position="1" value="1" />
+          <param position="2" value="0" />
+        </params>
+      </implementation>
+      <returns>u256 [token_id_low, token_id_high]</returns>
+    </function>
+
+    <function name="mine_rcs">
+      <purpose>Start mining a resource</purpose>
+      <implementation>
+        <meta_action>EXECUTE_TRANSACTION</meta_action>
+        <contract>$RESOURCES_SYSTEM</contract>
+        <entrypoint>mine</entrypoint>
+        <params>
+          <param position="0" value="$TOKEN_ID_LOW" description="token_id_low from CHECK_NFT[0]" />
+          <param position="1" value="$RESOURCE_TYPE" description="1:Wood, 2:Food, 3:Mineral" />
+          <param position="2" value="$RESOURCE_SUBTYPE" description="sub resource tier" />
+        </params>
+      </implementation>
+    </function>
+
+    <function name="harvest_rcs">
+      <purpose>Harvest currently mined resource</purpose>
+      <implementation>
+        <meta_action>EXECUTE_TRANSACTION</meta_action>
+        <contract>$RESOURCES_SYSTEM</contract>
+        <entrypoint>harvest</entrypoint>
+        <params>
+          <param position="0" value="$TOKEN_ID_LOW" description="token_id_low from CHECK_NFT[0]" />
+          <param position="1" value="$RESOURCE_TYPE" description="same as mining type" />
+        </params>
+      </implementation>
+    </function>
+  </available_functions>
+
+  <available_queries>
+    <query name="check_mining">
+      <purpose>Check if NFT is currently mining any resource</purpose>
+      <implementation>
+        <meta_action>GRAPHQL_FETCH</meta_action>
+        <query>
+          query ZidleMinerModels {
+            zidleMinerModels(where: { token_id: $TOKEN_ID_LOW, timestampGT: "0" }) {
+              edges {
+                node {
+                  token_id
+                  resource_type
+                  xp
+                }
+              }
+              totalCount
+            }
+          }
+        </query>
+        <params>
+          <param position="0" value="$TOKEN_ID_LOW" description="token_id_low from CHECK_NFT[0]" />
+        </params>
+      </implementation>
+      <result_interpretation>
+        <case condition="totalCount == 0">Not currently mining any resource</case>
+        <case condition="totalCount > 0">Currently mining resource type (1:Wood, 2:Food, 3:Mineral)</case>
+      </result_interpretation>
+    </query>
+
+    <query name="check_xp">
+      <purpose>Get current XP levels for each resource type</purpose>
+      <implementation>
+        <meta_action>GRAPHQL_FETCH</meta_action>
+        <query>
+          query ZidleXPModels {
+            zidleMinerModels(where: { token_id: $TOKEN_ID_LOW }) {
+              totalCount
+              edges {
+                node {
+                  resource_type
+                  xp
+                }
+              }
+            }
+          }
+        </query>
+        <params>
+          <param position="0" value="$TOKEN_ID_LOW" description="token_id_low from CHECK_NFT[0]" />
+        </params>
+      </implementation>
+      <result_interpretation>
+        <case condition="totalCount == 0">New character: all resource types start at 0 XP</case>
+        <case condition="totalCount > 0">XP per resource type (1:Wood, 2:Food, 3:Mineral)</case>
+      </result_interpretation>
+    </query>
+  </available_queries>
+</provider_guide>
