@@ -11,16 +11,7 @@ export const queryValidator = (
 
   for (const action of response.actions) {
     if (!action.type || !action.payload) return false;
-    if (
-      ![
-        "GRAPHQL_FETCH",
-        "EXECUTE_TRANSACTION",
-        "MINT_NFT",
-        "CHECK_NFT",
-        "MINE_RCS",
-        "HARVEST_RCS",
-      ].includes(action.type)
-    )
+    if (!["GRAPHQL_FETCH", "EXECUTE_TRANSACTION"].includes(action.type))
       return false;
   }
 
