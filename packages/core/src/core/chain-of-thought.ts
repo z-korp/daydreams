@@ -1353,14 +1353,10 @@ ${availableOutputs
             isComplete = completion.complete;
 
             if (completion.newActions?.length > 0) {
-              // Add new actions to the end of the pending queue
-              const extractedActions = completion.newActions.flatMap(
-                (plan: any) => plan.actions || []
-              );
-              pendingActions.push(...extractedActions);
+              pendingActions.push(...completion.newActions);
 
               this.logger.debug("think", "Added new actions", {
-                newActionsCount: extractedActions.length,
+                newActionsCount: completion.newActions.length,
                 totalPendingCount: pendingActions.length,
               });
             }
