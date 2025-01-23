@@ -7,16 +7,22 @@
  * - Process inputs through a character-based personality
  */
 
-
-import { TwitterClient } from "../packages/core/src/io/twitter";
+import { Core } from "../packages/core/src/core/core";
+import { tweetSchema, TwitterClient } from "../packages/core/src/io/twitter";
 import { RoomManager } from "../packages/core/src/core/room-manager";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
+import { Processor } from "../packages/core/src/core/processor";
 import { LLMClient } from "../packages/core/src/core/llm-client";
 import { env } from "../packages/core/src/core/env";
 import { LogLevel } from "../packages/core/src/types";
 import chalk from "chalk";
+import { defaultCharacter } from "../packages/core/src/core/character";
 
+import { Consciousness } from "../packages/core/src/core/consciousness";
+import type { AnySchema, JSONSchemaType } from "ajv";
+import { z } from "zod";
 import { ChainOfThought } from "../packages/core/src/core/chain-of-thought";
+import { TWITTER_CONTEXT } from "./twitter/twitter-context";
 
 async function main() {
   const loglevel = LogLevel.ERROR;
@@ -27,12 +33,13 @@ async function main() {
   });
   const memory = new ChromaVectorDB("shared_memory");
   const roomManager = new RoomManager(memory);
+ 
 
   const dreams = new ChainOfThought(
     llmClient,
     memory,
     {
-      worldState: "Tu es un bot twitter qui analyse les tweets et les tweets des autres utilisateurs",
+      worldState: "TWITTER_CONTEXT",
     }
   );
 
@@ -87,6 +94,7 @@ async function main() {
     }
   }
 
+  // Fonction pour sauvegarder l'analyse d'un tweet
   async function saveAnalysis(tweet: any, analysis: any) {
    chalk.bgCyan("\n💾 Saving analysis for tweet:", tweet.metadata.tweetId);
     
