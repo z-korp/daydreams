@@ -1,79 +1,21 @@
 import { LLMClient } from "./llm-client";
 import { Logger } from "./logger";
 import { Room } from "./room";
-import type { VectorDB } from "./vector-db";
-import type { Character } from "./character";
-import type { SearchResult } from "../types";
+import type { VectorDB } from "../types";
+
+import type {
+  Character,
+  EnrichedContent,
+  Output,
+  ProcessedResult,
+  SearchResult,
+  SuggestedOutput,
+} from "../types";
 import { LogLevel } from "../types";
-import type { Output } from "./core";
-import type { JSONSchemaType } from "ajv";
-import { getValidatedLLMResponse } from "./utils";
+
+import { hashString, validateLLMResponseSchema } from "./utils";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
-
-export interface ProcessedResult {
-  content: any;
-  metadata: Record<string, any>;
-  enrichedContext: EnrichedContext;
-  suggestedOutputs: SuggestedOutput<any>[];
-  isOutputSuccess?: boolean;
-  alreadyProcessed?: boolean;
-}
-
-export interface SuggestedOutput<T> {
-  name: string;
-  data: T;
-  confidence: number;
-  reasoning: string;
-}
-
-export interface EnrichedContext {
-  timeContext: string;
-  summary: string;
-  topics: string[];
-  relatedMemories: string[];
-  sentiment?: string;
-  entities?: string[];
-  intent?: string;
-  similarMessages?: any[];
-  metadata?: Record<string, any>;
-  availableOutputs?: string[]; // Names of available outputs
-}
-
-interface EnrichedContent {
-  originalContent: string;
-  timestamp: Date;
-  context: EnrichedContext;
-}
-
-// Type guard for VectorDB with room methods
-interface VectorDBWithRooms extends VectorDB {
-  storeInRoom: (
-    content: string,
-    roomId: string,
-    metadata?: Record<string, any>
-  ) => Promise<void>;
-  findSimilarInRoom: (
-    content: string,
-    roomId: string,
-    limit?: number,
-    metadata?: Record<string, any>
-  ) => Promise<SearchResult[]>;
-}
-
-function hasRoomSupport(vectorDb: VectorDB): vectorDb is VectorDBWithRooms {
-  return "storeInRoom" in vectorDb && "findSimilarInRoom" in vectorDb;
-}
-
-function hashString(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  return Math.abs(hash).toString(36); // Convert to base36 for shorter strings
-}
 
 export class Processor {
   private logger: Logger;
@@ -139,8 +81,12 @@ export class Processor {
     // First, classify the content
     const contentClassification = await this.classifyContent(content);
 
+    console.log("contentClassification", contentClassification);
+
     // Second, enrich content
     const enrichedContent = await this.enrichContent(content, room, new Date());
+
+    console.log("enrichedContent", enrichedContent);
 
     // Third, determine potential outputs
     const suggestedOutputs = await this.determinePotentialOutputs(
@@ -148,6 +94,8 @@ export class Processor {
       enrichedContent,
       contentClassification
     );
+
+    console.log("suggestedOutputs", suggestedOutputs);
 
     this.logger.info("Processor.process", "Suggested outputs", {
       contentId,
@@ -201,16 +149,17 @@ If this is feedback from a previous output:
 ${availableOutputs
   .map(
     ([name, output]) => `${name}:
-   ${JSON.stringify(zodToJsonSchema(output.schema, "mySchema"), null, 2)}
+   ${JSON.stringify(zodToJsonSchema(output.schema, name), null, 2)}
   `
   )
   .join("\n\n")}
 
-If the output is for a message user the personality of the character to determine if the output was successful.
+If the output is for a message, use the personality of the character to determine if the output was successful.
 
 ${JSON.stringify(this.character, null, 2)}
 
 Based on the content and context, determine which outputs should be triggered.
+
 For each appropriate output, provide:
 1. The output name
 2. The data that matches the output's schema
@@ -220,7 +169,7 @@ For each appropriate output, provide:
 `;
 
     try {
-      return (await getValidatedLLMResponse({
+      return (await validateLLMResponseSchema({
         prompt,
         systemPrompt:
           "You are an expert system that analyzes content and suggests appropriate automated responses. You are precise and careful to ensure all data matches the required schemas.",
@@ -261,7 +210,7 @@ For each appropriate output, provide:
   
 `;
 
-    const classification = await getValidatedLLMResponse({
+    const classification = await validateLLMResponseSchema({
       prompt,
       systemPrompt: "You are an expert content classifier.",
       schema: z.object({
@@ -276,6 +225,8 @@ For each appropriate output, provide:
       llmClient: this.llmClient,
       logger: this.logger,
     });
+
+    console.log("classification", classification);
 
     return typeof classification === "string"
       ? JSON.parse(this.stripCodeBlock(classification))
@@ -301,9 +252,11 @@ For each appropriate output, provide:
       typeof content === "string" ? content : JSON.stringify(content);
 
     // Get related memories if supported
-    const relatedMemories = hasRoomSupport(this.vectorDb)
-      ? await this.vectorDb.findSimilarInRoom(contentStr, room.id, 3)
-      : [];
+    const relatedMemories = await this.vectorDb.findSimilarInRoom(
+      contentStr,
+      room.id,
+      3
+    );
 
     const prompt = `Analyze the following content and provide enrichment:
 
@@ -322,7 +275,7 @@ Return a JSON object with the following fields:
 `;
 
     try {
-      const result = await getValidatedLLMResponse({
+      const result = await validateLLMResponseSchema({
         prompt,
         systemPrompt: this.character.voice.tone,
         schema: z.object({
@@ -483,9 +436,14 @@ Return a JSON object with the following fields:
     contentId: string,
     room: Room
   ): Promise<boolean> {
-    if (!hasRoomSupport(this.vectorDb)) {
-      return false;
-    }
+    // Create a marker string that includes the content ID
+    const markerContent = `processed_content:${contentId}`;
+
+    this.logger.debug("Processor.hasProcessedContent", "Checking content", {
+      contentId,
+      markerContent,
+      roomId: room.id,
+    });
 
     // Create a marker string that includes the content ID
     const markerContent = `processed_content:${contentId}`;
@@ -510,10 +468,6 @@ Return a JSON object with the following fields:
     contentId: string,
     room: Room
   ): Promise<void> {
-    if (!hasRoomSupport(this.vectorDb)) {
-      return;
-    }
-
     // Create a marker string that includes the content ID
     const markerContent = `processed_content:${contentId}`;
 

@@ -7,8 +7,8 @@
  * - Process inputs through a character-based personality
  */
 
-import { Core } from "../packages/core/src/core/core";
-import { tweetSchema, TwitterClient } from "../packages/core/src/io/twitter";
+import { Orchestrator } from "../packages/core/src/core/orchestrator";
+import { TwitterClient } from "../packages/core/src/io/twitter";
 import { RoomManager } from "../packages/core/src/core/room-manager";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { Processor } from "../packages/core/src/core/processor";
@@ -17,42 +17,47 @@ import { env } from "../packages/core/src/core/env";
 import { LogLevel } from "../packages/core/src/types";
 import chalk from "chalk";
 import { defaultCharacter } from "../packages/core/src/core/character";
-
 import { Consciousness } from "../packages/core/src/core/consciousness";
-import type { AnySchema, JSONSchemaType } from "ajv";
 import { z } from "zod";
-import { ChainOfThought } from "../packages/core/src/core/chain-of-thought";
-import { TWITTER_CONTEXT } from "./twitter/twitter-context";
 
 async function main() {
-  const loglevel = LogLevel.ERROR;
+  const loglevel = LogLevel.DEBUG;
+  // Initialize core dependencies
+  const vectorDb = new ChromaVectorDB("twitter_agent", {
+    chromaUrl: "http://localhost:8000",
+    logLevel: loglevel,
+  });
+
+  await vectorDb.purge(); // Clear previous session data
+
+  const roomManager = new RoomManager(vectorDb);
 
   // Initialize LLM client
   const llmClient = new LLMClient({
-    model: "deepseek/deepseek-r1",
+    model: "openai/gpt-4-turbo-preview", // Using OpenAI's GPT-4 Turbo
+    temperature: 0.7, // Slightly more creative
+    maxTokens: 4096, // Increased context window
   });
   const memory = new ChromaVectorDB("shared_memory");
   const roomManager = new RoomManager(memory);
  
 
-  const dreams = new ChainOfThought(
+  // Initialize processor with default character personality
+  const processor = new Processor(
+    vectorDb,
     llmClient,
-    memory,
-    {
-      worldState: "TWITTER_CONTEXT",
-    }
+    defaultCharacter,
+    loglevel
   );
 
-  // Add event handlers
-  dreams.on("think:start", ({ query }) => {
-    console.log(chalk.blue("\n🤔 Analyzing Twitter data:"), query);
+  // Initialize core system
+  const core = new Orchestrator(roomManager, vectorDb, processor, {
+    level: loglevel,
+    enableColors: true,
+    enableTimestamp: true,
   });
 
-  dreams.on("think:complete", ({ result }) => {
-    console.log(chalk.green("\n✅ Analysis completed:"), result);
-  });
-
-  // Set up Twitter client
+  // Set up Twitter client with credentials
   const twitter = new TwitterClient(
     {
       username: env.TWITTER_USERNAME,
@@ -62,171 +67,73 @@ async function main() {
     loglevel
   );
 
-  // Target account to analyze
-  const targetAccount = "zkorp_";
-  if (!targetAccount) {
-    throw new Error("TARGET_TWITTER_ACCOUNT environment variable is required");
-  }
+  // Initialize autonomous thought generation
+  const consciousness = new Consciousness(llmClient, roomManager, {
+    intervalMs: 300000, // Think every 5 minutes
+    minConfidence: 0.7,
+    logLevel: loglevel,
+  });
 
-  console.log(chalk.cyan(`🔍 Starting analysis of @${targetAccount}...`));
+  // Register input handler for Twitter mentions
+  core.subscribeToInputSource({
+    name: "twitter_mentions",
+    handler: async () => {
+      console.log(chalk.blue("🔍 Checking Twitter mentions..."));
+      // Create a static mentions input handler
+      const mentionsInput = twitter.createMentionsInput(60000);
+      const mentions = await mentionsInput.handler();
 
-  async function isTwitterAnalyzed(tweetId: string): Promise<boolean> {
-    try {
-      const results = await memory.findSimilar(tweetId,1,{tweetId:tweetId});
-      // Log the document content for debugging
-      chalk.bgCyan("\n🔍 Checking each result:");
-      
-      return results.some((doc) => {
-        try {
-         
-          const storedData = JSON.parse(doc.content); 
-
-          return storedData.metadata.tweetId === tweetId;
-
-        } catch (e) {
-          chalk.red("\n❌ Error analyzing document:", e);
-          return false;
-        }
-      });
-    } catch (error) {
-      console.error("Error checking tweet analysis:", error);
-      return false;
-    }
-  }
-
-  // Fonction pour sauvegarder l'analyse d'un tweet
-  async function saveAnalysis(tweet: any, analysis: any) {
-   chalk.bgCyan("\n💾 Saving analysis for tweet:", tweet.metadata.tweetId);
-    
-    const analysisDoc = {
-      id: tweet.metadata.tweetId,
-      content: JSON.stringify(analysis),
-      metadata: {
-        type: "tweet_analysis", 
-        timestamp: new Date().toISOString(),
-        tweetId: tweet.metadata.tweetId
+      // If no new mentions, return null to skip processing
+      if (!mentions || mentions.length === 0) {
+        return null;
       }
-    };
-    
-    await memory.store(JSON.stringify(analysisDoc), { tweetId: tweet.metadata.tweetId });
-    
-    console.log("\n✅ Successfully saved analysis for tweet:", tweet.metadata.tweetId);
-  }
 
-  try {
-    const timelineData = await twitter.createTimelineInput(targetAccount, 10);
-    const tweets = await timelineData.handler();
-    console.log(chalk.blue(`📥 Retrieved ${tweets.length} tweets`));
+      return mentions;
+    },
+    response: z.object({
+      type: z.string(),
+      content: z.string(),
+      metadata: z.record(z.any()),
+    }),
+    interval: 60000, // Check mentions every minute
+  });
 
-    const unanalyzedTweets = await Promise.all(
-      tweets.map(async (tweet) => {
-        if (!tweet.metadata.tweetId) return null;
-        const isAnalyzed = await isTwitterAnalyzed(tweet.metadata.tweetId);  
-        return isAnalyzed ? null : tweet;
-      })
-    );
+  // Register input handler for autonomous thoughts
+  core.subscribeToInputSource({
+    name: "consciousness_thoughts",
+    handler: async () => {
+      console.log(chalk.blue("🧠 Generating thoughts..."));
+      const thought = await consciousness.start();
 
-    const tweetsToAnalyze = unanalyzedTweets.filter(t => t !== null);
-    console.log(chalk.blue(`📊 Processing ${tweetsToAnalyze.length} new tweets`));
+      // If no thought was generated or it was already processed, skip
+      if (!thought || !thought.content) {
+        return null;
+      }
 
-    // Analyze each unanalyzed tweet
-    for (const tweet of tweetsToAnalyze) {
-      console.log(chalk.yellow("\n-------------------"));
-    
-      console.log(chalk.blue("Tweet Details:"));
-      console.log(chalk.cyan("Content:"), tweet.content);
-    
-      // Basic analysis
-      const analysis = {
-        length: tweet.content.length,
-        hashtags: extractHashtags(tweet.content),
-        mentions: extractMentions(tweet.content),
-        urls: extractUrls(tweet.content),
-        hasEmojis: containsEmojis(tweet.content),
-        type: tweet.type,
-        timestamp: tweet.metadata.timestamp,
-        engagement: {
-          likes: tweet.metadata.metrics.likes,
-          retweets: tweet.metadata.metrics.retweets,
-          replies: tweet.metadata.metrics.replies,
-          quotes: tweet.metadata.metrics.retweets
-        }
-      };
+      return thought;
+    },
+    response: z.object({
+      type: z.string(),
+      content: z.string(),
+      metadata: z.record(z.any()),
+    }),
+    interval: 300000, // Generate thoughts every 5 minutes
+  });
 
-      // LLM Analysis avec plus de contexte
-      const llmAnalysis = await llmClient.analyze(
-        `
-        Analyze this tweet and provide insights about:
-        1. Tone (formal, casual, etc.)
-        2. Purpose (inform, engage, promote, etc.)
-        3. Key topics or themes
-        4. Writing style characteristics
-        5. Engagement analysis based on metrics
-
-        Tweet: "${tweet.content}"
-        Metrics: 
-        - Likes: ${tweet.metadata.metrics.likes}
-        - Retweets: ${tweet.metadata.metrics.retweets}
-        - Replies: ${tweet.metadata.metrics.replies}
-        - Quotes: ${tweet.metadata.metrics.retweets}
-        Posted at: ${tweet.metadata.timestamp}
-        `,
-        {
-          system: "You are a tweet analyst. Provide concise, structured analysis of tweets.",
-          
-          
-        }
-      );
-
-      console.log(chalk.magenta("Deep Analysis:"), llmAnalysis);
-
-      // Save the analysis
-      await saveAnalysis(tweet, {
-        basicAnalysis: analysis,
-        llmAnalysis: llmAnalysis
+  // Register output handler for posting thoughts to Twitter
+  core.registerOutput({
+    name: "twitter_thought",
+    handler: async (data: unknown) => {
+      const thoughtData = data as { content: string };
+      return twitter.createTweetOutput().handler({
+        content: thoughtData.content,
       });
-    }
-
-    // Global analysis
-    console.log(chalk.yellow("\n=== Global Analysis ==="));
-    const globalStats = {
-      totalTweets: tweets.length,
-      averageEngagement: calculateAverageEngagement(tweets),
-      mostUsedHashtags: getMostUsedHashtags(tweets),
-      postingPattern: analyzePostingPattern(tweets)
-    };
-    console.log(chalk.cyan("Global Stats:"), globalStats);
-
-    console.log(chalk.green("\n✅ Analysis complete!"));
-
-  } catch (error) {
-    console.error(chalk.red("Error during analysis:"), error);
-    process.exit(1);
-  }
-}
-
-function calculateAverageEngagement(tweets: any[]): any {
-  const totals = tweets.reduce((acc, tweet) => ({
-    likes: acc.likes + tweet.metadata.metrics.likes,
-    retweets: acc.retweets + tweet.metadata.metrics.retweets,
-    replies: acc.replies + tweet.metadata.metrics.replies,
-    quotes: acc.quotes + tweet.metadata.metrics.quotes
-  }), { likes: 0, retweets: 0, replies: 0, quotes: 0 });
-
-  return {
-    avgLikes: totals.likes / tweets.length,
-    avgRetweets: totals.retweets / tweets.length,
-    avgReplies: totals.replies / tweets.length,
-    avgQuotes: totals.quotes / tweets.length
-  };
-}
-
-function getMostUsedHashtags(tweets: any[]): Record<string, number> {
-  const hashtags: Record<string, number> = {};
-  tweets.forEach(tweet => {
-    extractHashtags(tweet.content).forEach(tag => {
-      hashtags[tag] = (hashtags[tag] || 0) + 1;
-    });
+    },
+    schema: z.object({
+      content: z
+        .string()
+        .regex(/^[\x20-\x7E]*$/, "No emojis or non-ASCII characters allowed"),
+    }),
   });
   return Object.fromEntries(
     Object.entries(hashtags)
@@ -235,34 +142,36 @@ function getMostUsedHashtags(tweets: any[]): Record<string, number> {
   );
 }
 
-function analyzePostingPattern(tweets: any[]): any {
-  const timestamps = tweets
-    .map(tweet => new Date(tweet.metadata.timestamp))
-    .sort((a, b) => a.getTime() - b.getTime());
+  // Register output handler for Twitter replies
+  core.registerOutput({
+    name: "twitter_reply",
+    handler: async (data: unknown) => {
+      const tweetData = data as { content: string; inReplyTo: string };
+      return twitter.createTweetOutput().handler(tweetData);
+    },
+    schema: z.object({
+      content: z.string(),
+      inReplyTo: z
+        .string()
+        .optional()
+        .describe("The tweet ID to reply to, if any"),
+    }),
+  });
 
-  const intervals: number[] = [];
-  for (let i = 1; i < timestamps.length; i++) {
-    intervals.push(timestamps[i].getTime() - timestamps[i-1].getTime());
-  }
+  // Start monitoring
+  console.log(chalk.cyan("🤖 Bot is now running and monitoring Twitter..."));
+  console.log(chalk.cyan("Press Ctrl+C to stop"));
 
-  return {
-    averageInterval: intervals.reduce((a, b) => a + b, 0) / intervals.length,
-    firstTweet: timestamps[0],
-    lastTweet: timestamps[timestamps.length - 1],
-    totalDuration: timestamps[timestamps.length - 1].getTime() - timestamps[0].getTime()
-  };
-}
+  // Handle graceful shutdown
+  process.on("SIGINT", async () => {
+    console.log(chalk.yellow("\n\nShutting down..."));
 
-// Utility functions
-function extractHashtags(text: string): string[] {
-  const hashtagRegex = /#[\w\u0590-\u05ff]+/g;
-  return text.match(hashtagRegex) || [];
-}
-
-function extractMentions(text: string): string[] {
-  const mentionRegex = /@[\w]+/g;
-  return text.match(mentionRegex) || [];
-}
+    // Clean up resources
+    await consciousness.stop();
+    core.unsubscribeFromInputSource("twitter_mentions");
+    core.unsubscribeFromInputSource("consciousness_thoughts");
+    core.removeOutputHandler("twitter_reply");
+    core.removeOutputHandler("twitter_thought");
 
 function extractUrls(text: string): string[] {
   const urlRegex = /https?:\/\/[^\s]+/g;
