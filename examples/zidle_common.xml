@@ -6,7 +6,7 @@
 
   <token_ids>
     <description>Token ID handling rules</description>
-    <rule>Always use token_id_low from CHECK_NFT[0] for all actions</rule>
+    <rule>Always use TOKEN_ID_LOW from CHECK_NFT[0] for all actions</rule>
     <rule>Never use token_id_high in any operation</rule>
   </token_ids>
   

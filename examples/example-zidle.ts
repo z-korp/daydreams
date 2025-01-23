@@ -1,14 +1,16 @@
 import { LLMClient } from "../packages/core/src/core/llm-client";
 import { ChainOfThought } from "../packages/core/src/core/chain-of-thought";
 import { PROVIDER_GUIDE, ZIDLE_CONTEXT } from "./zidle";
-import { starknetTransactionAction } from "../packages/core/src/core/actions/starknet-transaction";
-import { starknetReadAction } from "../packages/core/src/core/actions/starknet-read";
 import chalk from "chalk";
 import { JSONSchemaType } from "ajv";
-import { starknetTransactionSchema } from "../packages/core/src/core/validation";
-import { graphqlAction } from "../packages/core/src/core/actions/graphql";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { GoalStatus, LogLevel } from "../packages/core/src/types";
+import { z } from "zod";
+import {
+  executeStarknetTransaction,
+  fetchGraphQL,
+} from "../packages/core/src/core/providers";
+import { executeStarknetRead } from "../packages/core/src/core/providers/starknet";
 
 interface GraphQLPayload {
   query: string;
@@ -41,7 +43,7 @@ function printGoalStatus(status: GoalStatus): string {
 async function main() {
   // Initialize LLM client
   const llmClient = new LLMClient({
-    model: "anthropic/claude-3.5-sonnet:beta", //"deepseek/deepseek-r1", //"anthropic/claude-3.5-haiku-20241022:beta"
+    model: "anthropic/claude-3-5-sonnet-latest", //"deepseek/deepseek-r1", //"anthropic/claude-3.5-haiku-20241022:beta"
   });
 
   const memory = new ChromaVectorDB("agent_memory", {
@@ -78,46 +80,81 @@ async function main() {
     { logLevel: LogLevel.DEBUG }
   );
 
-  dreams.registerAction(
-    "GRAPHQL_FETCH",
-    graphqlAction,
-    {
-      description: "Fetch data from the Eternum GraphQL API",
-      example: JSON.stringify({
-        query:
-          "query ZidleXPModels {zidleMinerModels(where: { token_id: $TOKEN_ID_LOW }) {totalCount edges { node { resource_type xp } } } }",
-      }),
+  dreams.registerOutput({
+    name: "EXECUTE_READ",
+    handler: async (data: any) => {
+      const result = await executeStarknetRead(data.payload);
+      return `Read executed successfully: ${JSON.stringify(result, null, 2)}`;
     },
-    graphqlFetchSchema as JSONSchemaType<any>
-  );
+    schema: z
+      .object({
+        contractAddress: z
+          .string()
+          .describe("The address of the contract to read from"),
+        entrypoint: z
+          .string()
+          .describe("The entrypoint to call on the contract"),
+        calldata: z
+          .array(z.union([z.number(), z.string()]))
+          .describe("The calldata to pass to the entrypoint"),
+      })
+      .describe(
+        "The payload to use to call, never include slashes or comments"
+      ),
+  });
 
-  dreams.registerAction(
-    "EXECUTE_TRANSACTION",
-    starknetTransactionAction,
-    {
-      description: "Execute a transaction on the Starknet blockchain",
-      example: JSON.stringify({
-        contractAddress: "0x1234567890abcdef",
-        entrypoint: "execute",
-        calldata: [1, 2, 3],
-      }),
+  dreams.registerOutput({
+    name: "EXECUTE_TRANSACTION",
+    handler: async (data: any) => {
+      const result = await executeStarknetTransaction(data.payload);
+      return `Transaction executed successfully: ${JSON.stringify(
+        result,
+        null,
+        2
+      )}`;
     },
-    starknetTransactionSchema as JSONSchemaType<any>
-  );
+    schema: z
+      .object({
+        contractAddress: z
+          .string()
+          .describe(
+            "The address of the contract to execute the transaction on"
+          ),
+        entrypoint: z
+          .string()
+          .describe("The entrypoint to call on the contract"),
+        calldata: z
+          .array(z.union([z.number(), z.string()]))
+          .describe("The calldata to pass to the entrypoint"),
+      })
+      .describe(
+        "The payload to execute the transaction, never include slashes or comments"
+      ),
+  });
 
-  dreams.registerAction(
-    "EXECUTE_READ",
-    starknetReadAction,
-    {
-      description: "Call a read-only function on the Starknet blockchain",
-      example: JSON.stringify({
-        contractAddress: "0x1234567890abcdef",
-        entrypoint: "read",
-        calldata: [1, 2, 3],
-      }),
+  dreams.registerOutput({
+    name: "GRAPHQL_FETCH",
+    handler: async (data: any) => {
+      const { query, variables } = data.payload ?? {};
+      const result = await fetchGraphQL(query, variables);
+      const resultStr = [
+        `query: ${query}`,
+        `result: ${JSON.stringify(result, null, 2)}`,
+      ].join("\n\n");
+      return `GraphQL data fetched successfully: ${resultStr}`;
     },
-    starknetTransactionSchema as JSONSchemaType<any>
-  );
+    schema: z
+      .object({
+        query: z
+          .string()
+          .describe(
+            `"query ZidleMinerModels { zidleMinerModels(where: { token_id: "0x10" }) {totalCount edges { node { resource_type xp } } } }"`
+          ),
+      })
+      .describe(
+        "The payload to fetch data from the Eternum GraphQL API, never include slashes or comments"
+      ),
+  });
 
   // Set up event logging
 
@@ -263,7 +300,7 @@ async function main() {
 
     // Initial analysis
     const result = await dreams.think(
-      "Analyze the current game state and determine the optimal farming strategy. Check resource levels and XP progress, then start farming the most needed resource."
+      "First Goal: Get NFT token ID before proceeding with any other actions. When this goal is done you can start mining resources efficiently to maximize XP gain"
     );
 
     console.log(chalk.green("\n✨ Initial analysis completed!"));

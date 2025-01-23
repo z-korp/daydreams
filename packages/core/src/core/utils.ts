@@ -155,7 +155,7 @@ export const validateLLMResponseSchema = async <T>({
   while (attempts < maxRetries) {
     try {
       console.log("before await llmClient.analyze");
-      console.log("formattedPrompt", formattedPrompt);
+      //console.log("formattedPrompt", formattedPrompt);
       const response = await llmClient.analyze(formattedPrompt, {
         system: systemPrompt,
       });
@@ -204,7 +204,7 @@ export const validateLLMResponseSchema = async <T>({
         continue;
       }
 
-      console.log(parsed);
+      console.log("parsed", parsed);
 
       return parsed;
     } catch (error) {

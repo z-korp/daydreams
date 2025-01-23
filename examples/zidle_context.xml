@@ -3,7 +3,7 @@
   <game_rules>
     - One NFT per wallet required
     - Balance mining between Stone and Wood
-    - Token IDs are u256, but use CHECK_NFT token_id_low for all actions
+    - Token IDs are u256, but use CHECK_NFT TOKEN_ID_LOW for all actions
     - Each resource type has different levels with specific requirements and rewards
   </game_rules>
 
@@ -181,35 +181,41 @@
   </game_mechanics>
 
   <game_flow>
-    <initialization>
-      <step>1. **Always start with CHECK_NFT.** Verify NFT existence before any action.</step>
-      <step>2. If no NFT is found:
-        - Mint new NFT using MINT_NFT.
-        - Verify the minting success with CHECK_NFT and then proceed.</step>
-      <step>3. Check current mining status (CHECK_MINING):
-        - If mining is in progress, harvest resources (HARVEST_RCS).
-        - If not, proceed to the main loop.</step>
-      <step>4. Query current XP to determine the starting point.</step>
-      <step>5. Proceed to the main loop.</step>
-    </initialization>
-    
-    <main_loop>
-      <step>1. Check current XP levels and calculate:
-        - Current level from XP.
-        - XP needed for the next level.
-        - Available resource tiers.</step>
-      <step>2. Check mining status (CHECK_MINING):
-        - If mining: Harvest current resource (HARVEST_RCS).
-        - If not: Select optimal resource based on the level and start mining (MINE_RCS).</step>
-      <step>3. Wait for gathering duration based on base time and level reduction bonus.</step>
-      <step>4. Return to step 1 of the main loop.</step>
-    </main_loop>
-    
-    <optimization_notes>
-      - Keep mining active at all times.
-      - Always choose the highest tier resource available based on your level.
-      - Factor in gathering time reduction from level bonuses.
-      - Balance between XP gains and gathering time.
-    </optimization_notes>
+    <action_dependencies>
+      - TOKEN_ID required before: CHECK_XP, CHECK_MINING, MINE_RCS, HARVEST_RCS
+      - XP_DATA required before: MINE_RCS (for tier selection)
+      - MINING_STATUS required before: HARVEST_RCS, MINE_RCS
+    </action_dependencies>
+
+    <action_flow>
+      <phase name="initialization">
+        1. CHECK_NFT:
+          - Success: Store TOKEN_ID_LOW, proceed to phase 2
+          - Not found: Execute MINT_NFT, then repeat CHECK_NFT
+      </phase>
+
+      <phase name="status_check" requires="TOKEN_ID_LOW">
+        1. CHECK_XP: Get current XP and level data
+        2. CHECK_MINING: Get current mining status
+        3. Based on results:
+          - If mining: Queue HARVEST_RCS
+          - If idle: Proceed to resource selection
+      </phase>
+
+      <phase name="resource_selection" requires="TOKEN_ID_LOW,XP_DATA,MINING_STATUS">
+        1. Calculate optimal resource tier based on:
+          - Current level
+          - Available tiers
+          - XP efficiency
+        2. Queue MINE_RCS with selected tier
+      </phase>
+    </action_flow>
+
+    <execution_rules>
+      - Generate only actions where all required data is available
+      - Wait for each action's response before planning next steps
+      - Validate data requirements before queueing any action
+      - Re-evaluate plan after each action completion
+    </execution_rules>
   </game_flow>
 </zidle_context>
