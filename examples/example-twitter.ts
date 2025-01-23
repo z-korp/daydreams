@@ -7,8 +7,8 @@
  * - Process inputs through a character-based personality
  */
 
-import { Core } from "../packages/core/src/core/core";
-import { tweetSchema, TwitterClient } from "../packages/core/src/io/twitter";
+import { Orchestrator } from "../packages/core/src/core/orchestrator";
+import { TwitterClient } from "../packages/core/src/io/twitter";
 import { RoomManager } from "../packages/core/src/core/room-manager";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { Processor } from "../packages/core/src/core/processor";
@@ -17,13 +17,11 @@ import { env } from "../packages/core/src/core/env";
 import { LogLevel } from "../packages/core/src/types";
 import chalk from "chalk";
 import { defaultCharacter } from "../packages/core/src/core/character";
-
 import { Consciousness } from "../packages/core/src/core/consciousness";
-import type { AnySchema, JSONSchemaType } from "ajv";
 import { z } from "zod";
 
 async function main() {
-  const loglevel = LogLevel.ERROR;
+  const loglevel = LogLevel.DEBUG;
   // Initialize core dependencies
   const vectorDb = new ChromaVectorDB("twitter_agent", {
     chromaUrl: "http://localhost:8000",
@@ -35,7 +33,9 @@ async function main() {
   const roomManager = new RoomManager(vectorDb);
 
   const llmClient = new LLMClient({
-    model: "deepseek/deepseek-r1", // High performance model
+    model: "openai/gpt-4-turbo-preview", // Using OpenAI's GPT-4 Turbo
+    temperature: 0.7, // Slightly more creative
+    maxTokens: 4096, // Increased context window
   });
 
   // Initialize processor with default character personality
@@ -43,16 +43,14 @@ async function main() {
     vectorDb,
     llmClient,
     defaultCharacter,
-    LogLevel.INFO
+    loglevel
   );
 
   // Initialize core system
-  const core = new Core(roomManager, vectorDb, processor, {
-    logging: {
-      level: loglevel,
-      enableColors: true,
-      enableTimestamp: true,
-    },
+  const core = new Orchestrator(roomManager, vectorDb, processor, {
+    level: loglevel,
+    enableColors: true,
+    enableTimestamp: true,
   });
 
   // Set up Twitter client with credentials
@@ -73,7 +71,7 @@ async function main() {
   });
 
   // Register input handler for Twitter mentions
-  core.registerInput({
+  core.subscribeToInputSource({
     name: "twitter_mentions",
     handler: async () => {
       console.log(chalk.blue("🔍 Checking Twitter mentions..."));
@@ -97,7 +95,7 @@ async function main() {
   });
 
   // Register input handler for autonomous thoughts
-  core.registerInput({
+  core.subscribeToInputSource({
     name: "consciousness_thoughts",
     handler: async () => {
       console.log(chalk.blue("🧠 Generating thoughts..."));
@@ -160,10 +158,10 @@ async function main() {
 
     // Clean up resources
     await consciousness.stop();
-    core.removeInput("twitter_mentions");
-    core.removeInput("consciousness_thoughts");
-    core.removeOutput("twitter_reply");
-    core.removeOutput("twitter_thought");
+    core.unsubscribeFromInputSource("twitter_mentions");
+    core.unsubscribeFromInputSource("consciousness_thoughts");
+    core.removeOutputHandler("twitter_reply");
+    core.removeOutputHandler("twitter_thought");
 
     console.log(chalk.green("✅ Shutdown complete"));
     process.exit(0);
