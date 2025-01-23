@@ -8,6 +8,12 @@
       <rule>$RESOURCE_TYPE must be numeric: 1=Wood, 2=Food, 3=Mineral</rule>
       <rule>$RESOURCE_SUBTYPE must be numeric: 1</rule>
     </parameter_rules>
+    <graphql_rule>
+      Use plain quotes, not escaped quotes:
+      ✓ query { tokens(id: "0x123") }
+      ✗ query { tokens(id: \"0x123\") }
+    </graphql_rule>
+
     <rule>CRITICAL: Entrypoint field in Dreams actions must exactly match the entrypoint specified in the action's implementation - no renaming allowed</rule>
     <rule>Parameters must use correct data types (numeric for IDs and types)</rule>
     <rule>The daydream_action determines which Dreams system action to use</rule>
@@ -150,7 +156,7 @@
       <example_call>{
           type: "GRAPHQL_FETCH",
           payload: {
-            query: "query ZidleMinerModels { zidleMinerModels(where: { token_id: \"0x10\", timestampGT: \"0\" }) { edges { node { token_id resource_type xp } } totalCount } }"
+            query: "query ZidleMinerModels { zidleMinerModels(where: { token_id: "0x10", timestampGT: "0" }) { edges { node { token_id resource_type xp } } totalCount } }"
           }
         }
       </example_call>
@@ -184,7 +190,7 @@
       <example_call>{
           "type": "GRAPHQL_FETCH",
           "payload": {
-            "query": "query ZidleMinerModels { zidleMinerModels(where: { token_id: \"0x10\", timestampGT: \"0\" }) { edges { node { token_id resource_type xp } } totalCount } }"
+            "query": "query ZidleMinerModels { zidleMinerModels(where: { token_id: "0x10", timestampGT: "0" }) { edges { node { token_id resource_type xp } } totalCount } }"
           }
         }
       </example_call>

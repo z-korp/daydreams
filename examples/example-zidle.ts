@@ -1,29 +1,14 @@
 import { LLMClient } from "../packages/core/src/core/llm-client";
 import { ChainOfThought } from "../packages/core/src/core/chain-of-thought";
-import { PROVIDER_GUIDE, ZIDLE_CONTEXT } from "./zidle";
+import { PROVIDER_GUIDE, ZIDLE_CONTEXT } from "./zidle/zidle";
 import chalk from "chalk";
 import { JSONSchemaType } from "ajv";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { GoalStatus, LogLevel } from "../packages/core/src/types";
 import { z } from "zod";
-import {
-  executeStarknetTransaction,
-  fetchGraphQL,
-} from "../packages/core/src/core/providers";
-import { executeStarknetRead } from "../packages/core/src/core/providers/starknet";
-
-interface GraphQLPayload {
-  query: string;
-}
-
-const graphqlFetchSchema: JSONSchemaType<GraphQLPayload> = {
-  type: "object",
-  properties: {
-    query: { type: "string" },
-  },
-  required: ["query"],
-  additionalProperties: false,
-};
+import { StarknetChain } from "../packages/core/src/core/chains/starknet";
+import { fetchGraphQL } from "../packages/core/src/core/providers";
+import { env } from "../packages/core/src/core/env";
 
 /**
  * Helper function to format goal status with colored icons
@@ -51,6 +36,12 @@ async function main() {
     logLevel: LogLevel.WARN,
   });
   await memory.purge(); // Clear previous session data
+
+  const starknetChain = new StarknetChain({
+    rpcUrl: env.STARKNET_RPC_URL,
+    address: env.STARKNET_ADDRESS,
+    privateKey: env.STARKNET_PRIVATE_KEY,
+  });
 
   // Load initial context documents
   await memory.storeDocument({
@@ -83,8 +74,8 @@ async function main() {
   dreams.registerOutput({
     name: "EXECUTE_READ",
     handler: async (data: any) => {
-      const result = await executeStarknetRead(data.payload);
-      return `Read executed successfully: ${JSON.stringify(result, null, 2)}`;
+      const result = await starknetChain.read(data.payload);
+      return `Transaction: ${JSON.stringify(result, null, 2)}`;
     },
     schema: z
       .object({
@@ -106,12 +97,8 @@ async function main() {
   dreams.registerOutput({
     name: "EXECUTE_TRANSACTION",
     handler: async (data: any) => {
-      const result = await executeStarknetTransaction(data.payload);
-      return `Transaction executed successfully: ${JSON.stringify(
-        result,
-        null,
-        2
-      )}`;
+      const result = await starknetChain.write(data.payload);
+      return `Transaction: ${JSON.stringify(result, null, 2)}`;
     },
     schema: z
       .object({
@@ -135,8 +122,13 @@ async function main() {
   dreams.registerOutput({
     name: "GRAPHQL_FETCH",
     handler: async (data: any) => {
+      console.log("[GRAPHQL_FETCH handler] data", data);
       const { query, variables } = data.payload ?? {};
-      const result = await fetchGraphQL(query, variables);
+      const result = await fetchGraphQL(
+        env.GRAPHQL_URL + "/graphql",
+        query,
+        variables
+      );
       const resultStr = [
         `query: ${query}`,
         `result: ${JSON.stringify(result, null, 2)}`,
@@ -148,11 +140,11 @@ async function main() {
         query: z
           .string()
           .describe(
-            `"query ZidleMinerModels { zidleMinerModels(where: { token_id: "0x10" }) {totalCount edges { node { resource_type xp } } } }"`
+            `query ZidleMinerModels { zidleMinerModels(where: { token_id: "0x10" }) {totalCount edges { node { resource_type xp } } } }`
           ),
       })
       .describe(
-        "The payload to fetch data from the Eternum GraphQL API, never include slashes or comments"
+        "The payload to fetch data from the zIdle GraphQL API, never include slashes or comments"
       ),
   });
 

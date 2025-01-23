@@ -1359,8 +1359,15 @@ ${availableOutputs
                 newActionsCount: completion.newActions.length,
                 totalPendingCount: pendingActions.length,
               });
+
+              isComplete = false;
             }
 
+            console.log("isComplete", isComplete);
+            console.log(
+              "!completion.shouldContinue",
+              !completion.shouldContinue
+            );
             if (isComplete || !completion.shouldContinue) {
               this.recordReasoningStep(
                 `Goal ${isComplete ? "achieved" : "failed"}: ${
