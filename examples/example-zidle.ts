@@ -7,9 +7,8 @@ import chalk from "chalk";
 import { JSONSchemaType } from "ajv";
 import { starknetTransactionSchema } from "../packages/core/src/core/validation";
 import { graphqlAction } from "../packages/core/src/core/actions/graphql";
-import ManifestParser from "./zidle/manifest_parser";
-import manifest from "./zidle/manifest.json";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
+import { GoalStatus, LogLevel } from "../packages/core/src/types";
 
 interface GraphQLPayload {
   query: string;
@@ -24,16 +23,32 @@ const graphqlFetchSchema: JSONSchemaType<GraphQLPayload> = {
   additionalProperties: false,
 };
 
+/**
+ * Helper function to format goal status with colored icons
+ */
+function printGoalStatus(status: GoalStatus): string {
+  const colors: Record<GoalStatus, string> = {
+    pending: chalk.yellow("⏳ PENDING"),
+    active: chalk.blue("▶️ ACTIVE"),
+    completed: chalk.green("✅ COMPLETED"),
+    failed: chalk.red("❌ FAILED"),
+    ready: chalk.cyan("🎯 READY"),
+    blocked: chalk.red("🚫 BLOCKED"),
+  };
+  return colors[status] || status;
+}
+
 async function main() {
   // Initialize LLM client
   const llmClient = new LLMClient({
-    model: "anthropic/claude-3.5-haiku-20241022:beta", // "deepseek/deepseek-r1"
+    model: "anthropic/claude-3.5-sonnet:beta", //"deepseek/deepseek-r1", //"anthropic/claude-3.5-haiku-20241022:beta"
   });
 
-  const memory = new ChromaVectorDB("agent_memory");
+  const memory = new ChromaVectorDB("agent_memory", {
+    chromaUrl: "http://localhost:8000",
+    logLevel: LogLevel.WARN,
+  });
   await memory.purge(); // Clear previous session data
-
-  const dojo_parser = new ManifestParser(JSON.stringify(manifest));
 
   // Load initial context documents
   await memory.storeDocument({
@@ -53,9 +68,15 @@ async function main() {
   });
 
   // Initialize the main reasoning engine
-  const dreams = new ChainOfThought(llmClient, memory, {
-    worldState: ZIDLE_CONTEXT,
-  });
+  const dreams = new ChainOfThought(
+    llmClient,
+    memory,
+    {
+      worldState: ZIDLE_CONTEXT,
+      providerContext: PROVIDER_GUIDE,
+    },
+    { logLevel: LogLevel.DEBUG }
+  );
 
   dreams.registerAction(
     "GRAPHQL_FETCH",
@@ -98,29 +119,141 @@ async function main() {
     starknetTransactionSchema as JSONSchemaType<any>
   );
 
-  // Add event handlers for monitoring
-  dreams.on("think:start", ({ query }) => {
-    console.log(chalk.blue("\n🤔 Analyzing game state:"), query);
+  // Set up event logging
+
+  // Thought process events
+  dreams.on("step", (step) => {
+    if (step.type === "system") {
+      console.log("\n💭 System prompt:", step.content);
+    } else {
+      console.log("\n🤔 New thought step:", {
+        content: step.content,
+        tags: step.tags,
+      });
+    }
   });
 
+  // Uncomment to log token usage
+  // llmClient.on("trace:tokens", ({ input, output }) => {
+  //   console.log("\n💡 Tokens used:", { input, output });
+  // });
+
+  // Action execution events
   dreams.on("action:start", (action) => {
-    console.log(chalk.yellow("\n🎮 Executing game action:"), {
+    console.log("\n🎬 Starting action:", {
       type: action.type,
       payload: action.payload,
     });
   });
 
   dreams.on("action:complete", ({ action, result }) => {
-    console.log(chalk.green("\n✅ Action completed:"), {
+    console.log("\n✅ Action complete:", {
       type: action.type,
       result,
     });
   });
 
   dreams.on("action:error", ({ action, error }) => {
-    console.log(chalk.red("\n❌ Action failed:"), {
+    console.log("\n❌ Action failed:", {
       type: action.type,
       error,
+    });
+  });
+
+  // Thinking process events
+  dreams.on("think:start", ({ query }) => {
+    console.log("\n🧠 Starting to think about:", query);
+  });
+
+  dreams.on("think:complete", ({ query }) => {
+    console.log("\n🎉 Finished thinking about:", query);
+  });
+
+  dreams.on("think:timeout", ({ query }) => {
+    console.log("\n⏰ Thinking timed out for:", query);
+  });
+
+  dreams.on("think:error", ({ query, error }) => {
+    console.log("\n💥 Error while thinking about:", query, error);
+  });
+
+  // Goal management events
+  dreams.on("goal:created", ({ id, description }) => {
+    console.log(chalk.cyan("\n🎯 New goal created:"), {
+      id,
+      description,
+    });
+  });
+
+  dreams.on("goal:updated", ({ id, status }) => {
+    console.log(chalk.yellow("\n📝 Goal status updated:"), {
+      id,
+      status: printGoalStatus(status),
+    });
+  });
+
+  dreams.on("goal:completed", ({ id, result }) => {
+    console.log(chalk.green("\n✨ Goal completed:"), {
+      id,
+      result,
+    });
+  });
+
+  dreams.on("goal:failed", ({ id, error }) => {
+    console.log(chalk.red("\n💥 Goal failed:"), {
+      id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  });
+
+  // Memory management events
+  dreams.on("memory:experience_stored", ({ experience }) => {
+    console.log(chalk.blue("\n💾 New experience stored:"), {
+      action: experience.action,
+      outcome: experience.outcome,
+      importance: experience.importance,
+      timestamp: experience.timestamp,
+    });
+
+    if (experience.emotions?.length) {
+      console.log(
+        chalk.blue("😊 Emotional context:"),
+        experience.emotions.join(", ")
+      );
+    }
+  });
+
+  dreams.on("memory:knowledge_stored", ({ document }) => {
+    console.log(chalk.magenta("\n📚 New knowledge documented:"), {
+      title: document.title,
+      category: document.category,
+      tags: document.tags,
+      lastUpdated: document.lastUpdated,
+    });
+    console.log(chalk.magenta("📝 Content:"), document.content);
+  });
+
+  dreams.on("memory:experience_retrieved", ({ experiences }) => {
+    console.log(chalk.yellow("\n🔍 Relevant past experiences found:"));
+    experiences.forEach((exp, index) => {
+      console.log(chalk.yellow(`\n${index + 1}. Previous Experience:`));
+      console.log(`   Action: ${exp.action}`);
+      console.log(`   Outcome: ${exp.outcome}`);
+      console.log(`   Importance: ${exp.importance || "N/A"}`);
+      if (exp.emotions?.length) {
+        console.log(`   Emotions: ${exp.emotions.join(", ")}`);
+      }
+    });
+  });
+
+  dreams.on("memory:knowledge_retrieved", ({ documents }) => {
+    console.log(chalk.green("\n📖 Relevant knowledge retrieved:"));
+    documents.forEach((doc, index) => {
+      console.log(chalk.green(`\n${index + 1}. Knowledge Entry:`));
+      console.log(`   Title: ${doc.title}`);
+      console.log(`   Category: ${doc.category}`);
+      console.log(`   Tags: ${doc.tags.join(", ")}`);
+      console.log(`   Content: ${doc.content}`);
     });
   });
 

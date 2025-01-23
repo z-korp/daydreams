@@ -1,7 +1,5 @@
 import type { CoTTransaction, LLMStructuredResponse } from "../types";
-
 import type { JSONSchemaType } from "ajv";
-import Ajv from "ajv";
 
 export const queryValidator = (
   response: any

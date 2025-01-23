@@ -62,6 +62,7 @@ export class ChainOfThought extends EventEmitter {
 
     this.context = initialContext ?? {
       worldState: "",
+      providerContext: "",
     };
 
     this.logger = new Logger({
@@ -915,7 +916,7 @@ ${lastSteps}
 <CONTEXT_SUMMARY>
 ${this.context.worldState}
 
-{{additional_context}}
+${this.context.providerContext}
 </CONTEXT_SUMMARY>
 
 <STEP_VALIDATION_RULES>
@@ -950,7 +951,6 @@ ${actionExamplesText}
 
 </global_context>
 `;
-
     return injectTags(tags, prompt);
   }
 

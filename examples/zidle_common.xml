@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <constants_context>
+  <wallet>
+    <account_address>0x6daf2a924fab727ae5409f0743de4869850f988b6f8545268016ad1107fd2cd</account_address>
+  </wallet>
+
   <token_ids>
     <description>Token ID handling rules</description>
     <rule>Always use token_id_low from CHECK_NFT[0] for all actions</rule>

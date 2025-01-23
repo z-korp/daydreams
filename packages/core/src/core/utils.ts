@@ -152,14 +152,19 @@ export const getValidatedLLMResponse = async <T>({
 
   while (attempts < maxRetries) {
     try {
+      console.log("before await llmClient.analyze");
+      console.log("formattedPrompt", formattedPrompt);
       const response = await llmClient.analyze(formattedPrompt, {
         system: systemPrompt,
       });
+      console.log("after await llmClient.analyze");
 
       let responseText = response.toString();
 
       // Remove markdown code block formatting if present
       responseText = responseText.replace(/```json\n?|\n?```/g, "");
+
+      console.log("responseText", responseText);
 
       let parsed: T;
       try {
@@ -196,6 +201,8 @@ export const getValidatedLLMResponse = async <T>({
         );
         continue;
       }
+
+      console.log(parsed);
 
       return parsed;
     } catch (error) {

@@ -1,10 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <provider_guide>
   <processing_rules>
-    <rule>Each <action> maps to a meta_action (EXECUTE_READ, EXECUTE_TRANSACTION, or GRAPHQL_FETCH)</rule>
-    <rule>The daydream_action determines which system action to use</rule>
-    <rule>Parameters from the XML need to be transformed to match the Dreams action schema</rule>
-    <rule>Always follow the rules in <important_rules>, especially checking NFT first</rule>
+    <rule>Variables in CAPS with $ must be replaced with actual values</rule>
+    <parameter_rules priority="1">
+      <rule>$TOKEN_ID_LOW must be replaced with numeric token_id_low value from the return of CHECK_NFT[0]</rule>
+      <rule>$WALLET_ADDRESS must be replaced with caller's actual wallet address</rule>
+      <rule>$RESOURCE_TYPE must be numeric: 1=Wood, 2=Food, 3=Mineral</rule>
+      <rule>$RESOURCE_SUBTYPE must be numeric: 1</rule>
+    </parameter_rules>
+    <rule>CRITICAL: Entrypoint field in Dreams actions must exactly match the entrypoint specified in the action's implementation - no renaming allowed</rule>
+    <rule>Parameters must use correct data types (numeric for IDs and types)</rule>
+    <rule>The daydream_action determines which Dreams system action to use</rule>
+    <rule>Parameters must match Dreams action schema format</rule>
+    <rule>Follow <important_rules>, especially NFT check first</rule>
   </processing_rules>
 
   <important_rules>
@@ -14,20 +22,57 @@
     <rule>Never use token_id_high, always use token_id_low</rule>
   </important_rules>
 
+  <variable_management>
+    <overview>
+      The AI agent must manage variables by capturing results from actions and substituting them in subsequent actions. Variables are denoted with a `$` prefix (e.g., `$TOKEN_ID_LOW`).
+    </overview>
+
+    <variable_assignment>
+      <step>After executing an action, parse the result to extract necessary values.</step>
+      <step>Assign extracted values to corresponding variables in the agent's context.</step>
+      <example>
+        After CHECK_NFT action returns [ "0x6", "0x0" ], assign `TOKEN_ID_LOW = "0x6"`.
+      </example>
+    </variable_assignment>
+
+    <variable_substitution>
+      <step>Before executing an action, identify placeholders in the action's parameters (e.g., `$TOKEN_ID_LOW`).</step>
+      <step>Replace placeholders with actual values from the agent's context.</step>
+      <example>
+        Replace `$TOKEN_ID_LOW` with `0x6` in the GRAPHQL_FETCH query.
+      </example>
+    </variable_substitution>
+
+    <best_practices>
+      <rule>Ensure variables are assigned immediately after action results are obtained.</rule>
+      <rule>Maintain a clear and accessible context/state where variables are stored.</rule>
+      <rule>Validate that all required variables are present before executing dependent actions.</rule>
+    </best_practices>
+  </variable_management>
+
   <available_actions>
     <action name="CHECK_NFT">
-      <purpose>Check if wallet has NFT. Must be called first.</purpose>
+      <purpose>Check if wallet has NFT. Must be called first. Get TOKEN_ID_LOW variable</purpose>
       <implementation>
         <daydream_action>EXECUTE_READ</daydream_action>
         <contract>$CHARACTER_NFT</contract>
         <entrypoint>token_of_owner_by_index</entrypoint>
         <params>
           <param position="0" value="$WALLET_ADDRESS" />
-          <param position="1" value="1" />
+          <param position="1" value="0" />
           <param position="2" value="0" />
         </params>
       </implementation>
-      <returns>u256 [token_id_low, token_id_high]</returns>
+      <example_call>{
+          type: "EXECUTE_READ", 
+          payload: {
+            contractAddress: "0x051d88174534ea0e084f1eb6669da78a1e3a0c1fe4fd23542397815385550cd2",
+            entrypoint: "token_of_owner_by_index",
+            calldata: ["0x6daf2a924fab727ae5409f0743de4869850f988b6f8545268016ad1107fd2cd", 0, 0]
+          }
+        }
+      </example_call>
+      <returns>u256 [token_id_low, token_id_high] - Take the first as the TOKEN_ID_LOW variable for all other actions and queries</returns>
     </action>
 
     <action name="MINE_RCS">
@@ -42,6 +87,17 @@
           <param position="2" value="$RESOURCE_SUBTYPE" description="sub resource tier" />
         </params>
       </implementation>
+
+      <example_call>{
+          "type": "EXECUTE_TRANSACTION",
+          "payload": {
+            "contractAddress": "0x033f05797f8d389757d061f04ba4be429e5143b5fc2e2dc4c77bdb7e517e706f",
+            "entrypoint": "mine",
+            "calldata": ["0x6", 1, 1]
+          }
+        }
+      </example_call>
+
     </action>
 
     <action name="HARVEST_RCS">
@@ -55,6 +111,16 @@
           <param position="1" value="$RESOURCE_TYPE" description="same as mining type" />
         </params>
       </implementation>
+
+      <example_call>{
+          "type": "EXECUTE_TRANSACTION",
+          "payload": {
+            "contractAddress": "0x033f05797f8d389757d061f04ba4be429e5143b5fc2e2dc4c77bdb7e517e706f",
+            "entrypoint": "harvest",
+            "calldata": ["0x6", 1]
+          }
+        }
+      </example_call>
     </action>
   </available_actions>
 
@@ -81,6 +147,13 @@
           <param position="0" value="$TOKEN_ID_LOW" description="token_id_low from CHECK_NFT[0]" />
         </params>
       </implementation>
+      <example_call>{
+          type: "GRAPHQL_FETCH",
+          payload: {
+            query: "query ZidleMinerModels { zidleMinerModels(where: { token_id: \"0x6\", timestampGT: \"0\" }) { edges { node { token_id resource_type xp } } totalCount } }"
+          }
+        }
+      </example_call>
       <result_interpretation>
         <case condition="totalCount == 0">Not currently mining any resource</case>
         <case condition="totalCount > 0">Currently mining resource type (1:Wood, 2:Food, 3:Mineral)</case>
@@ -108,6 +181,13 @@
           <param position="0" value="$TOKEN_ID_LOW" description="token_id_low from CHECK_NFT[0]" />
         </params>
       </implementation>
+      <example_call>{
+          "type": "GRAPHQL_FETCH",
+          "payload": {
+            "query": "query ZidleMinerModels { zidleMinerModels(where: { token_id: \"0x6\", timestampGT: \"0\" }) { edges { node { token_id resource_type xp } } totalCount } }"
+          }
+        }
+      </example_call>
       <result_interpretation>
         <case condition="totalCount == 0">New character: all resource types start at 0 XP</case>
         <case condition="totalCount > 0">XP per resource type (1:Wood, 2:Food, 3:Mineral)</case>
