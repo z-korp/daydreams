@@ -9,6 +9,24 @@ import { z } from "zod";
 import { StarknetChain } from "../packages/core/src/core/chains/starknet";
 import { fetchGraphQL } from "../packages/core/src/core/providers";
 import { env } from "../packages/core/src/core/env";
+import readline from "readline";
+
+/**
+ * Helper function to get user input from CLI
+ */
+async function getCliInput(prompt: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    rl.question(prompt, (answer) => {
+      rl.close();
+      resolve(answer);
+    });
+  });
+}
 
 /**
  * Helper function to format goal status with colored icons
@@ -287,7 +305,7 @@ async function main() {
   });
 
   // Start the AI agent
-  try {
+  /*try {
     console.log(chalk.cyan("\n🤖 Starting zIdle AI agent..."));
 
     // Initial analysis
@@ -306,13 +324,152 @@ async function main() {
     }, 5 * 60 * 1000); // Check every 5 minutes
   } catch (error) {
     console.error(chalk.red("Error running AI agent:"), error);
-  }
+  }*/
 
   // Handle shutdown
   process.on("SIGINT", async () => {
     console.log(chalk.yellow("\nShutting down zIdle AI agent..."));
     process.exit(0);
   });
+
+  // Main interaction loop
+  const main_goal =
+    "Mine resources (wood and mineral) efficiently to maximize XP gain";
+  while (true) {
+    try {
+      // Plan and execute goals
+      console.log(chalk.cyan("\n🤔 Planning strategy for goal..."));
+      await dreams.decomposeObjectiveIntoGoals(main_goal);
+
+      console.log(chalk.cyan("\n🎯 Executing goals..."));
+
+      const stats = {
+        completed: 0,
+        failed: 0,
+        total: 0,
+      };
+
+      // Execute goals until completion
+      while (true) {
+        const readyGoals = dreams.goalManager.getReadyGoals();
+        console.log("-------------------- readyGoals", readyGoals);
+        const activeGoals = dreams.goalManager
+          .getGoalsByHorizon("short")
+          .filter((g) => g.status === "active");
+        const pendingGoals = dreams.goalManager
+          .getGoalsByHorizon("short")
+          .filter((g) => g.status === "pending");
+        console.log("-------------------- activeGoals", activeGoals);
+        console.log("-------------------- pendingGoals", pendingGoals);
+
+        // Status update
+        console.log(chalk.cyan("\n📊 Current Progress:"));
+        console.log(`Ready goals: ${readyGoals.length}`);
+        console.log(`Active goals: ${activeGoals.length}`);
+        console.log(`Pending goals: ${pendingGoals.length}`);
+        console.log(`Completed: ${stats.completed}`);
+        console.log(`Failed: ${stats.failed}`);
+
+        // Check if all goals are complete
+        if (
+          readyGoals.length === 0 &&
+          activeGoals.length === 0 &&
+          pendingGoals.length === 0
+        ) {
+          console.log(chalk.green("\n✨ All goals completed!"));
+          break;
+        }
+
+        // Handle blocked goals
+        if (readyGoals.length === 0 && activeGoals.length === 0) {
+          console.log(
+            chalk.yellow(
+              "\n⚠️ No ready or active goals, but some goals are pending:"
+            )
+          );
+          pendingGoals.forEach((goal) => {
+            const blockingGoals = dreams.goalManager.getBlockingGoals(goal.id);
+            console.log(chalk.yellow(`\n📌 Pending Goal: ${goal.description}`));
+            console.log(
+              chalk.yellow(`   Blocked by: ${blockingGoals.length} goals`)
+            );
+            blockingGoals.forEach((blocking) => {
+              console.log(
+                chalk.yellow(
+                  `   - ${blocking.description} (${blocking.status})`
+                )
+              );
+            });
+          });
+          break;
+        }
+
+        // Execute next goal
+        try {
+          await dreams.processHighestPriorityGoal();
+          stats.completed++;
+        } catch (error) {
+          console.error(chalk.red("\n❌ Goal execution failed:"), error);
+          stats.failed++;
+
+          // Ask to continue
+          const shouldContinue = await getCliInput(
+            chalk.yellow("\nContinue executing remaining goals? (y/n): ")
+          );
+
+          if (shouldContinue.toLowerCase() !== "y") {
+            console.log(chalk.yellow("Stopping goal execution."));
+            break;
+          }
+        }
+
+        stats.total++;
+      }
+
+      // Learning summary
+      console.log(chalk.cyan("\n📊 Learning Summary:"));
+
+      const recentExperiences = await dreams.memory.getRecentEpisodes(5);
+      console.log(chalk.blue("\n🔄 Recent Experiences:"));
+      recentExperiences.forEach((exp, index) => {
+        console.log(chalk.blue(`\n${index + 1}. Experience:`));
+        console.log(`   Action: ${exp.action}`);
+        console.log(`   Outcome: ${exp.outcome}`);
+        console.log(`   Importance: ${exp.importance || "N/A"}`);
+      });
+
+      const relevantDocs = await dreams.memory.findSimilarDocuments(
+        main_goal,
+        3
+      );
+      console.log(chalk.magenta("\n📚 Accumulated Knowledge:"));
+      relevantDocs.forEach((doc, index) => {
+        console.log(chalk.magenta(`\n${index + 1}. Knowledge Entry:`));
+        console.log(`   Title: ${doc.title}`);
+        console.log(`   Category: ${doc.category}`);
+        console.log(`   Tags: ${doc.tags.join(", ")}`);
+      });
+
+      // Final execution summary
+      console.log(chalk.cyan("\n📊 Final Execution Summary:"));
+      console.log(chalk.green(`✅ Completed Goals: ${stats.completed}`));
+      console.log(chalk.red(`❌ Failed Goals: ${stats.failed}`));
+      console.log(
+        chalk.blue(
+          `📈 Success Rate: ${Math.round(
+            (stats.completed / stats.total) * 100
+          )}%`
+        )
+      );
+      console.log(
+        chalk.yellow(
+          `🧠 Learning Progress: ${recentExperiences.length} new experiences, ${relevantDocs.length} relevant knowledge entries`
+        )
+      );
+    } catch (error) {
+      console.error(chalk.red("Error processing goal:"), error);
+    }
+  }
 }
 
 main().catch((error) => {
