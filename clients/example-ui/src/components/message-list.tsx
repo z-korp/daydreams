@@ -1,16 +1,16 @@
-import * as React from "react";
+import React from 'react';
 
-interface MessageType {
-  type: "user" | "assistant" | "system" | "error" | "other" | "welcome" | "info";
-  message?: string;
-  error?: string;
+interface Message {
+  type: string;
+  content: string;
+  timestamp: number;
 }
 
 interface MessagesListProps {
-  messages: MessageType[];
+  messages: Message[];
 }
 
-export function MessagesList({ messages }: MessagesListProps) {
+export const MessagesList: React.FC<MessagesListProps> = ({ messages }) => {
   return (
     <div className="flex flex-col space-y-4">
       {messages.map((msg, i) => {
@@ -47,20 +47,19 @@ export function MessagesList({ messages }: MessagesListProps) {
               hover:brightness-95
             `;
             break;
-
-          case "system":
-            containerClass += " justify-center";
-            bubbleClass += `
-              bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-900
-              border border-yellow-200 hover:brightness-105
-            `;
-            break;
-
-          case "error":
-            containerClass += " justify-center";
-            bubbleClass += `
-              bg-gradient-to-r from-red-50 to-red-100 text-red-700 font-semibold
-              border border-red-200 hover:brightness-105
+            case "system":
+              containerClass += " justify-center";
+              bubbleClass += `
+                bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-900
+                border border-yellow-200 hover:brightness-105
+              `;
+              break;
+  
+            case "error":
+              containerClass += " justify-center";
+              bubbleClass += `
+                bg-gradient-to-r from-red-50 to-red-100 text-red-700 font-semibold
+            border border-red-200 hover:brightness-105
             `;
             break;
 
@@ -90,9 +89,9 @@ export function MessagesList({ messages }: MessagesListProps) {
 
         return (
           <div key={i} className={containerClass}>
-            <div className={bubbleClass}>
-              {/* Affiche le type si ce n’est pas un user/assistant classique */}
-              {msg.type !== "user" && msg.type !== "assistant" && (
+                <div className={bubbleClass}>
+            {/* Affiche le type si ce n’est pas un user/assistant classique */}
+            {msg.type !== "user" && msg.type !== "assistant" && (
                 <div className="mb-1 text-xs font-medium uppercase tracking-wider opacity-80">
                   {msg.type}
                 </div>
@@ -115,4 +114,4 @@ export function MessagesList({ messages }: MessagesListProps) {
       })}
     </div>
   );
-}
+};

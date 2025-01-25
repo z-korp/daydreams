@@ -16,36 +16,70 @@ import {
 } from "@/components/ui/sidebar";
 
 interface MessageType {
-  type: "user" | "assistant" | "system" | "error" | "other";
+  type: "user" | "assistant" | "system" | "error" | "other" | "response";
   message?: string;
   error?: string;
+  orchestratorId?: string;
 }
 
 function App() {
   const [message, setMessage] = useState("");
   const [allMessages, setAllMessages] = useState<MessageType[]>([]);
-  const { messages, sendGoal } = useDaydreamsWs();
+  const { messages, sendMessage } = useDaydreamsWs();
+  const [currentOrchestratorId, setCurrentOrchestratorId] = useState<string>("");
 
   // Synchronise les messages du hook dans allMessages
   useEffect(() => {
     if (messages.length === 0) return;
     const lastMessage = messages[messages.length - 1];
+
+    // Gérer le message de bienvenue et sélectionner l'orchestrateur par défaut
+    if (lastMessage.type === "welcome" && lastMessage.orchestrators) {
+      const defaultOrch = lastMessage.orchestrators[0];
+      if (defaultOrch) {
+        setCurrentOrchestratorId(defaultOrch.id);
+      }
+    }
+
+    // Convertir le message de réponse en format MessageType
+    let messageToAdd: MessageType;
+    if (lastMessage.type === "response") {
+      messageToAdd = {
+        type: "assistant",
+        message: lastMessage.message,
+        orchestratorId: lastMessage.orchestratorId,
+      };
+    } else {
+      messageToAdd = lastMessage as MessageType;
+    }
+
     setAllMessages((prev) => {
-      // On évite les doublons si le dernier message est identique
-      if (prev.length > 0 && JSON.stringify(prev[prev.length - 1]) === JSON.stringify(lastMessage)) {
+      // On évite les doublons
+      if (prev.length > 0 && JSON.stringify(prev[prev.length - 1]) === JSON.stringify(messageToAdd)) {
         return prev;
       }
-      return [...prev, lastMessage];
+      return [...prev, messageToAdd];
     });
   }, [messages]);
 
   const handleSubmit = () => {
-    if (!message.trim()) return;
-    setAllMessages((prev) => [
-      ...prev,
-      { type: "user", message: message },
-    ]);
-    sendGoal(message);
+    if (!message.trim() || !currentOrchestratorId) return;
+
+    // Ajouter le message de l'utilisateur à l'interface
+    const userMessage: MessageType = {
+      type: "user",
+      message: message,
+      orchestratorId: currentOrchestratorId,
+    };
+    setAllMessages((prev) => [...prev, userMessage]);
+
+    // Envoyer le message au serveur avec l'orchestratorId
+    sendMessage({
+      type: "user",
+      message: message,
+      orchestratorId: currentOrchestratorId,
+    });
+
     setMessage("");
   };
 
@@ -61,7 +95,7 @@ function App() {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="#">Home</BreadcrumbLink>
+                  <BreadcrumbLink href="#">Chat</BreadcrumbLink>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
