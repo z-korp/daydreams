@@ -11,6 +11,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { Link } from "react-router-dom";
 
 // This is sample data.
 const data = {
@@ -35,7 +36,7 @@ const data = {
       items: [
         {
           title: "My Agents",
-          url: "#",
+          url: "my-agents",
         },
         {
           title: "Create Agent",
@@ -84,6 +85,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavUser user={data.user} />
       </SidebarFooter>
       <SidebarRail />
+      <div className="p-4 space-y-4">
+        <nav className="space-y-2">
+          <Link
+            to="/"
+            className="flex items-center px-3 py-2 text-sm rounded-lg hover:bg-accent"
+          >
+            Home
+          </Link>
+          <Link
+            to="/my-agents"
+            className="flex items-center px-3 py-2 text-sm rounded-lg hover:bg-accent"
+          >
+            My Agents
+          </Link>
+        </nav>
+      </div>
     </Sidebar>
   );
 }
