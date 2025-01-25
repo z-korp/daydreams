@@ -9,6 +9,11 @@ import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { StarknetChain } from "../packages/core/src/core/chains/starknet";
 import { env } from "../packages/core/src/core/env";
 import { fetchGraphQL } from "../packages/core/src/core/providers";
+import { Orchestrator } from "../packages/core/src/core/orchestrator";
+import { HandlerRole } from "../packages/core/src/core/types";
+import { RoomManager } from "../packages/core/src/core/room-manager";
+import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
+import { defaultCharacter } from "../packages/core/src/core/character";
 
 import {
   GoalStatus,
@@ -19,82 +24,78 @@ import {
 // 1) CREATE DAYDREAMS AGENT
 // ------------------------------------------------------
 function createDaydreamsAgent() {
+  const loglevel = LogLevel.INFO;
+  
   // 1.1. LLM Initialization
   const llmClient = new LLMClient({
     model: "anthropic/claude-3-5-sonnet-latest",
+    temperature: 0.3,
   });
 
-  // 1.2. Starknet blockchain initialization
-  const starknetChain = new StarknetChain({
-    rpcUrl: env.STARKNET_RPC_URL,
-    address: env.STARKNET_ADDRESS,
-    privateKey: env.STARKNET_PRIVATE_KEY,
+  // 1.2. Vector memory initialization
+  const vectorDb = new ChromaVectorDB("agent_memory", {
+    chromaUrl: "http://localhost:8000",
+    logLevel: loglevel,
   });
 
-  // 1.3. Vector memory initialization
-  const memory = new ChromaVectorDB("agent_memory");
+  // 1.3. Room manager initialization
+  const roomManager = new RoomManager(vectorDb);
 
-  // 1.4. Main reasoning engine
-  const dreams = new ChainOfThought(
+  // 1.4. Initialize processor with default character
+  const processor = new MessageProcessor(
     llmClient,
-    memory,
-    { worldState: "You are a helpful assistant." },
-    { logLevel: LogLevel.DEBUG }
+    defaultCharacter,
+    loglevel
   );
 
-  // 1.5. Load initial context into memory
-  (async () => {
-    // For demonstration, we purge the database so we start clean each run
-    await memory.purge();
-  })().catch(console.error);
+  // 1.5. Initialize core system
+  const orchestrator = new Orchestrator(
+    roomManager,
+    vectorDb,
+    [processor],
+    null, // No scheduled tasks for this example
+    {
+      level: loglevel,
+      enableColors: true,
+      enableTimestamp: true,
+    }
+  );
 
-  // 1.6. Register actions that the agent can perform
-  dreams.registerOutput({
-    name: "EXECUTE_TRANSACTION",
-    handler: async (data: any) => {
-      const result = await starknetChain.write(data.payload);
-      return `Transaction executed successfully: ${JSON.stringify(result, null, 2)}`;
+  // 1.6. Register handlers
+  orchestrator.registerIOHandler({
+    name: "user_chat",
+    role: HandlerRole.INPUT,
+    schema: z.object({
+      content: z.string(),
+      userId: z.string().optional(),
+    }),
+    handler: async (payload) => {
+      return payload;
     },
-    schema: z
-      .any()
-      .describe(
-        "Payload to execute the transaction, never include slashes or comments"
-      ),
   });
 
-  dreams.registerOutput({
-    name: "GRAPHQL_FETCH",
-    handler: async (data: any) => {
-      const { query, variables } = data.payload ?? {};
-      const result = await fetchGraphQL(
-        env.GRAPHQL_URL + "/graphql",
-        query,
-        variables
-      );
-      const resultStr = [
-        `query: ${query}`,
-        `result: ${JSON.stringify(result, null, 2)}`,
-      ].join("\n\n");
-      return `GraphQL data fetched successfully: ${resultStr}`;
+  orchestrator.registerIOHandler({
+    name: "chat_reply",
+    role: HandlerRole.OUTPUT,
+    schema: z.object({
+      userId: z.string().optional(),
+      message: z.string(),
+    }),
+    handler: async (payload) => {
+      const { userId, message } = payload as {
+        userId?: string;
+        message: string;
+      };
+      console.log(`Reply to user ${userId ?? "??"}: ${message}`);
     },
-    schema: z
-      .any()
-      .describe(
-        "Payload to fetch data from the Eternum GraphQL API, never include slashes/comments"
-      ),
   });
 
-  // 1.7. Optionally register event handlers 
-  dreams.on("goal:created", ({ id, description }) => {
-    console.log(chalk.cyan("[WS] New goal created:"), { id, description });
-  });
-
-  // Return the main instance that we will use later
-  return dreams;
+  // Return the orchestrator instance
+  return orchestrator;
 }
 
-// Create a single “global” instance (or one per connection if you prefer isolation)
-const dreams = createDaydreamsAgent();
+// Create a single "global" instance
+const orchestrator = createDaydreamsAgent();
 
 // ------------------------------------------------------
 // 2) WEBSOCKET SERVER
@@ -102,9 +103,6 @@ const dreams = createDaydreamsAgent();
 const wss = new WebSocketServer({ port: 8080 });
 console.log(chalk.green("[WS] WebSocket server listening on ws://localhost:8080"));
 
-/**
- * Helper function to send JSON messages to a client.
- */
 function sendJSON(ws: WebSocket, data: unknown) {
   ws.send(JSON.stringify(data));
 }
@@ -112,85 +110,41 @@ function sendJSON(ws: WebSocket, data: unknown) {
 wss.on("connection", (ws) => {
   console.log(chalk.blue("[WS] New client connected."));
 
-  // Send a welcome message to the client
   sendJSON(ws, {
     type: "welcome",
     message: "Welcome to Daydreams WebSocket server!",
   });
 
-  // Handle incoming messages (each message can represent a new goal)
   ws.on("message", async (rawData) => {
     try {
       const dataString = rawData.toString();
       console.log(chalk.magenta("[WS] Received message:"), dataString);
 
-      // We assume the client sends JSON such as: { "goal": "some string" }
       const parsed = JSON.parse(dataString);
-      const userGoal = parsed.goal;
+      const userMessage = parsed.goal;
 
-      if (!userGoal || typeof userGoal !== "string") {
-        throw new Error("Invalid goal format. Expected { goal: string }");
+      if (!userMessage || typeof userMessage !== "string") {
+        throw new Error("Invalid message format. Expected { message: string }");
       }
 
-      // 2.1) Plan the goal with Daydreams
-      sendJSON(ws, {
-        type: "info",
-        message: "Planning strategy for goal: " + userGoal,
+      // Process the message using the orchestrator
+      const outputs = await orchestrator.dispatchToInput("user_chat", {
+        content: userMessage,
+        userId: "ws-user",
       });
 
-      await dreams.decomposeObjectiveIntoGoals(userGoal);
-
-      // 2.2) Execute goals until there are no more “ready” goals
-      const stats = { completed: 0, failed: 0, total: 0 };
-
-      while (true) {
-        const readyGoals = dreams.goalManager.getReadyGoals();
-        const activeGoals = dreams.goalManager
-          .getGoalsByHorizon("short")
-          .filter((g) => g.status === "active");
-        const pendingGoals = dreams.goalManager
-          .getGoalsByHorizon("short")
-          .filter((g) => g.status === "pending");
-
-        // Check if all goals are completed
-        if (
-          readyGoals.length === 0 &&
-          activeGoals.length === 0 &&
-          pendingGoals.length === 0
-        ) {
-          sendJSON(ws, {
-            type: "info",
-            message: "All goals completed!",
-          });
-          break;
+      // Send responses back through WebSocket
+      if (outputs && outputs.length > 0) {
+        for (const out of outputs) {
+          if (out.name === "chat_reply") {
+            sendJSON(ws, {
+              type: "response",
+              message: out.data.message,
+            });
+          }
         }
-
-        // Check if we are blocked
-        if (readyGoals.length === 0 && activeGoals.length === 0) {
-          sendJSON(ws, {
-            type: "warn",
-            message: "No ready or active goals, but some goals are pending. Possibly blocked.",
-          });
-          break;
-        }
-
-        // Execute the next ready goal
-        try {
-          await dreams.processHighestPriorityGoal();
-          stats.completed++;
-        } catch (err) {
-          console.error("[WS] Goal execution failed:", err);
-          stats.failed++;
-          break; // For simplicity, we stop here
-        }
-        stats.total++;
       }
 
-      // Send a final summary to the client
-      sendJSON(ws, {
-        type: "summary",
-        message: `Goal execution done. Completed: ${stats.completed}, Failed: ${stats.failed}, Total: ${stats.total}.`,
-      });
     } catch (error) {
       console.error(chalk.red("[WS] Error processing message:"), error);
       sendJSON(ws, {
@@ -200,8 +154,19 @@ wss.on("connection", (ws) => {
     }
   });
 
-  // If the client closes the connection
   ws.on("close", () => {
     console.log(chalk.yellow("[WS] Client disconnected."));
   });
+});
+
+// Handle graceful shutdown
+process.on("SIGINT", async () => {
+  console.log(chalk.yellow("\n\nShutting down..."));
+  
+  // Close WebSocket server
+  wss.close(() => {
+    console.log(chalk.green("✅ WebSocket server closed"));
+  });
+
+  process.exit(0);
 });
