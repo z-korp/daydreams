@@ -27,7 +27,7 @@ export class ChromaVectorDB implements VectorDB {
     static readonly EPISODIC_COLLECTION = "episodic_memory";
     static readonly DOCUMENTATION_COLLECTION = "documentation";
 
-  public client: ChromaClient;
+  private client: ChromaClient;
   private embedder: OpenAIEmbeddingFunction;
   private logger: Logger;
   private collectionName: string;
