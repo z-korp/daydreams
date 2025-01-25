@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "vocs dev",
     "build": "vocs build",
-    "preview": "vocs preview"
+    "preview": "vocs preview",
+    "docs:api": "cp ../README.md docs/pages/index.mdx && typedoc",
+    "docs:dev": "pnpm docs:api && vocs dev",
+    "docs:build": "pnpm docs:api && vocs build"
   },
   "dependencies": {
     "@types/react": "latest",
@@ -17,6 +20,11 @@
   },
   "devDependencies": {
     "@types/react": "^18.3.10",
-    "vite-plugin-svgr": "^4.2.0"
+    "@vitejs/plugin-react": "4.2.1",
+    "typedoc": "^0.27.6",
+    "typedoc-plugin-frontmatter": "^1.1.2",
+    "typedoc-plugin-markdown": "^4.4.1",
+    "vite": "5.4.11",
+    "vite-plugin-svgr": "4.2.0"
   }
 }
