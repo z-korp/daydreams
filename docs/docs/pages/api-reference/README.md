@@ -1,4 +1,4 @@
-![Daydreams](./banner.png)
+![Daydreams](_media/banner.png)
 
 # Daydreams - for Defai, games and more
 
