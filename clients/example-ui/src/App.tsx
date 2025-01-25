@@ -66,20 +66,22 @@ function App() {
         </header>
 
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="flex items-center space-x-2">
-            <input
-              className="border p-2 flex-1"
-              type="text"
-              value={message}
-              placeholder="Enter a goal..."
-              onChange={(e) => setMessage(e.target.value)}
-            />
-            <button
-              onClick={handleSubmit}
-              className="bg-blue-500 text-white px-4 py-2"
-            >
-              Send
-            </button>
+        <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min p-4">
+            <div className="flex gap-2 max-w-2xl mx-auto">
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Type your message here..."
+                className="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <button
+                onClick={handleSubmit}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                Send
+              </button>
+            </div>
           </div>
           <MessagesList messages={messages} />
         </div>
