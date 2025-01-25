@@ -81,8 +81,6 @@ function App() {
               Send
             </button>
           </div>
-
-          {/* Affichage des messages via MessageList */}
           <MessagesList messages={messages} />
         </div>
       </SidebarInset>
