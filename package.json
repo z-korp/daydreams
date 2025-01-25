@@ -5,6 +5,7 @@
         "goal": "bun run examples/example-goal.ts",
         "task": "bun run examples/example-basic.ts",
         "twitter": "bun run examples/example-twitter.ts",
+        "server": "bun run examples/example-server.ts",
         "api": "bun run examples/example-api.ts",
         "test": "bun run packages/core",
         "build": "pnpm --dir packages/core run build",
