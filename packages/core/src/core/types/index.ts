@@ -343,49 +343,6 @@ export interface ThoughtTemplate {
     temperature: number;
 }
 
-/**
- * Interface for defining input handlers that can be registered with the Core system.
- * @template T The type of data returned by the input handler
- */
-export interface Input<T = unknown> {
-    /** Unique identifier for this input */
-    name: string;
-    /** Handler function that processes the input and returns a Promise of type T */
-    handler: (...args: unknown[]) => Promise<T>;
-    /** Zod schema for validating the response */
-    response: z.ZodType<T>;
-
-    /**
-     * Optional interval in milliseconds for recurring inputs.
-     * If set, the input will run repeatedly at this interval.
-     * @example
-     * ```ts
-     * // Run every minute
-     * interval: 60000
-     * ```
-     */
-    interval?: number;
-
-    /**
-     * Optional timestamp for when this input should next run.
-     * If omitted, defaults to immediate execution (Date.now()).
-     */
-    nextRun?: number;
-}
-
-/**
- * Interface for defining output handlers that can be registered with the Core system.
- * @template T The type of data the output handler accepts
- */
-export interface Output<T = unknown> {
-    /** Unique identifier for this output */
-    name: string;
-    /** Handler function that processes the output data */
-    handler: (data: T) => Promise<unknown>;
-    /** Zod schema for validating the input data */
-    schema: z.ZodType<T>;
-}
-
 export interface RoomMetadata {
     name: string;
     description?: string;
