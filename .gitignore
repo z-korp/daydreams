@@ -1,4 +1,17 @@
 # Based on https://raw.githubusercontent.com/github/gitignore/main/Node.gitignore
+# VSCode settings
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local history for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
 
 # Logs
 
@@ -177,3 +190,11 @@ dist
 # Logs
 
 logs/app-*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# But keep examples
+!.env.example
