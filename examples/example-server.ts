@@ -2,37 +2,40 @@ import { WebSocketServer, WebSocket } from "ws";
 import chalk from "chalk";
 import { z } from "zod";
 
-// ---- Import your internal classes and functions here ----
 import { LLMClient } from "../packages/core/src/core/llm-client";
-import { ChainOfThought } from "../packages/core/src/core/chain-of-thought";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
-import { StarknetChain } from "../packages/core/src/core/chains/starknet";
-import { env } from "../packages/core/src/core/env";
-import { fetchGraphQL } from "../packages/core/src/core/providers";
 import { Orchestrator } from "../packages/core/src/core/orchestrator";
 import { HandlerRole } from "../packages/core/src/core/types";
 import { RoomManager } from "../packages/core/src/core/room-manager";
 import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
 import { defaultCharacter } from "../packages/core/src/core/character";
+import { LogLevel } from "../packages/core/src/core/types";
+import { ScheduledTaskMongoDb } from "../packages/core/src/core/scheduled-db";
 
-import {
-  GoalStatus,
-  LogLevel
-} from "../packages/core/src/core/types";
-
-// ------------------------------------------------------
-// 1) ORCHESTRATOR MANAGER
-// ------------------------------------------------------
 class OrchestratorManager {
   private orchestrators: Map<string, Orchestrator> = new Map();
   private roomManagers: Map<string, RoomManager> = new Map();
+  private scheduledTaskDb: ScheduledTaskMongoDb;
 
-  createOrchestrator(name: string, config = { logLevel: LogLevel.INFO }) {
+  constructor() {
+    this.scheduledTaskDb = new ScheduledTaskMongoDb(
+      "mongodb://localhost:27017",
+      "myApp",
+      "scheduled_tasks"
+    );
+  }
+
+  async initialize() {
+    await this.scheduledTaskDb.connect();
+    await this.scheduledTaskDb.deleteAll();
+    console.log(chalk.green("✅ Scheduled task database connected"));
+  }
+
+  async createOrchestrator(name: string, config = { logLevel: LogLevel.INFO }) {
     console.log(chalk.blue(`[OrchestratorManager] Creating new orchestrator '${name}'`));
     console.log(chalk.gray(`[OrchestratorManager] Config:`, JSON.stringify(config, null, 2)));
     const id = `orch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Create new instances for this orchestrator
     const llmClient = new LLMClient({
       model: "anthropic/claude-3-5-sonnet-latest",
       temperature: 0.3,
@@ -56,7 +59,7 @@ class OrchestratorManager {
       roomManager,
       vectorDb,
       [processor],
-      null,
+      this.scheduledTaskDb,
       {
         level: config.logLevel,
         enableColors: true,
@@ -64,7 +67,6 @@ class OrchestratorManager {
       }
     );
 
-    // Register handlers
     orchestrator.registerIOHandler({
       name: "user_chat",
       role: HandlerRole.INPUT,
@@ -112,13 +114,12 @@ class OrchestratorManager {
   }
 }
 
-// Create global orchestrator manager and default orchestrator
+// Initialize orchestrator manager
 const orchestratorManager = new OrchestratorManager();
-const defaultOrch = orchestratorManager.createOrchestrator("Default Orchestrator");
+await orchestratorManager.initialize();
+const defaultOrch = await orchestratorManager.createOrchestrator("Default Orchestrator");
 
-// ------------------------------------------------------
-// 2) WEBSOCKET SERVER
-// ------------------------------------------------------
+// WebSocket Server
 const wss = new WebSocketServer({ port: 8080 });
 console.log(chalk.green("[WS] WebSocket server listening on ws://localhost:8080"));
 
@@ -129,7 +130,6 @@ function sendJSON(ws: WebSocket, data: unknown) {
 wss.on("connection", (ws) => {
   console.log(chalk.blue("[WS] New client connected."));
 
-  // Send welcome with list of orchestrators
   sendJSON(ws, {
     type: "welcome",
     message: "Welcome to Daydreams WebSocket server!",
@@ -148,7 +148,7 @@ wss.on("connection", (ws) => {
           if (!parsed.name) {
             throw new Error("Orchestrator name is required");
           }
-          const newOrch = orchestratorManager.createOrchestrator(parsed.name);
+          const newOrch = await orchestratorManager.createOrchestrator(parsed.name);
           sendJSON(ws, {
             type: "orchestrator_created",
             orchestrator: {
@@ -159,7 +159,6 @@ wss.on("connection", (ws) => {
           break;
 
         case "list_orchestrators":
-          console.log(chalk.blue("[WS] Listing orchestrators"));
           sendJSON(ws, {
             type: "orchestrators_list",
             orchestrators: orchestratorManager.listOrchestrators(),
@@ -175,7 +174,6 @@ wss.on("connection", (ws) => {
             throw new Error("Orchestrator not found");
           }
 
-          // Envoyer le message utilisateur en debug
           sendJSON(ws, {
             type: "debug",
             messageType: "user_input",
@@ -186,7 +184,6 @@ wss.on("connection", (ws) => {
 
           console.log(chalk.blue(`[WS] Dispatching message to orchestrator ${parsed.orchestratorId}`));
           
-          // Message de début de traitement
           sendJSON(ws, {
             type: "debug",
             messageType: "processing_start",
@@ -203,7 +200,6 @@ wss.on("connection", (ws) => {
 
             console.log(chalk.blue(`[WS] Got outputs:`, outputs));
 
-            // Envoyer les outputs bruts en mode debug
             sendJSON(ws, {
               type: "debug",
               messageType: "raw_outputs",
@@ -216,7 +212,6 @@ wss.on("connection", (ws) => {
             if (outputs && Array.isArray(outputs)) {
               for (const out of outputs) {
                 if (out.name === "chat_reply") {
-                  // Envoyer la réponse en debug
                   sendJSON(ws, {
                     type: "debug",
                     messageType: "ai_response",
@@ -225,7 +220,6 @@ wss.on("connection", (ws) => {
                     timestamp: Date.now()
                   });
 
-                  // Envoyer la réponse normale
                   sendJSON(ws, {
                     type: "response",
                     message: out.data.message,
@@ -236,7 +230,6 @@ wss.on("connection", (ws) => {
               }
             }
           } catch (error) {
-            // Envoyer l'erreur en debug
             sendJSON(ws, {
               type: "debug",
               messageType: "error",
@@ -266,14 +259,10 @@ wss.on("connection", (ws) => {
   });
 });
 
-// Handle graceful shutdown
 process.on("SIGINT", async () => {
   console.log(chalk.yellow("\n\nShutting down..."));
-  
-  // Close WebSocket server
   wss.close(() => {
     console.log(chalk.green("✅ WebSocket server closed"));
   });
-
   process.exit(0);
 });

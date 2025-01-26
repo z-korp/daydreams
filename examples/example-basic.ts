@@ -19,6 +19,7 @@ import chalk from "chalk";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { z } from "zod";
 import { env } from "../packages/core/src/core/env";
+import { HandlerRole } from "../packages/core/src/core/types";
 
 /**
  * Helper function to get user input from CLI
@@ -77,6 +78,7 @@ async function main() {
     // Register available outputs
     dreams.registerOutput({
         name: "EXECUTE_TRANSACTION",
+        role: HandlerRole.OUTPUT,
         handler: async (data: any) => {
             const result = await starknetChain.write(data.payload);
             return `Transaction: ${JSON.stringify(result, null, 2)}`;
@@ -102,6 +104,7 @@ async function main() {
 
     dreams.registerOutput({
         name: "GRAPHQL_FETCH",
+        role: HandlerRole.OUTPUT,
         handler: async (data: any) => {
             const { query, variables } = data.payload ?? {};
             const result = await fetchGraphQL(

@@ -17,12 +17,14 @@ interface AppState {
   messages: Message[];
   isConnected: boolean;
   showDebug: boolean;
+  theme: 'light' | 'dark';
   setCurrentOrchestratorId: (id: string) => void;
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
   setIsConnected: (isConnected: boolean) => void;
   setShowDebug: (show: boolean) => void;
   toggleShowDebug: () => void;
+  toggleTheme: () => void;
   getMessagesForCurrentOrchestrator: () => Message[];
 }
 
@@ -33,6 +35,7 @@ export const useAppStore = create<AppState>()(
       messages: [],
       isConnected: false,
       showDebug: false,
+      theme: 'light',
       setCurrentOrchestratorId: (id: string) => set({ currentOrchestratorId: id }),
       setMessages: (messages: Message[]) => set({ messages }),
       addMessage: (message: Message) => set((state) => ({ 
@@ -41,6 +44,11 @@ export const useAppStore = create<AppState>()(
       setIsConnected: (isConnected: boolean) => set({ isConnected }),
       setShowDebug: (show: boolean) => set({ showDebug: show }),
       toggleShowDebug: () => set((state) => ({ showDebug: !state.showDebug })),
+      toggleTheme: () => {
+        const newTheme = get().theme === 'light' ? 'dark' : 'light';
+        document.documentElement.classList.toggle('dark', newTheme === 'dark');
+        set({ theme: newTheme });
+      },
       getMessagesForCurrentOrchestrator: () => {
         const state = get();
         return state.messages.filter(msg => 

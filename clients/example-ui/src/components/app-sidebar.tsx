@@ -3,30 +3,25 @@ import { Bot, MessageSquare } from "lucide-react";
 import { NavMain } from "@/components/nav-main";
 import { NavProjects } from "@/components/nav-projects";
 import { NavUser } from "@/components/nav-user";
-import { TeamSwitcher } from "@/components/team-switcher";
+//import { TeamSwitcher } from "@/components/team-switcher";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarHeader,
+    SidebarRail,
 } from "@/components/ui/sidebar";
 import { Link } from "react-router-dom";
+import { ModeToggle } from "./mode-toggle";
+import { TeamSwitcher } from "./team-switcher";
 
 // This is sample data.
 const data = {
-  user: {
-    name: "sleever",
-    email: "m@sleever.ai",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  teams: [
-    {
-      name: "sleever",
-      logo: Bot,
-      plan: "Enterprise",
+    user: {
+        name: "sleever",
+        email: "m@sleever.ai",
+        avatar: "/avatars/shadcn.jpg",
     },
-  ],
   navMain: [
     {
       title: "Chats",
@@ -75,7 +70,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        {/* <TeamSwitcher teams={data.teams} /> */}
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import { AppSidebar } from "@/components/app-sidebar";
 import HomePage from "@/pages/HomePage";
@@ -6,8 +7,15 @@ import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar";
+import { useAppStore } from "@/store/use-app-store";
 
 function App() {
+  const { theme } = useAppStore();
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
+
   return (
     <SidebarProvider className="font-body">
       <AppSidebar />

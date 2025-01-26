@@ -4,77 +4,123 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221 83% 53%;
     --radius: 0rem;
-    --chart-1: 12 76% 61%;
+    --chart-1: 221 83% 53%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --sidebar-background: 240 4.8% 95.9%;
-    --sidebar-foreground: 240 5.9% 10%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 240 5.9% 90%;
-    --sidebar-ring: 240 5.9% 10%;
+    --chart-4: 221 83% 53%;
+    --chart-5: 221 83% 53%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 96.1%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 221 83% 53%;
+    --message-user-from: 221 83% 53%;
+    --message-user-to: 221 83% 48%;
+    --message-user-text: 0 0% 100%;
+    --message-assistant-from: 210 40% 96.1%;
+    --message-assistant-to: 210 40% 92%;
+    --message-assistant-text: 222 47% 11%;
+    --message-assistant-border: 214.3 31.8% 91.4%;
+    --message-system-from: 221 83% 96%;
+    --message-system-to: 221 83% 92%;
+    --message-system-text: 221 83% 25%;
+    --message-system-border: 221 83% 85%;
+    --message-error-from: 0 84.2% 95%;
+    --message-error-to: 0 84.2% 90%;
+    --message-error-text: 0 84.2% 40%;
+    --message-error-border: 0 84.2% 85%;
+    --message-welcome-from: 221 83% 96%;
+    --message-welcome-to: 221 83% 92%;
+    --message-welcome-text: 221 83% 25%;
+    --message-welcome-border: 221 83% 85%;
+    --message-info-from: 221 83% 96%;
+    --message-info-to: 221 83% 92%;
+    --message-info-text: 221 83% 25%;
+    --message-info-border: 221 83% 85%;
   }
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --background: 20 14.3% 4.1%;
+    --foreground: 60 9.1% 97.8%;
+    --card: 20 14.3% 4.1%;
+    --card-foreground: 60 9.1% 97.8%;
+    --popover: 20 14.3% 4.1%;
+    --popover-foreground: 60 9.1% 97.8%;
+    --primary: 43 62% 48%;
+    --primary-foreground: 26 83.3% 14.1%;
+    --secondary: 12 6.5% 15.1%;
+    --secondary-foreground: 60 9.1% 97.8%;
+    --muted: 12 6.5% 15.1%;
+    --muted-foreground: 24 5.4% 63.9%;
+    --accent: 12 6.5% 15.1%;
+    --accent-foreground: 60 9.1% 97.8%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --destructive-foreground: 60 9.1% 97.8%;
+    --border: 12 6.5% 15.1%;
+    --input: 12 6.5% 15.1%;
+    --ring: 35.5 91.7% 32.9%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --sidebar-background: 240 3.7% 15.9%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 240 5.9% 10%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 240 4.9% 83.9%;
+    --sidebar-background: 20 14.3% 4.1%;
+    --sidebar-foreground: 60 9.1% 97.8%;
+    --sidebar-primary: 47.9 95.8% 53.1%;
+    --sidebar-primary-foreground: 26 83.3% 14.1%;
+    --sidebar-accent: 12 6.5% 15.1%;
+    --sidebar-accent-foreground: 60 9.1% 97.8%;
+    --sidebar-border: 12 6.5% 15.1%;
+    --sidebar-ring: 35.5 91.7% 32.9%;
+    --message-user-from: 221 83% 53%;
+    --message-user-to: 221 83% 48%;
+    --message-user-text: 0 0% 100%;
+    --message-assistant-from: 222 47% 11%;
+    --message-assistant-to: 222 47% 13%;
+    --message-assistant-text: 210 40% 98%;
+    --message-assistant-border: 222 47% 20%;
+    --message-system-from: 221 83% 20%;
+    --message-system-to: 221 83% 25%;
+    --message-system-text: 221 83% 90%;
+    --message-system-border: 221 83% 30%;
+    --message-error-from: 0 84.2% 20%;
+    --message-error-to: 0 84.2% 25%;
+    --message-error-text: 0 84.2% 90%;
+    --message-error-border: 0 84.2% 30%;
+    --message-welcome-from: 221 83% 20%;
+    --message-welcome-to: 221 83% 25%;
+    --message-welcome-text: 221 83% 90%;
+    --message-welcome-border: 221 83% 30%;
+    --message-info-from: 221 83% 20%;
+    --message-info-to: 221 83% 25%;
+    --message-info-text: 221 83% 90%;
+    --message-info-border: 221 83% 30%;
   }
 }
 @layer base {
   * {
-    @apply border-border;
+    @apply border-primary text-primary;
   }
   body {
     @apply bg-background text-foreground;
@@ -100,3 +146,105 @@
   font-weight: normal;
   font-style: italic;
 }
+
+@layer utilities {
+  .dither-border {
+    position: relative;
+    background: hsl(var(--card));
+    z-index: 1;
+    border: 1px solid hsl(var(--primary));
+  }
+
+  .dither-border::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    top: 8px;
+    left: 8px;
+    z-index: -1;
+    background-image: conic-gradient(
+      from var(--border-angle),
+      hsl(var(--primary)) 0%,
+      hsl(var(--primary)) 12.5%,
+      transparent 12.5%,
+      transparent 25%,
+      hsl(var(--primary)) 25%,
+      hsl(var(--primary)) 37.5%,
+      transparent 37.5%,
+      transparent 50%,
+      hsl(var(--primary)) 50%,
+      hsl(var(--primary)) 62.5%,
+      transparent 62.5%,
+      transparent 75%,
+      hsl(var(--primary)) 75%,
+      hsl(var(--primary)) 87.5%,
+      transparent 87.5%,
+      transparent 100%
+    );
+    background-size: 8px 8px;
+    background-position: 0px 0px;
+    animation: border-rotate 8s linear infinite;
+  }
+
+  .dither-border::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: inherit;
+    z-index: 1;
+  }
+
+  .dither-border > * {
+    position: relative;
+    z-index: 3;
+  }
+
+  @keyframes border-rotate {
+    from {
+      --border-angle: 0turn;
+    }
+    to {
+      --border-angle: 1turn;
+    }
+  }
+}
+
+@layer components {
+  .message-user {
+    @apply bg-gradient-to-r from-[hsl(var(--message-user-from))] to-[hsl(var(--message-user-to))] 
+           text-[hsl(var(--message-user-text))] mr-2 self-end hover:brightness-110;
+  }
+
+  .message-assistant {
+    @apply bg-gradient-to-r from-[hsl(var(--message-assistant-from))] to-[hsl(var(--message-assistant-to))]
+           text-[hsl(var(--message-assistant-text))] ml-2 border-[hsl(var(--message-assistant-border))]
+           border hover:brightness-95;
+  }
+
+  .message-system {
+    @apply bg-gradient-to-r from-[hsl(var(--message-system-from))] to-[hsl(var(--message-system-to))]
+           text-[hsl(var(--message-system-text))] border-[hsl(var(--message-system-border))]
+           border hover:brightness-105;
+  }
+
+  .message-error {
+    @apply bg-gradient-to-r from-[hsl(var(--message-error-from))] to-[hsl(var(--message-error-to))]
+           text-[hsl(var(--message-error-text))] border-[hsl(var(--message-error-border))]
+           border font-semibold hover:brightness-105;
+  }
+
+  .message-welcome {
+    @apply bg-gradient-to-r from-[hsl(var(--message-welcome-from))] to-[hsl(var(--message-welcome-to))]
+           text-[hsl(var(--message-welcome-text))] border-[hsl(var(--message-welcome-border))]
+           border hover:brightness-105;
+  }
+
+  .message-info {
+    @apply bg-gradient-to-r from-[hsl(var(--message-info-from))] to-[hsl(var(--message-info-to))]
+           text-[hsl(var(--message-info-text))] border-[hsl(var(--message-info-border))]
+           border hover:brightness-105;
+  }
+}
+
+
+

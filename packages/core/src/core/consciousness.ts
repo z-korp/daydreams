@@ -34,7 +34,7 @@ export class Consciousness {
 
     public async stop(): Promise<void> {
         if (this.thoughtInterval) {
-            clearInterval(this.thoughtInterval);
+            clearTimeout(this.thoughtInterval as any);
             this.thoughtInterval = null;
         }
         this.logger.info(
