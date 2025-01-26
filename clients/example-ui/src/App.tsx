@@ -119,9 +119,9 @@ function App() {
                     </header>
 
                     {/* Main content area */}
-                    <div className="flex flex-col flex-1 gap-4">
+                    <div className="flex flex-col flex-1">
                         {/* Zone conversation */}
-                        <div className="relative flex flex-col h-[calc(100vh-5rem)] rounded-lg border border-l-0  md:min-h-min">
+                        <div className="relative flex flex-col h-[calc(100vh-4rem)] rounded-lg border border-l-0">
                             {/* Liste des messages */}
                             <div className="flex-1 p-4 overflow-auto">
                                 <MessagesList messages={allMessages} />
@@ -132,8 +132,8 @@ function App() {
                                 )}
                             </div>
 
-                            {/* Barre d'input en bas */}
-                            <div className=" border-t bg-background flex items-center gap-2">
+                            {/* Input bar */}
+                            <div className="border-t bg-background flex items-center">
                                 <input
                                     type="text"
                                     value={message}
