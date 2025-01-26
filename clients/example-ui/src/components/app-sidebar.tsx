@@ -3,43 +3,37 @@ import { Bot, MessageSquare } from "lucide-react";
 import { NavMain } from "@/components/nav-main";
 import { NavProjects } from "@/components/nav-projects";
 import { NavUser } from "@/components/nav-user";
-import { TeamSwitcher } from "@/components/team-switcher";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarHeader,
+    SidebarRail,
 } from "@/components/ui/sidebar";
+import { Link } from "react-router-dom";
+import { ModeToggle } from "./mode-toggle";
 
 // This is sample data.
 const data = {
-  user: {
-    name: "sleever",
-    email: "m@sleever.ai",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  teams: [
-    {
-      name: "sleever",
-      logo: Bot,
-      plan: "Enterprise",
+    user: {
+        name: "sleever",
+        email: "m@sleever.ai",
+        avatar: "/avatars/shadcn.jpg",
     },
-  ],
   navMain: [
     {
-      title: "Agents",
-      url: "#",
-      icon: Bot,
+      title: "Chats",
+      url: "/",
+      icon: MessageSquare,
       isActive: true,
       items: [
         {
-          title: "My Agents",
-          url: "#",
+          title: "Chat",
+          url: "/",
         },
         {
-          title: "Create Agent",
-          url: "#",
+          title: "My Agents",
+          url: "my-agents",
         },
         {
           title: "Settings",
@@ -48,16 +42,16 @@ const data = {
       ],
     },
     {
-      title: "Chats",
+      title: "Agents",
       url: "#",
-      icon: MessageSquare,
+      icon: Bot,
       items: [
         {
-          title: "History",
-          url: "#",
+          title: "My Agents",
+          url: "/my-agents",
         },
         {
-          title: "Saved",
+          title: "Create Agent",
           url: "#",
         },
         {
@@ -74,7 +68,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        {/* <TeamSwitcher teams={data.teams} /> */}
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
@@ -84,6 +78,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavUser user={data.user} />
       </SidebarFooter>
       <SidebarRail />
+      <div className="p-4 space-y-4">
+        <nav className="space-y-2">
+          <Link
+            to="/"
+            className="flex items-center px-3 py-2 text-sm rounded-lg hover:bg-accent"
+          >
+            Chat
+          </Link>
+          <Link
+            to="/my-agents"
+            className="flex items-center px-3 py-2 text-sm rounded-lg hover:bg-accent"
+          >
+            My Agents
+          </Link>
+        </nav>
+      </div>
     </Sidebar>
   );
 }
