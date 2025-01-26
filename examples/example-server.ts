@@ -5,13 +5,12 @@ import { z } from "zod";
 import { LLMClient } from "../packages/core/src/core/llm-client";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { Orchestrator } from "../packages/core/src/core/orchestrator";
-import { HandlerRole } from "../packages/core/src/core/types";
+import { Character, HandlerRole } from "../packages/core/src/core/types";
 import { RoomManager } from "../packages/core/src/core/room-manager";
 import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
 import { defaultCharacter } from "../packages/core/src/core/character";
 import { LogLevel } from "../packages/core/src/core/types";
 import { ScheduledTaskMongoDb } from "../packages/core/src/core/scheduled-db";
-
 class OrchestratorManager {
   private orchestrators: Map<string, Orchestrator> = new Map();
   private roomManagers: Map<string, RoomManager> = new Map();
@@ -31,7 +30,7 @@ class OrchestratorManager {
     console.log(chalk.green("✅ Scheduled task database connected"));
   }
 
-  async createOrchestrator(name: string, config = { logLevel: LogLevel.INFO }) {
+  async createOrchestrator(name: string, config = { logLevel: LogLevel.INFO }, character?: Character) {
     console.log(chalk.blue(`[OrchestratorManager] Creating new orchestrator '${name}'`));
     console.log(chalk.gray(`[OrchestratorManager] Config:`, JSON.stringify(config, null, 2)));
     const id = `orch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -51,7 +50,7 @@ class OrchestratorManager {
 
     const processor = new MessageProcessor(
       llmClient,
-      defaultCharacter,
+      character || defaultCharacter,
       config.logLevel
     );
 
@@ -144,6 +143,33 @@ wss.on("connection", (ws) => {
       const parsed = JSON.parse(dataString);
       
       switch (parsed.type) {
+        case "create_character":
+          {
+            const { name, bio, traits, voice, instructions, templates } = parsed;
+            const character = {
+              name,
+              bio,
+              traits,
+              voice,
+              instructions,
+              templates
+            };
+            
+            const newOrch = await orchestratorManager.createOrchestrator(
+              name, 
+              { logLevel: LogLevel.INFO },
+              character
+            );
+
+            sendJSON(ws, {
+              type: "character_created",
+              character: {
+                id: newOrch.id,
+                ...character,
+              },
+            });
+          }
+          break;
         case "create_orchestrator":
           if (!parsed.name) {
             throw new Error("Orchestrator name is required");

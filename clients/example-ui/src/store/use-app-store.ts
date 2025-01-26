@@ -14,12 +14,42 @@ interface Message {
   timestamp?: number;
 }
 
+interface Character {
+  name: string;
+  bio: string;
+  traits: Array<{
+    name: string;
+    description: string;
+    strength: number;
+    examples: string[];
+  }>;
+  voice: {
+    tone: string;
+    style: string;
+    vocabulary: string[];
+    commonPhrases: string[];
+    emojis: string[];
+  };
+  instructions: {
+    goals: string[];
+    constraints: string[];
+    topics: string[];
+    responseStyle: string[];
+    contextRules: string[];
+  };
+  templates?: {
+    tweetTemplate?: string;
+  };
+}
+
 interface AppState {
   currentOrchestratorId: string;
   messages: Message[];
   isConnected: boolean;
   showDebug: boolean;
   theme: 'light' | 'dark';
+  characters: Character[];
+  currentCharacter: Character | null;
   setCurrentOrchestratorId: (id: string) => void;
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
@@ -29,6 +59,10 @@ interface AppState {
   toggleTheme: () => void;
   getMessagesForCurrentOrchestrator: () => Message[];
   addLoadingMessage: () => void;
+  addCharacter: (character: Character) => void;
+  setCurrentCharacter: (character: Character | null) => void;
+  removeCharacter: (name: string) => void;
+  updateCharacter: (name: string, character: Partial<Character>) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -39,6 +73,8 @@ export const useAppStore = create<AppState>()(
       isConnected: false,
       showDebug: false,
       theme: 'dark',
+      characters: [],
+      currentCharacter: null,
       setCurrentOrchestratorId: (id: string) => set({ currentOrchestratorId: id }),
       setMessages: (messages: Message[]) => set({ messages }),
       addMessage: (message: Message) => set((state) => {
@@ -76,6 +112,24 @@ export const useAppStore = create<AppState>()(
           orchestratorId: state.currentOrchestratorId,
           timestamp: Date.now()
         }]
+      })),
+      addCharacter: (character: Character) => set((state) => ({
+        characters: [...state.characters, character]
+      })),
+      setCurrentCharacter: (character: Character | null) => set({
+        currentCharacter: character
+      }),
+      removeCharacter: (name: string) => set((state) => ({
+        characters: state.characters.filter(c => c.name !== name),
+        currentCharacter: state.currentCharacter?.name === name ? null : state.currentCharacter
+      })),
+      updateCharacter: (name: string, updates: Partial<Character>) => set((state) => ({
+        characters: state.characters.map(c => 
+          c.name === name ? { ...c, ...updates } : c
+        ),
+        currentCharacter: state.currentCharacter?.name === name 
+          ? { ...state.currentCharacter, ...updates }
+          : state.currentCharacter
       })),
     }),
     {
