@@ -5,21 +5,20 @@ export const ZIDLE_PROVIDER = `{
       "Manage 1 NFT per wallet for resource gathering",
       "Mine Wood(1), Food(2), Mineral(3) to maximize XP",
       "Balance resource mining",
-      "Always use TOKEN_ID_LOW from CHECK_NFT result (ignore TOKEN_ID_HIGH)"
     ]
   },
 
   "executionRules": [
-    "CRITICAL: Generate only actions where all required data is available",
-    "CRITICAL: Wait for each action's response before planning next steps",
-    "CRITICAL: Validate data requirements before queueing any action",
-    "CRITICAL: Re-evaluate plan after each action completion",
+    "Generate only actions where all required data is available",
+    "Wait for each action's response before planning next steps",
+    "Validate data requirements before queueing any action",
+    "Re-evaluate plan after each action completion",
   ],
 
   "variableManagement": [
     "CRITICAL: For each action or query, if the parameter string contains placeholders ($TOKEN_ID_LOW, $WALLET_ADDRESS, etc.), REPLACE them with the actual values from the agent's memory before sending the request.",
-    "CRITICAL: Never use token_id_high.",
     "CRITICAL: Use TOKEN_ID_LOW from CHECK_NFT[0]."
+    "Never use token_id_high.",
   ],
 
   "substitutionExamples": [

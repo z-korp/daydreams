@@ -24,7 +24,6 @@ export const ZIDLE_CONTEXT = `{
 
   "rules": {
     "nftRequirement": "One NFT per wallet is required.",
-    "timeReductionFormula": "final_time = base_time - (base_time * (player_level * 0.5%) / 100)",
     "maxLevel": 99,
     "levelSystemNotes": [
       "Find current level by highest level where current_xp >= required_xp",
@@ -119,7 +118,6 @@ export const ZIDLE_CONTEXT = `{
   ],
 
   "errorHandling": [
-    "Verify NFT exists before any action",
     "Up to 3 retries on failure, wait 5s each",
     "Check level requirements before selecting sub-resource"
   ]
