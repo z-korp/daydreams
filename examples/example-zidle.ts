@@ -9,7 +9,11 @@ import { StarknetChain } from "../packages/core/src/core/chains/starknet";
 import { fetchGraphQL } from "../packages/core/src/core/providers";
 import { env } from "../packages/core/src/core/env";
 import readline from "readline";
-import { GoalStatus, LogLevel } from "../packages/core/src/core/types";
+import {
+    GoalStatus,
+    HandlerRole,
+    LogLevel,
+} from "../packages/core/src/core/types";
 
 /**
  * Helper function to get user input from CLI
@@ -90,6 +94,7 @@ async function main() {
     );
 
     dreams.registerOutput({
+        role: HandlerRole.ACTION,
         name: "EXECUTE_READ",
         handler: async (data: any) => {
             console.log(
@@ -124,6 +129,7 @@ async function main() {
     });
 
     dreams.registerOutput({
+        role: HandlerRole.ACTION,
         name: "EXECUTE_TRANSACTION",
         handler: async (data: any) => {
             console.log(
@@ -162,6 +168,7 @@ async function main() {
     });
 
     dreams.registerOutput({
+        role: HandlerRole.ACTION,
         name: "GRAPHQL_FETCH",
         handler: async (data: any) => {
             console.log(
@@ -340,28 +347,6 @@ async function main() {
             console.log(`   Content: ${doc.content}`);
         });
     });
-
-    // Start the AI agent
-    /*try {
-    console.log(chalk.cyan("\n🤖 Starting zIdle AI agent..."));
-
-    // Initial analysis
-    const result = await dreams.think(
-      "First Goal: Get NFT token ID before proceeding with any other actions. When this goal is done you can start mining resources efficiently to maximize XP gain"
-    );
-
-    console.log(chalk.green("\n✨ Initial analysis completed!"));
-    console.log("Strategy:", result);
-
-    // Continue monitoring and adjusting strategy
-    setInterval(async () => {
-      await dreams.think(
-        "Review current progress and adjust farming strategy if needed. Consider resource levels, XP gains, and whether we should switch resources."
-      );
-    }, 5 * 60 * 1000); // Check every 5 minutes
-  } catch (error) {
-    console.error(chalk.red("Error running AI agent:"), error);
-  }*/
 
     // Handle shutdown
     process.on("SIGINT", async () => {
