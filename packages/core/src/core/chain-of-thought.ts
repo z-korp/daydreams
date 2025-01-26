@@ -3,10 +3,9 @@ import type {
     ChainOfThoughtContext,
     CoTAction,
     Goal,
-    HorizonType,
     RefinedGoal,
     VectorDB,
-    Output,
+    IOHandler,
 } from "./types";
 import { Logger } from "./logger";
 import { EventEmitter } from "events";
@@ -35,7 +34,7 @@ export class ChainOfThought extends EventEmitter {
     goalManager: GoalManager;
     public memory: VectorDB;
 
-    private readonly outputs = new Map<string, Output>();
+    private readonly outputs = new Map<string, IOHandler>();
 
     constructor(
         private llmClient: LLMClient,
@@ -369,10 +368,11 @@ export class ChainOfThought extends EventEmitter {
             ]);
 
         const prompt = `
-      <goal_execution_check>
+    
 
-      # Goal
+      <goal>
       ${goal.description}
+      </goal>
 
       <relevant_context>
       ${relevantDocs
@@ -402,13 +402,11 @@ export class ChainOfThought extends EventEmitter {
 
       If you need to query then you could potentially complete the goal.
       
-      </goal_execution_check>
+      <thinking>
+      Think about this goal and the context here.
+      </thinking>
+     
     `;
-
-        /*console.log(
-      "[validateGoalPrerequisites]: =================================",
-      prompt
-    );*/
 
         try {
             const schema = z
@@ -448,9 +446,10 @@ export class ChainOfThought extends EventEmitter {
                 logger: this.logger,
             });
 
-            console.log(
-                "[validateGoalPrerequisites]: response: =================================",
-                response
+            this.logger.debug(
+                "validateGoalPrerequisites",
+                "Goal validation response",
+                { response }
             );
 
             return response;
@@ -506,8 +505,10 @@ export class ChainOfThought extends EventEmitter {
         );
 
         const prompt = `
-      <goal_refinement>
-      Goal to Refine: ${goal.description}
+
+       <goal_refinement>
+      ${goal.description}
+      </goal_refinement>
       
       <relevant_context>
       ${relevantDocs
@@ -539,8 +540,10 @@ export class ChainOfThought extends EventEmitter {
       - priority: Number 1-10 (10 being highest)
       - horizon: Must be "short" for immediate actions
       - requirements: Object containing needed resources/conditions
-      
-      </goal_refinement>
+
+      <thinking>
+      Think about this goal and the context here.
+      </thinking>
     `;
 
         try {
@@ -611,28 +614,25 @@ export class ChainOfThought extends EventEmitter {
             return;
         }
 
-        console.log(
-            "prioritizedGoals: =================================",
-            prioritizedGoals
+        this.logger.debug(
+            "processHighestPriorityGoal",
+            "Prioritized goals available",
+            { goals: prioritizedGoals }
         );
 
         for (const currentGoal of prioritizedGoals) {
-            console.log(
-                "currentGoal: =================================",
-                currentGoal
-            );
+            this.logger.debug("processHighestPriorityGoal", "Current goal", {
+                goal: currentGoal,
+            });
 
             const { possible, reason, incompleteState } =
                 await this.validateGoalPrerequisites(currentGoal);
-            console.log(
-                "possible: =================================",
-                possible
-            );
-            console.log("reason: =================================", reason);
-            console.log(
-                "incompleteState: =================================",
-                incompleteState
-            );
+
+            this.logger.debug("processHighestPriorityGoal", "Goal validation", {
+                possible,
+                reason,
+                incompleteState,
+            });
 
             // ------------------------------------------------------------------
             // Decide how to handle "false" from validateGoalPrerequisites
@@ -883,7 +883,6 @@ export class ChainOfThought extends EventEmitter {
       Outcome Score:
       - 0-100 = 0-100% success
 
-      Return only a JSON object with: { "success": boolean, "reason": string, "outcomeScore": number }
       </goal_validation>
     `;
 
@@ -1069,7 +1068,7 @@ export class ChainOfThought extends EventEmitter {
      * });
      * ```
      */
-    public registerOutput(output: Output): void {
+    public registerOutput(output: IOHandler): void {
         this.logger.debug("registerOutput", "Registering output", {
             name: output.name,
         });
@@ -1184,31 +1183,6 @@ export class ChainOfThought extends EventEmitter {
             this.emit("action:error", { action, error });
             throw error;
         }
-    }
-
-    /**
-     * Removes a step from the chain by its ID.
-     *
-     * @param stepId - The unique identifier of the step to remove
-     * @throws {Error} When no step exists with the given ID
-     * @remarks This method will remove the step from the chain's history and cannot be undone
-     * @example
-     * ```ts
-     * chain.removeStep("step-123");
-     * ```
-     */
-    public removeStep(stepId: string): void {
-        this.logger.debug("removeStep", "Removing step", { stepId });
-
-        const index = this.stepManager
-            .getSteps()
-            .findIndex((step) => step.id === stepId);
-        if (index === -1) {
-            const error = `Step with ID ${stepId} not found`;
-            this.logger.error("removeStep", error);
-            throw new Error(error);
-        }
-        this.stepManager.removeStep(stepId);
     }
 
     /**
@@ -1550,42 +1524,35 @@ ${availableOutputs
         action: string,
         result: string | Record<string, any>
     ): Promise<string> {
-        const resultStr =
-            typeof result === "string"
-                ? result
-                : JSON.stringify(result, null, 2);
-
-        const response = await validateLLMResponseSchema({
+        return await validateLLMResponseSchema({
             prompt: `
-      # Action Result Summary
-      Summarize this action result in a clear, concise way
-      
-      # Action taken
-      ${action}
+    # Action Result Summary
+    Summarize this action result in a clear, concise way
+    
+    # Action taken
+    ${action}
 
-      # Result of action
-      ${resultStr}
+    # Result of action
+    ${typeof result === "string" ? result : JSON.stringify(result, null, 2)}
 
-      # Rules for summary:
-      1. Be concise but informative (1-2 lines max)
-      2. All values from the result to make the summary more informative
-      3. Focus on the key outcomes or findings
-      4. Use neutral, factual language
-      5. Don't include technical details unless crucial
-      6. Make it human-readable
-      
-      # Rules for output
-      Return only the summary text, no additional formatting.
-      `,
+    # Rules for summary:
+    1. Be concise but informative (1-2 lines max)
+    2. All values from the result to make the summary more informative
+    3. Focus on the key outcomes or findings
+    4. Use neutral, factual language
+    5. Don't include technical details unless crucial
+    6. Make it human-readable
+    
+    # Rules for output
+    Return only the summary text, no additional formatting.
+    `,
             schema: z.any(),
             systemPrompt:
                 "You are a result summarizer. Create clear, concise summaries of action results.",
             maxRetries: 3,
             llmClient: this.llmClient,
             logger: this.logger,
-        });
-
-        return response.toString().trim();
+        }).toString();
     }
 
     /**

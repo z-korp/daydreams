@@ -1,1 +1,5 @@
-This is a [Vocs](https://vocs.dev) project bootstrapped with the Vocs CLI.
+## Docs for Daydreams.
+
+`cd docs && pnpm docs:dev`
+
+this will build the docs and serve them on `localhost:5173`.
