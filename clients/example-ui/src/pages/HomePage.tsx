@@ -166,7 +166,8 @@ function HomePage() {
     showDebug,
     toggleShowDebug,
     theme,
-    toggleTheme
+    toggleTheme,
+    addLoadingMessage
   } = useAppStore();
   const { sendMessage } = useDaydreamsWs();
   const [showDebugInChat, setShowDebugInChat] = useState(false);
@@ -208,6 +209,7 @@ function HomePage() {
     };
 
     addMessage(userMessage);
+    addLoadingMessage();
     sendMessage(userMessage);
     setMessage("");
   };

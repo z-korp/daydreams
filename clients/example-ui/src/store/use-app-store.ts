@@ -10,6 +10,8 @@ interface Message {
     id: string;
     name: string;
   }>;
+  isLoading?: boolean;
+  timestamp?: number;
 }
 
 interface AppState {
@@ -26,6 +28,7 @@ interface AppState {
   toggleShowDebug: () => void;
   toggleTheme: () => void;
   getMessagesForCurrentOrchestrator: () => Message[];
+  addLoadingMessage: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -35,12 +38,21 @@ export const useAppStore = create<AppState>()(
       messages: [],
       isConnected: false,
       showDebug: false,
-      theme: 'light',
+      theme: 'dark',
       setCurrentOrchestratorId: (id: string) => set({ currentOrchestratorId: id }),
       setMessages: (messages: Message[]) => set({ messages }),
-      addMessage: (message: Message) => set((state) => ({ 
-        messages: [...state.messages, message] 
-      })),
+      addMessage: (message: Message) => set((state) => {
+        if (message.type === 'response') {
+          return {
+            messages: state.messages
+              .filter(msg => !msg.isLoading)
+              .concat(message)
+          };
+        }
+        return { 
+          messages: [...state.messages, message] 
+        };
+      }),
       setIsConnected: (isConnected: boolean) => set({ isConnected }),
       setShowDebug: (show: boolean) => set({ showDebug: show }),
       toggleShowDebug: () => set((state) => ({ showDebug: !state.showDebug })),
@@ -56,7 +68,15 @@ export const useAppStore = create<AppState>()(
           msg.type === 'welcome' || 
           msg.type === 'orchestrators_list'
         );
-      }
+      },
+      addLoadingMessage: () => set((state) => ({
+        messages: [...state.messages, {
+          type: 'response',
+          isLoading: true,
+          orchestratorId: state.currentOrchestratorId,
+          timestamp: Date.now()
+        }]
+      })),
     }),
     {
       name: 'App Store'
