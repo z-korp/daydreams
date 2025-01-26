@@ -24,30 +24,69 @@ interface MessageType {
     error?: string;
 }
 
+const bladerunnerQuotes = [
+    "I've seen things you people wouldn't believe...",
+    "All those moments will be lost in time, like tears in rain",
+    "More human than human is our motto",
+    "Have you ever retired a human by mistake?",
+    "It's too bad she won't live, but then again who does?",
+    "I want more life, father",
+];
+
 function App() {
     const [message, setMessage] = useState("");
     const [allMessages, setAllMessages] = useState<MessageType[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [quoteIndex, setQuoteIndex] = useState(0);
     const { messages, sendGoal } = useDaydreamsWs();
 
-    // Synchronise les messages du hook dans allMessages
+    // Add quote cycling effect when loading
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isLoading) {
+            interval = setInterval(() => {
+                setQuoteIndex((prev) => (prev + 1) % bladerunnerQuotes.length);
+            }, 3000); // Change quote every 3 seconds
+        }
+        return () => clearInterval(interval);
+    }, [isLoading]);
+
+    // Update synchronization effect to handle loading state
     useEffect(() => {
         if (messages.length === 0) return;
+
         const lastMessage = messages[messages.length - 1];
-        setAllMessages((prev: any) => {
-            // On évite les doublons si le dernier message est identique
+
+        // Only clear loading if we received an assistant or error message
+        console.log(lastMessage.type);
+        if (lastMessage.type !== "user") {
+            setIsLoading(false);
+        }
+        setAllMessages((prev: MessageType[]) => {
+            // Type check lastMessage to ensure it matches MessageType
+            const typedMessage: MessageType = {
+                type: lastMessage.type as MessageType["type"],
+                message: lastMessage.message,
+                error: lastMessage.error,
+            };
+
             if (
                 prev.length > 0 &&
                 JSON.stringify(prev[prev.length - 1]) ===
-                    JSON.stringify(lastMessage)
+                    JSON.stringify(typedMessage)
             ) {
                 return prev;
             }
-            return [...prev, lastMessage];
+            return [...prev, typedMessage];
         });
     }, [messages]);
 
     const handleSubmit = () => {
         if (!message.trim()) return;
+
+        // Set loading before sending message
+        setIsLoading(true);
+
         setAllMessages((prev) => [...prev, { type: "user", message: message }]);
         sendGoal(message);
         setMessage("");
@@ -59,7 +98,7 @@ function App() {
                 <AppSidebar />
                 <SidebarInset>
                     {/* Header */}
-                    <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+                    <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 border-t border-r">
                         <div className="flex items-center gap-2 px-4">
                             <ModeToggle />
                             <SidebarTrigger className="-ml-1" />
@@ -80,16 +119,21 @@ function App() {
                     </header>
 
                     {/* Main content area */}
-                    <div className="flex flex-col flex-1 gap-4 p-4 pt-0">
+                    <div className="flex flex-col flex-1 gap-4">
                         {/* Zone conversation */}
-                        <div className="relative flex flex-col h-[calc(100vh-5rem)] rounded-lg border bg-muted/50 md:min-h-min">
+                        <div className="relative flex flex-col h-[calc(100vh-5rem)] rounded-lg border border-l-0  md:min-h-min">
                             {/* Liste des messages */}
                             <div className="flex-1 p-4 overflow-auto">
                                 <MessagesList messages={allMessages} />
+                                {isLoading && (
+                                    <div className="flex items-center justify-center p-4 text-muted-foreground italic">
+                                        {bladerunnerQuotes[quoteIndex]}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Barre d'input en bas */}
-                            <div className="px-4 py-3 border-t border-gray-300 bg-background flex items-center gap-2">
+                            <div className=" border-t bg-background flex items-center gap-2">
                                 <input
                                     type="text"
                                     value={message}
@@ -100,13 +144,13 @@ function App() {
                                         }
                                     }}
                                     placeholder="Type your message..."
-                                    className="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground 
+                                    className="flex-1 px-8 py-8 rounded-lg bg-background text-foreground placeholder:text-primary
                            focus:outline-none focus:ring-2 focus:ring-primary"
                                 />
                                 <button
                                     onClick={handleSubmit}
                                     className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 
-                           focus:outline-none focus:ring-2 focus:ring-primary"
+                           focus:outline-none focus:ring-2 focus:ring-primary h-full w-64"
                                 >
                                     Send
                                 </button>

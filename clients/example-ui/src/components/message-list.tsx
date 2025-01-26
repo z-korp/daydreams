@@ -1,22 +1,29 @@
 import * as React from "react";
 
 interface MessageType {
-  type: "user" | "assistant" | "system" | "error" | "other" | "welcome" | "info";
-  message?: string;
-  error?: string;
+    type:
+        | "user"
+        | "assistant"
+        | "system"
+        | "error"
+        | "other"
+        | "welcome"
+        | "info";
+    message?: string;
+    error?: string;
 }
 
 interface MessagesListProps {
-  messages: MessageType[];
+    messages: MessageType[];
 }
 
 export function MessagesList({ messages }: MessagesListProps) {
-  return (
-    <div className="flex flex-col space-y-4">
-      {messages.map((msg, i) => {
-        const baseBubble = `
+    return (
+        <div className="flex flex-col space-y-4">
+            {messages.map((msg, i) => {
+                const baseBubble = `
           relative
-          rounded-2xl
+        
           p-4
           text-sm
           shadow-md
@@ -27,92 +34,97 @@ export function MessagesList({ messages }: MessagesListProps) {
           break-words
         `;
 
-        let containerClass = "flex items-start";
-        let bubbleClass = baseBubble;
-        
-        switch (msg.type) {
-          case "user":
-            containerClass += " justify-end";
-            bubbleClass += `
-              bg-gradient-to-r from-blue-600 to-blue-500 text-white mr-2
+                let containerClass = "flex items-start";
+                let bubbleClass = baseBubble;
+
+                switch (msg.type) {
+                    case "user":
+                        containerClass += " justify-end";
+                        bubbleClass += `
+               bg-card text-foreground mr-2
               self-end hover:brightness-110
+              dither-border
             `;
-            break;
+                        break;
 
-          case "assistant":
-            containerClass += " justify-start";
-            bubbleClass += `
-              bg-gradient-to-r from-gray-100 to-gray-200 text-gray-900 ml-2
-              border border-gray-300
-              hover:brightness-95
+                    case "assistant":
+                        containerClass += " justify-start";
+                        bubbleClass += `
+              bg-card text-foreground ml-2
+              dither-border
+              hover:brightness-105
             `;
-            break;
+                        break;
 
-          case "system":
-            containerClass += " justify-center";
-            bubbleClass += `
-              bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-900
-              border border-yellow-200 hover:brightness-105
+                    case "system":
+                        containerClass += " justify-center";
+                        bubbleClass += `
+              bg-card text-muted-foreground
+              dither-border
+              hover:brightness-105
             `;
-            break;
+                        break;
 
-          case "error":
-            containerClass += " justify-center";
-            bubbleClass += `
-              bg-gradient-to-r from-red-50 to-red-100 text-red-700 font-semibold
-              border border-red-200 hover:brightness-105
+                    case "error":
+                        containerClass += " justify-center";
+                        bubbleClass += `
+              bg-card text-destructive font-semibold
+              dither-border
+              hover:brightness-105
             `;
-            break;
+                        break;
 
-          case "welcome":
-            containerClass += " justify-center";
-            bubbleClass += `
-              bg-gradient-to-r from-green-50 to-green-100 text-green-800
-              border border-green-200 hover:brightness-105
+                    case "welcome":
+                        containerClass += " justify-center";
+                        bubbleClass += `
+              bg-card text-accent-foreground
+              dither-border
+              hover:brightness-105
             `;
-            break;
+                        break;
 
-          case "info":
-            containerClass += " justify-center";
-            bubbleClass += `
-              bg-gradient-to-r from-blue-50 to-blue-100 text-blue-800
-              border border-blue-200 hover:brightness-105
+                    case "info":
+                        containerClass += " justify-center";
+                        bubbleClass += `
+              bg-card text-secondary-foreground
+              dither-border
+              hover:brightness-105
             `;
-            break;
+                        break;
 
-          default:
-            containerClass += " justify-start";
-            bubbleClass += `
-              bg-gradient-to-r from-gray-100 to-gray-200 text-gray-900 ml-2
-              border border-gray-300
+                    default:
+                        containerClass += " justify-start";
+                        bubbleClass += `
+              bg-card text-card-foreground ml-2
+              dither-border
+              hover:brightness-105
             `;
-        }
+                }
 
-        return (
-          <div key={i} className={containerClass}>
-            <div className={bubbleClass}>
-              {/* Affiche le type si ce n’est pas un user/assistant classique */}
-              {msg.type !== "user" && msg.type !== "assistant" && (
-                <div className="mb-1 text-xs font-medium uppercase tracking-wider opacity-80">
-                  {msg.type}
-                </div>
-              )}
+                return (
+                    <div key={i} className={containerClass}>
+                        <div className={bubbleClass}>
+                            {/* Affiche le type si ce n'est pas un user/assistant classique */}
+                            {msg.type !== "user" &&
+                                msg.type !== "assistant" && (
+                                    <div className="mb-1 text-xs font-medium uppercase tracking-wider opacity-80">
+                                        {msg.type}
+                                    </div>
+                                )}
 
-              {msg.message && (
-                <div className="text-base">
-                  {msg.message}
-                </div>
-              )}
+                            {msg.message && (
+                                <div className="text-base">{msg.message}</div>
+                            )}
 
-              {msg.error && (
-                <div className="text-sm font-medium text-red-800 mt-1">
-                  {msg.error}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+                            {msg.error && (
+                                <div className="text-sm font-medium text-destructive mt-1">
+                                    {msg.error}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
 }

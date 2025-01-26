@@ -19,7 +19,7 @@ import { ScheduledTaskMongoDb } from "../packages/core/src/core/scheduled-db";
 // ------------------------------------------------------
 // 1) CREATE DAYDREAMS AGENT
 // ------------------------------------------------------
-function createDaydreamsAgent() {
+async function createDaydreamsAgent() {
     const loglevel = LogLevel.INFO;
 
     // 1.1. LLM Initialization
@@ -44,16 +44,23 @@ function createDaydreamsAgent() {
         loglevel
     );
 
+    const scheduledTaskDb = new ScheduledTaskMongoDb(
+        "mongodb://localhost:27017",
+        "myApp",
+        "scheduled_tasks"
+    );
+
+    await scheduledTaskDb.connect();
+    console.log(chalk.green("✅ Scheduled task database connected"));
+
+    await scheduledTaskDb.deleteAll();
+
     // 1.5. Initialize core system
     const orchestrator = new Orchestrator(
         roomManager,
         vectorDb,
         [processor],
-        new ScheduledTaskMongoDb(
-            "mongodb://localhost:27017",
-            "myApp",
-            "scheduled_tasks"
-        ), // No scheduled tasks for this example
+        scheduledTaskDb,
         {
             level: loglevel,
             enableColors: true,
@@ -95,7 +102,7 @@ function createDaydreamsAgent() {
 }
 
 // Create a single "global" instance
-const orchestrator = createDaydreamsAgent();
+const orchestrator = await createDaydreamsAgent();
 
 // ------------------------------------------------------
 // 2) WEBSOCKET SERVER
