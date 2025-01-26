@@ -16,10 +16,13 @@ interface AppState {
   currentOrchestratorId: string;
   messages: Message[];
   isConnected: boolean;
+  showDebug: boolean;
   setCurrentOrchestratorId: (id: string) => void;
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
   setIsConnected: (isConnected: boolean) => void;
+  setShowDebug: (show: boolean) => void;
+  toggleShowDebug: () => void;
   getMessagesForCurrentOrchestrator: () => Message[];
 }
 
@@ -29,12 +32,15 @@ export const useAppStore = create<AppState>()(
       currentOrchestratorId: '',
       messages: [],
       isConnected: false,
-      setCurrentOrchestratorId: (id) => set({ currentOrchestratorId: id }),
-      setMessages: (messages) => set({ messages }),
-      addMessage: (message) => set((state) => ({ 
+      showDebug: false,
+      setCurrentOrchestratorId: (id: string) => set({ currentOrchestratorId: id }),
+      setMessages: (messages: Message[]) => set({ messages }),
+      addMessage: (message: Message) => set((state) => ({ 
         messages: [...state.messages, message] 
       })),
-      setIsConnected: (isConnected) => set({ isConnected }),
+      setIsConnected: (isConnected: boolean) => set({ isConnected }),
+      setShowDebug: (show: boolean) => set({ showDebug: show }),
+      toggleShowDebug: () => set((state) => ({ showDebug: !state.showDebug })),
       getMessagesForCurrentOrchestrator: () => {
         const state = get();
         return state.messages.filter(msg => 

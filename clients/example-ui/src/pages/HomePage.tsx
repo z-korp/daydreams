@@ -157,15 +157,32 @@ function DebugPanel({ messages, state }: { messages: Message[], state: AppState 
 function HomePage() {
   const [message, setMessage] = useState("");
   const [orchestrators, setOrchestrators] = useState<Orchestrator[]>([]);
-  const [showDebug, setShowDebug] = useState(false);
   const { 
     currentOrchestratorId, 
     setCurrentOrchestratorId, 
     messages,
     getMessagesForCurrentOrchestrator,
-    addMessage
+    addMessage,
+    showDebug,
+    toggleShowDebug
   } = useAppStore();
   const { sendMessage } = useDaydreamsWs();
+  const [showDebugInChat, setShowDebugInChat] = useState(false);
+
+  // Filtrer les messages pour n'afficher que ceux de l'orchestrateur courant
+  const filteredMessages = messages.filter(msg => {
+    // Toujours afficher les messages système et les messages de l'orchestrateur courant
+    const isRelevant = msg.orchestratorId === currentOrchestratorId || 
+                      msg.type === 'welcome' || 
+                      msg.type === 'orchestrators_list';
+    
+    // Filtrer les messages de debug selon le toggle
+    if (msg.type === 'debug') {
+      return showDebugInChat && isRelevant;
+    }
+    
+    return isRelevant;
+  });
 
   useEffect(() => {
     if (messages.length) {
@@ -253,14 +270,21 @@ function HomePage() {
               </option>
             ))}
           </select>
+          
+          <button
+            onClick={() => setShowDebugInChat(!showDebugInChat)}
+            className="px-2 py-1 rounded-md border border-border hover:bg-muted"
+          >
+            {showDebugInChat ? "Hide Debug Messages" : "Show Debug Messages"}
+          </button>
+          
+          <button
+            onClick={toggleShowDebug}
+            className="px-2 py-1 rounded-md border border-border hover:bg-muted"
+          >
+            {showDebug ? "Hide Debug Panel" : "Show Debug Panel"}
+          </button>
         </div>
-        
-        <button
-          onClick={() => setShowDebug(!showDebug)}
-          className="px-2 py-1 rounded-md border border-border hover:bg-muted"
-        >
-          {showDebug ? "Hide Debug" : "Show Debug"}
-        </button>
       </header>
 
       <div className="flex flex-col flex-1 gap-4 p-4 pt-0">
@@ -273,7 +297,7 @@ function HomePage() {
 
         <div className="relative flex flex-col h-[calc(100vh-5rem)] rounded-lg border bg-muted/50">
           <div className="flex-1 p-4 overflow-auto">
-            <MessagesList messages={messages} />
+            <MessagesList messages={filteredMessages} />
           </div>
 
           <div className="px-4 py-3 border-t border-gray-300 bg-background flex items-center gap-2">
