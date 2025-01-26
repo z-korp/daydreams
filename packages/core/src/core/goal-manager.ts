@@ -414,4 +414,13 @@ export class GoalManager {
             .filter((g) => g.outcomeScore !== undefined)
             .sort((a, b) => (b.outcomeScore || 0) - (a.outcomeScore || 0));
     }
+
+    /**
+     * Retrieves all goals currently managed by the GoalManager.
+     *
+     * @returns An array of all Goal objects
+     */
+    public getAllGoals(): Goal[] {
+        return Array.from(this.goals.values());
+    }
 }

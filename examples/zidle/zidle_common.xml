@@ -19,8 +19,8 @@
   <contract_addresses>
     <contract name="gold-erc20">0x041a8602ddf005594d1a6149325eaa21a103216a15c2883188ee912ed9a59cb0</contract>
     <contract name="character-nft" used_by="CHECK_NFT">0x051d88174534ea0e084f1eb6669da78a1e3a0c1fe4fd23542397815385550cd2</contract>
-    <contract name="character-system" used_by="MINT_NFT">0x1ae7332b69509e0c30adda1e9ab076a09017988302f9ed22342743e3855279b</contract>
-    <contract name="resources-system" used_by="MINE_RCS,HARVEST_RCS">0x033f05797f8d389757d061f04ba4be429e5143b5fc2e2dc4c77bdb7e517e706f</contract>
+    <contract name="character-system" used_by="MINT_NFT">0x180e55d0357658cb9b48eceeb511331b02024e6db84022a6a3a2be6cf2e4a52</contract>
+    <contract name="resources-system" used_by="MINE_RCS,HARVEST_RCS">0x40f638e57740f4e0c2e64e60e2cee00df77aff3c96b5ba4de1c909761774cc8</contract>
   </contract_addresses>
 
   <error_handling>

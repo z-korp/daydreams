@@ -2,6 +2,7 @@
 <provider_guide>
   <processing_rules>
     <rule>Variables in CAPS with $ must be replaced with actual values</rule>
+    <rule>Replace $CONTRACT_ADDRESS with the correct address from the predefined list based on action context.</rule>
     <parameter_rules priority="1">
       <rule>$TOKEN_ID_LOW must be replaced with numeric TOKEN_ID_LOW value from the return of CHECK_NFT[0]</rule>
       <rule>$WALLET_ADDRESS must be replaced with caller's actual wallet address</rule>
@@ -42,7 +43,7 @@
     </variable_assignment>
 
     <variable_substitution>
-      <step>Before executing an action, identify placeholders in the action's parameters (e.g., `$TOKEN_ID_LOW`).</step>
+      <step>Before executing an action, identify placeholders in the action's parameters (e.g., `$TOKEN_ID_LOW`)</step>
       <step>Replace placeholders with actual values from the agent's context.</step>
       <example>
         Replace `$TOKEN_ID_LOW` with `0x10` in the GRAPHQL_FETCH query.
@@ -72,7 +73,7 @@
       <example_call>{
           type: "EXECUTE_READ", 
           payload: {
-            contractAddress: "0x051d88174534ea0e084f1eb6669da78a1e3a0c1fe4fd23542397815385550cd2",
+            contractAddress: "0x04568174534ea0e084f1eb6669da78a1e3a0c1fe4fd23542397815385550444",
             entrypoint: "token_of_owner_by_index",
             calldata: ["0x1234567890abcdef", 0, 0]
           }

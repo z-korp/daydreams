@@ -188,28 +188,29 @@
     </action_dependencies>
 
     <action_flow>
-      <phase name="initialization">
+      <phase name="initialization" run_once="true">
         1. CHECK_NFT:
-          - Success: Store TOKEN_ID_LOW, proceed to phase 2
-          - Not found: Execute MINT_NFT, then repeat CHECK_NFT
+          - Store TOKEN_ID_LOW permanently
+          - Proceed to resource loop
       </phase>
 
-      <phase name="status_check" requires="TOKEN_ID_LOW">
-        1. CHECK_XP: Get current XP and level data
-        2. CHECK_MINING: Get current mining status
-        3. Based on results:
-          - If mining: Queue HARVEST_RCS
-          - If idle: Proceed to resource selection
-      </phase>
-
-      <phase name="resource_selection" requires="TOKEN_ID_LOW,XP_DATA,MINING_STATUS">
-        1. Calculate optimal resource tier based on:
-          - Current level
-          - Available tiers
-          - XP efficiency
-        2. Queue MINE_RCS with selected tier
+      <phase name="resource_loop" requires="TOKEN_ID_LOW">
+        1. CHECK_MINING
+        2. CHECK_XP
+        3. If not mining:
+          - SELECT_RESOURCE based on XP levels
+          - MINE_RCS with chosen resource
+        4. If mining && completion_time <= current_time:
+          - HARVEST_RCS
+          - (Return to step 1)
       </phase>
     </action_flow>
+
+    <mandatory_rules>
+      - MINE_RCS cannot be called if already mining
+      - HARVEST_RCS required before new MINE_RCS
+      - Must CHECK_XP and CHECK_MINING before any MINE_RCS
+    </mandatory_rules>
 
     <execution_rules>
       - Generate only actions where all required data is available
