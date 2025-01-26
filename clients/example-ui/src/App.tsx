@@ -6,33 +6,15 @@ import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar";
-import { useDaydreamsWs } from "@/hooks/use-daydreams";
 
 function App() {
-  const { currentOrchestratorId, setCurrentOrchestratorId } = useDaydreamsWs();
-
   return (
     <SidebarProvider className="font-body">
       <AppSidebar />
       <SidebarInset>
         <Routes>
-          <Route 
-            path="/" 
-            element={
-              <HomePage 
-                currentOrchestratorId={currentOrchestratorId} 
-              />
-            } 
-          />
-          <Route 
-            path="/my-agents" 
-            element={
-              <MyAgentsPage 
-                currentOrchestratorId={currentOrchestratorId}
-                setCurrentOrchestratorId={setCurrentOrchestratorId}
-              />
-            } 
-          />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/my-agents" element={<MyAgentsPage />} />
         </Routes>
       </SidebarInset>
     </SidebarProvider>

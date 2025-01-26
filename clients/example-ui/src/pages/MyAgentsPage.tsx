@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useDaydreamsWs } from "@/hooks/use-daydreams";
+import { useAppStore } from "@/store/use-app-store";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,6 +10,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Link } from "react-router-dom";
+import { ChangeEvent } from 'react';
 
 interface Orchestrator {
   id: string;
@@ -27,46 +29,30 @@ interface MyAgentsPageProps {
   setCurrentOrchestratorId: (id: string) => void;
 }
 
-export function MyAgentsPage({ 
-  currentOrchestratorId, 
-  setCurrentOrchestratorId 
-}: MyAgentsPageProps) {
+export function MyAgentsPage() {
   const [orchestrators, setOrchestrators] = useState<Orchestrator[]>([]);
   const [newOrchestratorName, setNewOrchestratorName] = useState("");
-  const { messages, sendMessage, isConnected } = useDaydreamsWs();
+  const { currentOrchestratorId, setCurrentOrchestratorId, messages } = useAppStore();
+  const { sendMessage } = useDaydreamsWs();
 
   useEffect(() => {
-    if (isConnected) {
-      sendMessage({
-        type: "list_orchestrators"
-      });
-    }
-  }, []);
+    if (messages.length) {
+      const lastMessage = messages[messages.length - 1];
 
-  useEffect(() => {
-    if (!messages.length) return;
-    const lastMessage = messages[messages.length - 1];
+      if (
+        (lastMessage.type === "welcome" || lastMessage.type === "orchestrators_list") && 
+        lastMessage.orchestrators
+      ) {
+        setOrchestrators(lastMessage.orchestrators);
+      }
 
-    if (lastMessage.type === "welcome" && lastMessage.orchestrators) {
-      setOrchestrators(lastMessage.orchestrators);
-      if (!currentOrchestratorId && lastMessage.orchestrators.length > 0) {
-        setCurrentOrchestratorId(lastMessage.orchestrators[0].id);
+      if (lastMessage.type === "orchestrator_created" && lastMessage.orchestrator) {
+        sendMessage({
+          type: "list_orchestrators"
+        });
       }
     }
-
-    if (lastMessage.type === "orchestrator_created" && lastMessage.orchestrator) {
-      sendMessage({
-        type: "list_orchestrators"
-      });
-    }
-
-    if (lastMessage.type === "orchestrators_list" && lastMessage.orchestrators) {
-      setOrchestrators(lastMessage.orchestrators);
-      if (!currentOrchestratorId && lastMessage.orchestrators.length > 0) {
-        setCurrentOrchestratorId(lastMessage.orchestrators[0].id);
-      }
-    }
-  }, [messages, sendMessage, currentOrchestratorId, setCurrentOrchestratorId]);
+  }, [messages, sendMessage]);
 
   const handleCreateOrchestrator = () => {
     if (!newOrchestratorName.trim()) return;
@@ -79,6 +65,10 @@ export function MyAgentsPage({
 
   const handleSelectOrchestrator = (orchId: string) => {
     setCurrentOrchestratorId(orchId);
+  };
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setNewOrchestratorName(e.target.value);
   };
 
   return (
@@ -126,7 +116,7 @@ export function MyAgentsPage({
               <input
                 type="text"
                 value={newOrchestratorName}
-                onChange={(e) => setNewOrchestratorName(e.target.value)}
+                onChange={handleInputChange}
                 placeholder="Orchestrator name..."
                 className="flex-1 px-4 py-2 rounded-lg border"
               />

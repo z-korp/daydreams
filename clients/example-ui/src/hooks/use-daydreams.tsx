@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useCallback } from "react";
+import { useAppStore } from "@/store/use-app-store";
 
 interface ServerMessage {
   type: string;
@@ -20,9 +21,12 @@ let messageQueue: unknown[] = [];
 let isConnecting = false;
 
 export function useDaydreamsWs() {
-  const [messages, setMessages] = useState<ServerMessage[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
-  const [currentOrchestratorId, setCurrentOrchestratorId] = useState<string>("");
+  const { 
+    currentOrchestratorId,
+    setCurrentOrchestratorId,
+    addMessage,
+    setIsConnected
+  } = useAppStore();
 
   const ensureConnection = useCallback(async () => {
     if (globalWs?.readyState === WebSocket.OPEN) {
@@ -64,14 +68,17 @@ export function useDaydreamsWs() {
       globalWs.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data) as ServerMessage;
-          setMessages(prev => [...prev, data]);
-
-          // Définir l'orchestrateur par défaut si on reçoit la liste
-          if ((data.type === "welcome" || data.type === "orchestrators_list") && data.orchestrators?.length > 0) {
+          console.log("📥 Received message:", data);
+          addMessage(data);
+          
+          if ((data.type === "welcome" || data.type === "orchestrators_list") && 
+              data.orchestrators?.length > 0 && 
+              !currentOrchestratorId) {
+            console.log("🎯 Setting default orchestrator:", data.orchestrators[0].id);
             setCurrentOrchestratorId(data.orchestrators[0].id);
           }
         } catch (err) {
-          console.error("Failed to parse WebSocket message:", event.data);
+          console.error("❌ Failed to parse WebSocket message:", event.data, err);
         }
       };
 
@@ -88,7 +95,7 @@ export function useDaydreamsWs() {
         isConnecting = false;
       };
     });
-  }, []);
+  }, [currentOrchestratorId, setCurrentOrchestratorId, addMessage, setIsConnected]);
 
   useEffect(() => {
     ensureConnection();
@@ -112,10 +119,6 @@ export function useDaydreamsWs() {
   };
 
   return {
-    messages,
-    sendMessage,
-    isConnected,
-    currentOrchestratorId,
-    setCurrentOrchestratorId
+    sendMessage
   };
 }
