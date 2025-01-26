@@ -121,7 +121,7 @@ wss.on("connection", (ws) => {
 
     sendJSON(ws, {
         type: "welcome",
-        message: "Welcome to Daydreams WebSocket server!",
+        message: "being human is hard",
     });
 
     ws.on("message", async (rawData) => {
