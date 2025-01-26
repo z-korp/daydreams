@@ -175,44 +175,76 @@ wss.on("connection", (ws) => {
             throw new Error("Orchestrator not found");
           }
 
-          console.log(chalk.blue(`[WS] Dispatching message to orchestrator ${parsed.orchestratorId}`));
-          
-          // Envoyer un message de debug pour indiquer le début du traitement
+          // Envoyer le message utilisateur en debug
           sendJSON(ws, {
             type: "debug",
+            messageType: "user_input",
+            message: parsed.message,
+            orchestratorId: parsed.orchestratorId,
+            timestamp: Date.now()
+          });
+
+          console.log(chalk.blue(`[WS] Dispatching message to orchestrator ${parsed.orchestratorId}`));
+          
+          // Message de début de traitement
+          sendJSON(ws, {
+            type: "debug",
+            messageType: "processing_start",
             message: `Processing message for orchestrator ${parsed.orchestratorId}`,
             orchestratorId: parsed.orchestratorId,
             timestamp: Date.now()
           });
           
-          const outputs = await orchestrator.dispatchToInput("user_chat", {
-            content: parsed.message,
-            userId: "ws-user",
-          });
+          try {
+            const outputs = await orchestrator.dispatchToInput("user_chat", {
+              content: parsed.message,
+              userId: "ws-user",
+            });
 
-          console.log(chalk.blue(`[WS] Got outputs:`, outputs));
+            console.log(chalk.blue(`[WS] Got outputs:`, outputs));
 
-          // Envoyer les outputs bruts en mode debug
-          sendJSON(ws, {
-            type: "debug",
-            message: "Raw outputs from orchestrator",
-            data: outputs,
-            orchestratorId: parsed.orchestratorId,
-            timestamp: Date.now()
-          });
+            // Envoyer les outputs bruts en mode debug
+            sendJSON(ws, {
+              type: "debug",
+              messageType: "raw_outputs",
+              message: "Raw outputs from orchestrator",
+              data: outputs,
+              orchestratorId: parsed.orchestratorId,
+              timestamp: Date.now()
+            });
 
-          if (outputs && Array.isArray(outputs)) {
-            for (const out of outputs) {
-              if (out.name === "chat_reply") {
-                console.log(chalk.blue(`[WS] Sending response:`, out.data.message));
-                sendJSON(ws, {
-                  type: "response",
-                  message: out.data.message,
-                  orchestratorId: parsed.orchestratorId,
-                  timestamp: Date.now()
-                });
+            if (outputs && Array.isArray(outputs)) {
+              for (const out of outputs) {
+                if (out.name === "chat_reply") {
+                  // Envoyer la réponse en debug
+                  sendJSON(ws, {
+                    type: "debug",
+                    messageType: "ai_response",
+                    message: out.data.message,
+                    orchestratorId: parsed.orchestratorId,
+                    timestamp: Date.now()
+                  });
+
+                  // Envoyer la réponse normale
+                  sendJSON(ws, {
+                    type: "response",
+                    message: out.data.message,
+                    orchestratorId: parsed.orchestratorId,
+                    timestamp: Date.now()
+                  });
+                }
               }
             }
+          } catch (error) {
+            // Envoyer l'erreur en debug
+            sendJSON(ws, {
+              type: "debug",
+              messageType: "error",
+              message: String(error),
+              orchestratorId: parsed.orchestratorId,
+              timestamp: Date.now()
+            });
+            throw error;
           }
           break;
 

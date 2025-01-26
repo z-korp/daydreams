@@ -33,11 +33,125 @@ interface UserMessage {
   orchestratorId: string;
 }
 
-type Message = WelcomeMessage | ResponseMessage | UserMessage;
+interface DebugMessage extends Message {
+  type: 'debug';
+  messageType: string;
+  timestamp: number;
+  data?: any;
+}
+
+type Message = WelcomeMessage | ResponseMessage | UserMessage | DebugMessage;
 
 interface Orchestrator {
   id: string;
   name: string;
+}
+
+// Ajout des types de messages pour le filtrage
+const MESSAGE_TYPES = {
+  STATE: 'state',
+  WELCOME: 'welcome',
+  USER: 'user',
+  DEBUG: 'debug',
+  RESPONSE: 'response'
+} as const;
+
+function DebugPanel({ messages, state }: { messages: Message[], state: AppState }) {
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set(Object.values(MESSAGE_TYPES)));
+  
+  const toggleMessageType = (type: string) => {
+    const newTypes = new Set(selectedTypes);
+    if (newTypes.has(type)) {
+      newTypes.delete(type);
+    } else {
+      newTypes.add(type);
+    }
+    setSelectedTypes(newTypes);
+  };
+
+  const filteredMessages = messages.filter(msg => selectedTypes.has(msg.type));
+
+  return (
+    <div className="grid grid-cols-2 gap-4 p-4 rounded-lg border bg-muted/50 overflow-hidden max-h-[400px]">
+      {/* État Zustand */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold">Zustand State</h3>
+          <span className="text-xs text-muted-foreground">
+            {Object.keys(state).length} properties
+          </span>
+        </div>
+        <div className="h-[320px] overflow-auto rounded border border-border/50 bg-background/50 p-2">
+          <pre className="text-xs">
+            {JSON.stringify(state, null, 2)}
+          </pre>
+        </div>
+      </div>
+
+      {/* Messages de Debug */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold">Debug Messages</h3>
+          <div className="flex gap-1">
+            {Object.entries(MESSAGE_TYPES).map(([key, type]) => (
+              <button
+                key={type}
+                onClick={() => toggleMessageType(type)}
+                className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+                  selectedTypes.has(type)
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted hover:bg-muted/80'
+                }`}
+              >
+                {key.toLowerCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="h-[320px] overflow-auto rounded border border-border/50 bg-background/50 p-2 space-y-2">
+          {filteredMessages.map((msg, idx) => {
+            let content = '';
+            let badge = '';
+            
+            if (msg.type === 'debug') {
+              const debugMsg = msg as DebugMessage;
+              const time = new Date(debugMsg.timestamp).toLocaleTimeString();
+              badge = debugMsg.messageType;
+              content = debugMsg.data 
+                ? JSON.stringify(debugMsg.data, null, 2)
+                : debugMsg.message;
+              return (
+                <div key={idx} className="text-xs space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">{time}</span>
+                    <span className="px-1.5 py-0.5 rounded-full bg-muted text-[10px] font-medium">
+                      {badge}
+                    </span>
+                  </div>
+                  <div className="font-mono pl-2 border-l-2 border-muted">
+                    {content}
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div key={idx} className="text-xs space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-1.5 py-0.5 rounded-full bg-muted text-[10px] font-medium">
+                    {msg.type}
+                  </span>
+                </div>
+                <div className="font-mono pl-2 border-l-2 border-muted">
+                  {JSON.stringify(msg, null, 2)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function HomePage() {
@@ -48,7 +162,8 @@ function HomePage() {
     currentOrchestratorId, 
     setCurrentOrchestratorId, 
     messages,
-    getMessagesForCurrentOrchestrator 
+    getMessagesForCurrentOrchestrator,
+    addMessage
   } = useAppStore();
   const { sendMessage } = useDaydreamsWs();
 
@@ -73,6 +188,7 @@ function HomePage() {
       orchestratorId: currentOrchestratorId
     };
 
+    addMessage(userMessage);
     sendMessage(userMessage);
     setMessage("");
   };
@@ -89,6 +205,23 @@ function HomePage() {
 
   const handleOrchestratorChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setCurrentOrchestratorId(e.target.value);
+  };
+
+  const formatDebugMessage = (msg: Message) => {
+    if (msg.type === 'debug') {
+      const debugMsg = msg as DebugMessage;
+      const time = new Date(debugMsg.timestamp).toLocaleTimeString();
+      const content = debugMsg.data 
+        ? JSON.stringify(debugMsg.data, null, 2)
+        : debugMsg.message;
+
+      return `[${time}] ${debugMsg.messageType}: ${content}`;
+    }
+    return JSON.stringify(msg, null, 2);
+  };
+
+  const getFullState = () => {
+    return useAppStore.getState();
   };
 
   return (
@@ -132,12 +265,10 @@ function HomePage() {
 
       <div className="flex flex-col flex-1 gap-4 p-4 pt-0">
         {showDebug && (
-          <div className="p-4 rounded-lg border bg-muted/50 overflow-auto max-h-[300px]">
-            <h3 className="font-semibold mb-2">Debug Messages for Orchestrator: {currentOrchestratorId}</h3>
-            <pre className="text-xs">
-              {JSON.stringify(getMessagesForCurrentOrchestrator(), null, 2)}
-            </pre>
-          </div>
+          <DebugPanel 
+            messages={getMessagesForCurrentOrchestrator()} 
+            state={getFullState()} 
+          />
         )}
 
         <div className="relative flex flex-col h-[calc(100vh-5rem)] rounded-lg border bg-muted/50">
