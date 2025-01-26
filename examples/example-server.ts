@@ -2,181 +2,267 @@ import { WebSocketServer, WebSocket } from "ws";
 import chalk from "chalk";
 import { z } from "zod";
 
-// ---- Import your internal classes and functions here ----
 import { LLMClient } from "../packages/core/src/core/llm-client";
-
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
-
 import { Orchestrator } from "../packages/core/src/core/orchestrator";
 import { HandlerRole } from "../packages/core/src/core/types";
 import { RoomManager } from "../packages/core/src/core/room-manager";
 import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
 import { defaultCharacter } from "../packages/core/src/core/character";
-
 import { LogLevel } from "../packages/core/src/core/types";
 import { ScheduledTaskMongoDb } from "../packages/core/src/core/scheduled-db";
 
-// ------------------------------------------------------
-// 1) CREATE DAYDREAMS AGENT
-// ------------------------------------------------------
-async function createDaydreamsAgent() {
-    const loglevel = LogLevel.INFO;
+class OrchestratorManager {
+  private orchestrators: Map<string, Orchestrator> = new Map();
+  private roomManagers: Map<string, RoomManager> = new Map();
+  private scheduledTaskDb: ScheduledTaskMongoDb;
 
-    // 1.1. LLM Initialization
-    const llmClient = new LLMClient({
-        model: "anthropic/claude-3-5-sonnet-latest",
-        temperature: 0.3,
-    });
-
-    // 1.2. Vector memory initialization
-    const vectorDb = new ChromaVectorDB("agent_memory", {
-        chromaUrl: "http://localhost:8000",
-        logLevel: loglevel,
-    });
-
-    // 1.3. Room manager initialization
-    const roomManager = new RoomManager(vectorDb);
-
-    // 1.4. Initialize processor with default character
-    const processor = new MessageProcessor(
-        llmClient,
-        defaultCharacter,
-        loglevel
+  constructor() {
+    this.scheduledTaskDb = new ScheduledTaskMongoDb(
+      "mongodb://localhost:27017",
+      "myApp",
+      "scheduled_tasks"
     );
+  }
 
-    const scheduledTaskDb = new ScheduledTaskMongoDb(
-        "mongodb://localhost:27017",
-        "myApp",
-        "scheduled_tasks"
-    );
-
-    await scheduledTaskDb.connect();
+  async initialize() {
+    await this.scheduledTaskDb.connect();
+    await this.scheduledTaskDb.deleteAll();
     console.log(chalk.green("✅ Scheduled task database connected"));
+  }
 
-    await scheduledTaskDb.deleteAll();
+  async createOrchestrator(name: string, config = { logLevel: LogLevel.INFO }) {
+    console.log(chalk.blue(`[OrchestratorManager] Creating new orchestrator '${name}'`));
+    console.log(chalk.gray(`[OrchestratorManager] Config:`, JSON.stringify(config, null, 2)));
+    const id = `orch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // 1.5. Initialize core system
-    const orchestrator = new Orchestrator(
-        roomManager,
-        vectorDb,
-        [processor],
-        scheduledTaskDb,
-        {
-            level: loglevel,
-            enableColors: true,
-            enableTimestamp: true,
-        }
+    const llmClient = new LLMClient({
+      model: "anthropic/claude-3-5-sonnet-latest",
+      temperature: 0.3,
+    });
+
+    const vectorDb = new ChromaVectorDB(`memory_${id}`, {
+      chromaUrl: "http://localhost:8000",
+      logLevel: config.logLevel,
+    });
+
+    const roomManager = new RoomManager(vectorDb);
+    this.roomManagers.set(id, roomManager);
+
+    const processor = new MessageProcessor(
+      llmClient,
+      defaultCharacter,
+      config.logLevel
     );
 
-    // 1.6. Register handlers
+    const orchestrator = new Orchestrator(
+      roomManager,
+      vectorDb,
+      [processor],
+      this.scheduledTaskDb,
+      {
+        level: config.logLevel,
+        enableColors: true,
+        enableTimestamp: true,
+      }
+    );
+
     orchestrator.registerIOHandler({
-        name: "user_chat",
-        role: HandlerRole.INPUT,
-        schema: z.object({
-            content: z.string(),
-            userId: z.string().optional(),
-        }),
-        handler: async (payload) => {
-            return payload;
-        },
+      name: "user_chat",
+      role: HandlerRole.INPUT,
+      schema: z.object({
+        content: z.string(),
+        userId: z.string().optional(),
+      }),
+      handler: async (payload) => {
+        return payload;
+      },
     });
 
     orchestrator.registerIOHandler({
-        name: "chat_reply",
-        role: HandlerRole.OUTPUT,
-        schema: z.object({
-            userId: z.string().optional(),
-            message: z.string(),
-        }),
-        handler: async (payload) => {
-            const { userId, message } = payload as {
-                userId?: string;
-                message: string;
-            };
-            console.log(`Reply to user ${userId ?? "??"}: ${message}`);
-        },
+      name: "chat_reply",
+      role: HandlerRole.OUTPUT,
+      schema: z.object({
+        userId: z.string().optional(),
+        message: z.string(),
+      }),
+      handler: async (payload) => {
+        const { userId, message } = payload as {
+          userId?: string;
+          message: string;
+        };
+        console.log(`[Orchestrator ${id}] Reply to user ${userId ?? "??"}: ${message}`);
+      },
     });
 
-    // Return the orchestrator instance
-    return orchestrator;
+    this.orchestrators.set(id, orchestrator);
+    return { id, name, orchestrator };
+  }
+
+  getOrchestrator(id: string) {
+    return this.orchestrators.get(id);
+  }
+
+  listOrchestrators() {
+    console.log(chalk.blue("[OrchestratorManager] Listing orchestrators"));
+    const orchestrators = Array.from(this.orchestrators.entries()).map(([id, orchestrator]) => ({
+      id,
+      name: `Orchestrator ${id}`
+    }));
+    console.log(chalk.blue("[OrchestratorManager] Listing orchestrators:", JSON.stringify(orchestrators, null, 2)));
+    return orchestrators;
+  }
 }
 
-// Create a single "global" instance
-const orchestrator = await createDaydreamsAgent();
+// Initialize orchestrator manager
+const orchestratorManager = new OrchestratorManager();
+await orchestratorManager.initialize();
+const defaultOrch = await orchestratorManager.createOrchestrator("Default Orchestrator");
 
-// ------------------------------------------------------
-// 2) WEBSOCKET SERVER
-// ------------------------------------------------------
+// WebSocket Server
 const wss = new WebSocketServer({ port: 8080 });
-console.log(
-    chalk.green("[WS] WebSocket server listening on ws://localhost:8080")
-);
+console.log(chalk.green("[WS] WebSocket server listening on ws://localhost:8080"));
 
 function sendJSON(ws: WebSocket, data: unknown) {
-    ws.send(JSON.stringify(data));
+  ws.send(JSON.stringify(data));
 }
 
 wss.on("connection", (ws) => {
-    console.log(chalk.blue("[WS] New client connected."));
+  console.log(chalk.blue("[WS] New client connected."));
 
-    sendJSON(ws, {
-        type: "welcome",
-        message: "being human is hard",
-    });
+  sendJSON(ws, {
+    type: "welcome",
+    message: "Welcome to Daydreams WebSocket server!",
+    orchestrators: orchestratorManager.listOrchestrators(),
+  });
 
-    ws.on("message", async (rawData) => {
-        try {
-            const dataString = rawData.toString();
-            console.log(chalk.magenta("[WS] Received message:"), dataString);
+  ws.on("message", async (rawData) => {
+    try {
+      const dataString = rawData.toString();
+      console.log(chalk.magenta("[WS] Received message:"), dataString);
 
-            const parsed = JSON.parse(dataString);
-            const userMessage = parsed.goal;
+      const parsed = JSON.parse(dataString);
+      
+      switch (parsed.type) {
+        case "create_orchestrator":
+          if (!parsed.name) {
+            throw new Error("Orchestrator name is required");
+          }
+          const newOrch = await orchestratorManager.createOrchestrator(parsed.name);
+          sendJSON(ws, {
+            type: "orchestrator_created",
+            orchestrator: {
+              id: newOrch.id,
+              name: newOrch.name,
+            },
+          });
+          break;
 
-            if (!userMessage || typeof userMessage !== "string") {
-                throw new Error(
-                    "Invalid message format. Expected { message: string }"
-                );
-            }
+        case "list_orchestrators":
+          sendJSON(ws, {
+            type: "orchestrators_list",
+            orchestrators: orchestratorManager.listOrchestrators(),
+          });
+          break;
 
-            // Process the message using the orchestrator
+        case "user":
+          if (!parsed.orchestratorId) {
+            throw new Error("Orchestrator ID is required");
+          }
+          const orchestrator = orchestratorManager.getOrchestrator(parsed.orchestratorId);
+          if (!orchestrator) {
+            throw new Error("Orchestrator not found");
+          }
+
+          sendJSON(ws, {
+            type: "debug",
+            messageType: "user_input",
+            message: parsed.message,
+            orchestratorId: parsed.orchestratorId,
+            timestamp: Date.now()
+          });
+
+          console.log(chalk.blue(`[WS] Dispatching message to orchestrator ${parsed.orchestratorId}`));
+          
+          sendJSON(ws, {
+            type: "debug",
+            messageType: "processing_start",
+            message: `Processing message for orchestrator ${parsed.orchestratorId}`,
+            orchestratorId: parsed.orchestratorId,
+            timestamp: Date.now()
+          });
+          
+          try {
             const outputs = await orchestrator.dispatchToInput("user_chat", {
-                content: userMessage,
-                userId: "ws-user",
+              content: parsed.message,
+              userId: "ws-user",
             });
 
-            // Send responses back through WebSocket
-            if (outputs && (outputs as any).length > 0) {
-                for (const out of outputs as any[]) {
-                    if (out.name === "chat_reply") {
-                        sendJSON(ws, {
-                            type: "response",
-                            message: out.data.message,
-                        });
-                    }
-                }
-            }
-        } catch (error) {
-            console.error(chalk.red("[WS] Error processing message:"), error);
+            console.log(chalk.blue(`[WS] Got outputs:`, outputs));
+
             sendJSON(ws, {
-                type: "error",
-                error: (error as Error).message || String(error),
+              type: "debug",
+              messageType: "raw_outputs",
+              message: "Raw outputs from orchestrator",
+              data: outputs,
+              orchestratorId: parsed.orchestratorId,
+              timestamp: Date.now()
             });
-        }
-    });
 
-    ws.on("close", () => {
-        console.log(chalk.yellow("[WS] Client disconnected."));
-    });
+            if (outputs && Array.isArray(outputs)) {
+              for (const out of outputs) {
+                if (out.name === "chat_reply") {
+                  sendJSON(ws, {
+                    type: "debug",
+                    messageType: "ai_response",
+                    message: out.data.message,
+                    orchestratorId: parsed.orchestratorId,
+                    timestamp: Date.now()
+                  });
+
+                  sendJSON(ws, {
+                    type: "response",
+                    message: out.data.message,
+                    orchestratorId: parsed.orchestratorId,
+                    timestamp: Date.now()
+                  });
+                }
+              }
+            }
+          } catch (error) {
+            sendJSON(ws, {
+              type: "debug",
+              messageType: "error",
+              message: String(error),
+              orchestratorId: parsed.orchestratorId,
+              timestamp: Date.now()
+            });
+            throw error;
+          }
+          break;
+
+        default:
+          console.warn(chalk.yellow("[WS] Unknown message type:"), parsed.type);
+      }
+
+    } catch (error) {
+      console.error(chalk.red("[WS] Error:"), error);
+      sendJSON(ws, {
+        type: "error",
+        error: (error as Error).message || String(error),
+      });
+    }
+  });
+
+  ws.on("close", () => {
+    console.log(chalk.yellow("[WS] Client disconnected."));
+  });
 });
 
-// Handle graceful shutdown
 process.on("SIGINT", async () => {
-    console.log(chalk.yellow("\n\nShutting down..."));
-
-    // Close WebSocket server
-    wss.close(() => {
-        console.log(chalk.green("✅ WebSocket server closed"));
-    });
-
-    process.exit(0);
+  console.log(chalk.yellow("\n\nShutting down..."));
+  wss.close(() => {
+    console.log(chalk.green("✅ WebSocket server closed"));
+  });
+  process.exit(0);
 });
