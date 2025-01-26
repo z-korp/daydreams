@@ -20,7 +20,12 @@ export function MyAgentsPage() {
   const [newOrchestratorName, setNewOrchestratorName] = useState("");
   const { messages, sendMessage } = useDaydreamsWs();
 
-  // Effet pour gérer les orchestrateurs
+  useEffect(() => {
+    sendMessage({
+      type: "list_orchestrators"
+    });
+  }, []);
+
   useEffect(() => {
     if (!messages.length) return;
     const lastMessage = messages[messages.length - 1];
@@ -29,8 +34,10 @@ export function MyAgentsPage() {
       setOrchestrators(lastMessage.orchestrators);
     }
 
-    if (lastMessage.type === "orchestrator_created" && lastMessage.orchestrator) {
-      setOrchestrators(prev => [...prev, lastMessage.orchestrator]);
+    if (lastMessage.type === "orchestrator_created" && lastMessage.orchestrator) { // Après la création d'un orchestrateur, on redemande la liste complète
+      sendMessage({
+        type: "list_orchestrators"
+      });
     }
 
     if (lastMessage.type === "orchestrators_list" && lastMessage.orchestrators) {

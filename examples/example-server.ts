@@ -102,10 +102,13 @@ class OrchestratorManager {
   }
 
   listOrchestrators() {
-    return Array.from(this.orchestrators.entries()).map(([id, orchestrator]) => ({
+    console.log(chalk.blue("[OrchestratorManager] Listing orchestrators"));
+    const orchestrators = Array.from(this.orchestrators.entries()).map(([id, orchestrator]) => ({
       id,
-      name: `Orchestrator ${id}`,
+      name: `Orchestrator ${id}`
     }));
+    console.log(chalk.blue("[OrchestratorManager] Listing orchestrators:", JSON.stringify(orchestrators, null, 2)));
+    return orchestrators;
   }
 }
 
@@ -156,6 +159,7 @@ wss.on("connection", (ws) => {
           break;
 
         case "list_orchestrators":
+          console.log(chalk.blue("[WS] Listing orchestrators"));
           sendJSON(ws, {
             type: "orchestrators_list",
             orchestrators: orchestratorManager.listOrchestrators(),
