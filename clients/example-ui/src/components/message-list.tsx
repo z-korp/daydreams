@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { CollapsibleJson } from "./collapsible-json";
 
 interface Message {
   type: string;
@@ -25,14 +26,14 @@ export function MessagesList({ messages }: { messages: Message[] }) {
       relative overflow-hidden
       before:absolute before:inset-[1px] before:bg-background/80 before:rounded-lg before:z-0
       after:absolute after:inset-0 after:rounded-lg after:z-[-1]
-      after:bg-gradient-to-r after:blur-[2px]
+      after:bg-gradient-to-r after:bg-[length:200%_100%]
       [&>*]:relative [&>*]:z-10
     `;
 
     if (msg.isLoading) {
       containerClass += " justify-start";
       bubbleClass += `
-        after:from-[#00FFC3] after:via-[#00FFC3]/50 after:to-[#00FFC3]
+        after:from-[#00FFC3] after:via-[#00FFC3]/30 after:to-[#00FFC3]/80
         text-[#00FFC3] animate-pulse
         shadow-[0_0_30px_rgba(0,255,195,0.3)]
       `;
@@ -43,56 +44,55 @@ export function MessagesList({ messages }: { messages: Message[] }) {
       switch (msg.messageType) {
         case "error":
           containerClass += " justify-start";
-          bubbleClass += " after:from-[#FF585D] after:via-[#FF585D]/50 after:to-[#FF585D] text-[#FF585D] shadow-[0_0_30px_rgba(255,88,93,0.3)]";
+          bubbleClass += " after:from-[#FF585D] after:via-[#FF585D]/30 after:to-[#FF585D]/80 text-[#FF585D] shadow-[0_0_30px_rgba(255,88,93,0.3)]";
           break;
 
         case "ai_response":
           containerClass += " justify-start";
-          bubbleClass += " after:from-[#00FFC3] after:via-[#00FFC3]/50 after:to-[#00FFC3] text-[#00FFC3] shadow-[0_0_30px_rgba(0,255,195,0.3)]";
+          bubbleClass += " after:from-[#00FFC3] after:via-[#00FFC3]/30 after:to-[#00FFC3]/80 text-[#00FFC3] shadow-[0_0_30px_rgba(0,255,195,0.3)]";
           break;
 
         case "raw_outputs":
         case "processing_start":
           containerClass += " justify-start";
-          bubbleClass += " after:from-[#9F00C5] after:via-[#9F00C5]/50 after:to-[#9F00C5] text-[#9F00C5] shadow-[0_0_30px_rgba(159,0,197,0.3)]";
+          bubbleClass += " after:from-[#9F00C5] after:via-[#9F00C5]/30 after:to-[#9F00C5]/80 text-[#9F00C5] shadow-[0_0_30px_rgba(159,0,197,0.3)]";
           break;
 
         case "user_input":
           containerClass += " justify-end";
-          bubbleClass += " after:from-[#FF307B] after:via-[#FF307B]/50 after:to-[#FF307B] text-[#FF307B] shadow-[0_0_30px_rgba(255,48,123,0.3)]";
+          bubbleClass += " after:from-[#FF307B] after:via-[#FF307B]/30 after:to-[#FF307B]/80 text-[#FF307B] shadow-[0_0_30px_rgba(255,48,123,0.3)]";
           break;
 
         default:
           containerClass += " justify-start";
-          bubbleClass += " after:from-[#1CEB92] after:via-[#1CEB92]/50 after:to-[#1CEB92] text-[#1CEB92] shadow-[0_0_30px_rgba(28,235,146,0.3)]";
+          bubbleClass += " after:from-[#1CEB92] after:via-[#1CEB92]/30 after:to-[#1CEB92]/80 text-[#1CEB92] shadow-[0_0_30px_rgba(28,235,146,0.3)]";
       }
     } else {
       switch (msg.type) {
         case "user":
           containerClass += " justify-end";
-          bubbleClass += " after:from-[#FF307B] after:via-[#FF307B]/50 after:to-[#FF307B] text-[#FF307B] shadow-[0_0_30px_rgba(255,48,123,0.3)]";
+          bubbleClass += " after:from-[#FF307B] after:via-[#FF307B]/30 after:to-[#FF307B]/80 text-[#FF307B] shadow-[0_0_30px_rgba(255,48,123,0.3)]";
           break;
 
         case "response":
           containerClass += " justify-start";
-          bubbleClass += " after:from-[#00FFC3] after:via-[#00FFC3]/50 after:to-[#00FFC3] text-[#00FFC3] shadow-[0_0_30px_rgba(0,255,195,0.3)]";
+          bubbleClass += " after:from-[#00FFC3] after:via-[#00FFC3]/30 after:to-[#00FFC3]/80 text-[#00FFC3] shadow-[0_0_30px_rgba(0,255,195,0.3)]";
           break;
 
         case "welcome":
           containerClass += " justify-center";
-          bubbleClass += " after:from-[#1CEB92] after:via-[#1CEB92]/50 after:to-[#1CEB92] text-[#1CEB92] shadow-[0_0_30px_rgba(28,235,146,0.3)]";
+          bubbleClass += " after:from-[#1CEB92] after:via-[#1CEB92]/30 after:to-[#1CEB92]/80 text-[#1CEB92] shadow-[0_0_30px_rgba(28,235,146,0.3)]";
           break;
 
         default:
           containerClass += " justify-start";
-          bubbleClass += " after:from-[#9F00C5] after:via-[#9F00C5]/50 after:to-[#9F00C5] text-[#9F00C5] shadow-[0_0_30px_rgba(159,0,197,0.3)]";
+          bubbleClass += " after:from-[#9F00C5] after:via-[#9F00C5]/30 after:to-[#9F00C5]/80 text-[#9F00C5] shadow-[0_0_30px_rgba(159,0,197,0.3)]";
       }
     }
 
     bubbleClass += ` 
       hover:before:bg-opacity-70
-      hover:shadow-[0_0_50px_rgba(var(--shadow-color),0.5)]
-      hover:after:animate-pulse
+      hover:after:animate-[gradient_3s_ease_infinite]
       transition-all duration-300
     `;
 
@@ -114,14 +114,20 @@ export function MessagesList({ messages }: { messages: Message[] }) {
     }
 
     if (msg.type === 'debug') {
+      if (msg.messageType === 'raw_outputs' && msg.data) {
+        return <CollapsibleJson data={msg.data} />;
+      }
+      
       if (msg.data) {
         try {
+          if (typeof msg.data === 'object') {
+            return <CollapsibleJson data={msg.data} />;
+          }
           return JSON.stringify(msg.data, null, 2);
         } catch (e) {
           return String(msg.data);
         }
       }
-      return msg.message;
     }
     return msg.message || msg.error || JSON.stringify(msg);
   };
@@ -135,14 +141,9 @@ export function MessagesList({ messages }: { messages: Message[] }) {
 
         return (
           <div key={idx} className={containerClass}>
-            <div className={`${bubbleClass} overflow-hidden`}>
-              {time && !msg.isLoading && (
-                <div className="text-xs opacity-50 mb-1">
-                  {time}
-                </div>
-              )}
+            <div className={`${bubbleClass} overflow-hidden relative`}>
               {msg.type === 'debug' && msg.messageType && !msg.isLoading && (
-                <div className="text-xs font-semibold mb-1 opacity-70">
+                <div className="text-xs font-semibold mb-2 opacity-70">
                   {msg.messageType}
                 </div>
               )}
@@ -151,10 +152,16 @@ export function MessagesList({ messages }: { messages: Message[] }) {
                   ${msg.data && !msg.isLoading ? "whitespace-pre-wrap font-mono text-sm" : ""}
                   break-words overflow-x-auto
                   ${msg.type === 'debug' && !msg.isLoading ? 'max-h-[300px] overflow-y-auto' : ''}
+                  ${time ? 'mb-4' : ''}
                 `}
               >
                 {formattedMessage}
               </div>
+              {time && !msg.isLoading && (
+                <div className="text-xs opacity-50 absolute bottom-1 right-2">
+                  {time}
+                </div>
+              )}
             </div>
           </div>
         );
