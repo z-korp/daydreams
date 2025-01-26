@@ -1,0 +1,8 @@
+{
+  "editor.formatOnSave": true,
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "prettier.singleQuote": false,
+  "typescript.tsdk": "node_modules/typescript/lib"
+}
