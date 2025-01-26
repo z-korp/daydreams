@@ -54,7 +54,7 @@ export class ChainOfThought extends EventEmitter {
 
         this.context = initialContext ?? {
             worldState: "",
-            providerContext: ""
+            providerContext: "",
         };
 
         this.logger = new Logger({
@@ -149,6 +149,8 @@ export class ChainOfThought extends EventEmitter {
       6. Ensure goals are achievable given the current context
       7. Consider past experiences when setting goals
       8. Use available game state information to inform strategy
+      9. Ensure that goals requiring specific variables are only planned after those variables are obtained
+      10. Break down goals further if they depend on the results of previous actions
       
       # Return a JSON structure with three arrays:
       - long_term: Strategic goals that might take multiple sessions
@@ -298,6 +300,32 @@ export class ChainOfThought extends EventEmitter {
      */
     private getReadyGoalsByPriority(): Goal[] {
         const readyGoals = this.goalManager.getReadyGoals();
+        const horizonPriority: Record<string, number> = {
+            short: 3,
+            medium: 2,
+            long: 1,
+        };
+
+        return readyGoals.sort((a, b) => {
+            const horizonDiff =
+                horizonPriority[a.horizon] - horizonPriority[b.horizon];
+            if (horizonDiff !== 0) {
+                return -horizonDiff;
+            }
+            return (b.priority ?? 0) - (a.priority ?? 0);
+        });
+    }
+
+    /**
+     * Gets a prioritized list of goals that are ready to be worked on.
+     * Goals are sorted first by horizon (short-term > medium-term > long-term)
+     * and then by their individual priority values.
+     *
+     * @returns An array of Goal objects sorted by priority
+     * @internal
+     */
+    public getAllGoalsByPriority(): Goal[] {
+        const readyGoals = this.goalManager.getAllGoals();
         const horizonPriority: Record<string, number> = {
             short: 3,
             medium: 2,
@@ -1342,6 +1370,8 @@ ${availableOutputs
                 logger: this.logger,
             });
 
+            console.log("XXXXXXX initialResponse: ", initialResponse);
+
             // Initialize pending actions queue with initial actions
             let pendingActions: CoTAction[] = [
                 ...initialResponse.actions,
@@ -1365,6 +1395,8 @@ ${availableOutputs
                     currentIteration,
                     pendingActionsCount: pendingActions.length,
                 });
+
+                console.log("XXXXXXX pendingActions: ", pendingActions);
 
                 // Process one action at a time
                 const currentAction = pendingActions.shift()!;
@@ -1443,19 +1475,16 @@ ${availableOutputs
                         logger: this.logger,
                     });
 
+                    console.log("XXXXXXX completion: ", completion);
+
                     try {
                         isComplete = completion.complete;
 
                         if (completion.newActions?.length > 0) {
-                            // Add new actions to the end of the pending queue
-                            const extractedActions =
-                                completion.newActions.flatMap(
-                                    (plan: any) => plan.actions || []
-                                );
-                            pendingActions.push(...extractedActions);
+                            pendingActions.push(...completion.newActions);
 
                             this.logger.debug("think", "Added new actions", {
-                                newActionsCount: extractedActions.length,
+                                newActionsCount: completion.newActions.length,
                                 totalPendingCount: pendingActions.length,
                             });
                         }
