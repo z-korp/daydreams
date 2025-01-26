@@ -175,18 +175,23 @@ wss.on("connection", (ws) => {
             throw new Error("Orchestrator not found");
           }
 
+          console.log(chalk.blue(`[WS] Dispatching message to orchestrator ${parsed.orchestratorId}`));
+          
           const outputs = await orchestrator.dispatchToInput("user_chat", {
             content: parsed.message,
             userId: "ws-user",
           });
 
+          console.log(chalk.blue(`[WS] Got outputs:`, outputs));
+
           if (outputs && Array.isArray(outputs)) {
             for (const out of outputs) {
               if (out.name === "chat_reply") {
+                console.log(chalk.blue(`[WS] Sending response:`, out.data.message));
                 sendJSON(ws, {
                   type: "response",
-                  orchestratorId: parsed.orchestratorId,
                   message: out.data.message,
+                  orchestratorId: parsed.orchestratorId
                 });
               }
             }

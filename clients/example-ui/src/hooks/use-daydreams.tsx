@@ -14,7 +14,7 @@ interface ServerMessage {
   timestamp?: number;
 }
 
-
+// Connexion WebSocket singleton
 let globalWs: WebSocket | null = null;
 let messageQueue: unknown[] = [];
 let isConnecting = false;
@@ -22,6 +22,7 @@ let isConnecting = false;
 export function useDaydreamsWs() {
   const [messages, setMessages] = useState<ServerMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [currentOrchestratorId, setCurrentOrchestratorId] = useState<string>("");
 
   const ensureConnection = useCallback(async () => {
     if (globalWs?.readyState === WebSocket.OPEN) {
@@ -64,6 +65,11 @@ export function useDaydreamsWs() {
         try {
           const data = JSON.parse(event.data) as ServerMessage;
           setMessages(prev => [...prev, data]);
+
+          // Définir l'orchestrateur par défaut si on reçoit la liste
+          if ((data.type === "welcome" || data.type === "orchestrators_list") && data.orchestrators?.length > 0) {
+            setCurrentOrchestratorId(data.orchestrators[0].id);
+          }
         } catch (err) {
           console.error("Failed to parse WebSocket message:", event.data);
         }
@@ -86,9 +92,7 @@ export function useDaydreamsWs() {
 
   useEffect(() => {
     ensureConnection();
-    
-    return () => {
-    };
+    return () => {};
   }, [ensureConnection]);
 
   const sendMessage = async (message: unknown) => {
@@ -111,5 +115,7 @@ export function useDaydreamsWs() {
     messages,
     sendMessage,
     isConnected,
+    currentOrchestratorId,
+    setCurrentOrchestratorId
   };
 }

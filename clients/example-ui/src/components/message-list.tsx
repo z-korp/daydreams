@@ -2,8 +2,9 @@ import React from 'react';
 
 interface Message {
   type: string;
-  content: string;
-  timestamp: number;
+  message?: string;
+  error?: string;
+  orchestratorId?: string;
 }
 
 interface MessagesListProps {
@@ -39,6 +40,7 @@ export const MessagesList: React.FC<MessagesListProps> = ({ messages }) => {
             `;
             break;
 
+          case "response":
           case "assistant":
             containerClass += " justify-start";
             bubbleClass += `
@@ -47,18 +49,19 @@ export const MessagesList: React.FC<MessagesListProps> = ({ messages }) => {
               hover:brightness-95
             `;
             break;
-            case "system":
-              containerClass += " justify-center";
-              bubbleClass += `
-                bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-900
-                border border-yellow-200 hover:brightness-105
-              `;
-              break;
+
+          case "system":
+            containerClass += " justify-center";
+            bubbleClass += `
+              bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-900
+              border border-yellow-200 hover:brightness-105
+            `;
+            break;
   
-            case "error":
-              containerClass += " justify-center";
-              bubbleClass += `
-                bg-gradient-to-r from-red-50 to-red-100 text-red-700 font-semibold
+          case "error":
+            containerClass += " justify-center";
+            bubbleClass += `
+              bg-gradient-to-r from-red-50 to-red-100 text-red-700 font-semibold
             border border-red-200 hover:brightness-105
             `;
             break;
@@ -80,6 +83,7 @@ export const MessagesList: React.FC<MessagesListProps> = ({ messages }) => {
             break;
 
           default:
+            console.log("Message type non géré:", msg.type);
             containerClass += " justify-start";
             bubbleClass += `
               bg-gradient-to-r from-gray-100 to-gray-200 text-gray-900 ml-2
@@ -89,9 +93,9 @@ export const MessagesList: React.FC<MessagesListProps> = ({ messages }) => {
 
         return (
           <div key={i} className={containerClass}>
-                <div className={bubbleClass}>
-            {/* Affiche le type si ce n’est pas un user/assistant classique */}
-            {msg.type !== "user" && msg.type !== "assistant" && (
+            <div className={bubbleClass}>
+              {/* Affiche le type si ce n'est pas un message standard */}
+              {msg.type !== "user" && msg.type !== "assistant" && msg.type !== "response" && (
                 <div className="mb-1 text-xs font-medium uppercase tracking-wider opacity-80">
                   {msg.type}
                 </div>

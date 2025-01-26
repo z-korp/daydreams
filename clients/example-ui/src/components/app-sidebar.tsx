@@ -29,18 +29,18 @@ const data = {
   ],
   navMain: [
     {
-      title: "Agents",
-      url: "#",
-      icon: Bot,
+      title: "Chats",
+      url: "/",
+      icon: MessageSquare,
       isActive: true,
       items: [
         {
-          title: "My Agents",
-          url: "my-agents",
+          title: "Chat",
+          url: "/",
         },
         {
-          title: "Create Agent",
-          url: "#",
+          title: "My Agents",
+          url: "my-agents",
         },
         {
           title: "Settings",
@@ -49,16 +49,16 @@ const data = {
       ],
     },
     {
-      title: "Chats",
+      title: "Agents",
       url: "#",
-      icon: MessageSquare,
+      icon: Bot,
       items: [
         {
-          title: "History",
-          url: "#",
+          title: "My Agents",
+          url: "/my-agents",
         },
         {
-          title: "Saved",
+          title: "Create Agent",
           url: "#",
         },
         {
@@ -91,7 +91,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             to="/"
             className="flex items-center px-3 py-2 text-sm rounded-lg hover:bg-accent"
           >
-            Home
+            Chat
           </Link>
           <Link
             to="/my-agents"

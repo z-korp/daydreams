@@ -15,15 +15,32 @@ interface Orchestrator {
   name: string;
 }
 
-export function MyAgentsPage() {
+interface MessageType {
+  type: string;
+  message?: string;
+  error?: string;
+  orchestratorId?: string;
+}
+
+interface MyAgentsPageProps {
+  currentOrchestratorId: string;
+  setCurrentOrchestratorId: (id: string) => void;
+}
+
+export function MyAgentsPage({ 
+  currentOrchestratorId, 
+  setCurrentOrchestratorId 
+}: MyAgentsPageProps) {
   const [orchestrators, setOrchestrators] = useState<Orchestrator[]>([]);
   const [newOrchestratorName, setNewOrchestratorName] = useState("");
-  const { messages, sendMessage } = useDaydreamsWs();
+  const { messages, sendMessage, isConnected } = useDaydreamsWs();
 
   useEffect(() => {
-    sendMessage({
-      type: "list_orchestrators"
-    });
+    if (isConnected) {
+      sendMessage({
+        type: "list_orchestrators"
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -32,9 +49,12 @@ export function MyAgentsPage() {
 
     if (lastMessage.type === "welcome" && lastMessage.orchestrators) {
       setOrchestrators(lastMessage.orchestrators);
+      if (!currentOrchestratorId && lastMessage.orchestrators.length > 0) {
+        setCurrentOrchestratorId(lastMessage.orchestrators[0].id);
+      }
     }
 
-    if (lastMessage.type === "orchestrator_created" && lastMessage.orchestrator) { // Après la création d'un orchestrateur, on redemande la liste complète
+    if (lastMessage.type === "orchestrator_created" && lastMessage.orchestrator) {
       sendMessage({
         type: "list_orchestrators"
       });
@@ -42,8 +62,11 @@ export function MyAgentsPage() {
 
     if (lastMessage.type === "orchestrators_list" && lastMessage.orchestrators) {
       setOrchestrators(lastMessage.orchestrators);
+      if (!currentOrchestratorId && lastMessage.orchestrators.length > 0) {
+        setCurrentOrchestratorId(lastMessage.orchestrators[0].id);
+      }
     }
-  }, [messages]);
+  }, [messages, sendMessage, currentOrchestratorId, setCurrentOrchestratorId]);
 
   const handleCreateOrchestrator = () => {
     if (!newOrchestratorName.trim()) return;
@@ -52,6 +75,10 @@ export function MyAgentsPage() {
       name: newOrchestratorName,
     });
     setNewOrchestratorName("");
+  };
+
+  const handleSelectOrchestrator = (orchId: string) => {
+    setCurrentOrchestratorId(orchId);
   };
 
   return (
@@ -80,7 +107,11 @@ export function MyAgentsPage() {
               {orchestrators.map(orch => (
                 <div
                   key={orch.id}
-                  className="p-4 rounded-lg border bg-card hover:border-primary transition-colors"
+                  onClick={() => handleSelectOrchestrator(orch.id)}
+                  className={`p-4 rounded-lg border cursor-pointer transition-colors
+                    ${currentOrchestratorId === orch.id 
+                      ? 'bg-primary/10 border-primary' 
+                      : 'bg-card hover:border-primary'}`}
                 >
                   <h3 className="font-semibold">{orch.name}</h3>
                   <p className="text-sm text-muted-foreground mt-1">ID: {orch.id}</p>
