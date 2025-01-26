@@ -316,32 +316,6 @@ export class ChainOfThought extends EventEmitter {
     }
 
     /**
-     * Gets a prioritized list of goals that are ready to be worked on.
-     * Goals are sorted first by horizon (short-term > medium-term > long-term)
-     * and then by their individual priority values.
-     *
-     * @returns An array of Goal objects sorted by priority
-     * @internal
-     */
-    public getAllGoalsByPriority(): Goal[] {
-        const readyGoals = this.goalManager.getAllGoals();
-        const horizonPriority: Record<string, number> = {
-            short: 3,
-            medium: 2,
-            long: 1,
-        };
-
-        return readyGoals.sort((a, b) => {
-            const horizonDiff =
-                horizonPriority[a.horizon] - horizonPriority[b.horizon];
-            if (horizonDiff !== 0) {
-                return -horizonDiff;
-            }
-            return (b.priority ?? 0) - (a.priority ?? 0);
-        });
-    }
-
-    /**
      * Checks if a goal can be executed based on current state and requirements.
      *
      * Analyzes the goal against relevant documents, past experiences, and current state
@@ -900,11 +874,6 @@ export class ChainOfThought extends EventEmitter {
                 logger: this.logger,
             });
 
-            console.log(
-                "evaluateGoalCompletion response: =================================",
-                response
-            );
-
             if (response.success) {
                 this.recordReasoningStep(
                     `Goal validated as successful: ${response.reason}`,
@@ -1344,8 +1313,6 @@ ${availableOutputs
                 logger: this.logger,
             });
 
-            console.log("XXXXXXX initialResponse: ", initialResponse);
-
             // Initialize pending actions queue with initial actions
             let pendingActions: CoTAction[] = [
                 ...initialResponse.actions,
@@ -1369,8 +1336,6 @@ ${availableOutputs
                     currentIteration,
                     pendingActionsCount: pendingActions.length,
                 });
-
-                console.log("XXXXXXX pendingActions: ", pendingActions);
 
                 // Process one action at a time
                 const currentAction = pendingActions.shift()!;
@@ -1448,8 +1413,6 @@ ${availableOutputs
                         llmClient: this.llmClient,
                         logger: this.logger,
                     });
-
-                    console.log("XXXXXXX completion: ", completion);
 
                     try {
                         isComplete = completion.complete;
