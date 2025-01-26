@@ -177,12 +177,29 @@ wss.on("connection", (ws) => {
 
           console.log(chalk.blue(`[WS] Dispatching message to orchestrator ${parsed.orchestratorId}`));
           
+          // Envoyer un message de debug pour indiquer le début du traitement
+          sendJSON(ws, {
+            type: "debug",
+            message: `Processing message for orchestrator ${parsed.orchestratorId}`,
+            orchestratorId: parsed.orchestratorId,
+            timestamp: Date.now()
+          });
+          
           const outputs = await orchestrator.dispatchToInput("user_chat", {
             content: parsed.message,
             userId: "ws-user",
           });
 
           console.log(chalk.blue(`[WS] Got outputs:`, outputs));
+
+          // Envoyer les outputs bruts en mode debug
+          sendJSON(ws, {
+            type: "debug",
+            message: "Raw outputs from orchestrator",
+            data: outputs,
+            orchestratorId: parsed.orchestratorId,
+            timestamp: Date.now()
+          });
 
           if (outputs && Array.isArray(outputs)) {
             for (const out of outputs) {
@@ -191,7 +208,8 @@ wss.on("connection", (ws) => {
                 sendJSON(ws, {
                   type: "response",
                   message: out.data.message,
-                  orchestratorId: parsed.orchestratorId
+                  orchestratorId: parsed.orchestratorId,
+                  timestamp: Date.now()
                 });
               }
             }

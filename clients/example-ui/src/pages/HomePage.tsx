@@ -43,7 +43,13 @@ interface Orchestrator {
 function HomePage() {
   const [message, setMessage] = useState("");
   const [orchestrators, setOrchestrators] = useState<Orchestrator[]>([]);
-  const { currentOrchestratorId, setCurrentOrchestratorId, messages } = useAppStore();
+  const [showDebug, setShowDebug] = useState(false);
+  const { 
+    currentOrchestratorId, 
+    setCurrentOrchestratorId, 
+    messages,
+    getMessagesForCurrentOrchestrator 
+  } = useAppStore();
   const { sendMessage } = useDaydreamsWs();
 
   useEffect(() => {
@@ -115,9 +121,25 @@ function HomePage() {
             ))}
           </select>
         </div>
+        
+        <button
+          onClick={() => setShowDebug(!showDebug)}
+          className="px-2 py-1 rounded-md border border-border hover:bg-muted"
+        >
+          {showDebug ? "Hide Debug" : "Show Debug"}
+        </button>
       </header>
 
       <div className="flex flex-col flex-1 gap-4 p-4 pt-0">
+        {showDebug && (
+          <div className="p-4 rounded-lg border bg-muted/50 overflow-auto max-h-[300px]">
+            <h3 className="font-semibold mb-2">Debug Messages for Orchestrator: {currentOrchestratorId}</h3>
+            <pre className="text-xs">
+              {JSON.stringify(getMessagesForCurrentOrchestrator(), null, 2)}
+            </pre>
+          </div>
+        )}
+
         <div className="relative flex flex-col h-[calc(100vh-5rem)] rounded-lg border bg-muted/50">
           <div className="flex-1 p-4 overflow-auto">
             <MessagesList messages={messages} />
