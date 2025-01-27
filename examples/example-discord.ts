@@ -87,7 +87,7 @@ async function main() {
         }
     }
 
-    // Set up Twitter client with credentials
+    // Set up Discord client with credentials
     const discord = new DiscordClient(
         {
             discord_token: env.DISCORD_TOKEN,
@@ -98,7 +98,7 @@ async function main() {
         }
     );
 
-    // Register input handler for Twitter mentions
+    // Register input handler for Discord mentions
     core.registerIOHandler({
         name: "discord_mention",
         role: HandlerRole.INPUT,
@@ -115,7 +115,7 @@ async function main() {
         }),
     });
 
-    // Register output handler for Twitter replies
+    // Register output handler for Discord replies
     core.registerIOHandler({
         name: "discord_reply",
         role: HandlerRole.OUTPUT,
