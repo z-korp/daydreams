@@ -12,6 +12,7 @@ export interface MessageData {
     content: string;
     channelId: string;
     conversationId?: string;
+    sendBy?: string;
 }
 
 export interface EventCallbacks {
@@ -77,6 +78,10 @@ export class DiscordClient {
         });
     }
 
+    public destroy() {
+        this.client.destroy();
+    }
+
     /**
      * Create an output for sending messages
      */
@@ -107,15 +112,29 @@ export class DiscordClient {
             if (env.DRY_RUN) {
                 return {
                     success: true,
-                    channelId: "DRY RUN MESSAGE ID",
+                    channelId: "DRY RUN CHANNEL ID",
                 };
             }
 
-            this.client.channels.cache.get(data.channelId)?.send(data.content);
+            const channel = this.client.channels.cache.get(data.channelId);
+            if (!channel?.isTextBased()) {
+                const error = new Error(
+                    `Invalid or unsupported channel: ${data.channelId}`
+                );
+                this.logger.error(
+                    "DiscordClient.sendMessage",
+                    "Error sending message",
+                    {
+                        error,
+                    }
+                );
+                throw error;
+            }
+            const sentMessage = await channel.send(data.content);
 
             return {
                 success: true,
-                messageId: 0,
+                messageId: sentMessage.id,
             };
         } catch (error) {
             this.logger.error(
