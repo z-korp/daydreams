@@ -13,6 +13,7 @@ import {
     SidebarRail,
 } from "@/components/ui/sidebar";
 import { ModeToggle } from "./mode-toggle";
+import { Link } from "@tanstack/react-router";
 
 // This is sample data.
 const data = {
@@ -88,20 +89,24 @@ function ChatHistoryList() {
         return <div className="px-4 py-2 text-sm text-red-500">{error}</div>;
     }
 
+    console.log(chatItems);
+
     return (
         <div className="space-y-1">
             {chatItems.map((chat) => (
-                <button
-                    key={chat._id}
-                    className="w-full px-4 py-2 text-left text-sm hover:bg-accent/50 rounded-lg"
-                >
-                    <div className="font-medium truncate">{chat.title}</div>
-                    {chat.lastMessage && (
-                        <div className="text-xs text-muted-foreground truncate">
-                            {chat.lastMessage}
-                        </div>
-                    )}
-                </button>
+                <Link to={"/chats/$chatId"} params={{ chatId: chat._id }}>
+                    <button
+                        key={chat._id}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-accent/50 rounded-lg"
+                    >
+                        <div className="font-medium truncate">{chat.title}</div>
+                        {chat.lastMessage && (
+                            <div className="text-xs text-muted-foreground truncate">
+                                {chat.lastMessage}
+                            </div>
+                        )}
+                    </button>
+                </Link>
             ))}
         </div>
     );

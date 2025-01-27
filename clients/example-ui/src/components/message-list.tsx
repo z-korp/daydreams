@@ -18,6 +18,7 @@ interface MessagesListProps {
 }
 
 export function MessagesList({ messages }: MessagesListProps) {
+    console.log("messages", messages);
     return (
         <div className="flex flex-col space-y-4">
             {messages.map((msg, i) => {

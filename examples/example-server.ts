@@ -3,6 +3,7 @@ import chalk from "chalk";
 import { z } from "zod";
 import express from "express";
 import cors from "cors";
+import { ObjectId } from "mongodb";
 
 // ---- Import your internal classes and functions here ----
 import { LLMClient } from "../packages/core/src/core/llm-client";
@@ -132,7 +133,7 @@ wss.on("connection", (ws) => {
             console.log(chalk.magenta("[WS] Received message:"), dataString);
 
             const parsed = JSON.parse(dataString);
-            const { userId, goal: userMessage } = parsed;
+            const { userId, goal: userMessage, orchestratorId } = parsed;
 
             if (!userMessage || typeof userMessage !== "string") {
                 throw new Error(
@@ -153,7 +154,8 @@ wss.on("connection", (ws) => {
                     content: userMessage,
                     userId: userId,
                 },
-                userId
+                userId,
+                orchestratorId ? new ObjectId(orchestratorId) : undefined
             );
 
             // Send responses back through WebSocket
@@ -214,6 +216,34 @@ app.get("/api/history/:userId", async (req, res) => {
         }
 
         res.json(histories);
+    } catch (error) {
+        console.error("Error fetching chat history:", error);
+        res.status(500).json({
+            error: "Failed to fetch chat history",
+            details: error instanceof Error ? error.message : String(error),
+        });
+    }
+});
+
+app.get("/api/history/:userId/:chatId", async (req, res) => {
+    try {
+        const { userId, chatId } = req.params;
+
+        // Convert string chatId to ObjectId
+        let objectId;
+        try {
+            objectId = new ObjectId(chatId);
+        } catch (err) {
+            return res.status(400).json({ error: "Invalid chat ID format" });
+        }
+
+        const history = await scheduledTaskDb.getOrchestratorById(objectId);
+
+        if (!history) {
+            return res.status(404).json({ error: "History not found" });
+        }
+
+        res.json(history);
     } catch (error) {
         console.error("Error fetching chat history:", error);
         res.status(500).json({
