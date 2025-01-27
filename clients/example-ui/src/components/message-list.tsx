@@ -1,5 +1,3 @@
-import * as React from "react";
-
 interface MessageType {
     type:
         | "user"
@@ -20,7 +18,7 @@ interface MessagesListProps {
 export function MessagesList({ messages }: MessagesListProps) {
     console.log("messages", messages);
     return (
-        <div className="flex flex-col space-y-4">
+        <div className="flex flex-col space-y-4 w-1/2 mx-auto">
             {messages.map((msg, i) => {
                 const baseBubble = `
           relative
@@ -30,9 +28,10 @@ export function MessagesList({ messages }: MessagesListProps) {
           shadow-md
           transition-all
           duration-200
-          max-w-[80%]
+         w-[80%]
           whitespace-pre-wrap
           break-words
+          border-opacity-50
         `;
 
                 let containerClass = "flex items-start";
@@ -44,7 +43,7 @@ export function MessagesList({ messages }: MessagesListProps) {
                         bubbleClass += `
                bg-card text-foreground mr-2
               self-end hover:brightness-110
-              dither-border
+              dither-border 
             `;
                         break;
 
