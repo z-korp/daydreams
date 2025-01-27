@@ -7,4 +7,18 @@ module.exports = {
     trailingComma: "es5",
     bracketSpacing: true,
     printWidth: 80,
+    overrides: [
+        {
+            files: ["*.yaml", "*.yml"],
+            options: {
+                tabWidth: 2,
+            },
+        },
+        {
+            files: ["*.md"],
+            options: {
+                tabWidth: 2,
+            },
+        },
+    ],
 };
