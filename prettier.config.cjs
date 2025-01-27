@@ -12,12 +12,16 @@ module.exports = {
             files: ["*.yaml", "*.yml"],
             options: {
                 tabWidth: 2,
+                proseWrap: "preserve",
+                bracketSpacing: false,
             },
         },
         {
             files: ["*.md", "*.mdx"],
             options: {
                 tabWidth: 2,
+                proseWrap: "always",
+                embeddedLanguageFormatting: "auto",
             },
         },
     ],
