@@ -6,7 +6,7 @@ import type { Memory, ProcessedResult, VectorDB } from "./types";
 import { HandlerRole, LogLevel, type LoggerConfig } from "./types";
 import type { IOHandler } from "./types";
 import type { MongoDb } from "./mongo-db";
-import type { ObjectId } from "mongodb";
+import { ObjectId } from "mongodb";
 
 /**
  * Orchestrator system that manages both "input" and "output" handlers
@@ -254,7 +254,8 @@ export class Orchestrator {
     private async runAutonomousFlow(
         initialData: unknown,
         sourceName: string,
-        userId: string
+        userId: string,
+        orchestratorId?: ObjectId
     ) {
         const queue: Array<{ data: unknown; source: string }> = [];
 
@@ -270,11 +271,21 @@ export class Orchestrator {
         // You can keep track of any "outputs" you need to return or do something with
         const outputs: Array<{ name: string; data: any }> = [];
 
-        // Create a new orchestrator record if we have a userId
-        let orchestratorId: ObjectId | undefined;
-        if (userId) {
-            orchestratorId = await this.mongoDb.createOrchestrator(userId);
+        // check if we have an orchestratorId
+        if (orchestratorId) {
+            // check if it exists in the db
+            const existingOrchestrator = await this.mongoDb.getOrchestratorById(
+                new ObjectId(orchestratorId)
+            );
 
+            if (!existingOrchestrator) {
+                orchestratorId = await this.mongoDb.createOrchestrator(userId);
+            }
+        }
+
+        // Create a new orchestrator record if we have a userId
+
+        if (orchestratorId) {
             // Record the initial input
             await this.mongoDb.addMessage(
                 orchestratorId,
@@ -488,7 +499,8 @@ export class Orchestrator {
     public async dispatchToInput<T>(
         name: string,
         data: T,
-        userId: string
+        userId: string,
+        orchestratorId?: ObjectId
     ): Promise<unknown> {
         const handler = this.ioHandlers.get(name);
         if (!handler) throw new Error(`No IOHandler: ${name}`);
@@ -503,7 +515,8 @@ export class Orchestrator {
                 return await this.runAutonomousFlow(
                     result,
                     handler.name,
-                    userId
+                    userId,
+                    orchestratorId
                 );
             }
             return [];

@@ -20,27 +20,33 @@ interface ChatHistory {
     updatedAt: Date;
 }
 
-export function useChatHistory() {
+export function useSingleChatHistory({
+    chatId,
+    userId,
+}: {
+    chatId: string;
+    userId: string;
+}) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [histories, setHistories] = useState<ChatHistory[]>([]);
+    const [history, setHistory] = useState<ChatHistory | null>(null);
 
     useEffect(() => {
         const fetchHistory = async () => {
             try {
                 setLoading(true);
                 const response = await fetch(
-                    `http://localhost:8081/api/history/${generateUserId()}`
+                    `http://localhost:8081/api/history/${userId}/${chatId}`
                 );
-
-                console.log(response);
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const data = await response.json();
-                setHistories(data);
+
+                console.log(data);
+                setHistory(data);
                 setError(null);
             } catch (err) {
                 setError(
@@ -54,16 +60,16 @@ export function useChatHistory() {
             }
         };
 
-        if (generateUserId()) {
+        if (userId && chatId) {
             fetchHistory();
         }
-    }, []);
+    }, [userId, chatId]);
 
     const refreshHistory = async () => {
         setLoading(true);
         try {
             const response = await fetch(
-                `http://localhost:8081/api/history/${generateUserId()}`
+                `http://localhost:8081/api/history/${userId}/${chatId}`
             );
 
             if (!response.ok) {
@@ -71,7 +77,7 @@ export function useChatHistory() {
             }
 
             const data = await response.json();
-            setHistories(data);
+            setHistory(data);
             setError(null);
         } catch (err) {
             setError(
@@ -85,15 +91,10 @@ export function useChatHistory() {
         }
     };
 
-    const getHistory = (chatId: string) => {
-        return histories.find((history) => history._id === chatId);
-    };
-
     return {
-        histories,
+        history,
         loading,
         error,
         refreshHistory,
-        getHistory,
     };
 }

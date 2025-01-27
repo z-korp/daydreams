@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 interface ServerMessage {
     type: string;
@@ -55,21 +55,17 @@ export function useDaydreamsWs() {
         };
     }, []);
 
-    const sendGoal = (goal: string) => {
-        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-            console.warn("WebSocket is not open. Cannot send goal:", goal);
-            return;
+    const sendGoal = useCallback((goal: string, orchestratorId?: string) => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(
+                JSON.stringify({
+                    goal,
+                    userId: generateUserId(),
+                    orchestratorId,
+                })
+            );
         }
-
-        setMessages((prev) => [...prev, { type: "user", message: goal }]);
-
-        wsRef.current.send(
-            JSON.stringify({
-                goal,
-                userId: userIdRef.current,
-            })
-        );
-    };
+    }, []);
 
     return {
         messages,
