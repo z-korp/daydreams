@@ -19,7 +19,7 @@ import { defaultCharacter } from "../packages/core/src/core/character";
 import { Consciousness } from "../packages/core/src/core/consciousness";
 import { z } from "zod";
 import readline from "readline";
-import { ScheduledTaskMongoDb } from "../packages/core/src/core/scheduled-db";
+import { MongoDb } from "../packages/core/src/core/mongo-db";
 
 async function main() {
     const loglevel = LogLevel.DEBUG;
@@ -45,7 +45,7 @@ async function main() {
         loglevel
     );
 
-    const scheduledTaskDb = new ScheduledTaskMongoDb(
+    const scheduledTaskDb = new MongoDb(
         "mongodb://localhost:27017",
         "myApp",
         "scheduled_tasks"
@@ -205,7 +205,8 @@ async function main() {
                     {
                         content: userMessage,
                         userId,
-                    }
+                    },
+                    userId
                 );
 
                 // Now `outputs` is an array of suggestions with role=output that got triggered

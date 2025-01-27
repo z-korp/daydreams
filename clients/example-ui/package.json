@@ -10,6 +10,7 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@daydreamsai/core": "workspace:*",
         "@radix-ui/react-accordion": "^1.2.2",
         "@radix-ui/react-avatar": "^1.1.2",
         "@radix-ui/react-collapsible": "^1.1.2",
@@ -18,6 +19,7 @@
         "@radix-ui/react-separator": "^1.1.1",
         "@radix-ui/react-slot": "^1.1.1",
         "@radix-ui/react-tooltip": "^1.1.6",
+        "@tanstack/react-router": "^1.97.23",
         "@types/three": "^0.172.0",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
@@ -26,11 +28,12 @@
         "react-dom": "^18.3.1",
         "tailwind-merge": "^2.6.0",
         "tailwindcss-animate": "^1.0.7",
-        "three": "^0.172.0",
-        "@daydreamsai/core": "workspace:*"
+        "three": "^0.172.0"
     },
     "devDependencies": {
         "@eslint/js": "^9.17.0",
+        "@tanstack/router-devtools": "^1.97.23",
+        "@tanstack/router-plugin": "^1.97.23",
         "@types/node": "^22.10.5",
         "@types/react": "^18.3.18",
         "@types/react-dom": "^18.3.5",
