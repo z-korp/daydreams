@@ -1,6 +1,8 @@
 import { WebSocketServer, WebSocket } from "ws";
 import chalk from "chalk";
 import { z } from "zod";
+import express from "express";
+import cors from "cors";
 
 // ---- Import your internal classes and functions here ----
 import { LLMClient } from "../packages/core/src/core/llm-client";
@@ -14,7 +16,18 @@ import { MessageProcessor } from "../packages/core/src/core/processors/message-p
 import { defaultCharacter } from "../packages/core/src/core/character";
 
 import { LogLevel } from "../packages/core/src/core/types";
-import { ScheduledTaskMongoDb } from "../packages/core/src/core/scheduled-db";
+import { MongoDb } from "../packages/core/src/core/mongo-db";
+
+const scheduledTaskDb = new MongoDb(
+    "mongodb://localhost:27017",
+    "myApp",
+    "scheduled_tasks"
+);
+
+await scheduledTaskDb.connect();
+console.log(chalk.green("✅ Scheduled task database connected"));
+
+await scheduledTaskDb.deleteAll();
 
 // ------------------------------------------------------
 // 1) CREATE DAYDREAMS AGENT
@@ -43,17 +56,6 @@ async function createDaydreamsAgent() {
         defaultCharacter,
         loglevel
     );
-
-    const scheduledTaskDb = new ScheduledTaskMongoDb(
-        "mongodb://localhost:27017",
-        "myApp",
-        "scheduled_tasks"
-    );
-
-    await scheduledTaskDb.connect();
-    console.log(chalk.green("✅ Scheduled task database connected"));
-
-    await scheduledTaskDb.deleteAll();
 
     // 1.5. Initialize core system
     const orchestrator = new Orchestrator(
@@ -130,19 +132,29 @@ wss.on("connection", (ws) => {
             console.log(chalk.magenta("[WS] Received message:"), dataString);
 
             const parsed = JSON.parse(dataString);
-            const userMessage = parsed.goal;
+            const { userId, goal: userMessage } = parsed;
 
             if (!userMessage || typeof userMessage !== "string") {
                 throw new Error(
-                    "Invalid message format. Expected { message: string }"
+                    "Invalid message format. Expected { goal: string, userId: string }"
                 );
             }
 
-            // Process the message using the orchestrator
-            const outputs = await orchestrator.dispatchToInput("user_chat", {
-                content: userMessage,
-                userId: "ws-user",
-            });
+            if (!userId || typeof userId !== "string") {
+                throw new Error("userId is required");
+            }
+
+            orchestrator.initializeOrchestrator(userId);
+
+            // Process the message using the orchestrator with the provided userId
+            const outputs = await orchestrator.dispatchToInput(
+                "user_chat",
+                {
+                    content: userMessage,
+                    userId: userId,
+                },
+                userId
+            );
 
             // Send responses back through WebSocket
             if (outputs && (outputs as any).length > 0) {
@@ -179,4 +191,44 @@ process.on("SIGINT", async () => {
     });
 
     process.exit(0);
+});
+
+// Create Express app for REST API
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Add REST endpoint for chat history
+app.get("/api/history/:userId", async (req, res) => {
+    try {
+        const { userId } = req.params;
+        console.log("Fetching history for userId:", userId);
+
+        // Get all orchestrator records for this user
+        const histories =
+            await scheduledTaskDb.getOrchestratorsByUserId(userId);
+
+        if (!histories || histories.length === 0) {
+            console.log("No histories found");
+            return res.status(404).json({ error: "No history found for user" });
+        }
+
+        res.json(histories);
+    } catch (error) {
+        console.error("Error fetching chat history:", error);
+        res.status(500).json({
+            error: "Failed to fetch chat history",
+            details: error instanceof Error ? error.message : String(error),
+        });
+    }
+});
+
+// Start the Express server
+const API_PORT = 8081;
+app.listen(API_PORT, () => {
+    console.log(
+        chalk.green(
+            `[API] REST API server listening on http://localhost:${API_PORT}`
+        )
+    );
 });
