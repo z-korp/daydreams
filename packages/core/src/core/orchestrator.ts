@@ -5,8 +5,8 @@ import type { BaseProcessor } from "./processor";
 import type { Memory, ProcessedResult, VectorDB } from "./types";
 import { HandlerRole, LogLevel, type LoggerConfig } from "./types";
 import type { IOHandler } from "./types";
-import type { ScheduledTaskMongoDb } from "./scheduled-db";
-import type { ObjectId } from "mongodb";
+import type { MongoDb } from "./mongo-db";
+import { ObjectId } from "mongodb";
 
 /**
  * Orchestrator system that manages both "input" and "output" handlers
@@ -32,7 +32,9 @@ export class Orchestrator {
 
     private readonly logger: Logger;
 
-    private readonly scheduledTaskDb: ScheduledTaskMongoDb;
+    private readonly mongoDb: MongoDb;
+
+    public userId: string;
 
     /**
      * Other references in your system. Adjust as needed.
@@ -42,7 +44,7 @@ export class Orchestrator {
         private readonly roomManager: RoomManager,
         vectorDb: VectorDB,
         processors: BaseProcessor[],
-        scheduledTaskDb: ScheduledTaskMongoDb,
+        mongoDb: MongoDb,
         config?: LoggerConfig
     ) {
         this.vectorDb = vectorDb;
@@ -51,7 +53,8 @@ export class Orchestrator {
                 return [p.getName(), p];
             })
         );
-        this.scheduledTaskDb = scheduledTaskDb;
+        this.mongoDb = mongoDb;
+
         this.logger = new Logger(
             config ?? {
                 level: LogLevel.ERROR,
@@ -60,12 +63,19 @@ export class Orchestrator {
             }
         );
 
+        // Initialize userId to an empty string
+        this.userId = "";
+
         // Our TaskScheduler will handle only input-type IOHandlers
         this.inputScheduler = new TaskScheduler(async (handler) => {
             await this.processInputTask(handler);
         });
 
         this.startPolling();
+    }
+
+    public initializeOrchestrator(userId: string) {
+        this.userId = userId;
     }
 
     /**
@@ -154,10 +164,14 @@ export class Orchestrator {
 
             if (Array.isArray(result)) {
                 for (const item of result) {
-                    await this.runAutonomousFlow(item, handler.name);
+                    await this.runAutonomousFlow(
+                        item,
+                        handler.name,
+                        this.userId
+                    );
                 }
             } else {
-                await this.runAutonomousFlow(result, handler.name);
+                await this.runAutonomousFlow(result, handler.name, this.userId);
             }
         } catch (error) {
             this.logger.error(
@@ -237,8 +251,12 @@ export class Orchestrator {
      * Takes some incoming piece of data, processes it through the system,
      * and handles any follow-on "action" or "output" suggestions in a chain.
      */
-    private async runAutonomousFlow(initialData: unknown, sourceName: string) {
-        // A queue of "things to process"
+    private async runAutonomousFlow(
+        initialData: unknown,
+        sourceName: string,
+        userId: string,
+        orchestratorId?: ObjectId
+    ) {
         const queue: Array<{ data: unknown; source: string }> = [];
 
         // If the initial data is already an array, enqueue each item
@@ -253,12 +271,72 @@ export class Orchestrator {
         // You can keep track of any "outputs" you need to return or do something with
         const outputs: Array<{ name: string; data: any }> = [];
 
+        // check if we have an orchestratorId
+        if (orchestratorId) {
+            // check if it exists in the db
+            const existingOrchestrator = await this.mongoDb.getOrchestratorById(
+                new ObjectId(orchestratorId)
+            );
+
+            if (!existingOrchestrator) {
+                orchestratorId = await this.mongoDb.createOrchestrator(userId);
+            }
+        }
+
+        // Create a new orchestrator record if we have a userId
+
+        if (orchestratorId) {
+            // Record the initial input
+            await this.mongoDb.addMessage(
+                orchestratorId,
+                HandlerRole.INPUT,
+                sourceName,
+                initialData
+            );
+
+            this.logger.debug(
+                "Orchestrator.runAutonomousFlow",
+                "Created orchestrator record",
+                {
+                    orchestratorId,
+                    userId,
+                }
+            );
+        }
+
         // Keep processing while there is something in the queue
         while (queue.length > 0) {
             const { data, source } = queue.shift()!;
 
+            // Record any action results if we have an orchestratorId
+            if (orchestratorId) {
+                await this.mongoDb.addMessage(
+                    orchestratorId,
+                    HandlerRole.INPUT,
+                    source,
+                    data
+                );
+
+                this.logger.debug(
+                    "Orchestrator.runAutonomousFlow",
+                    "Added message to orchestrator record",
+                    {
+                        orchestratorId,
+                        message: {
+                            role: HandlerRole.INPUT,
+                            name: source,
+                            data,
+                        },
+                    }
+                );
+            }
+
             // processContent now returns an array of ProcessedResult
-            const processedResults = await this.processContent(data, source);
+            const processedResults = await this.processContent(
+                data,
+                source,
+                userId
+            );
 
             // If there's nothing to process further, continue
             if (!processedResults || processedResults.length === 0) {
@@ -276,9 +354,18 @@ export class Orchestrator {
                 if (processed.updateTasks) {
                     for (const task of processed.updateTasks) {
                         await this.scheduleTaskInDb(
+                            userId,
                             task.name,
                             task.data,
                             task.intervalMs
+                        );
+
+                        this.logger.debug(
+                            "Orchestrator.runAutonomousFlow",
+                            "Scheduled task in DB",
+                            {
+                                task,
+                            }
                         );
                     }
                 }
@@ -298,12 +385,54 @@ export class Orchestrator {
                         // e.g. send a Slack message
                         outputs.push({ name: output.name, data: output.data });
                         await this.dispatchToOutput(output.name, output.data);
+
+                        this.logger.debug(
+                            "Orchestrator.runAutonomousFlow",
+                            "Dispatched output",
+                            {
+                                name: output.name,
+                                data: output.data,
+                            }
+                        );
+
+                        // Record output in DB
+                        if (orchestratorId) {
+                            await this.mongoDb.addMessage(
+                                orchestratorId,
+                                HandlerRole.OUTPUT,
+                                output.name,
+                                output.data
+                            );
+                        }
                     } else if (handler.role === HandlerRole.ACTION) {
                         // e.g. fetch data from an external API
                         const actionResult = await this.dispatchToAction(
                             output.name,
                             output.data
                         );
+
+                        this.logger.debug(
+                            "Orchestrator.runAutonomousFlow",
+                            "Dispatched action",
+                            {
+                                name: output.name,
+                                data: output.data,
+                            }
+                        );
+
+                        // Record action in DB
+                        if (orchestratorId) {
+                            await this.mongoDb.addMessage(
+                                orchestratorId,
+                                HandlerRole.ACTION,
+                                output.name,
+                                {
+                                    input: output.data,
+                                    result: actionResult,
+                                }
+                            );
+                        }
+
                         // If the action returns new data (array or single),
                         // feed it back into the queue to continue the flow
                         if (actionResult) {
@@ -367,16 +496,28 @@ export class Orchestrator {
      * @throws {Error} If no handler is found with the given name
      * @throws {Error} If the handler's role is not "input"
      */
-    public async dispatchToInput<T>(name: string, data: T): Promise<unknown> {
+    public async dispatchToInput<T>(
+        name: string,
+        data: T,
+        userId: string,
+        orchestratorId?: ObjectId
+    ): Promise<unknown> {
         const handler = this.ioHandlers.get(name);
         if (!handler) throw new Error(`No IOHandler: ${name}`);
         if (handler.role !== "input") {
             throw new Error(`Handler "${name}" is not role=input`);
         }
+
         try {
             const result = await handler.handler(data);
+
             if (result) {
-                return await this.runAutonomousFlow(result, handler.name);
+                return await this.runAutonomousFlow(
+                    result,
+                    handler.name,
+                    userId,
+                    orchestratorId
+                );
             }
             return [];
         } catch (error) {
@@ -390,6 +531,7 @@ export class Orchestrator {
     }
 
     public async scheduleTaskInDb(
+        userId: string,
         handlerName: string,
         data: Record<string, unknown> = {},
         intervalMs?: number
@@ -406,7 +548,8 @@ export class Orchestrator {
             }
         );
 
-        return await this.scheduledTaskDb.createTask(
+        return await this.mongoDb.createTask(
+            userId,
             handlerName,
             {
                 request: handlerName,
@@ -445,7 +588,7 @@ export class Orchestrator {
     private async pollScheduledTasks() {
         try {
             // Guard against undefined collection
-            if (!this.scheduledTaskDb) {
+            if (!this.mongoDb) {
                 this.logger.error(
                     "pollScheduledTasks error",
                     "scheduledTaskDb is not initialized"
@@ -453,7 +596,7 @@ export class Orchestrator {
                 return;
             }
 
-            const tasks = await this.scheduledTaskDb.findDueTasks();
+            const tasks = await this.mongoDb.findDueTasks();
             if (!tasks) {
                 return;
             }
@@ -468,7 +611,7 @@ export class Orchestrator {
                 }
 
                 // 2. Mark them as 'running' (or handle concurrency the way you want)
-                await this.scheduledTaskDb.markRunning(task._id);
+                await this.mongoDb.markRunning(task._id);
 
                 const handler = this.ioHandlers.get(task.handlerName);
                 if (!handler) {
@@ -482,7 +625,11 @@ export class Orchestrator {
 
                 if (handler.role === HandlerRole.INPUT) {
                     try {
-                        await this.dispatchToInput(task.handlerName, taskData);
+                        await this.dispatchToInput(
+                            task.handlerName,
+                            taskData,
+                            task.userId
+                        );
                     } catch (error) {
                         this.logger.error(
                             "Task execution failed",
@@ -498,7 +645,8 @@ export class Orchestrator {
                         if (actionResult) {
                             await this.runAutonomousFlow(
                                 actionResult,
-                                task.handlerName
+                                task.handlerName,
+                                task.userId
                             );
                         }
                     } catch (error) {
@@ -521,13 +669,10 @@ export class Orchestrator {
                 // 4. If the task is recurring (interval_ms), update next_run_at
                 if (task.intervalMs) {
                     const nextRunAt = new Date(Date.now() + task.intervalMs);
-                    await this.scheduledTaskDb.updateNextRun(
-                        task._id,
-                        nextRunAt
-                    );
+                    await this.mongoDb.updateNextRun(task._id, nextRunAt);
                 } else {
                     // Otherwise, mark completed
-                    await this.scheduledTaskDb.markCompleted(task._id);
+                    await this.mongoDb.markCompleted(task._id);
                 }
             }
         } catch (err) {
@@ -540,16 +685,18 @@ export class Orchestrator {
 
     public async processContent(
         content: any,
-        source: string
+        source: string,
+        userId?: string
     ): Promise<ProcessedResult[]> {
-        // If content is already an array, process each item individually
         if (Array.isArray(content)) {
             const allResults: ProcessedResult[] = [];
             for (const item of content) {
-                // (Optional) Delay to throttle
                 await new Promise((resolve) => setTimeout(resolve, 5000));
-
-                const result = await this.processContentItem(item, source);
+                const result = await this.processContentItem(
+                    item,
+                    source,
+                    userId
+                );
                 if (result) {
                     allResults.push(result);
                 }
@@ -557,14 +704,18 @@ export class Orchestrator {
             return allResults;
         }
 
-        // For single item, wrap in array
-        const singleResult = await this.processContentItem(content, source);
+        const singleResult = await this.processContentItem(
+            content,
+            source,
+            userId
+        );
         return singleResult ? [singleResult] : [];
     }
 
     private async processContentItem(
         content: any,
-        source: string
+        source: string,
+        userId?: string
     ): Promise<ProcessedResult | null> {
         let memories: Memory[] = [];
 
@@ -582,13 +733,15 @@ export class Orchestrator {
                     {
                         contentId: content.contentId,
                         roomId: content.room,
+                        userId,
                     }
                 );
                 return null;
             }
             const room = await this.roomManager.ensureRoom(
                 content.room,
-                source
+                source,
+                userId
             );
             memories = await this.roomManager.getMemoriesFromRoom(room.id);
 
@@ -599,6 +752,7 @@ export class Orchestrator {
                     content,
                     source,
                     roomId: room.id,
+                    userId,
                     relevantMemories: memories,
                 }
             );
