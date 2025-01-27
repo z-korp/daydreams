@@ -10,18 +10,18 @@ It is designed to be as lite as possible while remaining powerful and flexible.
 
 - [Quick Start](#quick-start)
 - [Examples](#examples)
-    - [Basic Example](#basic-example)
-    - [Goal-Based Example](#goal-based-example)
-    - [Twitter Bot Example](#twitter-bot-example)
-    - [API Example](#api-example)
+  - [Basic Example](#basic-example)
+  - [Goal-Based Example](#goal-based-example)
+  - [Twitter Bot Example](#twitter-bot-example)
+  - [API Example](#api-example)
 - [How It Works](#how-it-works)
-    - [Context](#context)
-    - [Actions](#actions)
-    - [Goals](#goals)
-    - [Monitor Progress](#monitor-progress)
+  - [Context](#context)
+  - [Actions](#actions)
+  - [Goals](#goals)
+  - [Monitor Progress](#monitor-progress)
 - [Architecture](#architecture)
-    - [Core Concepts](#core-concepts)
-    - [Protocol Design](#protocol-design)
+  - [Core Concepts](#core-concepts)
+  - [Protocol Design](#protocol-design)
 - [Development](#development)
 - [Roadmap](#roadmap)
 - [Contributors](#contributors)
@@ -42,7 +42,7 @@ pnpm install
 # Copy environment variables
 cp .env.example .env
 
-# Start Docker services
+# Start docker services
 docker compose up -d
 ```
 
@@ -119,45 +119,45 @@ Register handlers for inputs, outputs, and actions using `registerIOHandler`. Ea
 ```typescript
 // Register an action handler
 orchestrator.registerIOHandler({
-    name: "universalApiCall",
-    role: "action",
-    schema: z.object({
-        method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
-        url: z.string().url(),
-        headers: z.record(z.string()).optional(),
-        body: z.union([z.string(), z.record(z.any())]).optional(),
-    }),
-    handler: async (payload) => {
-        // Handler implementation
-        const response = await fetch(/* ... */);
-        return response;
-    },
+  name: "universalApiCall",
+  role: "action",
+  schema: z.object({
+    method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
+    url: z.string().url(),
+    headers: z.record(z.string()).optional(),
+    body: z.union([z.string(), z.record(z.any())]).optional(),
+  }),
+  handler: async (payload) => {
+    // Handler implementation
+    const response = await fetch(/* ... */);
+    return response;
+  },
 });
 
 // Register an input handler
 orchestrator.registerIOHandler({
-    name: "user_chat",
-    role: "input",
-    schema: z.object({
-        content: z.string(),
-        userId: z.string().optional(),
-    }),
-    handler: async (payload) => {
-        return payload;
-    },
+  name: "user_chat",
+  role: "input",
+  schema: z.object({
+    content: z.string(),
+    userId: z.string().optional(),
+  }),
+  handler: async (payload) => {
+    return payload;
+  },
 });
 
 // Register an output handler
 orchestrator.registerIOHandler({
-    name: "ui_chat_reply",
-    role: "output",
-    schema: z.object({
-        userId: z.string().optional(),
-        message: z.string(),
-    }),
-    handler: async (payload) => {
-        console.log(`Reply to user ${payload.userId}: ${payload.message}`);
-    },
+  name: "ui_chat_reply",
+  role: "output",
+  schema: z.object({
+    userId: z.string().optional(),
+    message: z.string(),
+  }),
+  handler: async (payload) => {
+    console.log(`Reply to user ${payload.userId}: ${payload.message}`);
+  },
 });
 ```
 
@@ -176,14 +176,14 @@ Subscribe to events to track the agent's thinking and actions:
 
 ```typescript
 dreams.on("think:start", ({ query }) => {
-    console.log("🧠 Starting to think about:", query);
+  console.log("🧠 Starting to think about:", query);
 });
 
 dreams.on("action:complete", ({ action, result }) => {
-    console.log("✅ Action complete:", {
-        type: action.type,
-        result,
-    });
+  console.log("✅ Action complete:", {
+    type: action.type,
+    result,
+  });
 });
 ```
 
@@ -193,26 +193,26 @@ The system consists of several key components:
 
 1. **Context Layers**
 
-    - Game/Application State
-    - Historical Data
-    - Execution Context
+   - Game/Application State
+   - Historical Data
+   - Execution Context
 
 2. **Chain of Thought Kernel**
 
-    - Reasoning Engine
-    - Memory Integration
-    - Action Planning
+   - Reasoning Engine
+   - Memory Integration
+   - Action Planning
 
 3. **Vector Database**
 
-    - Experience Storage
-    - Knowledge Retrieval
-    - Similarity Search
+   - Experience Storage
+   - Knowledge Retrieval
+   - Similarity Search
 
 4. **Swarm Rooms**
-    - Multi-Agent Collaboration
-    - Knowledge Sharing
-    - Federated Learning
+   - Multi-Agent Collaboration
+   - Knowledge Sharing
+   - Federated Learning
 
 ### System Flow
 
@@ -259,29 +259,29 @@ The system works through several coordinated components:
 
 1. **Orchestrator**: The central coordinator that:
 
-    - Manages input/output/action handlers
-    - Routes data through the system
-    - Schedules recurring tasks
-    - Maintains the autonomous flow
+   - Manages input/output/action handlers
+   - Routes data through the system
+   - Schedules recurring tasks
+   - Maintains the autonomous flow
 
 2. **Chain of Thought (CoT)**: The reasoning engine that:
 
-    - Processes complex queries asked - it can be called directly like in the examples or through the orchestrator
-    - Makes decisions based on goals
-    - Determines required actions
-    - Learns from outcomes
+   - Processes complex queries asked - it can be called directly like in the examples or through the orchestrator
+   - Makes decisions based on goals
+   - Determines required actions
+   - Learns from outcomes
 
 3. **Memory System**:
 
-    - Vector Memory stores experiences and knowledge
-    - Room Manager organizes conversations and contexts
-    - Enables retrieval of relevant past experiences
+   - Vector Memory stores experiences and knowledge
+   - Room Manager organizes conversations and contexts
+   - Enables retrieval of relevant past experiences
 
 4. **Goal System**:
-    - Breaks down complex objectives
-    - Manages dependencies between goals
-    - Tracks progress and completion
-    - Adapts strategies based on outcomes
+   - Breaks down complex objectives
+   - Manages dependencies between goals
+   - Tracks progress and completion
+   - Adapts strategies based on outcomes
 
 This architecture allows for:
 
