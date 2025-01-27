@@ -17,6 +17,7 @@ import {
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { ModeToggle } from "./components/mode-toggle";
+import { useChatHistory } from "./hooks/use-chat-history";
 
 interface MessageType {
     type: "user" | "assistant" | "system" | "error" | "other";
@@ -39,6 +40,10 @@ function App() {
     const [isLoading, setIsLoading] = useState(false);
     const [quoteIndex, setQuoteIndex] = useState(0);
     const { messages, sendGoal } = useDaydreamsWs();
+
+    const { histories, loading, error } = useChatHistory();
+
+    console.log(histories);
 
     // Add quote cycling effect when loading
     useEffect(() => {
