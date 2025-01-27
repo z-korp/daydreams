@@ -15,7 +15,7 @@ module.exports = {
             },
         },
         {
-            files: ["*.md"],
+            files: ["*.md", "*.mdx"],
             options: {
                 tabWidth: 2,
             },
