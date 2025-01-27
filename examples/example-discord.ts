@@ -109,9 +109,9 @@ async function main() {
             return [message];
         },
         schema: z.object({
-            type: z.string(),
+            sentBy: z.string(),
             content: z.string(),
-            metadata: z.record(z.any()),
+            channelId: z.string(),
         }),
     });
 
@@ -155,6 +155,7 @@ async function main() {
         console.log(chalk.yellow("\n\nShutting down..."));
 
         // Clean up resources
+        discord.destroy();
         core.removeIOHandler("discord_mention");
         core.removeIOHandler("discord_reply");
         rl.close();
