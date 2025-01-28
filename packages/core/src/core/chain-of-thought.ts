@@ -269,6 +269,13 @@ export class ChainOfThought extends EventEmitter {
                 .map((id) => this.goalManager.getGoalById(id))
                 .filter((g): g is Goal => !!g);
 
+            // Update goals with no dependencies to ready
+            for (const goal of finalGoals) {
+                if (goal.dependencies && goal.dependencies.length === 0) {
+                    this.goalManager.updateGoalStatus(goal.id, "ready");
+                }
+            }
+
             // Add a planning step
             this.recordReasoningStep(
                 `Strategy planned for objective: ${objective}`,
@@ -1055,6 +1062,7 @@ export class ChainOfThought extends EventEmitter {
      * ```ts
      * const result = await chain.executeAction({
      *   type: "sendMessage",
+     *   context: "Sending a message to user"
      *   payload: {
      *     message: "Hello world"
      *   }
@@ -1190,7 +1198,6 @@ ${this.context.worldState}
 4. If the required amounts are not available, end the sequence.
 {{additional_validations}}
 
-
 ## Output Format
 Return a JSON array where each step contains:
 - plan: A short explanation of what you will do
@@ -1198,8 +1205,11 @@ Return a JSON array where each step contains:
 - actions: A list of actions to be executed. You can either use ${this.getAvailableOutputs()}
 
 <AVAILABLE_ACTIONS>
-Below is a list of actions you may use. For each action, 
-the "payload" must follow the indicated structure exactly. Do not include any markdown formatting, slashes or comments.
+Below is a list of actions you may use. 
+The "payload" must follow the indicated structure exactly. Do not include any markdown formatting, slashes or comments.
+Each action must include:
+- **payload**: The action data structured as per the available actions.
+- **context**: A contextual description or metadata related to the action's execution. This can include statuses, results, or any pertinent information that may influence future actions.
 
 ${availableOutputs
     .map(
@@ -1257,6 +1267,7 @@ ${availableOutputs
                     actions: z.array(
                         z.object({
                             type: z.string(),
+                            context: z.string(),
                             payload: z.any(),
                         })
                     ),

@@ -9,15 +9,19 @@ module.exports = {
     printWidth: 80,
     overrides: [
         {
-            files: ["*.yaml", "*.yml"],
+            files: ["*.yml", "*.yaml"],
             options: {
                 tabWidth: 2,
+                proseWrap: "preserve",
+                bracketSpacing: false,
             },
         },
         {
             files: ["*.md", "*.mdx"],
             options: {
                 tabWidth: 2,
+                proseWrap: "always",
+                embeddedLanguageFormatting: "auto",
             },
         },
     ],
