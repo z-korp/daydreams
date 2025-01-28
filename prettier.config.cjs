@@ -9,7 +9,7 @@ module.exports = {
     printWidth: 80,
     overrides: [
         {
-            files: ["*.yaml", "*.yml"],
+            files: ["*.yml", "*.yaml"],
             options: {
                 tabWidth: 2,
                 proseWrap: "preserve",

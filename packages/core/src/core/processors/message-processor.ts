@@ -27,9 +27,17 @@ export class MessageProcessor extends BaseProcessor {
         );
     }
 
-    // TODO: fix this
+    /**
+     * Logic to decide if this processor can handle the given content.
+     * This processor is designed to handle shorter messages and text content.
+     */
     public canHandle(content: any): boolean {
-        return true;
+        // Convert content to string for length check
+        const contentStr =
+            typeof content === "string" ? content : JSON.stringify(content);
+
+        // Check if content is short enough for message processing (<1000 chars)
+        return contentStr.length < this.contentLimit;
     }
 
     async process(
