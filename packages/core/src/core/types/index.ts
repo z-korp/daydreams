@@ -27,6 +27,7 @@ export interface ChainOfThoughtContext {
  */
 export interface CoTAction {
     type: string;
+    context: string;
     payload: Record<string, any>;
 }
 

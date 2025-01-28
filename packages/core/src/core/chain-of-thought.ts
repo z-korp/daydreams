@@ -1059,6 +1059,7 @@ export class ChainOfThought extends EventEmitter {
      * ```ts
      * const result = await chain.executeAction({
      *   type: "sendMessage",
+     *   context: "Sending a message to user"
      *   payload: {
      *     message: "Hello world"
      *   }
@@ -1207,8 +1208,11 @@ export class ChainOfThought extends EventEmitter {
     - actions: A list of actions to be executed. You can either use ${this.getAvailableOutputs()}
 
     <AVAILABLE_ACTIONS>
-    Below is a list of actions you may use. For each action, 
-    the "payload" must follow the indicated structure exactly. Do not include any markdown formatting, slashes or comments.
+    Below is a list of actions you may use. 
+    The "payload" must follow the indicated structure exactly. Do not include any markdown formatting, slashes or comments.
+    Each action must include:
+    - **payload**: The action data structured as per the available actions.
+    - **context**: A contextual description or metadata related to the action's execution. This can include statuses, results, or any pertinent information that may influence future actions.
 
     ${availableOutputs
         .map(
@@ -1266,6 +1270,7 @@ export class ChainOfThought extends EventEmitter {
                     actions: z.array(
                         z.object({
                             type: z.string(),
+                            context: z.string(),
                             payload: z.any(),
                         })
                     ),
@@ -1276,8 +1281,6 @@ export class ChainOfThought extends EventEmitter {
                 llmClient: this.llmClient,
                 logger: this.logger,
             });
-
-            console.log("XXXXXXX initialResponse: ", initialResponse);
 
             // Initialize pending actions queue with initial actions
             let pendingActions: CoTAction[] = [
@@ -1302,8 +1305,6 @@ export class ChainOfThought extends EventEmitter {
                     currentIteration,
                     pendingActionsCount: pendingActions.length,
                 });
-
-                console.log("XXXXXXX pendingActions: ", pendingActions);
 
                 // Process one action at a time
                 const currentAction = pendingActions.shift()!;
@@ -1412,8 +1413,6 @@ export class ChainOfThought extends EventEmitter {
                         llmClient: this.llmClient,
                         logger: this.logger,
                     });
-
-                    console.log("XXXXXXX completion: ", completion);
 
                     try {
                         isComplete = completion.complete;
