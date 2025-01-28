@@ -36,7 +36,7 @@ async function main() {
     const roomManager = new RoomManager(vectorDb);
 
     const llmClient = new LLMClient({
-        model: "anthropic/claude-3-5-sonnet-latest", // Using a known supported model
+        model: "openrouter:deepseek/deepseek-r1-distill-llama-70b",
         temperature: 0.3,
     });
 

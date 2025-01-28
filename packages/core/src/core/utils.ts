@@ -216,7 +216,10 @@ export const validateLLMResponseSchema = async <T>({
             logger.error(
                 "validateLLMResponseSchema",
                 `Attempt ${attempts + 1} failed`,
-                { error }
+                {
+                    error:
+                        error instanceof Error ? error.message : String(error),
+                }
             );
             attempts++;
             onRetry?.(error as Error, attempts);
