@@ -14,6 +14,12 @@ import {
     HandlerRole,
     LogLevel,
 } from "../packages/core/src/core/types";
+import { RoomManager } from "../packages/core/src/core/room-manager";
+import { defaultCharacter } from "../packages/core/src/core/character";
+import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
+import { ScheduledTaskMongoDb } from "../packages/core/src/core/scheduled-db";
+import { Orchestrator } from "../packages/core/src/core/orchestrator";
+import { WebSocketServer, WebSocket } from "ws";
 
 /**
  * Helper function to get user input from CLI
@@ -48,6 +54,8 @@ function printGoalStatus(status: GoalStatus): string {
 }
 
 async function main() {
+    const loglevel = LogLevel.DEBUG;
+
     // Initialize LLM client
     const llmClient = new LLMClient({
         model: "anthropic/claude-3-5-sonnet-latest", //"deepseek/deepseek-r1", //"anthropic/claude-3.5-haiku-20241022:beta"
@@ -58,12 +66,6 @@ async function main() {
         logLevel: LogLevel.WARN,
     });
     await memory.purge(); // Clear previous session data
-
-    const starknetChain = new StarknetChain({
-        rpcUrl: env.STARKNET_RPC_URL,
-        address: env.STARKNET_ADDRESS,
-        privateKey: env.STARKNET_PRIVATE_KEY,
-    });
 
     // Load initial context documents
     await memory.storeDocument({
@@ -80,6 +82,396 @@ async function main() {
         category: "actions",
         tags: ["actions", "provider-guide"],
         lastUpdated: new Date(),
+    });
+
+    const roomManager = new RoomManager(memory);
+
+    const processor = new MessageProcessor(
+        llmClient,
+        defaultCharacter,
+        LogLevel.WARN
+    );
+
+    const scheduledTaskDb = new ScheduledTaskMongoDb(
+        "mongodb://localhost:27017",
+        "myApp",
+        "scheduled_tasks"
+    );
+
+    await scheduledTaskDb.connect();
+    console.log(chalk.green("✅ Scheduled task database connected"));
+    await scheduledTaskDb.deleteAll();
+
+    const orchestrator = new Orchestrator(
+        roomManager,
+        memory,
+        [processor],
+        scheduledTaskDb,
+        {
+            level: loglevel,
+            enableColors: true,
+            enableTimestamp: true,
+        }
+    );
+
+    const starknetChain = new StarknetChain({
+        rpcUrl: env.STARKNET_RPC_URL,
+        address: env.STARKNET_ADDRESS,
+        privateKey: env.STARKNET_PRIVATE_KEY,
+    });
+
+    /*orchestrator.registerIOHandler({
+        role: HandlerRole.ACTION,
+        name: "EXECUTE_READ",
+        handler: async (payload: any) => {
+            console.log(
+                "Preparing to execute read action... " + JSON.stringify(payload)
+            );
+            const shouldProceed = await getCliInput(
+                chalk.yellow("\nProceed with the read action? (y/n): ")
+            );
+            if (shouldProceed.toLowerCase() !== "y") {
+                return "Action aborted by the user.";
+            }
+
+            const result = await starknetChain.read(payload);
+            return `Read: ${JSON.stringify(result, null, 2)}`;
+        },
+        schema: z
+            .object({
+                contractAddress: z
+                    .string()
+                    .describe("The address of the contract to read from"),
+                entrypoint: z
+                    .string()
+                    .describe("The entrypoint to call on the contract"),
+                calldata: z
+                    .array(z.union([z.number(), z.string()]))
+                    .describe("The calldata to pass to the entrypoint"),
+            })
+            .describe(
+                "The payload to use to call, never include slashes or comments"
+            ),
+    });
+
+    orchestrator.registerIOHandler({
+        role: HandlerRole.ACTION,
+        name: "EXECUTE_TRANSACTION",
+        handler: async (payload: any) => {
+            console.log(
+                "Preparing to execute transaction action... " +
+                    JSON.stringify(payload)
+            );
+            const shouldProceed = await getCliInput(
+                chalk.yellow(
+                    "\nProceed with the execute transaction action? (y/n): "
+                )
+            );
+            if (shouldProceed.toLowerCase() !== "y") {
+                return "Action aborted by the user.";
+            }
+
+            const result = await starknetChain.write(payload);
+            return `Transaction: ${JSON.stringify(result, null, 2)}`;
+        },
+        schema: z
+            .object({
+                contractAddress: z
+                    .string()
+                    .describe(
+                        "The address of the contract to execute the transaction on"
+                    ),
+                entrypoint: z
+                    .string()
+                    .describe("The entrypoint to call on the contract"),
+                calldata: z
+                    .array(z.union([z.number(), z.string()]))
+                    .describe("The calldata to pass to the entrypoint"),
+            })
+            .describe(
+                "The payload to execute the transaction, never include slashes or comments"
+            ),
+    });
+
+    orchestrator.registerIOHandler({
+        role: HandlerRole.ACTION,
+        name: "GRAPHQL_FETCH",
+        handler: async (payload: any) => {
+            console.log(
+                "Preparing to execute graphql fetch action... " +
+                    JSON.stringify(payload)
+            );
+            const shouldProceed = await getCliInput(
+                chalk.yellow(
+                    "\nProceed with the execute graphql action? (y/n): "
+                )
+            );
+            if (shouldProceed.toLowerCase() !== "y") {
+                return "Action aborted by the user.";
+            }
+
+            console.log("[GRAPHQL_FETCH handler] data", payload);
+            const { query, variables } = payload ?? {};
+            const result = await fetchGraphQL(
+                env.GRAPHQL_URL + "/graphql",
+                query,
+                variables
+            );
+            const resultStr = [
+                `query: ${query}`,
+                `result: ${JSON.stringify(result, null, 2)}`,
+            ].join("\n\n");
+            return `GraphQL data fetched successfully: ${resultStr}`;
+        },
+        schema: z
+            .object({
+                query: z
+                    .string()
+                    .describe(
+                        `query ZidleMinerModels { zidleMinerModels(where: { token_id: "0x10" }) {totalCount edges { node { resource_type xp } } } }`
+                    ),
+            })
+            .describe(
+                "The payload to fetch data from the zIdle GraphQL API, never include slashes or comments"
+            ),
+    });*/
+
+    // ------------------------------------------------------
+    // 2) WEBSOCKET SERVER
+    // ------------------------------------------------------
+    const wss = new WebSocketServer({ port: 8080 });
+    console.log(
+        chalk.green("[WS] WebSocket server listening on ws://localhost:8080")
+    );
+
+    function sendJSON(ws: WebSocket, data: unknown) {
+        ws.send(JSON.stringify(data));
+    }
+
+    /**
+     * Broadcast a message to all connected WebSocket clients
+     */
+    function broadcastMessage(message: AppMessage) {
+        const messageString = JSON.stringify(message);
+        wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(messageString);
+            }
+        });
+    }
+
+    /**
+     * Broadcast Functions for Each Message Type
+     */
+
+    function broadcastWelcome(message: string) {
+        const welcomeMsg: WelcomeMessage = {
+            type: "welcome",
+            message,
+            timestamp: "", // Will be filled by createMessage
+            emoji: "", // Will be filled by createMessage
+        };
+        broadcastMessage(createMessage(welcomeMsg));
+    }
+
+    function broadcastResponse(message: string) {
+        const responseMsg: ResponseMessage = {
+            type: "response",
+            message,
+            timestamp: "",
+            emoji: "",
+        };
+        broadcastMessage(createMessage(responseMsg));
+    }
+
+    function broadcastError(error: string) {
+        const errorMsg: ErrorMessage = {
+            type: "error",
+            error,
+            timestamp: "",
+            emoji: "",
+        };
+        broadcastMessage(createMessage(errorMsg));
+    }
+
+    function broadcastGoalCreated(id: string, description: string) {
+        const goalCreatedMsg: Omit<GoalCreatedMessage, "timestamp" | "emoji"> =
+            {
+                type: "goal_created",
+                data: {
+                    id,
+                    description,
+                    timestamp: new Date().toISOString(),
+                },
+            };
+
+        broadcastMessage(createMessage(goalCreatedMsg));
+    }
+
+    function broadcastGoalUpdated(id: string, status: string) {
+        const goalUpdatedMsg: Omit<GoalUpdatedMessage, "timestamp" | "emoji"> =
+            {
+                type: "goal_updated",
+                data: {
+                    id,
+                    status,
+                    timestamp: new Date().toISOString(),
+                },
+            };
+
+        broadcastMessage(createMessage(goalUpdatedMsg));
+    }
+
+    function broadcastGoalCompleted(id: string, result: string) {
+        const goalCompletedMsg: Omit<
+            GoalCompletedMessage,
+            "timestamp" | "emoji"
+        > = {
+            type: "goal_completed",
+            data: {
+                id,
+                result,
+                timestamp: new Date().toISOString(),
+            },
+        };
+
+        broadcastMessage(createMessage(goalCompletedMsg));
+    }
+
+    function broadcastGoalFailed(id: string, error: string) {
+        const goalFailedMsg: Omit<GoalFailedMessage, "timestamp" | "emoji"> = {
+            type: "goal_failed",
+            data: {
+                id,
+                error,
+                timestamp: new Date().toISOString(),
+            },
+        };
+
+        broadcastMessage(createMessage(goalFailedMsg));
+    }
+
+    function broadcastActionStart(actionType: string, payload: any) {
+        const actionStartMsg: Omit<ActionStartMessage, "timestamp" | "emoji"> =
+            {
+                type: "action_start",
+                data: {
+                    actionType,
+                    payload,
+                },
+            };
+
+        broadcastMessage(createMessage(actionStartMsg));
+    }
+
+    function broadcastActionComplete(actionType: string, result: any) {
+        const actionCompleteMsg: Omit<
+            ActionCompleteMessage,
+            "timestamp" | "emoji"
+        > = {
+            type: "action_complete",
+            data: {
+                actionType,
+                result,
+                timestamp: new Date().toISOString(),
+            },
+        };
+
+        broadcastMessage(createMessage(actionCompleteMsg));
+    }
+
+    function broadcastActionError(actionType: string, error: string) {
+        const actionErrorMsg: Omit<ActionErrorMessage, "timestamp" | "emoji"> =
+            {
+                type: "action_error",
+                data: {
+                    actionType,
+                    error,
+                    timestamp: new Date().toISOString(),
+                },
+            };
+
+        broadcastMessage(createMessage(actionErrorMsg));
+    }
+
+    function broadcastSystemMessage(message: string) {
+        const systemMsg: SystemMessage = {
+            type: "system",
+            message,
+            timestamp: "",
+            emoji: "",
+        };
+        broadcastMessage(createMessage(systemMsg));
+    }
+
+    wss.on("connection", (ws) => {
+        console.log(chalk.blue("[WS] New client connected."));
+        broadcastWelcome("Welcome to the zIdle AI agent WebSocket server!");
+
+        ws.on("message", async (rawData) => {
+            try {
+                const dataString = rawData.toString();
+                console.log(
+                    chalk.magenta("[WS] Received message:"),
+                    dataString
+                );
+
+                const parsed = JSON.parse(dataString);
+                const userMessage = parsed.goal;
+
+                if (!userMessage || typeof userMessage !== "string") {
+                    throw new Error(
+                        "Invalid message format. Expected { goal: string }"
+                    );
+                }
+
+                // Process the message using the orchestrator
+                const outputs = await orchestrator.dispatchToInput(
+                    "user_chat",
+                    {
+                        content: userMessage,
+                        userId: "ws-user",
+                    }
+                );
+
+                // Send responses back through WebSocket
+                if (outputs && (outputs as any).length > 0) {
+                    for (const out of outputs as any[]) {
+                        if (out.name === "chat_reply") {
+                            sendJSON(ws, {
+                                type: "response",
+                                message: out.data.message,
+                            });
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error(
+                    chalk.red("[WS] Error processing message:"),
+                    error
+                );
+                sendJSON(ws, {
+                    type: "error",
+                    error: (error as Error).message || String(error),
+                });
+            }
+        });
+
+        ws.on("close", () => {
+            console.log(chalk.yellow("[WS] Client disconnected."));
+        });
+    });
+
+    // Handle graceful shutdown
+    process.on("SIGINT", async () => {
+        console.log(chalk.yellow("\n\nShutting down..."));
+
+        // Close WebSocket server
+        wss.close(() => {
+            console.log(chalk.green("✅ WebSocket server closed"));
+        });
+
+        process.exit(0);
     });
 
     // Initialize the main reasoning engine
@@ -216,12 +608,15 @@ async function main() {
     dreams.on("step", (step) => {
         if (step.type === "system") {
             console.log("\n💭 System prompt:", step.content);
+            broadcastSystemMessage(step.content);
         } else {
             console.log("\n🤔 New thought step:", {
                 content: step.content,
                 tags: step.tags,
             });
         }
+
+        sendJSON;
     });
 
     // Uncomment to log token usage
@@ -235,6 +630,7 @@ async function main() {
             type: action.type,
             payload: action.payload,
         });
+        broadcastActionStart(action.type, action.payload);
     });
 
     dreams.on("action:complete", ({ action, result }) => {
@@ -242,6 +638,7 @@ async function main() {
             type: action.type,
             result,
         });
+        broadcastActionComplete(action.type, result);
     });
 
     dreams.on("action:error", ({ action, error }) => {
@@ -249,6 +646,10 @@ async function main() {
             type: action.type,
             error,
         });
+        broadcastActionError(
+            action.type,
+            error instanceof Error ? error.message : String(error)
+        );
     });
 
     // Thinking process events
@@ -274,6 +675,8 @@ async function main() {
             id,
             description,
         });
+
+        broadcastGoalCreated(id, description);
     });
 
     dreams.on("goal:updated", ({ id, status }) => {
@@ -281,6 +684,8 @@ async function main() {
             id,
             status: printGoalStatus(status),
         });
+
+        broadcastGoalUpdated(id, printGoalStatus(status));
     });
 
     dreams.on("goal:completed", ({ id, result }) => {
@@ -288,6 +693,8 @@ async function main() {
             id,
             result,
         });
+
+        broadcastGoalCompleted(id, result);
     });
 
     dreams.on("goal:failed", ({ id, error }) => {
@@ -295,6 +702,11 @@ async function main() {
             id,
             error: error instanceof Error ? error.message : String(error),
         });
+
+        broadcastGoalFailed(
+            id,
+            error instanceof Error ? error.message : String(error)
+        );
     });
 
     // Memory management events
@@ -512,3 +924,147 @@ main().catch((error) => {
     console.error(chalk.red("Fatal error:"), error);
     process.exit(1);
 });
+
+// // src/types/messages.ts
+
+export type MessageType =
+    | "welcome"
+    | "response"
+    | "error"
+    | "goal_created"
+    | "goal_updated"
+    | "goal_completed"
+    | "goal_failed"
+    | "action_start"
+    | "action_complete"
+    | "action_error"
+    | "system";
+
+export interface BaseMessage {
+    type: MessageType;
+    timestamp: string; // ISO string
+    emoji?: string;
+}
+
+export interface WelcomeMessage extends BaseMessage {
+    type: "welcome";
+    message: string;
+}
+
+export interface ResponseMessage extends BaseMessage {
+    type: "response";
+    message: string;
+}
+
+export interface ErrorMessage extends BaseMessage {
+    type: "error";
+    error: string;
+}
+
+export interface GoalCreatedMessage extends BaseMessage {
+    type: "goal_created";
+    data: {
+        id: string;
+        description: string;
+        timestamp: string;
+    };
+}
+
+export interface GoalUpdatedMessage extends BaseMessage {
+    type: "goal_updated";
+    data: {
+        id: string;
+        status: string; // Use enums if possible
+        timestamp: string;
+    };
+}
+
+export interface GoalCompletedMessage extends BaseMessage {
+    type: "goal_completed";
+    data: {
+        id: string;
+        result: string;
+        timestamp: string;
+    };
+}
+
+export interface GoalFailedMessage extends BaseMessage {
+    type: "goal_failed";
+    data: {
+        id: string;
+        error: string;
+        timestamp: string;
+    };
+}
+
+export interface ActionStartMessage extends BaseMessage {
+    type: "action_start";
+    data: {
+        actionType: string;
+        payload: any; // Define more specific types if possible
+    };
+}
+
+export interface ActionCompleteMessage extends BaseMessage {
+    type: "action_complete";
+    data: {
+        actionType: string;
+        result: any;
+        timestamp: string;
+    };
+}
+
+export interface ActionErrorMessage extends BaseMessage {
+    type: "action_error";
+    data: {
+        actionType: string;
+        error: string;
+        timestamp: string;
+    };
+}
+
+export interface SystemMessage extends BaseMessage {
+    type: "system";
+    message: string;
+}
+
+// Union Type for All Messages
+export type AppMessage =
+    | WelcomeMessage
+    | ResponseMessage
+    | ErrorMessage
+    | GoalCreatedMessage
+    | GoalUpdatedMessage
+    | GoalCompletedMessage
+    | GoalFailedMessage
+    | ActionStartMessage
+    | ActionCompleteMessage
+    | ActionErrorMessage
+    | SystemMessage;
+
+const emojiMap: Record<MessageType, string> = {
+    welcome: "👋",
+    response: "💬",
+    error: "❌",
+    goal_created: "🎯",
+    goal_updated: "📝",
+    goal_completed: "✅",
+    goal_failed: "❌",
+    action_start: "🚀",
+    action_complete: "✅",
+    action_error: "❌",
+    system: "🛠️",
+};
+
+export function createMessage<M extends BaseMessage>(
+    message: Omit<M, "timestamp" | "emoji">
+): M {
+    const timestamp = new Date().toISOString();
+    const emoji = emojiMap[message.type];
+
+    return {
+        ...message,
+        timestamp,
+        emoji,
+    } as M;
+}
