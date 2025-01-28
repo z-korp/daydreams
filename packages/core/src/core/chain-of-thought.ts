@@ -79,12 +79,33 @@ export class ChainOfThought extends EventEmitter {
         this.logger.debug(
             "decomposeObjectiveIntoGoals",
             "Planning strategy for objective",
-            {
-                objective,
-            }
+            { objective }
         );
 
-        // Fetch relevant documents and experiences related to the objective
+        const context = await this.gatherRelevantContext(objective);
+        this.logger.info(
+            "decomposeObjectiveIntoGoals",
+            "Gathered relevant context",
+            { context }
+        );
+
+        const goals = await this.generateGoalHierarchy(objective, context);
+        this.logger.info(
+            "decomposeObjectiveIntoGoals",
+            "Generated goal hierarchy",
+            { goals }
+        );
+
+        await this.createAndLinkGoals(goals);
+        this.recordReasoningStep(
+            `Strategy planned for objective: ${objective}`,
+            "planning",
+            ["strategy-planning"],
+            { goals: this.getCreatedGoals() }
+        );
+    }
+
+    private async gatherRelevantContext(objective: string) {
         const [relevantDocs, relevantExperiences] = await Promise.all([
             this.memory.findSimilarDocuments(objective, 5),
             this.memory.findSimilarEpisodes(objective, 3),
@@ -99,7 +120,6 @@ export class ChainOfThought extends EventEmitter {
             }
         );
 
-        // Build context from relevant documents
         const gameStateContext = relevantDocs
             .map(
                 (doc) => `
@@ -111,7 +131,6 @@ export class ChainOfThought extends EventEmitter {
             )
             .join("\n\n");
 
-        // Build context from past experiences
         const experienceContext = relevantExperiences
             .map(
                 (exp) => `
@@ -124,16 +143,23 @@ export class ChainOfThought extends EventEmitter {
             )
             .join("\n\n");
 
+        return { gameStateContext, experienceContext };
+    }
+
+    private async generateGoalHierarchy(
+        objective: string,
+        context: { gameStateContext: string; experienceContext: string }
+    ) {
         const prompt = `
       <objective>
       "${objective}"
       </objective>
 
       <context>
-      ${gameStateContext}
+      ${context.gameStateContext}
       
       <past_experiences>
-      ${experienceContext}
+      ${context.experienceContext}
       </past_experiences>
 
       </context>
@@ -181,7 +207,7 @@ export class ChainOfThought extends EventEmitter {
         });
 
         try {
-            const goals = await validateLLMResponseSchema({
+            return await validateLLMResponseSchema({
                 prompt,
                 systemPrompt:
                     "You are a strategic planning system that creates hierarchical goal structures.",
@@ -191,91 +217,12 @@ export class ChainOfThought extends EventEmitter {
                     this.logger.error(
                         "decomposeObjectiveIntoGoals",
                         `Attempt ${attempt} failed`,
-                        {
-                            error,
-                        }
+                        { error }
                     );
                 },
                 llmClient: this.llmClient,
                 logger: this.logger,
             });
-
-            const allLLMGoals = [
-                ...goals.long_term.map((g) => ({
-                    horizon: "long" as const,
-                    ...g,
-                })),
-                ...goals.medium_term.map((g) => ({
-                    horizon: "medium" as const,
-                    ...g,
-                })),
-                ...goals.short_term.map((g) => ({
-                    horizon: "short" as const,
-                    ...g,
-                })),
-            ];
-
-            // Link: LLM’s "id" -> goal manager’s "goal-xyz" ID
-            const llmIdToRealId = new Map<string, string>();
-
-            // Keep track of newly created goal IDs so we can fetch them after pass #2
-            const createdGoalIds: string[] = [];
-
-            // Pass #1: Create each goal (with empty dependencies)
-            for (const llmGoal of allLLMGoals) {
-                const {
-                    id: llmId,
-                    horizon,
-                    dependencies: _,
-                    ...rest
-                } = llmGoal;
-
-                // Create a new goal, letting GoalManager generate the random ID
-                const newGoal = this.goalManager.addGoal({
-                    horizon,
-                    status: "pending",
-                    created_at: Date.now(),
-                    dependencies: [], // empty for now, will fill in pass #2
-                    ...rest,
-                });
-
-                // Map LLM’s temp ID -> our new random ID
-                llmIdToRealId.set(llmId, newGoal.id);
-                createdGoalIds.push(newGoal.id);
-
-                this.emit("goal:created", {
-                    id: newGoal.id,
-                    description: newGoal.description,
-                    priority: newGoal.priority,
-                });
-            }
-
-            // PASS #2: Update dependencies with real IDs
-            for (const llmGoal of allLLMGoals) {
-                // Grab the real ID for this LLM goal
-                const realGoalId = llmIdToRealId.get(llmGoal.id);
-                if (!realGoalId) continue;
-
-                // Convert LLM dependencies to our manager IDs
-                const realDeps = llmGoal.dependencies
-                    .map((dep) => llmIdToRealId.get(dep))
-                    .filter((id): id is string => !!id);
-
-                this.goalManager.updateGoalDependencies(realGoalId, realDeps);
-            }
-
-            // Get all the goals we just created
-            const finalGoals = createdGoalIds
-                .map((id) => this.goalManager.getGoalById(id))
-                .filter((g): g is Goal => !!g);
-
-            // Add a planning step
-            this.recordReasoningStep(
-                `Strategy planned for objective: ${objective}`,
-                "planning",
-                ["strategy-planning"],
-                { goals: finalGoals }
-            );
         } catch (error) {
             this.logger.error(
                 "decomposeObjectiveIntoGoals",
@@ -286,30 +233,62 @@ export class ChainOfThought extends EventEmitter {
         }
     }
 
-    /**
-     * Gets a prioritized list of goals that are ready to be worked on.
-     * Goals are sorted first by horizon (short-term > medium-term > long-term)
-     * and then by their individual priority values.
-     *
-     * @returns An array of Goal objects sorted by priority
-     * @internal
-     */
-    private getReadyGoalsByPriority(): Goal[] {
-        const readyGoals = this.goalManager.getReadyGoals();
-        const horizonPriority: Record<string, number> = {
-            short: 3,
-            medium: 2,
-            long: 1,
-        };
+    private async createAndLinkGoals(goals: {
+        long_term: any[];
+        medium_term: any[];
+        short_term: any[];
+    }) {
+        const allLLMGoals = [
+            ...goals.long_term.map((g) => ({ horizon: "long" as const, ...g })),
+            ...goals.medium_term.map((g) => ({
+                horizon: "medium" as const,
+                ...g,
+            })),
+            ...goals.short_term.map((g) => ({
+                horizon: "short" as const,
+                ...g,
+            })),
+        ];
 
-        return readyGoals.sort((a, b) => {
-            const horizonDiff =
-                horizonPriority[a.horizon] - horizonPriority[b.horizon];
-            if (horizonDiff !== 0) {
-                return -horizonDiff;
-            }
-            return (b.priority ?? 0) - (a.priority ?? 0);
-        });
+        const llmIdToRealId = new Map<string, string>();
+        const createdGoalIds: string[] = [];
+
+        // Pass #1: Create goals
+        for (const llmGoal of allLLMGoals) {
+            const { id: llmId, horizon, dependencies: _, ...rest } = llmGoal;
+            const newGoal = this.goalManager.addGoal({
+                horizon,
+                status: "pending",
+                created_at: Date.now(),
+                dependencies: [],
+                ...rest,
+            });
+
+            llmIdToRealId.set(llmId, newGoal.id);
+            createdGoalIds.push(newGoal.id);
+
+            this.emit("goal:created", {
+                id: newGoal.id,
+                description: newGoal.description,
+                priority: newGoal.priority,
+            });
+        }
+
+        // Pass #2: Link dependencies
+        for (const llmGoal of allLLMGoals) {
+            const realGoalId = llmIdToRealId.get(llmGoal.id);
+            if (!realGoalId) continue;
+
+            const realDeps = llmGoal.dependencies
+                .map((dep: string) => llmIdToRealId.get(dep))
+                .filter((id: string | undefined): id is string => !!id);
+
+            this.goalManager.updateGoalDependencies(realGoalId, realDeps);
+        }
+    }
+
+    private getCreatedGoals(): Goal[] {
+        return Array.from(this.goalManager.goals.values());
     }
 
     /**
@@ -331,55 +310,14 @@ export class ChainOfThought extends EventEmitter {
         missing_requirements: string[];
         incompleteState?: boolean;
     }> {
-        const [relevantDocs, relevantExperiences, blackboardState] =
-            await Promise.all([
-                this.memory.findSimilarDocuments(goal.description, 5),
-                this.memory.findSimilarEpisodes(goal.description, 3),
-                this.getBlackboardState(),
-            ]);
-
-        const prompt = `
-    
-
-      <goal>
-      ${goal.description}
-      </goal>
-
-      <relevant_context>
-      ${relevantDocs
-          .map((doc) => `Document: ${doc.title}\n${doc.content}`)
-          .join("\n\n")}
-      </relevant_context>
-
-      <relevant_experiences>
-      ${relevantExperiences
-          .map((exp) => `Experience: ${exp.action}\n${exp.outcome}`)
-          .join("\n\n")}
-      </relevant_experiences>
-
-      <current_game_state>
-      ${JSON.stringify(blackboardState, null, 2)}
-      </current_game_state>
-      
-      # Required dependencies:
-      ${JSON.stringify(goal.dependencies || {}, null, 2)}
-      
-      # Analyze if this goal can be executed right now. Consider:
-
-      1. Are all required resources available in the current game state?
-      2. Are environmental conditions met?
-      3. Are there any blocking conditions?
-      4. Do we have the necessary game state requirements?
-
-      If you need to query then you could potentially complete the goal.
-      
-      <thinking>
-      Think about this goal and the context here.
-      </thinking>
-     
-    `;
-
         try {
+            const [relevantDocs, relevantExperiences, blackboardState] =
+                await Promise.all([
+                    this.memory.findSimilarDocuments(goal.description, 5),
+                    this.memory.findSimilarEpisodes(goal.description, 3),
+                    this.getBlackboardState(),
+                ]);
+
             const schema = z
                 .object({
                     possible: z.boolean(),
@@ -393,6 +331,13 @@ export class ChainOfThought extends EventEmitter {
                         ),
                 })
                 .strict();
+
+            const prompt = this.buildValidationPrompt(
+                goal,
+                relevantDocs,
+                relevantExperiences,
+                blackboardState
+            );
 
             const response = await validateLLMResponseSchema<{
                 possible: boolean;
@@ -408,9 +353,7 @@ export class ChainOfThought extends EventEmitter {
                     this.logger.warn(
                         "validateGoalPrerequisites",
                         `Retry attempt ${attempt}`,
-                        {
-                            error,
-                        }
+                        { error }
                     );
                 },
                 llmClient: this.llmClient,
@@ -438,6 +381,52 @@ export class ChainOfThought extends EventEmitter {
             };
         }
     }
+
+    private buildValidationPrompt(
+        goal: Goal,
+        relevantDocs: any[],
+        relevantExperiences: any[],
+        blackboardState: any
+    ): string {
+        return `
+            <goal>
+            ${goal.description}
+            </goal>
+
+            <relevant_context>
+            ${relevantDocs
+                .map((doc) => `Document: ${doc.title}\n${doc.content}`)
+                .join("\n\n")}
+            </relevant_context>
+
+            <relevant_experiences>
+            ${relevantExperiences
+                .map((exp) => `Experience: ${exp.action}\n${exp.outcome}`)
+                .join("\n\n")}
+            </relevant_experiences>
+
+            <current_game_state>
+            ${JSON.stringify(blackboardState, null, 2)}
+            </current_game_state>
+            
+            # Required dependencies:
+            ${JSON.stringify(goal.dependencies || {}, null, 2)}
+            
+            # Analyze if this goal can be executed right now. Consider:
+
+            1. Are all required resources available in the current game state?
+            2. Are environmental conditions met? 
+            3. Are there any blocking conditions?
+            4. Do we have the necessary game state requirements?
+
+            If you need to query then you could potentially complete the goal.
+            
+            <thinking>
+            Think about this goal and the context here.
+            </thinking>
+        `;
+    }
+
     /**
      * Refines a high-level goal into more specific, actionable sub-goals by analyzing relevant context.
      *
@@ -573,9 +562,9 @@ export class ChainOfThought extends EventEmitter {
      * @returns Promise that resolves when execution is complete
      */
     public async processHighestPriorityGoal(): Promise<void> {
-        const prioritizedGoals = this.getReadyGoalsByPriority().filter(
-            (goal) => goal.status !== "completed"
-        );
+        const prioritizedGoals = this.goalManager
+            .getReadyGoalsByPriority()
+            .filter((goal) => goal.status !== "completed");
 
         if (!prioritizedGoals.length) {
             this.logger.debug(
@@ -681,7 +670,12 @@ export class ChainOfThought extends EventEmitter {
                         error,
                     }
                 );
-                await this.processGoalFailure(currentGoal, error);
+                await this.goalManager.processGoalFailure(currentGoal);
+
+                this.emit("goal:failed", {
+                    id: currentGoal.id,
+                    error,
+                });
                 // Go on to the next goal
                 continue;
             }
@@ -789,35 +783,6 @@ export class ChainOfThought extends EventEmitter {
             );
             return null;
         }
-    }
-
-    /**
-     * Handles the failure of a goal by updating its status and notifying relevant systems.
-     *
-     * This method:
-     * 1. Updates the failed goal's status
-     * 2. If the goal has a parent, marks the parent as blocked
-     * 3. Emits a goal:failed event
-     *
-     * @param goal - The goal that failed
-     * @param error - The error that caused the failure
-     * @internal
-     */
-    private async processGoalFailure(
-        goal: Goal,
-        error: Error | unknown
-    ): Promise<void> {
-        this.goalManager.updateGoalStatus(goal.id, "failed");
-
-        // If this was a sub-goal, mark parent as blocked
-        if (goal.parentGoal) {
-            this.goalManager.updateGoalStatus(goal.parentGoal, "blocked");
-        }
-
-        this.emit("goal:failed", {
-            id: goal.id,
-            error,
-        });
     }
 
     /**
@@ -1271,63 +1236,11 @@ ${availableOutputs
         this.emit("think:start", { query: userQuery });
 
         try {
-            // Consult single memory instance for both types of memories
-            const [similarExperiences, relevantDocs] = await Promise.all([
-                this.memory.findSimilarEpisodes(userQuery, 1),
-                this.memory.findSimilarDocuments(userQuery, 1),
-            ]);
-
-            this.logger.debug("think", "Retrieved memory context", {
-                experienceCount: similarExperiences.length,
-                docCount: relevantDocs.length,
-            });
-
-            this.logger.debug("think", "Beginning to think", {
-                userQuery,
-                maxIterations,
-            });
-
-            // Initialize with user query
-            this.recordReasoningStep(`User Query: ${userQuery}`, "task", [
-                "user-query",
-            ]);
+            await this.initializeThinkingContext(userQuery);
+            let pendingActions = await this.getInitialActions(userQuery);
 
             let currentIteration = 0;
             let isComplete = false;
-
-            // Get initial plan and actions
-            const initialResponse = await validateLLMResponseSchema({
-                prompt: this.buildPrompt({ query: userQuery }),
-                schema: z.object({
-                    plan: z.string().optional(),
-                    meta: z.any().optional(),
-                    actions: z.array(
-                        z.object({
-                            type: z.string(),
-                            payload: z.any(),
-                        })
-                    ),
-                }),
-                systemPrompt:
-                    "You are a reasoning system that outputs structured JSON only.",
-                maxRetries: 3,
-                llmClient: this.llmClient,
-                logger: this.logger,
-            });
-
-            // Initialize pending actions queue with initial actions
-            let pendingActions: CoTAction[] = [
-                ...initialResponse.actions,
-            ] as CoTAction[];
-
-            // Add initial plan as a step if provided
-            if (initialResponse.plan) {
-                this.recordReasoningStep(
-                    `Initial plan: ${initialResponse.plan}`,
-                    "planning",
-                    ["initial-plan"]
-                );
-            }
 
             while (
                 !isComplete &&
@@ -1339,31 +1252,162 @@ ${availableOutputs
                     pendingActionsCount: pendingActions.length,
                 });
 
-                // Process one action at a time
                 const currentAction = pendingActions.shift()!;
-                this.logger.debug("think", "Processing action", {
-                    action: currentAction,
-                    remainingActions: pendingActions.length,
-                });
 
                 try {
                     const result = await this.executeAction(currentAction);
+                    await this.handleActionResult(currentAction, result);
 
-                    // Store the experience
-                    await this.storeEpisode(currentAction.type, result);
+                    const completion = await this.verifyCompletion(
+                        userQuery,
+                        result,
+                        currentAction
+                    );
 
-                    // If the result seems important, store as knowledge
-                    if (calculateImportance(result) > 0.7) {
-                        await this.storeKnowledge(
-                            `Learning from ${currentAction.type}`,
-                            result,
-                            "action_learning",
-                            [currentAction.type, "automated_learning"]
+                    isComplete = completion.complete;
+
+                    if (completion.newActions?.length > 0) {
+                        pendingActions.push(
+                            ...this.extractNewActions(completion.newActions)
                         );
                     }
 
-                    const completion = await validateLLMResponseSchema({
-                        prompt: `${this.buildPrompt({ result })}
+                    if (isComplete || !completion.shouldContinue) {
+                        await this.handleCompletion(
+                            isComplete,
+                            completion.reason,
+                            userQuery
+                        );
+                        return;
+                    }
+
+                    this.recordReasoningStep(
+                        `Action completed, continuing execution: ${completion.reason}`,
+                        "system",
+                        ["continuation"]
+                    );
+                } catch (error) {
+                    this.emit("think:error", { query: userQuery, error });
+                    throw error;
+                }
+
+                currentIteration++;
+            }
+
+            if (currentIteration >= maxIterations) {
+                const error = `Failed to solve query "${userQuery}" within ${maxIterations} iterations`;
+                this.logger.error("think", error);
+                this.emit("think:timeout", { query: userQuery });
+            }
+        } catch (error) {
+            this.emit("think:error", { query: userQuery, error });
+            throw error;
+        }
+    }
+
+    private async initializeThinkingContext(userQuery: string): Promise<void> {
+        const [similarExperiences, relevantDocs] = await Promise.all([
+            this.memory.findSimilarEpisodes(userQuery, 1),
+            this.memory.findSimilarDocuments(userQuery, 1),
+        ]);
+
+        this.logger.debug("think", "Retrieved memory context", {
+            experienceCount: similarExperiences.length,
+            docCount: relevantDocs.length,
+        });
+
+        this.logger.debug("think", "Beginning to think", {
+            userQuery,
+        });
+
+        this.recordReasoningStep(`User Query: ${userQuery}`, "task", [
+            "user-query",
+        ]);
+    }
+
+    private async getInitialActions(userQuery: string): Promise<CoTAction[]> {
+        const initialResponse = await validateLLMResponseSchema({
+            prompt: this.buildPrompt({ query: userQuery }),
+            schema: z.object({
+                plan: z.string().optional(),
+                meta: z.any().optional(),
+                actions: z.array(
+                    z.object({
+                        type: z.string(),
+                        payload: z.any(),
+                    })
+                ),
+            }),
+            systemPrompt:
+                "You are a reasoning system that outputs structured JSON only.",
+            maxRetries: 3,
+            llmClient: this.llmClient,
+            logger: this.logger,
+        });
+
+        if (initialResponse.plan) {
+            this.recordReasoningStep(
+                `Initial plan: ${initialResponse.plan}`,
+                "planning",
+                ["initial-plan"]
+            );
+        }
+
+        return [...initialResponse.actions] as CoTAction[];
+    }
+
+    private async handleActionResult(
+        currentAction: CoTAction,
+        result: any
+    ): Promise<void> {
+        await this.storeEpisode(currentAction.type, result);
+
+        if (calculateImportance(result) > 0.7) {
+            await this.storeKnowledge(
+                `Learning from ${currentAction.type}`,
+                result,
+                "action_learning",
+                [currentAction.type, "automated_learning"]
+            );
+        }
+    }
+
+    private async verifyCompletion(
+        userQuery: string,
+        result: any,
+        currentAction: CoTAction
+    ): Promise<{
+        complete: boolean;
+        reason: string;
+        shouldContinue: boolean;
+        newActions: any[];
+    }> {
+        return await validateLLMResponseSchema({
+            prompt: this.buildVerificationPrompt(
+                userQuery,
+                result,
+                currentAction
+            ),
+            schema: z.object({
+                complete: z.boolean(),
+                reason: z.string(),
+                shouldContinue: z.boolean(),
+                newActions: z.array(z.any()),
+            }),
+            systemPrompt:
+                "You are a goal completion analyzer using Chain of Verification...",
+            maxRetries: 3,
+            llmClient: this.llmClient,
+            logger: this.logger,
+        });
+    }
+
+    private buildVerificationPrompt(
+        userQuery: string,
+        result: any,
+        currentAction: CoTAction
+    ): string {
+        return `${this.buildPrompt({ result })}
             ${JSON.stringify({
                 query: userQuery,
                 currentSteps: this.stepManager.getSteps(),
@@ -1401,86 +1445,33 @@ ${availableOutputs
 
              <thinking_process>
              Think in detail here
-             </thinking_process>
-               `,
-                        schema: z.object({
-                            complete: z.boolean(),
-                            reason: z.string(),
-                            shouldContinue: z.boolean(),
-                            newActions: z.array(z.any()),
-                        }),
-                        systemPrompt:
-                            "You are a goal completion analyzer using Chain of Verification...",
-                        maxRetries: 3,
-                        llmClient: this.llmClient,
-                        logger: this.logger,
-                    });
+             </thinking_process>`;
+    }
 
-                    try {
-                        isComplete = completion.complete;
+    private extractNewActions(newActions: any[]): CoTAction[] {
+        const extractedActions = newActions.flatMap(
+            (plan: any) => plan.actions || []
+        );
 
-                        if (completion.newActions?.length > 0) {
-                            // Add new actions to the end of the pending queue
-                            const extractedActions =
-                                completion.newActions.flatMap(
-                                    (plan: any) => plan.actions || []
-                                );
-                            pendingActions.push(...extractedActions);
+        this.logger.debug("think", "Added new actions", {
+            newActionsCount: extractedActions.length,
+            totalPendingCount: extractedActions.length,
+        });
 
-                            this.logger.debug("think", "Added new actions", {
-                                newActionsCount: extractedActions.length,
-                                totalPendingCount: pendingActions.length,
-                            });
-                        }
+        return extractedActions;
+    }
 
-                        if (isComplete || !completion.shouldContinue) {
-                            this.recordReasoningStep(
-                                `Goal ${isComplete ? "achieved" : "failed"}: ${
-                                    completion.reason
-                                }`,
-                                "system",
-                                ["completion"]
-                            );
-                            this.emit("think:complete", { query: userQuery });
-                            return;
-                        } else {
-                            this.recordReasoningStep(
-                                `Action completed, continuing execution: ${completion.reason}`,
-                                "system",
-                                ["continuation"]
-                            );
-                        }
-                    } catch (error) {
-                        this.logger.error(
-                            "think",
-                            "Error parsing completion check",
-                            {
-                                error:
-                                    error instanceof Error
-                                        ? error.message
-                                        : String(error),
-                                completion,
-                            }
-                        );
-                        continue;
-                    }
-                } catch (error) {
-                    this.emit("think:error", { query: userQuery, error });
-                    throw error;
-                }
-
-                currentIteration++;
-            }
-
-            if (currentIteration >= maxIterations) {
-                const error = `Failed to solve query "${userQuery}" within ${maxIterations} iterations`;
-                this.logger.error("think", error);
-                this.emit("think:timeout", { query: userQuery });
-            }
-        } catch (error) {
-            this.emit("think:error", { query: userQuery, error });
-            throw error;
-        }
+    private async handleCompletion(
+        isComplete: boolean,
+        reason: string,
+        userQuery: string
+    ): Promise<void> {
+        this.recordReasoningStep(
+            `Goal ${isComplete ? "achieved" : "failed"}: ${reason}`,
+            "system",
+            ["completion"]
+        );
+        this.emit("think:complete", { query: userQuery });
     }
 
     /**
