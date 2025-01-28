@@ -178,13 +178,15 @@ export class GoalManager {
         return Array.from(this.goals.values())
             .filter((goal) => {
                 const horizonMatch = !horizon || goal.horizon === horizon;
+                // Only consider goals that are explicitly in "ready" status
                 const isReady = goal.status === "ready";
                 const dependenciesMet =
                     !goal.dependencies?.length ||
                     goal.dependencies.every(
                         (depId) => this.goals.get(depId)?.status === "completed"
                     );
-                return horizonMatch && (isReady || dependenciesMet);
+                // A goal is only ready if it's explicitly in ready status AND dependencies are met
+                return horizonMatch && isReady && dependenciesMet;
             })
             .sort((a, b) => b.priority - a.priority);
     }
