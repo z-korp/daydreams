@@ -19,7 +19,7 @@ import chalk from "chalk";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { z } from "zod";
 import { env } from "../packages/core/src/core/env";
-import { HandlerRole } from "../packages/core/src/core/types";
+import { HandlerRole, LogLevel } from "../packages/core/src/core/types";
 
 /**
  * Helper function to get user input from CLI
@@ -71,9 +71,16 @@ async function main() {
     });
 
     // Initialize the main reasoning engine
-    const dreams = new ChainOfThought(llmClient, memory, {
-        worldState: ETERNUM_CONTEXT,
-    });
+    const dreams = new ChainOfThought(
+        llmClient,
+        memory,
+        {
+            worldState: ETERNUM_CONTEXT,
+        },
+        {
+            logLevel: LogLevel.DEBUG,
+        }
+    );
 
     // Register available outputs
     dreams.registerOutput({
