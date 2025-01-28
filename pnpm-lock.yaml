@@ -214,9 +214,6 @@ importers:
       '@ai-sdk/xai':
         specifier: ^1.1.1
         version: 1.1.1(zod@3.24.1)
-      '@huggingface/inference':
-        specifier: ^3.1.2
-        version: 3.1.2
       '@langchain/core':
         specifier: ^0.3.33
         version: 0.3.33(openai@4.78.0(encoding@0.1.13)(zod@3.24.1))
@@ -247,9 +244,6 @@ importers:
       chromadb-default-embed:
         specifier: ^2.13.2
         version: 2.13.2
-      dotenv:
-        specifier: ^16.4.7
-        version: 16.4.7
       ethers:
         specifier: ^6.13.5
         version: 6.13.5(bufferutil@4.0.9)(utf-8-validate@5.0.10)
@@ -1200,16 +1194,9 @@ packages:
   '@floating-ui/utils@0.2.9':
     resolution: {integrity: sha512-MDWhGtE+eHw5JW7lq4qhc5yRLS11ERl1c7Z6Xd0a58DozHES6EnNNwUWbMiG4J9Cgj053Bhk8zvlhFYKVhULwg==}
 
-  '@huggingface/inference@3.1.2':
-    resolution: {integrity: sha512-oaSTSlQmx2QY7khWSWUW8Uc47XdVTdTnu11S0ScDKdappHe9Eu8MmeoJDvGvM5rV/X34nOfnovc9X/9HcfNnWQ==}
-    engines: {node: '>=18'}
-
   '@huggingface/jinja@0.1.3':
     resolution: {integrity: sha512-9KsiorsdIK8+7VmlamAT7Uh90zxAhC/SeKaKc80v58JhtPYuwaJpmR/ST7XAUxrHAFqHTCoTH5aJnJDwSL6xIQ==}
     engines: {node: '>=18'}
-
-  '@huggingface/tasks@0.15.2':
-    resolution: {integrity: sha512-uVAf1qOP4s/il46+NsdnZ0AExcEWsl61z4t9BawM56DJfZlEs4+/dH2o5V5j733VpC7NahaEb+/mfP3sZXqdlw==}
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -7245,13 +7232,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.9': {}
 
-  '@huggingface/inference@3.1.2':
-    dependencies:
-      '@huggingface/tasks': 0.15.2
-
   '@huggingface/jinja@0.1.3': {}
-
-  '@huggingface/tasks@0.15.2': {}
 
   '@humanfs/core@0.19.1': {}
 
