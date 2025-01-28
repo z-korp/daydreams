@@ -42,8 +42,8 @@ pnpm install
 # Copy environment variables
 cp .env.example .env
 
-# Start Docker services (ChromaDB)
-sh ./docker.sh
+# Start docker services
+docker compose up -d
 ```
 
 ## Examples
