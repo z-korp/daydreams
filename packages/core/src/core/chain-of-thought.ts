@@ -444,7 +444,7 @@ export class ChainOfThought extends EventEmitter {
     private async breakdownGoalIntoSubtasks(
         goal: Goal,
         maxRetries: number = 3
-    ): Promise<void> {
+    ): Promise<string | void> {
         const [relevantDocs, relevantExperiences, blackboardState] =
             await Promise.all([
                 this.memory.findSimilarDocuments(goal.description, 5),
@@ -539,9 +539,13 @@ export class ChainOfThought extends EventEmitter {
             // Update original goal status
             this.goalManager.updateGoalStatus(goal.id, "active");
         } catch (error) {
-            throw new Error(
-                `Failed to refine goal after ${maxRetries} attempts: ${error}`
+            this.logger.error(
+                "breakdownGoalIntoSubtasks",
+                "Failed to refine goal",
+                { error }
             );
+
+            return JSON.stringify({ error });
         }
     }
 
@@ -1232,7 +1236,7 @@ ${availableOutputs
     public async think(
         userQuery: string,
         maxIterations: number = 10
-    ): Promise<void> {
+    ): Promise<void | string> {
         this.emit("think:start", { query: userQuery });
 
         try {
@@ -1288,7 +1292,7 @@ ${availableOutputs
                     );
                 } catch (error) {
                     this.emit("think:error", { query: userQuery, error });
-                    throw error;
+                    return JSON.stringify({ error });
                 }
 
                 currentIteration++;
@@ -1301,7 +1305,7 @@ ${availableOutputs
             }
         } catch (error) {
             this.emit("think:error", { query: userQuery, error });
-            throw error;
+            return JSON.stringify({ error });
         }
     }
 
