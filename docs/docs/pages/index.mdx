@@ -42,8 +42,8 @@ pnpm install
 # Copy environment variables
 cp .env.example .env
 
-# Start Docker services (ChromaDB)
-sh ./docker.sh
+# Start docker services
+docker compose up -d
 ```
 
 ## Examples
@@ -313,7 +313,10 @@ Design principles:
 ## Contributors
 
 <a href="https://github.com/daydreamsai/daydreams/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=daydreamsai/daydreams" alt="Daydreams contributors" />
+  <img
+    src="https://contrib.rocks/image?repo=daydreamsai/daydreams"
+    alt="Daydreams contributors"
+  />
 </a>
 
 ## Star History

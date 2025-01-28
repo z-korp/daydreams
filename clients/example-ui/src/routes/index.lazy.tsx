@@ -1,4 +1,3 @@
-import App from "@/App";
 import { createLazyFileRoute } from "@tanstack/react-router";
 
 export const Route = createLazyFileRoute("/")({
@@ -6,5 +5,5 @@ export const Route = createLazyFileRoute("/")({
 });
 
 function Index() {
-    return <App />;
+    return <div>Hello</div>;
 }

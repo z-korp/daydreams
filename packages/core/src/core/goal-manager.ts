@@ -5,7 +5,7 @@ import type { Goal, GoalStatus, HorizonType } from "./types";
  */
 export class GoalManager {
     /** Internal map storing all goals indexed by their IDs */
-    private goals: Map<string, Goal> = new Map();
+    goals: Map<string, Goal> = new Map();
 
     /**
      * Creates a new goal and adds it to the goal collection.
@@ -28,6 +28,53 @@ export class GoalManager {
         }
 
         return newGoal;
+    }
+
+    /**
+     * Handles the failure of a goal by updating its status and notifying relevant systems.
+     *
+     * This method:
+     * 1. Updates the failed goal's status
+     * 2. If the goal has a parent, marks the parent as blocked
+     * 3. Emits a goal:failed event
+     *
+     * @param goal - The goal that failed
+     * @param error - The error that caused the failure
+     * @internal
+     */
+    public async processGoalFailure(goal: Goal): Promise<void> {
+        this.updateGoalStatus(goal.id, "failed");
+
+        // If this was a sub-goal, mark parent as blocked
+        if (goal.parentGoal) {
+            this.updateGoalStatus(goal.parentGoal, "blocked");
+        }
+    }
+
+    /**
+     * Gets a prioritized list of goals that are ready to be worked on.
+     * Goals are sorted first by horizon (short-term > medium-term > long-term)
+     * and then by their individual priority values.
+     *
+     * @returns An array of Goal objects sorted by priority
+     * @internal
+     */
+    public getReadyGoalsByPriority(): Goal[] {
+        const readyGoals = this.getReadyGoals();
+        const horizonPriority: Record<string, number> = {
+            short: 3,
+            medium: 2,
+            long: 1,
+        };
+
+        return readyGoals.sort((a, b) => {
+            const horizonDiff =
+                horizonPriority[a.horizon] - horizonPriority[b.horizon];
+            if (horizonDiff !== 0) {
+                return -horizonDiff;
+            }
+            return (b.priority ?? 0) - (a.priority ?? 0);
+        });
     }
 
     /**
