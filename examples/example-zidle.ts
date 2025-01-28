@@ -17,9 +17,9 @@ import {
 import { RoomManager } from "../packages/core/src/core/room-manager";
 import { defaultCharacter } from "../packages/core/src/core/character";
 import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
-import { ScheduledTaskMongoDb } from "../packages/core/src/core/scheduled-db";
 import { Orchestrator } from "../packages/core/src/core/orchestrator";
 import { WebSocketServer, WebSocket } from "ws";
+import { MongoDb } from "../packages/core/src/core/mongo-db";
 
 /**
  * Helper function to get user input from CLI
@@ -92,7 +92,7 @@ async function main() {
         LogLevel.WARN
     );
 
-    const scheduledTaskDb = new ScheduledTaskMongoDb(
+    const scheduledTaskDb = new MongoDb(
         "mongodb://localhost:27017",
         "myApp",
         "scheduled_tasks"
@@ -431,7 +431,8 @@ async function main() {
                     {
                         content: userMessage,
                         userId: "ws-user",
-                    }
+                    },
+                    "ws-user"
                 );
 
                 // Send responses back through WebSocket
@@ -488,10 +489,10 @@ async function main() {
     dreams.registerOutput({
         role: HandlerRole.ACTION,
         name: "EXECUTE_READ",
-        handler: async (data: any) => {
+        handler: async (action: any) => {
             console.log(
                 "Preparing to execute read action... " +
-                    JSON.stringify(data.payload)
+                    JSON.stringify(action.payload)
             );
             const shouldProceed = await getCliInput(
                 chalk.yellow("\nProceed with the read action? (y/n): ")
@@ -500,8 +501,8 @@ async function main() {
                 return "Action aborted by the user.";
             }
 
-            const result = await starknetChain.read(data.payload);
-            return `Read: ${JSON.stringify(result, null, 2)}`;
+            const result = await starknetChain.read(action.payload);
+            return `[EXECUTE_READ] ${action.context}: ${JSON.stringify(result, null, 2)}`;
         },
         schema: z
             .object({
@@ -523,10 +524,10 @@ async function main() {
     dreams.registerOutput({
         role: HandlerRole.ACTION,
         name: "EXECUTE_TRANSACTION",
-        handler: async (data: any) => {
+        handler: async (action: any) => {
             console.log(
                 "Preparing to execute transaction action... " +
-                    JSON.stringify(data.payload)
+                    JSON.stringify(action.payload)
             );
             const shouldProceed = await getCliInput(
                 chalk.yellow(
@@ -537,8 +538,9 @@ async function main() {
                 return "Action aborted by the user.";
             }
 
-            const result = await starknetChain.write(data.payload);
-            return `Transaction: ${JSON.stringify(result, null, 2)}`;
+            const result = await starknetChain.write(action.payload);
+            console.log("result", result);
+            return `[EXECUTE_TRANSACTION] ${action.context}. STATUS: ${result.statusReceipt}`;
         },
         schema: z
             .object({
@@ -562,10 +564,10 @@ async function main() {
     dreams.registerOutput({
         role: HandlerRole.ACTION,
         name: "GRAPHQL_FETCH",
-        handler: async (data: any) => {
+        handler: async (action: any) => {
             console.log(
                 "Preparing to execute graphql fetch action... " +
-                    JSON.stringify(data.payload)
+                    JSON.stringify(action.payload)
             );
             const shouldProceed = await getCliInput(
                 chalk.yellow(
@@ -576,8 +578,8 @@ async function main() {
                 return "Action aborted by the user.";
             }
 
-            console.log("[GRAPHQL_FETCH handler] data", data);
-            const { query, variables } = data.payload ?? {};
+            console.log("[GRAPHQL_FETCH handler] action", action);
+            const { query, variables } = action.payload ?? {};
             const result = await fetchGraphQL(
                 env.GRAPHQL_URL + "/graphql",
                 query,
@@ -587,7 +589,7 @@ async function main() {
                 `query: ${query}`,
                 `result: ${JSON.stringify(result, null, 2)}`,
             ].join("\n\n");
-            return `GraphQL data fetched successfully: ${resultStr}`;
+            return `[GRAPHQL_FETCH] ${action.context}: ${resultStr}`;
         },
         schema: z
             .object({
@@ -601,6 +603,19 @@ async function main() {
                 "The payload to fetch data from the zIdle GraphQL API, never include slashes or comments"
             ),
     });
+
+    /*dreams.executeAction({
+        type: "EXECUTE_TRANSACTION",
+        payload: {
+            contractAddress:
+                "0x40f638e57740f4e0c2e64e60e2cee00df77aff3c96b5ba4de1c909761774cc8",
+            entrypoint: "mine",
+            calldata: ["7", "3", "1"],
+        },
+        context: "Start mining Mineral (Coal) to increase lowest XP resource",
+    });
+
+    return;*/
 
     // Set up event logging
 
@@ -783,20 +798,16 @@ async function main() {
                 total: 0,
             };
 
-            console.log("Goals: ", dreams.getAllGoalsByPriority());
-
             // Execute goals until completion
             while (true) {
+                console.log("getAllGoals ", dreams.goalManager.getAllGoals());
                 const readyGoals = dreams.goalManager.getReadyGoals();
-                //console.log("-------------------- readyGoals", readyGoals);
                 const activeGoals = dreams.goalManager
                     .getGoalsByHorizon("short")
                     .filter((g) => g.status === "active");
                 const pendingGoals = dreams.goalManager
                     .getGoalsByHorizon("short")
                     .filter((g) => g.status === "pending");
-                //console.log("-------------------- activeGoals", activeGoals);
-                //console.log("-------------------- pendingGoals", pendingGoals);
 
                 // Status update
                 console.log(chalk.cyan("\n📊 Current Progress:"));
