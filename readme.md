@@ -1,4 +1,6 @@
-![Daydreams](./banner.png)
+<p align="center">
+  <img src="./banner.png" alt="Daydreams">
+</p>
 
 # Daydreams - for Defai, games and more
 
