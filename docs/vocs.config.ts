@@ -13,7 +13,6 @@ export default defineConfig({
             link: "https://github.com/daydreamsai/daydreams/releases",
         },
     ],
-    baseUrl: "https://github.com/daydreamsai/daydreams",
     socials: [
         {
             icon: "github",
