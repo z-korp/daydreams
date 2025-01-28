@@ -1,5 +1,5 @@
 import { LLMClient } from "../llm-client";
-import type { Character, ProcessedResult, SuggestedOutput } from "../types";
+import type { Character } from "../types";
 import { LogLevel } from "../types";
 import { getTimeContext, validateLLMResponseSchema } from "../utils";
 import { z } from "zod";
