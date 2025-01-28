@@ -272,6 +272,13 @@ export class ChainOfThought extends EventEmitter {
                 .map((id) => this.goalManager.getGoalById(id))
                 .filter((g): g is Goal => !!g);
 
+            // Update goals with no dependencies to ready
+            for (const goal of finalGoals) {
+                if (goal.dependencies && goal.dependencies.length === 0) {
+                    this.goalManager.updateGoalStatus(goal.id, "ready");
+                }
+            }
+
             // Add a planning step
             this.recordReasoningStep(
                 `Strategy planned for objective: ${objective}`,
