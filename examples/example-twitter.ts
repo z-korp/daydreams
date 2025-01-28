@@ -21,7 +21,7 @@ import { defaultCharacter } from "../packages/core/src/core/character";
 import { Consciousness } from "../packages/core/src/core/consciousness";
 import { z } from "zod";
 import readline from "readline";
-import { ScheduledTaskMongoDb } from "../packages/core/src/core/scheduled-db";
+import { MongoDb } from "../packages/core/src/core/mongo-db";
 
 async function main() {
     const loglevel = LogLevel.DEBUG;
@@ -36,7 +36,7 @@ async function main() {
     const roomManager = new RoomManager(vectorDb);
 
     const llmClient = new LLMClient({
-        model: "anthropic/claude-3-5-sonnet-latest", // Using a known supported model
+        model: "openrouter:deepseek/deepseek-r1-distill-llama-70b",
         temperature: 0.3,
     });
 
@@ -47,7 +47,7 @@ async function main() {
         loglevel
     );
 
-    const scheduledTaskDb = new ScheduledTaskMongoDb(
+    const scheduledTaskDb = new MongoDb(
         "mongodb://localhost:27017",
         "myApp",
         "scheduled_tasks"
@@ -169,8 +169,8 @@ async function main() {
     });
 
     // Schedule a task to run every minute
-    await core.scheduleTaskInDb("twitter_mentions", {}, 6000); // Check mentions every minute
-    await core.scheduleTaskInDb("consciousness_thoughts", {}, 30000); // Think every 5 minutes
+    await core.scheduleTaskInDb("sleever", "twitter_mentions", {}, 6000); // Check mentions every minute
+    await core.scheduleTaskInDb("sleever", "consciousness_thoughts", {}, 30000); // Think every 5 minutes
 
     // Register output handler for Twitter replies
     core.registerIOHandler({

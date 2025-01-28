@@ -59,7 +59,7 @@ function printGoalStatus(status: GoalStatus): string {
 async function main() {
     // Initialize core components
     const llmClient = new LLMClient({
-        model: "deepseek/deepseek-r1", // High performance model
+        model: "openrouter:deepseek/deepseek-r1", // High performance model
     });
 
     const starknetChain = new StarknetChain({

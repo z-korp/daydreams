@@ -83,7 +83,7 @@ export class RoomManager {
     public async createRoom(
         platformId: string,
         platform: string,
-        metadata?: Partial<RoomMetadata>
+        metadata?: Partial<RoomMetadata & { userId?: string }>
     ): Promise<Room> {
         if (!this.vectorDb) {
             throw new Error("VectorDB required for room creation");
@@ -92,12 +92,11 @@ export class RoomManager {
         const room = new Room(platformId, platform, metadata);
 
         try {
-            // Initialize room in VectorDB with full metadata
             const collection = await this.vectorDb.getCollectionForRoom(
                 room.id
             );
 
-            // Update collection with full room metadata
+            // Update collection with full room metadata including userId
             await collection.modify({
                 metadata: {
                     description: "Room-specific memory storage",
@@ -108,6 +107,7 @@ export class RoomManager {
                     lastActive: room.getMetadata().lastActive.toISOString(),
                     name: metadata?.name,
                     participants: metadata?.participants,
+                    userId: metadata?.userId, // Include userId in collection metadata
                 },
             });
 
@@ -118,6 +118,7 @@ export class RoomManager {
                     roomId: room.id,
                     platform,
                     platformId,
+                    userId: metadata?.userId, // Log userId
                 }
             );
 
@@ -130,6 +131,7 @@ export class RoomManager {
                     error:
                         error instanceof Error ? error.message : String(error),
                     roomId: room.id,
+                    userId: metadata?.userId, // Log userId in errors
                 }
             );
             throw error;
@@ -152,11 +154,12 @@ export class RoomManager {
 
         const memory = await room.addMemory(content, metadata);
 
-        // Store in room-specific collection
+        // Store in room-specific collection with userId from metadata
         await this.vectorDb.storeInRoom(memory.content, room.id, {
             memoryId: memory.id,
             timestamp: memory.timestamp,
             platform: room.platform,
+            userId: metadata?.userId, // Include userId in vector storage
             ...metadata,
         });
 
@@ -205,13 +208,18 @@ export class RoomManager {
         return rooms;
     }
 
-    public async ensureRoom(name: string, platform: string): Promise<Room> {
+    public async ensureRoom(
+        name: string,
+        platform: string,
+        userId?: string
+    ): Promise<Room> {
         let room = await this.getRoomByPlatformId(name, platform);
         if (!room) {
             room = await this.createRoom(name, platform, {
                 name,
                 description: `Room for ${name}`,
                 participants: [],
+                userId, // Add userId to metadata
             });
         }
         return room;

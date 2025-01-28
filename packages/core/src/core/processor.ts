@@ -25,7 +25,8 @@ export abstract class BaseProcessor {
         protected metadata: { name: string; description: string },
         protected loggerLevel: LogLevel = LogLevel.ERROR,
         protected character: Character,
-        protected llmClient: LLMClient
+        protected llmClient: LLMClient,
+        protected contentLimit: number = 1000
     ) {
         this.logger = new Logger({
             level: loggerLevel,

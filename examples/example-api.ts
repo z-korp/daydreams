@@ -12,6 +12,7 @@ import { HandlerRole } from "../packages/core/src/core/types";
 import { RoomManager } from "../packages/core/src/core/room-manager";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
+import { ResearchQuantProcessor } from "../packages/core/src/core/processors/research-processor";
 import { LLMClient } from "../packages/core/src/core/llm-client";
 import { LogLevel } from "../packages/core/src/core/types";
 import chalk from "chalk";
@@ -19,7 +20,7 @@ import { defaultCharacter } from "../packages/core/src/core/character";
 import { Consciousness } from "../packages/core/src/core/consciousness";
 import { z } from "zod";
 import readline from "readline";
-import { ScheduledTaskMongoDb } from "../packages/core/src/core/scheduled-db";
+import { MongoDb } from "../packages/core/src/core/mongo-db";
 
 async function main() {
     const loglevel = LogLevel.DEBUG;
@@ -33,10 +34,23 @@ async function main() {
 
     const roomManager = new RoomManager(vectorDb);
 
+    // Research client
+    const researchClient = new LLMClient({
+        model: "openrouter:google/gemini-flash-1.5-8b", // Using a known supported model
+        temperature: 0.3,
+    });
+
     const llmClient = new LLMClient({
         model: "anthropic/claude-3-5-sonnet-latest", // Using a known supported model
         temperature: 0.3,
     });
+
+    const researchProcessor = new ResearchQuantProcessor(
+        researchClient,
+        defaultCharacter,
+        loglevel,
+        1000 // chunk size, depends
+    );
 
     // Initialize processor with default character personality
     const processor = new MessageProcessor(
@@ -45,7 +59,7 @@ async function main() {
         loglevel
     );
 
-    const scheduledTaskDb = new ScheduledTaskMongoDb(
+    const scheduledTaskDb = new MongoDb(
         "mongodb://localhost:27017",
         "myApp",
         "scheduled_tasks"
@@ -60,7 +74,7 @@ async function main() {
     const orchestrator = new Orchestrator(
         roomManager,
         vectorDb,
-        [processor],
+        [processor, researchProcessor],
         scheduledTaskDb,
         {
             level: loglevel,
@@ -205,7 +219,8 @@ async function main() {
                     {
                         content: userMessage,
                         userId,
-                    }
+                    },
+                    userId
                 );
 
                 // Now `outputs` is an array of suggestions with role=output that got triggered

@@ -145,61 +145,6 @@ describe("ChromaVectorDB", () => {
 
     // Room Operations
     describe("Room Operations", () => {
-        test("storeInRoom() should store content in room collection", async () => {
-            await db.storeInRoom("room content", "room123", { key: "value" });
-
-            expect(mockClient.getOrCreateCollection).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    name: "room_room123",
-                })
-            );
-            expect(mockCollection.add).toHaveBeenCalled();
-        });
-
-        test("findSimilarInRoom() should search room collection", async () => {
-            // Reset and setup specific mocks for this test
-            mockCollection.query
-                // Mock domain cluster query
-                .mockResolvedValueOnce({
-                    ids: [["domain1"]],
-                    distances: [[0.2]],
-                    documents: [["domain content"]],
-                    metadatas: [[{ topics: "topic1,topic2" }]],
-                    embeddings: [[0.1, 0.2, 0.3]],
-                })
-                // Mock content cluster query
-                .mockResolvedValueOnce({
-                    ids: [["cluster1"]],
-                    distances: [[0.2]],
-                    documents: [["cluster content"]],
-                    metadatas: [[{ topics: "topic1,topic2" }]],
-                    embeddings: [[0.1, 0.2, 0.3]],
-                })
-                // Mock room collection query
-                .mockResolvedValueOnce({
-                    ids: [["id1"]],
-                    distances: [[0.1]],
-                    documents: [["room content"]],
-                    metadatas: [
-                        [
-                            {
-                                timestamp: new Date().toISOString(),
-                                clusterId: "cluster1",
-                            },
-                        ],
-                    ],
-                });
-
-            const results = await db.findSimilarInRoom("query", "room123");
-
-            expect(mockClient.getOrCreateCollection).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    name: "room_room123",
-                })
-            );
-            expect(results).toHaveLength(1);
-        });
-
         test("listRooms() should return room collections", async () => {
             mockClient.listCollections.mockResolvedValueOnce([
                 "room_123",

@@ -1,23 +1,39 @@
-import { useEffect, useRef } from "react";
 import { CollapsibleJson } from "./collapsible-json";
 
-interface Message {
-  type: string;
-  messageType?: string;
-  message?: string;
-  error?: string;
-  orchestratorId?: string;
-  data?: any;
-  timestamp?: number;
-  isLoading?: boolean;
+interface MessageType {
+    type:
+        | "user"
+        | "assistant"
+        | "system"
+        | "error"
+        | "other"
+        | "welcome"
+        | "info";
+    message?: string;
+    error?: string;
 }
 
 export function MessagesList({ messages }: { messages: Message[] }) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+export function MessagesList({ messages }: MessagesListProps) {
+    console.log("messages", messages);
+    return (
+        <div className="flex flex-col space-y-4 w-1/2 mx-auto">
+            {messages.map((msg, i) => {
+                const baseBubble = `
+          relative
+        
+          p-4
+          text-sm
+          shadow-md
+          transition-all
+          duration-200
+         w-[80%]
+          whitespace-pre-wrap
+          break-words
+          border-opacity-50
+        `;
 
   const getMessageClasses = (msg: Message) => {
     let containerClass = "flex w-full mb-4 px-4";
@@ -30,15 +46,15 @@ export function MessagesList({ messages }: { messages: Message[] }) {
       [&>*]:relative [&>*]:z-10
     `;
 
-    if (msg.isLoading) {
-      containerClass += " justify-start";
-      bubbleClass += `
-        after:from-[#00FFC3] after:via-[#00FFC3]/30 after:to-[#00FFC3]/80
-        text-[#00FFC3] animate-pulse
-        shadow-[0_0_30px_rgba(0,255,195,0.3)]
-      `;
-      return { containerClass, bubbleClass };
-    }
+                switch (msg.type) {
+                    case "user":
+                        containerClass += " justify-end";
+                        bubbleClass += `
+               bg-card text-foreground mr-2
+              self-end hover:brightness-110
+              dither-border 
+            `;
+                        break;
 
     if (msg.type === 'debug') {
       switch (msg.messageType) {

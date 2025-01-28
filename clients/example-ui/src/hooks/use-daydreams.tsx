@@ -1,18 +1,22 @@
-import { useEffect, useCallback } from "react";
-import { useAppStore } from "@/store/use-app-store";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 interface ServerMessage {
-  type: string;
-  message?: string;
-  error?: string;
-  orchestrators?: Array<{
-    id: string;
-    name: string;
-  }>;
-  orchestratorId?: string;
-  content?: string;
-  messageType?: string;
-  timestamp?: number;
+    type: string;
+    message?: string;
+    error?: string;
+}
+
+// Helper function to generate a simple UUID
+// testing purposes only
+export function generateUserId() {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+        /[xy]/g,
+        function (c) {
+            const r = (0.1 * 16) | 0; // deterministic for testing
+            const v = c === "x" ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+        }
+    );
 }
 
 // Connexion WebSocket singleton
@@ -21,104 +25,56 @@ let messageQueue: unknown[] = [];
 let isConnecting = false;
 
 export function useDaydreamsWs() {
-  const { 
-    currentOrchestratorId,
-    setCurrentOrchestratorId,
-    addMessage,
-    setIsConnected
-  } = useAppStore();
+    const [messages, setMessages] = useState<ServerMessage[]>([]);
+    const wsRef = useRef<WebSocket | null>(null);
+    // Generate and store userId in a ref so it persists across renders
+    const userIdRef = useRef<string>(generateUserId());
 
-  const ensureConnection = useCallback(async () => {
-    if (globalWs?.readyState === WebSocket.OPEN) {
-      return true;
-    }
+    useEffect(() => {
+        const ws = new WebSocket("ws://localhost:8080");
+        wsRef.current = ws;
 
-    if (isConnecting) {
-      await new Promise(resolve => {
-        const checkConnection = setInterval(() => {
-          if (globalWs?.readyState === WebSocket.OPEN) {
-            clearInterval(checkConnection);
-            resolve(true);
-          }
-        }, 100);
-      });
-      return true;
-    }
+        ws.onopen = () => {
+            console.log("✅ Connected to Daydreams WebSocket!");
+        };
 
-    return new Promise<boolean>((resolve) => {
-      isConnecting = true;
-      const wsUrl = import.meta.env.VITE_WEBSOCKET_URL || "ws://localhost:8080";
-      globalWs = new WebSocket(wsUrl);
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data) as ServerMessage;
+                setMessages((prev) => [...prev, data]);
+            } catch (err) {
+                console.error("Failed to parse WebSocket message:", event.data);
+            }
+        };
 
-      globalWs.onopen = () => {
-        console.log(`✅ Connected to Daydreams WebSocket at ${wsUrl}!`);
-        setIsConnected(true);
-        isConnecting = false;
-        
-        while (messageQueue.length > 0) {
-          const message = messageQueue.shift();
-          if (message && globalWs?.readyState === WebSocket.OPEN) {
-            globalWs.send(JSON.stringify(message));
-          }
+        ws.onerror = (error) => {
+            console.error("WebSocket error:", error);
+        };
+
+        ws.onclose = () => {
+            console.log("❌ Disconnected from Daydreams WebSocket.");
+        };
+
+        return () => {
+            ws.close();
+        };
+    }, []);
+
+    const sendGoal = useCallback((goal: string, orchestratorId?: string) => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(
+                JSON.stringify({
+                    goal,
+                    userId: generateUserId(),
+                    orchestratorId,
+                })
+            );
         }
-        
-        resolve(true);
-      };
+    }, []);
 
-      globalWs.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data) as ServerMessage;
-          console.log("📥 Received message:", data);
-          addMessage(data);
-          
-          if ((data.type === "welcome" || data.type === "orchestrators_list") && 
-              data.orchestrators?.length > 0 && 
-              !currentOrchestratorId) {
-            console.log("🎯 Setting default orchestrator:", data.orchestrators[0].id);
-            setCurrentOrchestratorId(data.orchestrators[0].id);
-          }
-        } catch (err) {
-          console.error("❌ Failed to parse WebSocket message:", event.data, err);
-        }
-      };
-
-      globalWs.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        isConnecting = false;
-        resolve(false);
-      };
-
-      globalWs.onclose = () => {
-        console.log("❌ Disconnected from Daydreams WebSocket.");
-        setIsConnected(false);
-        globalWs = null;
-        isConnecting = false;
-      };
-    });
-  }, [currentOrchestratorId, setCurrentOrchestratorId, addMessage, setIsConnected]);
-
-  useEffect(() => {
-    ensureConnection();
-    return () => {};
-  }, [ensureConnection]);
-
-  const sendMessage = async (message: unknown) => {
-    const isConnected = await ensureConnection();
-    
-    if (!isConnected) {
-      console.warn("Could not establish WebSocket connection. Adding message to queue.");
-      messageQueue.push(message);
-      return;
-    }
-
-    if (globalWs?.readyState === WebSocket.OPEN) {
-      globalWs.send(JSON.stringify(message));
-    } else {
-      messageQueue.push(message);
-    }
-  };
-
-  return {
-    sendMessage
-  };
+    return {
+        messages,
+        sendGoal,
+        userId: userIdRef.current,
+    };
 }

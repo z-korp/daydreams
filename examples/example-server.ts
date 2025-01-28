@@ -1,6 +1,9 @@
-import { WebSocketServer, WebSocket } from "ws";
+import ws, { WebSocketServer, WebSocket } from "ws";
 import chalk from "chalk";
-import { z } from "zod";
+import { string, z } from "zod";
+import express from "express";
+import cors from "cors";
+import { ObjectId } from "mongodb";
 
 import { LLMClient } from "../packages/core/src/core/llm-client";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
@@ -10,7 +13,18 @@ import { RoomManager } from "../packages/core/src/core/room-manager";
 import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
 import { defaultCharacter } from "../packages/core/src/core/character";
 import { LogLevel } from "../packages/core/src/core/types";
-import { ScheduledTaskMongoDb } from "../packages/core/src/core/scheduled-db";
+import { MongoDb } from "../packages/core/src/core/mongo-db";
+
+const scheduledTaskDb = new MongoDb(
+    "mongodb://localhost:27017",
+    "myApp",
+    "scheduled_tasks"
+);
+
+await scheduledTaskDb.connect();
+console.log(chalk.green("✅ Scheduled task database connected"));
+
+await scheduledTaskDb.deleteAll();
 
 class OrchestratorManager {
   private orchestrators: Map<string, Orchestrator> = new Map();
@@ -25,46 +39,17 @@ class OrchestratorManager {
     );
   }
 
-  async initialize() {
-    await this.scheduledTaskDb.connect();
-    await this.scheduledTaskDb.deleteAll();
-    console.log(chalk.green("✅ Scheduled task database connected"));
-  }
-
-  async createOrchestrator(name: string, config = { logLevel: LogLevel.INFO }) {
-    console.log(chalk.blue(`[OrchestratorManager] Creating new orchestrator '${name}'`));
-    console.log(chalk.gray(`[OrchestratorManager] Config:`, JSON.stringify(config, null, 2)));
-    const id = `orch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    const llmClient = new LLMClient({
-      model: "anthropic/claude-3-5-sonnet-latest",
-      temperature: 0.3,
-    });
-
-    const vectorDb = new ChromaVectorDB(`memory_${id}`, {
-      chromaUrl: "http://localhost:8000",
-      logLevel: config.logLevel,
-    });
-
-    const roomManager = new RoomManager(vectorDb);
-    this.roomManagers.set(id, roomManager);
-
-    const processor = new MessageProcessor(
-      llmClient,
-      defaultCharacter,
-      config.logLevel
-    );
-
+    // 1.5. Initialize core system
     const orchestrator = new Orchestrator(
-      roomManager,
-      vectorDb,
-      [processor],
-      this.scheduledTaskDb,
-      {
-        level: config.logLevel,
-        enableColors: true,
-        enableTimestamp: true,
-      }
+        roomManager,
+        vectorDb,
+        [processor],
+        scheduledTaskDb,
+        {
+            level: loglevel,
+            enableColors: true,
+            enableTimestamp: true,
+        }
     );
 
     orchestrator.registerIOHandler({
@@ -141,62 +126,31 @@ wss.on("connection", (ws) => {
       const dataString = rawData.toString();
       console.log(chalk.magenta("[WS] Received message:"), dataString);
 
-      const parsed = JSON.parse(dataString);
-      
-      switch (parsed.type) {
-        case "create_orchestrator":
-          if (!parsed.name) {
-            throw new Error("Orchestrator name is required");
-          }
-          const newOrch = await orchestratorManager.createOrchestrator(parsed.name);
-          sendJSON(ws, {
-            type: "orchestrator_created",
-            orchestrator: {
-              id: newOrch.id,
-              name: newOrch.name,
-            },
-          });
-          break;
+            const parsed = JSON.parse(dataString);
+            const { userId, goal: userMessage, orchestratorId } = parsed;
 
-        case "list_orchestrators":
-          sendJSON(ws, {
-            type: "orchestrators_list",
-            orchestrators: orchestratorManager.listOrchestrators(),
-          });
-          break;
+            if (!userMessage || typeof userMessage !== "string") {
+                throw new Error(
+                    "Invalid message format. Expected { goal: string, userId: string }"
+                );
+            }
 
-        case "user":
-          if (!parsed.orchestratorId) {
-            throw new Error("Orchestrator ID is required");
-          }
-          const orchestrator = orchestratorManager.getOrchestrator(parsed.orchestratorId);
-          if (!orchestrator) {
-            throw new Error("Orchestrator not found");
-          }
+            if (!userId || typeof userId !== "string") {
+                throw new Error("userId is required");
+            }
 
-          sendJSON(ws, {
-            type: "debug",
-            messageType: "user_input",
-            message: parsed.message,
-            orchestratorId: parsed.orchestratorId,
-            timestamp: Date.now()
-          });
+            orchestrator.initializeOrchestrator(userId);
 
-          console.log(chalk.blue(`[WS] Dispatching message to orchestrator ${parsed.orchestratorId}`));
-          
-          sendJSON(ws, {
-            type: "debug",
-            messageType: "processing_start",
-            message: `Processing message for orchestrator ${parsed.orchestratorId}`,
-            orchestratorId: parsed.orchestratorId,
-            timestamp: Date.now()
-          });
-          
-          try {
-            const outputs = await orchestrator.dispatchToInput("user_chat", {
-              content: parsed.message,
-              userId: "ws-user",
-            });
+            // Process the message using the orchestrator with the provided userId
+            const outputs = await orchestrator.dispatchToInput(
+                "user_chat",
+                {
+                    content: userMessage,
+                    userId: userId,
+                },
+                userId,
+                orchestratorId ? new ObjectId(orchestratorId) : undefined
+            );
 
             console.log(chalk.blue(`[WS] Got outputs:`, outputs));
 
@@ -260,9 +214,80 @@ wss.on("connection", (ws) => {
 });
 
 process.on("SIGINT", async () => {
-  console.log(chalk.yellow("\n\nShutting down..."));
-  wss.close(() => {
-    console.log(chalk.green("✅ WebSocket server closed"));
-  });
-  process.exit(0);
+    console.log(chalk.yellow("\n\nShutting down..."));
+
+    // Close WebSocket server
+    wss.close(() => {
+        console.log(chalk.green("✅ WebSocket server closed"));
+    });
+
+    process.exit(0);
+});
+
+// Create Express app for REST API
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Add REST endpoint for chat history
+app.get("/api/history/:userId", async (req, res) => {
+    try {
+        const { userId } = req.params;
+        console.log("Fetching history for userId:", userId);
+
+        // Get all orchestrator records for this user
+        const histories =
+            await scheduledTaskDb.getOrchestratorsByUserId(userId);
+
+        if (!histories || histories.length === 0) {
+            console.log("No histories found");
+            return res.status(404).json({ error: "No history found for user" });
+        }
+
+        res.json(histories);
+    } catch (error) {
+        console.error("Error fetching chat history:", error);
+        res.status(500).json({
+            error: "Failed to fetch chat history",
+            details: error instanceof Error ? error.message : String(error),
+        });
+    }
+});
+
+app.get("/api/history/:userId/:chatId", async (req, res) => {
+    try {
+        const { userId, chatId } = req.params;
+
+        // Convert string chatId to ObjectId
+        let objectId;
+        try {
+            objectId = new ObjectId(chatId);
+        } catch (err) {
+            return res.status(400).json({ error: "Invalid chat ID format" });
+        }
+
+        const history = await scheduledTaskDb.getOrchestratorById(objectId);
+
+        if (!history) {
+            return res.status(404).json({ error: "History not found" });
+        }
+
+        res.json(history);
+    } catch (error) {
+        console.error("Error fetching chat history:", error);
+        res.status(500).json({
+            error: "Failed to fetch chat history",
+            details: error instanceof Error ? error.message : String(error),
+        });
+    }
+});
+
+// Start the Express server
+const API_PORT = 8081;
+app.listen(API_PORT, () => {
+    console.log(
+        chalk.green(
+            `[API] REST API server listening on http://localhost:${API_PORT}`
+        )
+    );
 });

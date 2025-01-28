@@ -290,58 +290,6 @@ export class ChainOfThought extends EventEmitter {
     }
 
     /**
-     * Gets a prioritized list of goals that are ready to be worked on.
-     * Goals are sorted first by horizon (short-term > medium-term > long-term)
-     * and then by their individual priority values.
-     *
-     * @returns An array of Goal objects sorted by priority
-     * @internal
-     */
-    private getReadyGoalsByPriority(): Goal[] {
-        const readyGoals = this.goalManager.getReadyGoals();
-        const horizonPriority: Record<string, number> = {
-            short: 3,
-            medium: 2,
-            long: 1,
-        };
-
-        return readyGoals.sort((a, b) => {
-            const horizonDiff =
-                horizonPriority[a.horizon] - horizonPriority[b.horizon];
-            if (horizonDiff !== 0) {
-                return -horizonDiff;
-            }
-            return (b.priority ?? 0) - (a.priority ?? 0);
-        });
-    }
-
-    /**
-     * Gets a prioritized list of goals that are ready to be worked on.
-     * Goals are sorted first by horizon (short-term > medium-term > long-term)
-     * and then by their individual priority values.
-     *
-     * @returns An array of Goal objects sorted by priority
-     * @internal
-     */
-    public getAllGoalsByPriority(): Goal[] {
-        const readyGoals = this.goalManager.getAllGoals();
-        const horizonPriority: Record<string, number> = {
-            short: 3,
-            medium: 2,
-            long: 1,
-        };
-
-        return readyGoals.sort((a, b) => {
-            const horizonDiff =
-                horizonPriority[a.horizon] - horizonPriority[b.horizon];
-            if (horizonDiff !== 0) {
-                return -horizonDiff;
-            }
-            return (b.priority ?? 0) - (a.priority ?? 0);
-        });
-    }
-
-    /**
      * Checks if a goal can be executed based on current state and requirements.
      *
      * Analyzes the goal against relevant documents, past experiences, and current state
@@ -603,9 +551,9 @@ export class ChainOfThought extends EventEmitter {
      * @returns Promise that resolves when execution is complete
      */
     public async processHighestPriorityGoal(): Promise<void> {
-        const prioritizedGoals = this.getReadyGoalsByPriority().filter(
-            (goal) => goal.status !== "completed"
-        );
+        const prioritizedGoals = this.goalManager
+            .getReadyGoalsByPriority()
+            .filter((goal) => goal.status !== "completed");
 
         if (!prioritizedGoals.length) {
             this.logger.debug(
@@ -1186,27 +1134,6 @@ export class ChainOfThought extends EventEmitter {
         }
     }
 
-    /**
-     * Returns a formatted string listing all available outputs registered in the outputs registry.
-     * The string includes each output name on a new line prefixed with a bullet point.
-     * @returns A formatted string containing all registered output names
-     * @example
-     * ```ts
-     * // If outputs contains "console" and "file"
-     * getAvailableOutputs() // Returns:
-     * // Available outputs:
-     * // - console
-     * // - file
-     * ```
-     * @internal
-     */
-    private getAvailableOutputs(): string {
-        const outputs = Array.from(this.outputs.keys());
-        return `Available outputs:\n${outputs
-            .map((output) => `- ${output}`)
-            .join("\n")}`;
-    }
-
     private buildPrompt(tags: Record<string, string> = {}): string {
         this.logger.debug("buildPrompt", "Building LLM prompt");
 
@@ -1636,6 +1563,10 @@ export class ChainOfThought extends EventEmitter {
                     id: crypto.randomUUID(),
                 },
             });
+
+            this.logger.info("storeEpisode", "Stored experience", {
+                experience,
+            });
         } catch (error) {
             this.logger.error("storeEpisode", "Failed to store experience", {
                 error,
@@ -1669,6 +1600,10 @@ export class ChainOfThought extends EventEmitter {
             };
 
             await this.memory.storeDocument(document);
+
+            this.logger.info("storeKnowledge", "Stored knowledge", {
+                document,
+            });
 
             this.emit("memory:knowledge_stored", { document });
         } catch (error) {
@@ -1750,6 +1685,10 @@ export class ChainOfThought extends EventEmitter {
                     state[update.type][update.key] = update.value;
                 });
 
+            this.logger.info("getBlackboardState", "Found blackboard state", {
+                state,
+            });
+
             return state;
         } catch (error) {
             this.logger.error(
@@ -1791,6 +1730,14 @@ export class ChainOfThought extends EventEmitter {
 
             const docs = await this.memory.searchDocumentsByTag(tags, limit);
 
+            this.logger.info(
+                "getBlackboardHistory",
+                "Found blackboard history",
+                {
+                    docs,
+                }
+            );
+
             return docs
                 .map((doc) => ({
                     ...JSON.parse(doc.content),
@@ -1808,5 +1755,26 @@ export class ChainOfThought extends EventEmitter {
             );
             return [];
         }
+    }
+
+    /**
+     * Returns a formatted string listing all available outputs registered in the outputs registry.
+     * The string includes each output name on a new line prefixed with a bullet point.
+     * @returns A formatted string containing all registered output names
+     * @example
+     * ```ts
+     * // If outputs contains "console" and "file"
+     * getAvailableOutputs() // Returns:
+     * // Available outputs:
+     * // - console
+     * // - file
+     * ```
+     * @internal
+     */
+    private getAvailableOutputs(): string {
+        const outputs = Array.from(this.outputs.keys());
+        return `Available outputs:\n${outputs
+            .map((output) => `- ${output}`)
+            .join("\n")}`;
     }
 }
