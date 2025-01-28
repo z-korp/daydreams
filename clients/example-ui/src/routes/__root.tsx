@@ -12,6 +12,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ModeToggle } from "@/components/mode-toggle";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarRight } from "@/components/sidebar-right";
 
 export const Route = createRootRoute({
     component: () => (
@@ -41,6 +42,7 @@ export const Route = createRootRoute({
                         </header>
                         <Outlet />
                     </SidebarInset>
+                    <SidebarRight />
                 </SidebarProvider>
             </ThemeProvider>
 
