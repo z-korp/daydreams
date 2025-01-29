@@ -32,7 +32,7 @@ It is designed to be as lite as possible while remaining powerful and flexible.
 
 Prerequisites:
 
-- Node.js 16+
+- Node.js 18+
 - pnpm
 - Bun
 - Docker Desktop
