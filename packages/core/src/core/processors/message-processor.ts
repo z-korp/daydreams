@@ -1,6 +1,12 @@
 import { LLMClient } from "../llm-client";
 
-import type { Character, ProcessedResult, SuggestedOutput } from "../types";
+import type {
+    ActionIOHandler,
+    Character,
+    OutputIOHandler,
+    ProcessedResult,
+    SuggestedOutput,
+} from "../types";
 import { LogLevel } from "../types";
 
 import { getTimeContext, validateLLMResponseSchema } from "../utils";
@@ -44,8 +50,8 @@ export class MessageProcessor extends BaseProcessor {
         content: any,
         otherContext: string,
         ioContext?: {
-            availableOutputs: IOHandler[];
-            availableActions: IOHandler[];
+            availableOutputs: OutputIOHandler[];
+            availableActions: ActionIOHandler[];
         }
     ): Promise<ProcessedResult> {
         this.logger.debug("Processor.process", "Processing content", {
@@ -57,13 +63,13 @@ export class MessageProcessor extends BaseProcessor {
 
         const outputsSchemaPart = ioContext?.availableOutputs
             .map((handler) => {
-                return `${handler.name}: ${JSON.stringify(zodToJsonSchema(handler.schema, handler.name))}`;
+                return `${handler.name}: ${JSON.stringify(zodToJsonSchema(handler.outputSchema!, handler.name))}`;
             })
             .join("\n");
 
         const actionsSchemaPart = ioContext?.availableActions
             .map((handler) => {
-                return `${handler.name}: ${JSON.stringify(zodToJsonSchema(handler.schema, handler.name))}`;
+                return `${handler.name}: ${JSON.stringify(zodToJsonSchema(handler.outputSchema!, handler.name))}`;
             })
             .join("\n");
 
@@ -97,7 +103,14 @@ export class MessageProcessor extends BaseProcessor {
         2. Only make tasks if you have been told, based off what you think is possible.
         </thinking>
 
+        <thinking id="should_reply">
+        1. Should you reply to the message?
+        2. You should only reply if you have been mentioned in the message or you think you can help deeply.
+        3. You should never respond to yourself.
+        </thinking>
+
         <thinking id="message_personality">
+
         # Speak in the following voice:
         ${JSON.stringify(this.character.voice)}
 

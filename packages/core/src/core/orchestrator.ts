@@ -78,6 +78,7 @@ export class Orchestrator {
         this.userId = userId;
     }
 
+    private unsubscribers = new Map<string, () => void>();
     /**
      * Primary method to register any IOHandler (input or output).
      * - If it's an input with an interval, schedule it for recurring runs.
@@ -88,19 +89,31 @@ export class Orchestrator {
             this.logger.warn(
                 "Orchestrator.registerIOHandler",
                 "Overwriting handler with same name",
-                {
-                    name: handler.name,
-                }
+                { name: handler.name }
             );
         }
+
         this.ioHandlers.set(handler.name, handler);
+
+        if (handler.role === HandlerRole.INPUT && handler.subscribe) {
+            const unsubscribe = handler.subscribe(async (data) => {
+                this.logger.info(
+                    "Orchestrator.registerIOHandler",
+                    "Starting stream",
+                    {
+                        data,
+                    }
+                );
+                // Whenever data arrives, pass it into runAutonomousFlow
+                await this.runAutonomousFlow(data, handler.name, this.userId);
+            });
+            this.unsubscribers.set(handler.name, unsubscribe);
+        }
 
         this.logger.info(
             "Orchestrator.registerIOHandler",
             `Registered ${handler.role}`,
-            {
-                name: handler.name,
-            }
+            { name: handler.name }
         );
     }
 
@@ -108,14 +121,17 @@ export class Orchestrator {
      * Removes a handler (input or output) by name, stopping scheduling if needed.
      */
     public removeIOHandler(name: string): void {
-        if (this.ioHandlers.has(name)) {
-            // If it was scheduled as an input, it will no longer be re-scheduled
-            this.ioHandlers.delete(name);
-            this.logger.info(
-                "Orchestrator.removeIOHandler",
-                `Removed IOHandler: ${name}`
-            );
+        // If we have an unsubscribe function, call it
+        const unsub = this.unsubscribers.get(name);
+        if (unsub) {
+            unsub(); // e.g. remove event listeners, clear intervals, etc.
+            this.unsubscribers.delete(name);
         }
+
+        // Remove the handler itself
+        this.ioHandlers.delete(name);
+
+        console.log(`Removed IOHandler: ${name}`);
     }
 
     /**
@@ -124,7 +140,7 @@ export class Orchestrator {
      */
     public async dispatchToOutput<T>(name: string, data: T): Promise<unknown> {
         const handler = this.ioHandlers.get(name);
-        if (!handler) {
+        if (!handler || !handler.execute) {
             throw new Error(`No IOHandler registered with name: ${name}`);
         }
 
@@ -138,7 +154,12 @@ export class Orchestrator {
         });
 
         try {
-            const result = await handler.handler(data);
+            const result = await handler.execute(data);
+
+            this.logger.info("Orchestrator.dispatchToOutput", "Output result", {
+                result,
+            });
+
             return result;
         } catch (error) {
             this.logger.error(
@@ -158,8 +179,17 @@ export class Orchestrator {
      * We only schedule inputs in the constructor's scheduler.
      */
     private async processInputTask(handler: IOHandler): Promise<void> {
+        if (!handler.execute) {
+            this.logger.error(
+                "Orchestrator.processInputTask",
+                "Handler has no execute method",
+                { handler }
+            );
+            return;
+        }
         try {
-            const result = await handler.handler();
+            // it's undefined because this might be fetching data from an api or something
+            const result = await handler.execute(undefined);
             if (!result) return;
 
             if (Array.isArray(result)) {
@@ -221,7 +251,7 @@ export class Orchestrator {
      */
     public async dispatchToAction<T>(name: string, data: T): Promise<unknown> {
         const handler = this.ioHandlers.get(name);
-        if (!handler) {
+        if (!handler || !handler.execute) {
             throw new Error(`No IOHandler registered with name: ${name}`);
         }
         if (handler.role !== "action") {
@@ -232,7 +262,7 @@ export class Orchestrator {
             data,
         });
         try {
-            const result = await handler.handler(data);
+            const result = await handler.execute(data);
             return result;
         } catch (error) {
             this.logger.error(
@@ -504,12 +534,14 @@ export class Orchestrator {
     ): Promise<unknown> {
         const handler = this.ioHandlers.get(name);
         if (!handler) throw new Error(`No IOHandler: ${name}`);
+        if (!handler.execute)
+            throw new Error(`Handler "${name}" has no execute method`);
         if (handler.role !== "input") {
             throw new Error(`Handler "${name}" is not role=input`);
         }
 
         try {
-            const result = await handler.handler(data);
+            const result = await handler.execute(data);
 
             if (result) {
                 return await this.runAutonomousFlow(

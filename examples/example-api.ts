@@ -93,10 +93,10 @@ async function main() {
     orchestrator.registerIOHandler({
         name: "fetchGithubIssues",
         role: HandlerRole.ACTION,
-        schema: z.object({
+        outputSchema: z.object({
             repo: z.string(),
         }),
-        handler: async (payload) => {
+        execute: async (payload) => {
             // 1. Fetch some info from GitHub
             // 2. Return the fetched data so it can be processed as "new input"
             //    to the next step in the chain.
@@ -114,7 +114,7 @@ async function main() {
         name: "universalApiCall",
         role: HandlerRole.ACTION,
         // The agent must fill out these fields to make a valid request
-        schema: z
+        outputSchema: z
             .object({
                 method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
                 url: z.string().url(),
@@ -124,7 +124,7 @@ async function main() {
             .describe(
                 "Use this to fetch data from an API. It should include the method, url, headers, and body."
             ),
-        handler: async (payload) => {
+        execute: async (payload) => {
             const { method, url, headers, body } = payload as {
                 method: string;
                 url: string;
@@ -163,13 +163,13 @@ async function main() {
         name: "user_chat",
         role: HandlerRole.INPUT,
         // This schema describes what a user message looks like
-        schema: z.object({
+        outputSchema: z.object({
             content: z.string(),
             userId: z.string().optional(),
         }),
         // For "on-demand" input handlers, the `handler()` can be a no-op.
         // We'll call it manually with data, so we don't need an interval.
-        handler: async (payload) => {
+        execute: async (payload) => {
             // We simply return the payload so the Orchestrator can process it
             return payload;
         },
@@ -178,11 +178,11 @@ async function main() {
     orchestrator.registerIOHandler({
         name: "ui_chat_reply",
         role: HandlerRole.OUTPUT,
-        schema: z.object({
+        outputSchema: z.object({
             userId: z.string().optional(),
             message: z.string(),
         }),
-        handler: async (payload) => {
+        execute: async (payload) => {
             const { userId, message } = payload as {
                 userId?: string;
                 message: string;
