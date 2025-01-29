@@ -12,6 +12,9 @@ const envSchema = z.object({
     OPENROUTER_API_KEY: z.string(),
     GRAPHQL_URL: z.string(),
     DISCORD_TOKEN: z.string(),
+    TELEGRAM_TOKEN: z.string(),
+    TELEGRAM_API_ID: z.string(),
+    TELEGRAM_API_HASH: z.string(),
     WEBSOCKET_URL: z.string().default("ws://localhost:8080"),
     DRY_RUN: z
         .preprocess((val) => val === "1" || val === "true", z.boolean())
