@@ -1,12 +1,5 @@
 interface MessageType {
-    type:
-        | "user"
-        | "assistant"
-        | "system"
-        | "error"
-        | "other"
-        | "welcome"
-        | "info";
+    type: "input" | "output" | "system" | "ERROR" | "OTHER" | "WELCOME" | "INFO";
     message?: string;
     error?: string;
 }
@@ -16,101 +9,113 @@ interface MessagesListProps {
 }
 
 export function MessagesList({ messages }: MessagesListProps) {
-    console.log("messages", messages);
     return (
         <div className="flex flex-col space-y-4 w-1/2 mx-auto">
             {messages.map((msg, i) => {
-                const baseBubble = `
-          relative
-        
-          p-4
-          text-sm
-          shadow-md
-          transition-all
-          duration-200
-         w-[80%]
-          whitespace-pre-wrap
-          break-words
-          border-opacity-50
-        `;
+                // Base classes that are common to all message types
+                const baseClasses = [
+                    "relative",
+                    "p-4",
+                    "text-sm",
+                    "shadow-md",
+                    "transition-all",
+                    "duration-200",
+                    "w-4/5",  // Using w-4/5 instead of w-[80%]
+                    "whitespace-pre-wrap",
+                    "break-words",
+                    "border",
+                    "border-opacity-50"
+                ];
 
-                let containerClass = "flex items-start";
-                let bubbleClass = baseBubble;
-
+                // Container classes start with flex and items-start
+                let containerClasses = ["flex", "items-start"];
+                
+                // Add specific classes based on message type
                 switch (msg.type) {
-                    case "user":
-                        containerClass += " justify-end";
-                        bubbleClass += `
-               bg-card text-foreground mr-2
-              self-end hover:brightness-110
-              dither-border 
-            `;
+                    case "input":
+                        containerClasses.push("justify-end");
+                        baseClasses.push(
+                            "bg-card",
+                            "text-foreground",
+                            "mr-2",
+                            "self-end",
+                            "hover:brightness-110",
+                            "border-primary",
+                        );
                         break;
 
-                    case "assistant":
-                        containerClass += " justify-start";
-                        bubbleClass += `
-              bg-card text-foreground ml-2
-              dither-border
-              hover:brightness-105
-            `;
+                    case "output":
+                        containerClasses.push("justify-start");
+                        baseClasses.push(
+                            "bg-card",
+                            "text-foreground",
+                            "ml-2",
+                            "hover:brightness-105",
+                            "border-secondary"
+                        );
                         break;
 
                     case "system":
-                        containerClass += " justify-center";
-                        bubbleClass += `
-              bg-card text-muted-foreground
-              dither-border
-              hover:brightness-105
-            `;
+                        containerClasses.push("justify-center");
+                        baseClasses.push(
+                            "bg-card",
+                            "text-muted-foreground",
+                            "hover:brightness-105",
+                            "border-muted"
+                        );
                         break;
 
-                    case "error":
-                        containerClass += " justify-center";
-                        bubbleClass += `
-              bg-card text-destructive font-semibold
-              dither-border
-              hover:brightness-105
-            `;
+                    case "ERROR":
+                        containerClasses.push("justify-center");
+                        baseClasses.push(
+                            "bg-card",
+                            "text-destructive",
+                            "font-semibold",
+                            "hover:brightness-105",
+                            "border-destructive"
+                        );
                         break;
 
-                    case "welcome":
-                        containerClass += " justify-center";
-                        bubbleClass += `
-              bg-card text-accent-foreground
-              dither-border
-              hover:brightness-105
-            `;
+                    case "WELCOME":
+                        containerClasses.push("justify-center");
+                        baseClasses.push(
+                            "bg-card",
+                            "text-accent-foreground",
+                            "hover:brightness-105",
+                            "border-accent"
+                        );
                         break;
 
-                    case "info":
-                        containerClass += " justify-center";
-                        bubbleClass += `
-              bg-card text-secondary-foreground
-              dither-border
-              hover:brightness-105
-            `;
+                    case "INFO":
+                        containerClasses.push("justify-center");
+                        baseClasses.push(
+                            "bg-card",
+                            "text-secondary-foreground",
+                            "hover:brightness-105",
+                            "border-secondary"
+                        );
                         break;
 
                     default:
-                        containerClass += " justify-start";
-                        bubbleClass += `
-              bg-card text-card-foreground ml-2
-              dither-border
-              hover:brightness-105
-            `;
+                        containerClasses.push("justify-start");
+                        baseClasses.push(
+                            "bg-card",
+                            "text-card-foreground",
+                            "ml-2",
+                            "hover:brightness-105",
+                            "border-primary"
+                        );
                 }
-
+                console.log("msg:L110",baseClasses);
+                console.log("msg:L110",msg.type);
                 return (
-                    <div key={i} className={containerClass}>
-                        <div className={bubbleClass}>
-                            {/* Affiche le type si ce n'est pas un user/assistant classique */}
-                            {msg.type !== "user" &&
-                                msg.type !== "assistant" && (
-                                    <div className="mb-1 text-xs font-medium uppercase tracking-wider opacity-80">
-                                        {msg.type}
-                                    </div>
-                                )}
+                    <div key={i} className={containerClasses.join(" ")}>
+                        <div className={baseClasses.join(" ")}>
+                            {msg.type !== "INPUT" && msg.type !== "OUTPUT" && (
+                                <div className="mb-1 text-xs font-medium uppercase tracking-wider opacity-80">
+                                    {msg.type}
+                                </div>
+                            )}
 
                             {msg.message && (
                                 <div className="text-base">{msg.message}</div>

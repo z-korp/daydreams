@@ -41,8 +41,7 @@ export function ChatUI() {
         if (currentChat?.messages) {
             console.log('📝 Processing messages for chat:', chatId);
             const formattedMessages: MessageType[] = currentChat.messages.map(msg => ({
-                type: msg.role === "assistant" ? "assistant" : 
-                      msg.role === "user" ? "user" : "system",
+                type: msg.role,
                 message: msg.data.content || msg.data.message || "",
             }));
             setAllMessages(formattedMessages);
@@ -58,7 +57,7 @@ export function ChatUI() {
         if (!input.trim() || !currentOrchestratorId) return;
 
         const userMessage: MessageType = {
-            type: "user",
+            type: "input",
             message: input,
         };
 
@@ -76,7 +75,7 @@ export function ChatUI() {
             setAllMessages(prev => [
                 ...prev,
                 {
-                    type: "error",
+                    type: "ERROR",
                     error: "Failed to send message",
                 },
             ]);
