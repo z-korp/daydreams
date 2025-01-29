@@ -12,6 +12,7 @@ import { z } from "zod";
 
 export interface DiscordCredentials {
     discord_token: string;
+    discord_bot_name: string;
 }
 
 export interface MessageData {
@@ -82,8 +83,12 @@ export class DiscordClient {
             // Here, you could decide what "data" looks like
             // E.g., check if the bot was mentioned, etc.
 
-            if (message.author.displayName == "DeepLoaf") {
-                console.log("Skipping message from DeepLoaf");
+            if (
+                message.author.displayName == this.credentials.discord_bot_name
+            ) {
+                console.log(
+                    `Skipping message from ${this.credentials.discord_bot_name}`
+                );
                 return;
             }
 
