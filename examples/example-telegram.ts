@@ -162,7 +162,7 @@ async function main() {
 
         // Clean up resources
         telegram.logout();
-        core.removeIOHandler("telegram_get_messages");
+        core.removeIOHandler("telegram_channel_scraper");
         core.removeIOHandler("telegram_send_message");
         rl.close();
 
