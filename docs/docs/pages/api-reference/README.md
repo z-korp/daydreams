@@ -36,6 +36,9 @@ Prerequisites:
 - Docker Desktop
 
 ```bash
+# Install Node.js
+nvm install
+
 # Install dependencies
 pnpm install
 
