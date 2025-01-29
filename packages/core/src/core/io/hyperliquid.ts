@@ -61,36 +61,57 @@ export class HyperliquidClient {
         });
     }
 
-    public async getPositions() {
-        return (
-            await this.client.info.perpetuals.getClearinghouseState(
-                this.mainAddress
-            )
-        ).assetPositions;
+    public async cancelOrder(ticker: string, orderId: number) {
+        return await this.client.exchange.cancelOrder({
+            coin: ticker,
+            o: orderId,
+        });
+    }
+
+    public async getAccountBalancesAndPositions() {
+        return await this.client.info.perpetuals.getClearinghouseState(
+            this.mainAddress
+        );
+    }
+
+    public async getOpenOrders() {
+        return await this.client.info
+            .getUserOpenOrders(this.mainAddress)
+            .catch((error) => {
+                console.error("Error getting user open orders:", error);
+            });
     }
 
     public async marketSellPositions(tickers: string[]) {
-        const positions = await this.getPositions();
+        const positions = (await this.getAccountBalancesAndPositions())
+            .assetPositions;
         return Promise.all(
             tickers.map((ticker) => this.marketSellPosition(ticker, positions))
         );
     }
 
     public async marketSellPosition(ticker: string, positions: any) {
-        if (positions === undefined) {
-            positions = await this.getPositions();
+        if (!ticker) return;
+        if (!positions) {
+            const { assetPositions } =
+                await this.getAccountBalancesAndPositions();
+            positions = assetPositions;
         }
-        const positionsMatching = positions.filter(
-            (obj: any) => obj.position.coin === ticker.toUpperCase() + "-PERP"
+        const match = positions.find(
+            (p: any) => p.position.coin === `${ticker.toUpperCase()}-PERP`
         );
-        if (positionsMatching.length > 0) {
-            const size: number = Number(positionsMatching[0].position.szi);
-            return await this.placeMarketOrder(
-                ticker.toUpperCase(),
-                size,
-                false
-            );
-        }
+        if (!match) return;
+        const size = Number(match.position.szi);
+        return this.placeMarketOrder(ticker.toUpperCase(), size, false);
+    }
+
+    private async loadPerpMeta() {
+        if (this.perpMeta) return;
+        this.perpMeta = {};
+        const universe = (await this.client.info.perpetuals.getMeta()).universe;
+        universe.forEach((token) => {
+            this.perpMeta[token.name] = token.szDecimals;
+        });
     }
 
     public async placeMarketOrderUSD(
@@ -98,19 +119,11 @@ export class HyperliquidClient {
         totalprice: number,
         is_buy: boolean
     ) {
+        await this.loadPerpMeta();
         const orderbook = await this.client.info.getL2Book(ticker + "-PERP");
         const triggerPx = is_buy
             ? Number(orderbook.levels[1][3].px)
             : Number(orderbook.levels[0][3].px);
-        if (!this.perpMeta) {
-            // Save szDecimals once
-            this.perpMeta = {};
-            (await this.client.info.perpetuals.getMeta()).universe.forEach(
-                (token: { name: string; szDecimals: number }) => {
-                    this.perpMeta[token.name] = token.szDecimals;
-                }
-            );
-        }
         let szDecimals = this.perpMeta[ticker + "-PERP"];
         if (szDecimals === undefined) {
             throw new Error("Can't find szDecimals for " + ticker);
