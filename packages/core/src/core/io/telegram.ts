@@ -218,7 +218,7 @@ export class TelegramClient {
     */
     public createChannelScraper() {
         return {
-            name: "telegram_get_messages",
+            name: "telegram_channel_scraper",
             handler: async (data: GetMessagesData) => {
                 return await this.getMessages(data);
             },
