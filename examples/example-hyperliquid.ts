@@ -91,7 +91,7 @@ async function main() {
     core.registerIOHandler({
         name: "hyperliquid_place_limit_order_instantorcancel",
         role: HandlerRole.ACTION,
-        schema: z.object({
+        outputSchema: z.object({
             ticker: z
                 .string()
                 .describe(
@@ -101,7 +101,7 @@ async function main() {
             limit_px: z.number(),
             is_buy: z.boolean(),
         }),
-        handler: async (data: unknown) => {
+        execute: async (data: unknown) => {
             const message = data as {
                 ticker: string;
                 sz: number;
@@ -126,7 +126,7 @@ async function main() {
     core.registerIOHandler({
         name: "hyperliquid_place_limit_order_goodtilcancel",
         role: HandlerRole.ACTION,
-        schema: z.object({
+        outputSchema: z.object({
             ticker: z
                 .string()
                 .describe(
@@ -136,7 +136,7 @@ async function main() {
             limit_px: z.number().positive(),
             is_buy: z.boolean(),
         }),
-        handler: async (data: unknown) => {
+        execute: async (data: unknown) => {
             const message = data as {
                 ticker: string;
                 sz: number;
@@ -161,10 +161,10 @@ async function main() {
     core.registerIOHandler({
         name: "hyperliquid_market_sell_positions",
         role: HandlerRole.ACTION,
-        schema: z.object({
+        outputSchema: z.object({
             tickers: z.array(z.string()).min(1),
         }),
-        handler: async (data: unknown) => {
+        execute: async (data: unknown) => {
             const message = data as {
                 tickers: string[];
             };
@@ -181,8 +181,8 @@ async function main() {
     core.registerIOHandler({
         name: "hyperliquid_get_open_orders",
         role: HandlerRole.ACTION,
-        schema: z.object({}),
-        handler: async () => {
+        outputSchema: z.object({}),
+        execute: async () => {
             console.log(chalk.blue(`🔍 Looking at current open orders...`));
             return await hyperliquid.getOpenOrders();
         },
@@ -192,8 +192,8 @@ async function main() {
     core.registerIOHandler({
         name: "hyperliquid_get_account_balances_and_positions",
         role: HandlerRole.ACTION,
-        schema: z.object({}),
-        handler: async () => {
+        outputSchema: z.object({}),
+        execute: async () => {
             console.log(chalk.blue(`🔍 Looking at balances...`));
             return await hyperliquid.getAccountBalancesAndPositions();
         },
@@ -203,7 +203,7 @@ async function main() {
     core.registerIOHandler({
         name: "hyperliquid_place_market_order",
         role: HandlerRole.ACTION,
-        schema: z.object({
+        outputSchema: z.object({
             ticker: z
                 .string()
                 .describe(
@@ -212,7 +212,7 @@ async function main() {
             sz: z.number().positive(),
             is_buy: z.boolean(),
         }),
-        handler: async (data: unknown) => {
+        execute: async (data: unknown) => {
             const message = data as {
                 ticker: string;
                 sz: number;
@@ -235,7 +235,7 @@ async function main() {
     core.registerIOHandler({
         name: "hyperliquid_place_market_order_from_total_usdc_amount",
         role: HandlerRole.ACTION,
-        schema: z.object({
+        outputSchema: z.object({
             ticker: z
                 .string()
                 .describe(
@@ -244,7 +244,7 @@ async function main() {
             usdtotalprice: z.number().positive(),
             is_buy: z.boolean(),
         }),
-        handler: async (data: unknown) => {
+        execute: async (data: unknown) => {
             const message = data as {
                 ticker: string;
                 usdtotalprice: number;
@@ -271,7 +271,7 @@ async function main() {
     core.registerIOHandler({
         name: "hyperliquid_cancel_order",
         role: HandlerRole.ACTION,
-        schema: z.object({
+        outputSchema: z.object({
             ticker: z
                 .string()
                 .describe(
@@ -279,7 +279,7 @@ async function main() {
                 ),
             orderId: z.number(),
         }),
-        handler: async (data: unknown) => {
+        execute: async (data: unknown) => {
             const order = data as {
                 ticker: string;
                 orderId: number;
@@ -288,32 +288,10 @@ async function main() {
         },
     });
 
-    // // Get market data/price feeds
-    // core.registerIOHandler({
-    //     name: "hyperliquid_get_market_data",
-    //     role: HandlerRole.ACTION,
-    //     schema: z.object({
-    //         ticker: z.string().describe(
-    //     "Ticker must be only the letter of the ticker in uppercase without the -PERP or -SPOT suffix"
-    // ),
-    //     }),
-    //     handler: async (data: unknown) => {
-    //         // Implementation
-    //     },
-    // });
-
     core.registerIOHandler({
         name: "user_chat",
         role: HandlerRole.INPUT,
-        // This schema describes what a user message looks like
-        schema: z.object({
-            content: z.string(),
-            userId: z.string().optional(),
-        }),
-        // For "on-demand" input handlers, the `handler()` can be a no-op.
-        // We'll call it manually with data, so we don't need an interval.
-        handler: async (payload) => {
-            // We simply return the payload so the Orchestrator can process it
+        execute: async (payload) => {
             return payload;
         },
     });
@@ -321,21 +299,14 @@ async function main() {
     core.registerIOHandler({
         name: "ui_chat_reply",
         role: HandlerRole.OUTPUT,
-        schema: z.object({
-            userId: z.string().optional(),
+        outputSchema: z.object({
             message: z.string(),
         }),
-        handler: async (payload) => {
-            const { userId, message } = payload as {
-                userId?: string;
+        execute: async (payload) => {
+            const { message } = payload as {
                 message: string;
             };
-
-            // In a real app, you might push this to a WebSocket, or store it in a DB,
-            // or just log it to the console:
             console.log(`Reply to user: ${message}`);
-
-            // No need to return anything if it's a final "output"
         },
     });
 
