@@ -75,6 +75,7 @@ async function main() {
     const discord = new DiscordClient(
         {
             discord_token: env.DISCORD_TOKEN,
+            discord_bot_name: "DeepLoaf",
         },
         loglevel
     );
