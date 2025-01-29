@@ -509,18 +509,103 @@ export enum HandlerRole {
 }
 
 /**
- * A single interface for all Inputs, Outputs.
+ * A single interface for all Input, Output and Action handlers in the system.
+ * This provides a unified way to handle different types of I/O operations.
+ *
+ * @example
+ * ```ts
+ * // Register a chat input handler
+ * orchestrator.registerIOHandler({
+ *   name: "user_chat",
+ *   role: HandlerRole.INPUT,
+ *   execute: async (message) => {
+ *     return message;
+ *   }
+ * });
+ * ```
  */
-export interface IOHandler {
-    /** Unique name for this handler */
+
+/**
+ * Base interface for all IO handlers in the system
+ */
+interface BaseIOHandler {
+    /** Unique name identifier for this handler */
     name: string;
-
-    /** "input" | "output" | (optionally "action") if you want more roles */
-    role: HandlerRole;
-
-    /** The schema for the input handler */
-    schema: z.ZodType<any>;
-
-    /** The main function. For inputs, no payload is typically passed. For outputs, pass the data. */
-    handler: (payload?: unknown) => Promise<unknown>;
 }
+
+/**
+ * Handler for processing input data streams
+ * @example
+ * ```ts
+ * // Register an input handler for chat messages
+ * const handler: InputIOHandler = {
+ *   name: "chat_input",
+ *   role: HandlerRole.INPUT,
+ *   execute: async (message) => {
+ *     return processMessage(message);
+ *   }
+ * };
+ * ```
+ */
+export interface InputIOHandler extends BaseIOHandler {
+    /** Identifies this as an input handler */
+    role: HandlerRole.INPUT;
+    /** Function to process input data */
+    execute?: (data: any) => Promise<unknown>;
+    /** Sets up a subscription to receive streaming data */
+    subscribe?: (onData: (data: any) => void) => () => void;
+}
+
+/**
+ * Handler for sending output data
+ * @example
+ * ```ts
+ * // Register an output handler for chat responses
+ * const handler: OutputIOHandler = {
+ *   name: "chat_output",
+ *   role: HandlerRole.OUTPUT,
+ *   outputSchema: z.object({
+ *     message: z.string()
+ *   }),
+ *   execute: async (response) => {
+ *     await sendResponse(response);
+ *   }
+ * };
+ * ```
+ */
+export interface OutputIOHandler extends BaseIOHandler {
+    /** Identifies this as an output handler */
+    role: HandlerRole.OUTPUT;
+    /** Required schema to validate output data */
+    outputSchema: z.ZodType<any>;
+    /** Function to process and send output */
+    execute?: (data: any) => Promise<unknown>;
+    /** Sets up a subscription to handle output streams */
+    subscribe?: (onData: (data: any) => void) => () => void;
+}
+
+/**
+ * Handler for performing actions/side effects
+ * @example
+ * ```ts
+ * // Register an action handler for database operations
+ * const handler: ActionIOHandler = {
+ *   name: "db_action",
+ *   role: HandlerRole.ACTION,
+ *   execute: async (query) => {
+ *     return await db.execute(query);
+ *   }
+ * };
+ * ```
+ */
+export interface ActionIOHandler extends BaseIOHandler {
+    /** Identifies this as an action handler */
+    role: HandlerRole.ACTION;
+    /** Optional schema to validate action parameters */
+    outputSchema?: z.ZodType<any>;
+    /** Function to execute the action */
+    execute?: (data: any) => Promise<unknown>;
+}
+
+/** Union type of all possible IO handler types */
+export type IOHandler = InputIOHandler | OutputIOHandler | ActionIOHandler;
