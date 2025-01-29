@@ -92,7 +92,7 @@ async function main() {
     core.registerIOHandler({
         name: "twitter_mentions",
         role: HandlerRole.INPUT,
-        handler: async () => {
+        execute: async () => {
             console.log(chalk.blue("🔍 Checking Twitter mentions..."));
             // Create a static mentions input handler
             const mentionsInput = twitter.createMentionsInput(60000);
@@ -112,20 +112,13 @@ async function main() {
                 metadata: mention,
             }));
         },
-        schema: z.object({
-            type: z.string(),
-            room: z.string(),
-            user: z.string(),
-            content: z.string(),
-            metadata: z.record(z.any()),
-        }),
     });
 
     // Register input handler for autonomous thoughts
     core.registerIOHandler({
         name: "consciousness_thoughts",
         role: HandlerRole.INPUT,
-        handler: async () => {
+        execute: async () => {
             console.log(chalk.blue("🧠 Generating thoughts..."));
             const thought = await consciousness.start();
 
@@ -136,25 +129,20 @@ async function main() {
 
             return thought;
         },
-        schema: z.object({
-            type: z.string(),
-            content: z.string(),
-            metadata: z.record(z.any()),
-        }),
     });
 
     // Register output handler for posting thoughts to Twitter
     core.registerIOHandler({
         name: "twitter_thought",
         role: HandlerRole.OUTPUT,
-        handler: async (data: unknown) => {
+        execute: async (data: unknown) => {
             const thoughtData = data as { content: string };
 
             return twitter.createTweetOutput().handler({
                 content: thoughtData.content,
             });
         },
-        schema: z
+        outputSchema: z
             .object({
                 content: z
                     .string()
@@ -176,12 +164,12 @@ async function main() {
     core.registerIOHandler({
         name: "twitter_reply",
         role: HandlerRole.OUTPUT,
-        handler: async (data: unknown) => {
+        execute: async (data: unknown) => {
             const tweetData = data as { content: string; inReplyTo: string };
 
             return twitter.createTweetOutput().handler(tweetData);
         },
-        schema: z
+        outputSchema: z
             .object({
                 content: z.string(),
                 inReplyTo: z
