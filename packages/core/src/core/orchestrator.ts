@@ -283,17 +283,14 @@ export class Orchestrator {
             }
         }
 
-        // Create a new orchestrator record if we have a userId
-
         if (orchestratorId) {
-            // Record the initial input
-            await this.mongoDb.addMessage(
-                orchestratorId,
-                HandlerRole.INPUT,
-                sourceName,
-                initialData
+            const existingOrchestrator = await this.mongoDb.getOrchestratorById(
+                new ObjectId(orchestratorId)
             );
 
+            if (!existingOrchestrator) {
+                orchestratorId = await this.mongoDb.createOrchestrator(userId);
+            }
             this.logger.debug(
                 "Orchestrator.runAutonomousFlow",
                 "Created orchestrator record",
