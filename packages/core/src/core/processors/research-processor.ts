@@ -202,10 +202,11 @@ export class ResearchQuantProcessor extends BaseProcessor {
     private buildHandlerSchemaPart(handlers?: IOHandler[]): string {
         if (!handlers || handlers.length === 0) return "None";
         return handlers
+            .filter((handler) => handler.outputSchema)
             .map(
                 (handler) =>
                     `${handler.name}: ${JSON.stringify(
-                        zodToJsonSchema(handler.schema, handler.name),
+                        zodToJsonSchema(handler.outputSchema!, handler.name),
                         null,
                         2
                     )}`
