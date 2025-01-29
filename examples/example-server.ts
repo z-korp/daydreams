@@ -75,11 +75,11 @@ async function createDaydreamsAgent() {
     orchestrator.registerIOHandler({
         name: "user_chat",
         role: HandlerRole.INPUT,
-        schema: z.object({
+        outputSchema: z.object({
             content: z.string(),
             userId: z.string().optional(),
         }),
-        handler: async (payload) => {
+        execute: async (payload) => {
             return payload;
         },
     });
@@ -87,11 +87,11 @@ async function createDaydreamsAgent() {
     orchestrator.registerIOHandler({
         name: "chat_reply",
         role: HandlerRole.OUTPUT,
-        schema: z.object({
+        outputSchema: z.object({
             userId: z.string().optional(),
             message: z.string(),
         }),
-        handler: async (payload) => {
+        execute: async (payload) => {
             const { userId, message } = payload as {
                 userId?: string;
                 message: string;
