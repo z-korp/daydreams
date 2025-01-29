@@ -218,7 +218,11 @@ async function main() {
                 sz: number;
                 is_buy: boolean;
             };
-            console.log(chalk.blue(`🔍 Selling all ${message.ticker}...`));
+            console.log(
+                chalk.blue(
+                    `🔍 ${message.is_buy ? "Buying" : "Selling"} ${message.sz} of ${message.ticker}...`
+                )
+            );
             try {
                 return await hyperliquid.placeMarketOrder(
                     message.ticker,
