@@ -308,7 +308,7 @@ export class Orchestrator {
             // Record any action results if we have an orchestratorId
             if (orchestratorId) {
                 await this.mongoDb.addMessage(
-                    orchestratorId,
+                    orchestratorId.toString(),
                     HandlerRole.INPUT,
                     source,
                     data
@@ -318,7 +318,7 @@ export class Orchestrator {
                     "Orchestrator.runAutonomousFlow",
                     "Added message to orchestrator record",
                     {
-                        orchestratorId,
+                        orchestratorId: orchestratorId.toString(),
                         message: {
                             role: HandlerRole.INPUT,
                             name: source,
