@@ -1,7 +1,10 @@
+import React, { useRef, useEffect } from 'react';
+
 interface MessageType {
     type: "input" | "output" | "system" | "ERROR" | "OTHER" | "WELCOME" | "INFO";
     message?: string;
     error?: string;
+    timestamp?: number;
 }
 
 interface MessagesListProps {
@@ -9,127 +12,114 @@ interface MessagesListProps {
 }
 
 export function MessagesList({ messages }: MessagesListProps) {
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+
+    const getMessageClasses = (msg: MessageType) => {
+        let containerClass = "flex w-full mb-4 px-4";
+        let bubbleClass = `
+            px-4 py-2 rounded-lg max-w-[80%] font-medium 
+            relative overflow-hidden
+            bg-card text-foreground
+            before:absolute before:inset-[1px] before:rounded-lg before:z-0
+            [&>*]:relative [&>*]:z-10
+        `;
+
+        switch (msg.type) {
+            case "input":
+                containerClass += " justify-end";
+                bubbleClass += ` 
+                    text-[#FF307B]
+                    shadow-[0_0_30px_rgba(255,48,123,0.3)]
+                    border border-[#FF307B]/30
+                `;
+                break;
+
+            case "output":
+                containerClass += " justify-start";
+                bubbleClass += ` 
+                    text-[#00FFC3]
+                    shadow-[0_0_30px_rgba(0,255,195,0.3)]
+                    border border-[#00FFC3]/30
+                `;
+                break;
+
+            case "system":
+                containerClass += " justify-center";
+                bubbleClass += ` 
+                    text-[#1CEB92]
+                    shadow-[0_0_30px_rgba(28,235,146,0.3)]
+                    border border-[#1CEB92]/30
+                `;
+                break;
+
+            case "ERROR":
+                containerClass += " justify-start";
+                bubbleClass += ` 
+                    text-[#FF585D]
+                    shadow-[0_0_30px_rgba(255,88,93,0.3)]
+                    border border-[#FF585D]/30
+                `;
+                break;
+
+            default:
+                containerClass += " justify-start";
+                bubbleClass += ` 
+                    text-[#9F00C5]
+                    shadow-[0_0_30px_rgba(159,0,197,0.3)]
+                    border border-[#9F00C5]/30
+                `;
+        }
+
+        bubbleClass += ` 
+            hover:brightness-105
+            transition-all duration-300
+        `;
+
+        return { containerClass, bubbleClass };
+    };
+
     return (
-        <div className="flex flex-col space-y-4 w-1/2 mx-auto">
+        <div className="flex flex-col w-full">
             {messages.map((msg, i) => {
-                // Base classes that are common to all message types
-                const baseClasses = [
-                    "relative",
-                    "p-4",
-                    "text-sm",
-                    "shadow-md",
-                    "transition-all",
-                    "duration-200",
-                    "w-4/5",  // Using w-4/5 instead of w-[80%]
-                    "whitespace-pre-wrap",
-                    "break-words",
-                    "border",
-                    "border-opacity-50"
-                ];
+                const { containerClass, bubbleClass } = getMessageClasses(msg);
+                const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : null;
 
-                // Container classes start with flex and items-start
-                let containerClasses = ["flex", "items-start"];
-                
-                // Add specific classes based on message type
-                switch (msg.type) {
-                    case "input":
-                        containerClasses.push("justify-end");
-                        baseClasses.push(
-                            "bg-card",
-                            "text-foreground",
-                            "mr-2",
-                            "self-end",
-                            "hover:brightness-110",
-                            "border-primary",
-                        );
-                        break;
-
-                    case "output":
-                        containerClasses.push("justify-start");
-                        baseClasses.push(
-                            "bg-card",
-                            "text-foreground",
-                            "ml-2",
-                            "hover:brightness-105",
-                            "border-secondary"
-                        );
-                        break;
-
-                    case "system":
-                        containerClasses.push("justify-center");
-                        baseClasses.push(
-                            "bg-card",
-                            "text-muted-foreground",
-                            "hover:brightness-105",
-                            "border-muted"
-                        );
-                        break;
-
-                    case "ERROR":
-                        containerClasses.push("justify-center");
-                        baseClasses.push(
-                            "bg-card",
-                            "text-destructive",
-                            "font-semibold",
-                            "hover:brightness-105",
-                            "border-destructive"
-                        );
-                        break;
-
-                    case "WELCOME":
-                        containerClasses.push("justify-center");
-                        baseClasses.push(
-                            "bg-card",
-                            "text-accent-foreground",
-                            "hover:brightness-105",
-                            "border-accent"
-                        );
-                        break;
-
-                    case "INFO":
-                        containerClasses.push("justify-center");
-                        baseClasses.push(
-                            "bg-card",
-                            "text-secondary-foreground",
-                            "hover:brightness-105",
-                            "border-secondary"
-                        );
-                        break;
-
-                    default:
-                        containerClasses.push("justify-start");
-                        baseClasses.push(
-                            "bg-card",
-                            "text-card-foreground",
-                            "ml-2",
-                            "hover:brightness-105",
-                            "border-primary"
-                        );
-                }
-                console.log("msg:L110",baseClasses);
-                console.log("msg:L110",msg.type);
                 return (
-                    <div key={i} className={containerClasses.join(" ")}>
-                        <div className={baseClasses.join(" ")}>
-                            {msg.type !== "INPUT" && msg.type !== "OUTPUT" && (
-                                <div className="mb-1 text-xs font-medium uppercase tracking-wider opacity-80">
+                    <div key={i} className={containerClass}>
+                        <div className={bubbleClass}>
+                            {msg.type !== "input" && msg.type !== "output" && (
+                                <div className="text-xs font-semibold mb-2 opacity-70">
                                     {msg.type}
                                 </div>
                             )}
 
-                            {msg.message && (
-                                <div className="text-base">{msg.message}</div>
-                            )}
+                            <div className={`
+                                break-words overflow-x-auto
+                                ${time ? 'mb-4' : ''}
+                            `}>
+                                {msg.message}
+                            </div>
 
                             {msg.error && (
                                 <div className="text-sm font-medium text-destructive mt-1">
                                     {msg.error}
                                 </div>
                             )}
+
+                            {time && (
+                                <div className="text-xs opacity-50 absolute bottom-1 right-2">
+                                    {time}
+                                </div>
+                            )}
                         </div>
                     </div>
                 );
             })}
+            <div ref={messagesEndRef} />
         </div>
     );
 }
