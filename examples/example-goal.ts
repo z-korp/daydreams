@@ -104,7 +104,7 @@ async function main() {
     dreams.registerOutput({
         name: "EXECUTE_TRANSACTION",
         role: HandlerRole.OUTPUT,
-        handler: async (data: any) => {
+        execute: async (data: any) => {
             const result = await starknetChain.write(data.payload);
             return `Transaction executed successfully: ${JSON.stringify(
                 result,
@@ -112,7 +112,7 @@ async function main() {
                 2
             )}`;
         },
-        schema: z
+        outputSchema: z
             .object({
                 contractAddress: z
                     .string()
@@ -134,7 +134,7 @@ async function main() {
     dreams.registerOutput({
         name: "GRAPHQL_FETCH",
         role: HandlerRole.OUTPUT,
-        handler: async (data: any) => {
+        execute: async (data: any) => {
             const { query, variables } = data.payload ?? {};
             const result = await fetchGraphQL(
                 env.GRAPHQL_URL + "/graphql",
@@ -147,7 +147,7 @@ async function main() {
             ].join("\n\n");
             return `GraphQL data fetched successfully: ${resultStr}`;
         },
-        schema: z
+        outputSchema: z
             .object({
                 query: z.string()
                     .describe(`"query GetRealmInfo { eternumRealmModels(where: { realm_id: 42 }) { edges { node { ... on eternum_Realm { 
