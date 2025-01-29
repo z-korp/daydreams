@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 
 interface MessageType {
-    type: "input" | "output" | "system" | "ERROR" | "OTHER" | "WELCOME" | "INFO";
+    type: "INPUT" | "OUTPUT" | "SYSTEM" | "ERROR" | "OTHER" | "WELCOME" | "INFO";
     message?: string;
     error?: string;
     timestamp?: number;
@@ -29,7 +29,7 @@ export function MessagesList({ messages }: MessagesListProps) {
         `;
 
         switch (msg.type) {
-            case "input":
+            case "INPUT":
                 containerClass += " justify-end";
                 bubbleClass += ` 
                     text-[#FF307B]
@@ -38,7 +38,7 @@ export function MessagesList({ messages }: MessagesListProps) {
                 `;
                 break;
 
-            case "output":
+            case "OUTPUT":
                 containerClass += " justify-start";
                 bubbleClass += ` 
                     text-[#00FFC3]
@@ -47,7 +47,7 @@ export function MessagesList({ messages }: MessagesListProps) {
                 `;
                 break;
 
-            case "system":
+            case "SYSTEM":
                 containerClass += " justify-center";
                 bubbleClass += ` 
                     text-[#1CEB92]

@@ -47,9 +47,12 @@ export interface AppState {
   currentOrchestratorId: string | null;
   currentChatId: string | null;
   setOrchestrators: (orchestrators: Orchestrator[]) => void;
-  setCurrentOrchestratorId: (id: string) => void;
+  setCurrentOrchestratorId: (id: string | null) => void;
   setCurrentChatId: (id: string) => void;
   addOrchestrator: (orchestrator: Orchestrator) => void;
+
+  // New debug state
+  toggleDebug: () => void;
 }
 
 type SetState = (
@@ -127,6 +130,9 @@ export const useAppStore = create<AppState>()(
           orchestrators: [...state.orchestrators, orchestrator],
         }));
       },
+
+      // New debug state
+      toggleDebug: () => set((state) => ({ showDebug: !state.showDebug })),
     }),
     {
       name: 'app-store',

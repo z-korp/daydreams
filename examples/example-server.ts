@@ -123,11 +123,6 @@ function sendJSON(ws: WebSocket, data: unknown) {
 wss.on("connection", (ws) => {
     console.log(chalk.blue("[WS] New client connected."));
 
-    // Envoyer uniquement le message de bienvenue
-    sendJSON(ws, {
-        type: "welcome",
-        message: "Welcome to Daydreams WebSocket server!"
-    });
 
     ws.on("message", async (rawData) => {
         try {
@@ -190,7 +185,7 @@ wss.on("connection", (ws) => {
                 for (const out of outputs) {
                     if (out.name === "chat_reply") {
                         sendJSON(ws, {
-                            type: "response",
+                            type: "OUTPUT",
                             message: out.data.message,
                         });
                     }

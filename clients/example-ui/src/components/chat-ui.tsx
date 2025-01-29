@@ -7,11 +7,7 @@ import { DebugPanel } from "./debug-panel";
 import type { MessageType } from '@/types/chat';
 import { Route } from '@/routes/chats/$chatId';
 import { useChatHistories } from "@/hooks/use-chat-histories";
-interface MessageType {
-    type: "user" | "assistant" | "system" | "error" | "other";
-    message?: string;
-    error?: string;
-}
+
 
 const bladerunnerQuotes = [
     "I've seen things you people wouldn't believe...",
@@ -24,44 +20,65 @@ const bladerunnerQuotes = [
 
 export function ChatUI() {
     const [input, setInput] = useState('');
-    const { currentOrchestratorId } = useAppStore();
-    const { sendGoal } = useDaydreamsWs();
+    const { 
+        currentOrchestratorId, 
+        showDebug, 
+        toggleDebug,
+        messages: storeMessages,
+        addMessage 
+    } = useAppStore();
+    const { sendGoal, messages } = useDaydreamsWs();
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const [allMessages, setAllMessages] = useState<MessageType[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [quoteIndex, setQuoteIndex] = useState(0);
-    const { showDebug } = useAppStore();
     const { chatId } = Route.useParams();
     
     const { chatItems, loading } = useChatHistories();
-    console.log("chatItems", chatItems);
     const currentChat = chatItems.find(chat => chat._id === currentOrchestratorId);
 
     useEffect(() => {
+        if (messages.length > 0) {
+            const lastMessage = messages[messages.length - 1];
+            const isMessageInStore = storeMessages.some(
+                msg => msg.message === lastMessage.message && msg.type === lastMessage.type
+            );
+            
+            if (!isMessageInStore) {
+                addMessage({
+                    ...lastMessage,
+                    timestamp: Date.now()
+                });
+            }
+        }
+    }, [messages, storeMessages, addMessage]);
+
+    useEffect(() => {
         if (currentChat?.messages) {
-            console.log('📝 Processing messages for chat:', chatId);
-            const formattedMessages: MessageType[] = currentChat.messages.map(msg => ({
-                type: msg.role,
+            console.log('📝 Processing historical messages for chat:', chatId);
+            const formattedMessages = currentChat.messages.map(msg => ({
+                type: msg.role.toUpperCase(),
                 message: msg.data.content || msg.data.message || "",
+                timestamp: new Date(msg.timestamp).getTime(),
             }));
-            setAllMessages(formattedMessages);
+            useAppStore.setState({ messages: formattedMessages });
         }
     }, [currentChat, chatId]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [allMessages]);
+    }, [storeMessages]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim() || !currentOrchestratorId) return;
 
-        const userMessage: MessageType = {
-            type: "input",
+        const userMessage = {
+            type: "INPUT",
             message: input,
+            timestamp: Date.now(),
         };
 
-        setAllMessages(prev => [...prev, userMessage]);
+        addMessage(userMessage);
         setInput('');
       
         try {
@@ -72,13 +89,11 @@ export function ChatUI() {
             );
         } catch (error) {
             console.error('Failed to send message:', error);
-            setAllMessages(prev => [
-                ...prev,
-                {
-                    type: "ERROR",
-                    error: "Failed to send message",
-                },
-            ]);
+            addMessage({
+                type: "ERROR",
+                error: "Failed to send message",
+                timestamp: Date.now(),
+            });
         }
     };
 
@@ -101,37 +116,50 @@ export function ChatUI() {
     }
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex h-full">
+            <div className="flex-1 flex flex-col h-full">
+                <div className="flex-1 overflow-y-auto p-4">
+                    <MessagesList messages={storeMessages} />
+                    <div ref={messagesEndRef} />
+                </div>
+
+                <form onSubmit={handleSubmit} className="border-t p-4">
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Type your message..."
+                            className="flex-1 px-4 py-2 rounded-lg border"
+                        />
+                        <button
+                            type="submit"
+                            disabled={!input.trim() || !currentOrchestratorId}
+                            className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
+                        >
+                            Send
+                        </button>
+                        <button
+                            type="button"
+                            onClick={toggleDebug}
+                            className={`px-4 py-2 rounded-lg border transition-colors ${
+                                showDebug 
+                                    ? 'bg-primary text-white' 
+                                    : 'bg-background hover:bg-muted'
+                            }`}
+                        >
+                            Debug
+                        </button>
+                    </div>
+                </form>
+            </div>
+
             {showDebug && (
                 <DebugPanel 
-                    messages={allMessages} 
+                    messages={storeMessages} 
                     state={useAppStore.getState()} 
                 />
             )}
-
-            <div className="flex-1 overflow-y-auto p-4">
-                <MessagesList messages={allMessages} />
-                <div ref={messagesEndRef} />
-            </div>
-
-            <form onSubmit={handleSubmit} className="border-t p-4">
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder="Type your message..."
-                        className="flex-1 px-4 py-2 rounded-lg border"
-                    />
-                    <button
-                        type="submit"
-                        disabled={!input.trim() || !currentOrchestratorId}
-                        className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
-                    >
-                        Send
-                    </button>
-                </div>
-            </form>
         </div>
     );
 }
