@@ -91,7 +91,7 @@ export function MessagesList({ messages }: MessagesListProps) {
                 return (
                     <div key={i} className={containerClass}>
                         <div className={bubbleClass}>
-                            {msg.type !== "input" && msg.type !== "output" && (
+                            {msg.type !== "INPUT" && msg.type !== "OUTPUT" && (
                                 <div className="text-xs font-semibold mb-2 opacity-70">
                                     {msg.type}
                                 </div>

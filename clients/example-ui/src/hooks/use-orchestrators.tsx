@@ -52,7 +52,7 @@ export function useOrchestrators(): UseOrchestratorsReturn {
   useEffect(() => {
     console.log('🚀 useOrchestrators mounted');
     fetchOrchestrators();
-  }, []);
+  }, [fetchOrchestrators]);
 
   const createOrchestrator = useCallback(async (name: string) => {
     try {

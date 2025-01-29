@@ -1,5 +1,5 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
-import  ChatUI  from "@/components/chat-list";
+import  ChatUI  from "@/components/chat-ui";
 export const Route = createLazyFileRoute("/")({
     component: Index,
 });

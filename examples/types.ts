@@ -1,6 +1,6 @@
 import { ObjectId } from "mongodb";
 
-export interface OrchestratorData extends OrchestratorChat {
+export interface OrchestratorData {
     _id: ObjectId;
     name: string;
     userId: string;
