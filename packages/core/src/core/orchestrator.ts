@@ -5,7 +5,7 @@ import type { BaseProcessor } from "./processor";
 import type { Memory, ProcessedResult, VectorDB } from "./types";
 import { HandlerRole, LogLevel, type LoggerConfig } from "./types";
 import type { IOHandler } from "./types";
-import type { MongoDb } from "./mongo-db";
+import type { MongoDb, OrchestratorData } from "./mongo-db";
 import { ObjectId } from "mongodb";
 
 /**
@@ -275,21 +275,35 @@ export class Orchestrator {
         if (orchestratorId) {
             // check if it exists in the db
             const existingOrchestrator = await this.mongoDb.getOrchestratorById(
-                new ObjectId(orchestratorId)
+                orchestratorId.toString()
             );
 
             if (!existingOrchestrator) {
-                orchestratorId = await this.mongoDb.createOrchestrator(userId);
+                orchestratorId = await this.mongoDb.createOrchestrator({
+                    userId,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    messages: [],
+                    model: "default",
+                    temperature: 0.7
+                } as OrchestratorData);
             }
         }
 
         if (orchestratorId) {
             const existingOrchestrator = await this.mongoDb.getOrchestratorById(
-                new ObjectId(orchestratorId)
+                orchestratorId.toString()
             );
 
             if (!existingOrchestrator) {
-                orchestratorId = await this.mongoDb.createOrchestrator(userId);
+                orchestratorId = await this.mongoDb.createOrchestrator({
+                    userId,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    messages: [],
+                    model: "default",
+                    temperature: 0.7
+                } as OrchestratorData);
             }
             this.logger.debug(
                 "Orchestrator.runAutonomousFlow",
@@ -308,7 +322,7 @@ export class Orchestrator {
             // Record any action results if we have an orchestratorId
             if (orchestratorId) {
                 await this.mongoDb.addMessage(
-                    orchestratorId.toString(),
+                    orchestratorId,
                     HandlerRole.INPUT,
                     source,
                     data
@@ -318,7 +332,7 @@ export class Orchestrator {
                     "Orchestrator.runAutonomousFlow",
                     "Added message to orchestrator record",
                     {
-                        orchestratorId: orchestratorId.toString(),
+                        orchestratorId: orchestratorId,
                         message: {
                             role: HandlerRole.INPUT,
                             name: source,

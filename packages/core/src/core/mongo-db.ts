@@ -21,7 +21,7 @@ export interface OrchestratorMessage {
     timestamp: Date;
 }
 
-export interface OrchestratorChat {
+export interface OrchestratorData {
     _id?: ObjectId;
     userId: string;
     createdAt: Date;
@@ -34,7 +34,7 @@ export interface OrchestratorChat {
 export class MongoDb {
     private client: MongoClient;
     private collection!: Collection<ScheduledTask>;
-    private orchestratorCollection!: Collection<OrchestratorChat>;
+    private orchestratorCollection!: Collection<OrchestratorData>;
 
     /**
      * @param uri   A MongoDB connection string
@@ -67,7 +67,7 @@ export class MongoDb {
         await this.collection.createIndex({ status: 1 });
 
         this.orchestratorCollection =
-            db.collection<OrchestratorChat>("orchestrators");
+            db.collection<OrchestratorData>("orchestrators");
 
         await this.orchestratorCollection.createIndex({
             userId: 1,
@@ -276,14 +276,14 @@ export class MongoDb {
      */
     public async findOrchestratorsByUser(
         userId: string
-    ): Promise<OrchestratorChat[]> {
+    ): Promise<OrchestratorData[]> {
         return this.orchestratorCollection.find({ userId }).toArray();
     }
 
     /**
      * Retrieves a single orchestrator document by its ObjectId.
      */
-    public async getOrchestratorById(orchestratorId: string): Promise<OrchestratorChat | null> {
+    public async getOrchestratorById(orchestratorId: string): Promise<OrchestratorData | null> {
         try {
             const orchestrator = await this.orchestratorCollection.findOne({
                 _id: new ObjectId(orchestratorId)
