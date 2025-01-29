@@ -13,8 +13,11 @@ import { createFileRoute } from '@tanstack/react-router'
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as MyAgentsIndexImport } from './routes/my-agents/index'
 import { Route as ChatsIndexImport } from './routes/chats/index'
 import { Route as ChatsChatIdImport } from './routes/chats/$chatId'
+import { Route as MyAgentsChatsIndexImport } from './routes/my-agents/chats/index'
+import { Route as MyAgentsChatsChatIdImport } from './routes/my-agents/chats/$chatId'
 
 // Create Virtual Routes
 
@@ -28,6 +31,12 @@ const IndexLazyRoute = IndexLazyImport.update({
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
 
+const MyAgentsIndexRoute = MyAgentsIndexImport.update({
+  id: '/my-agents/',
+  path: '/my-agents/',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const ChatsIndexRoute = ChatsIndexImport.update({
   id: '/chats/',
   path: '/chats/',
@@ -37,6 +46,18 @@ const ChatsIndexRoute = ChatsIndexImport.update({
 const ChatsChatIdRoute = ChatsChatIdImport.update({
   id: '/chats/$chatId',
   path: '/chats/$chatId',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const MyAgentsChatsIndexRoute = MyAgentsChatsIndexImport.update({
+  id: '/my-agents/chats/',
+  path: '/my-agents/chats/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const MyAgentsChatsChatIdRoute = MyAgentsChatsChatIdImport.update({
+  id: '/my-agents/chats/$chatId',
+  path: '/my-agents/chats/$chatId',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -65,6 +86,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatsIndexImport
       parentRoute: typeof rootRoute
     }
+    '/my-agents/': {
+      id: '/my-agents/'
+      path: '/my-agents'
+      fullPath: '/my-agents'
+      preLoaderRoute: typeof MyAgentsIndexImport
+      parentRoute: typeof rootRoute
+    }
+    '/my-agents/chats/$chatId': {
+      id: '/my-agents/chats/$chatId'
+      path: '/my-agents/chats/$chatId'
+      fullPath: '/my-agents/chats/$chatId'
+      preLoaderRoute: typeof MyAgentsChatsChatIdImport
+      parentRoute: typeof rootRoute
+    }
+    '/my-agents/chats/': {
+      id: '/my-agents/chats/'
+      path: '/my-agents/chats'
+      fullPath: '/my-agents/chats'
+      preLoaderRoute: typeof MyAgentsChatsIndexImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -74,12 +116,18 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
   '/chats': typeof ChatsIndexRoute
+  '/my-agents': typeof MyAgentsIndexRoute
+  '/my-agents/chats/$chatId': typeof MyAgentsChatsChatIdRoute
+  '/my-agents/chats': typeof MyAgentsChatsIndexRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
   '/chats': typeof ChatsIndexRoute
+  '/my-agents': typeof MyAgentsIndexRoute
+  '/my-agents/chats/$chatId': typeof MyAgentsChatsChatIdRoute
+  '/my-agents/chats': typeof MyAgentsChatsIndexRoute
 }
 
 export interface FileRoutesById {
@@ -87,14 +135,36 @@ export interface FileRoutesById {
   '/': typeof IndexLazyRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
   '/chats/': typeof ChatsIndexRoute
+  '/my-agents/': typeof MyAgentsIndexRoute
+  '/my-agents/chats/$chatId': typeof MyAgentsChatsChatIdRoute
+  '/my-agents/chats/': typeof MyAgentsChatsIndexRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chats/$chatId' | '/chats'
+  fullPaths:
+    | '/'
+    | '/chats/$chatId'
+    | '/chats'
+    | '/my-agents'
+    | '/my-agents/chats/$chatId'
+    | '/my-agents/chats'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chats/$chatId' | '/chats'
-  id: '__root__' | '/' | '/chats/$chatId' | '/chats/'
+  to:
+    | '/'
+    | '/chats/$chatId'
+    | '/chats'
+    | '/my-agents'
+    | '/my-agents/chats/$chatId'
+    | '/my-agents/chats'
+  id:
+    | '__root__'
+    | '/'
+    | '/chats/$chatId'
+    | '/chats/'
+    | '/my-agents/'
+    | '/my-agents/chats/$chatId'
+    | '/my-agents/chats/'
   fileRoutesById: FileRoutesById
 }
 
@@ -102,12 +172,18 @@ export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
   ChatsChatIdRoute: typeof ChatsChatIdRoute
   ChatsIndexRoute: typeof ChatsIndexRoute
+  MyAgentsIndexRoute: typeof MyAgentsIndexRoute
+  MyAgentsChatsChatIdRoute: typeof MyAgentsChatsChatIdRoute
+  MyAgentsChatsIndexRoute: typeof MyAgentsChatsIndexRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
   ChatsChatIdRoute: ChatsChatIdRoute,
   ChatsIndexRoute: ChatsIndexRoute,
+  MyAgentsIndexRoute: MyAgentsIndexRoute,
+  MyAgentsChatsChatIdRoute: MyAgentsChatsChatIdRoute,
+  MyAgentsChatsIndexRoute: MyAgentsChatsIndexRoute,
 }
 
 export const routeTree = rootRoute
@@ -122,7 +198,10 @@ export const routeTree = rootRoute
       "children": [
         "/",
         "/chats/$chatId",
-        "/chats/"
+        "/chats/",
+        "/my-agents/",
+        "/my-agents/chats/$chatId",
+        "/my-agents/chats/"
       ]
     },
     "/": {
@@ -133,6 +212,15 @@ export const routeTree = rootRoute
     },
     "/chats/": {
       "filePath": "chats/index.tsx"
+    },
+    "/my-agents/": {
+      "filePath": "my-agents/index.tsx"
+    },
+    "/my-agents/chats/$chatId": {
+      "filePath": "my-agents/chats/$chatId.tsx"
+    },
+    "/my-agents/chats/": {
+      "filePath": "my-agents/chats/index.tsx"
     }
   }
 }

@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import * as React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MessagesList } from "@/components/message-list";
-import { generateUserId, useDaydreamsWs } from "@/hooks/use-daydreams";
-import { useChatHistory } from "@/hooks/use-chat-history";
-import { useSingleChatHistory } from "@/hooks/use-single-chat-history";
-
+import { useDaydreamsWs } from "@/hooks/use-daydreams";
+import { useAppStore } from "@/store/use-app-store";
+import { DebugPanel } from "./debug-panel";
+import type { MessageType } from '@/types/chat';
+import { Route } from '@/routes/chats/$chatId';
+import { useChatHistories } from "@/hooks/use-chat-histories";
 interface MessageType {
     type: "user" | "assistant" | "system" | "error" | "other";
     message?: string;
@@ -19,140 +22,117 @@ const bladerunnerQuotes = [
     "I want more life, father",
 ];
 
-function ChatUI({ chatId }: { chatId: string }) {
-    const [message, setMessage] = useState("");
+export function ChatUI() {
+    const [input, setInput] = useState('');
+    const { currentOrchestratorId } = useAppStore();
+    const { sendGoal } = useDaydreamsWs();
+    const messagesEndRef = useRef<HTMLDivElement>(null);
     const [allMessages, setAllMessages] = useState<MessageType[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [quoteIndex, setQuoteIndex] = useState(0);
-    const { messages, sendGoal } = useDaydreamsWs();
+    const { showDebug } = useAppStore();
+    const { chatId } = Route.useParams();
+    
+    const { chatItems, loading } = useChatHistories();
+    console.log("chatItems", chatItems);
+    const currentChat = chatItems.find(chat => chat._id === currentOrchestratorId);
 
-    const {
-        history,
-        loading: historyLoading,
-        error,
-    } = useSingleChatHistory({
-        chatId,
-        userId: generateUserId(),
-    });
-
-    // Load chat history when component mounts or history changes
     useEffect(() => {
-        if (history?.messages) {
-            const formattedMessages: MessageType[] = history.messages.map(
-                (msg) => ({
-                    type:
-                        msg.role === "assistant"
-                            ? "assistant"
-                            : msg.role === "user"
-                              ? "user"
-                              : "system",
-                    message: msg.data.content || msg.data.message || "",
-                })
-            );
+        if (currentChat?.messages) {
+            console.log('📝 Processing messages for chat:', chatId);
+            const formattedMessages: MessageType[] = currentChat.messages.map(msg => ({
+                type: msg.role === "assistant" ? "assistant" : 
+                      msg.role === "user" ? "user" : "system",
+                message: msg.data.content || msg.data.message || "",
+            }));
             setAllMessages(formattedMessages);
         }
-    }, [history]);
+    }, [currentChat, chatId]);
 
-    // Handle new WebSocket messages
     useEffect(() => {
-        if (messages.length === 0) return;
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [allMessages]);
 
-        const lastMessage = messages[messages.length - 1];
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!input.trim() || !currentOrchestratorId) return;
 
-        // Only clear loading if we received an assistant or error message
-        if (lastMessage.type !== "user") {
-            setIsLoading(false);
+        const userMessage: MessageType = {
+            type: "user",
+            message: input,
+        };
+
+        setAllMessages(prev => [...prev, userMessage]);
+        setInput('');
+      
+        try {
+            await sendGoal(
+                input,
+                currentOrchestratorId,
+                currentChat?.userId,
+            );
+        } catch (error) {
+            console.error('Failed to send message:', error);
+            setAllMessages(prev => [
+                ...prev,
+                {
+                    type: "error",
+                    error: "Failed to send message",
+                },
+            ]);
         }
+    };
 
-        setAllMessages((prev: MessageType[]) => {
-            const typedMessage: MessageType = {
-                type: lastMessage.type as MessageType["type"],
-                message: lastMessage.message,
-                error: lastMessage.error,
-            };
-
-            // Avoid duplicate messages
-            if (
-                prev.length > 0 &&
-                JSON.stringify(prev[prev.length - 1]) ===
-                    JSON.stringify(typedMessage)
-            ) {
-                return prev;
-            }
-            return [...prev, typedMessage];
-        });
-    }, [messages]);
-
-    // Add quote cycling effect when loading
     useEffect(() => {
         let interval: NodeJS.Timeout;
         if (isLoading) {
             interval = setInterval(() => {
                 setQuoteIndex((prev) => (prev + 1) % bladerunnerQuotes.length);
-            }, 3000); // Change quote every 3 seconds
+            }, 3000);
         }
         return () => clearInterval(interval);
     }, [isLoading]);
 
-    const handleSubmit = () => {
-        if (!message.trim()) return;
-        setIsLoading(true);
-        setAllMessages((prev) => [...prev, { type: "user", message: message }]);
-        sendGoal(message, chatId);
-        setMessage("");
-    };
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     return (
-        <div className="flex flex-col flex-1">
-            <div className="relative flex flex-col h-[calc(100vh-4rem)] rounded-lg border border-l-0">
-                <div className="flex-1 p-4 overflow-auto">
-                    {historyLoading ? (
-                        <div className="flex items-center justify-center p-4 text-muted-foreground italic">
-                            Loading chat history...
-                        </div>
-                    ) : error ? (
-                        <div className="flex items-center justify-center p-4 text-destructive">
-                            Error loading chat history: {error}
-                        </div>
-                    ) : (
-                        <>
-                            <MessagesList messages={allMessages} />
-                            {isLoading && (
-                                <div className="flex items-center justify-center p-4 text-muted-foreground italic">
-                                    {bladerunnerQuotes[quoteIndex]}
-                                </div>
-                            )}
-                        </>
-                    )}
-                </div>
+        <div className="flex flex-col h-full">
+            {showDebug && (
+                <DebugPanel 
+                    messages={allMessages} 
+                    state={useAppStore.getState()} 
+                />
+            )}
 
-                {/* Input bar */}
-                <div className="border-t bg-background flex items-center">
+            <div className="flex-1 overflow-y-auto p-4">
+                <MessagesList messages={allMessages} />
+                <div ref={messagesEndRef} />
+            </div>
+
+            <form onSubmit={handleSubmit} className="border-t p-4">
+                <div className="flex gap-2">
                     <input
                         type="text"
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                                handleSubmit();
-                            }
-                        }}
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
                         placeholder="Type your message..."
-                        className="flex-1 px-8 py-8 rounded-lg bg-background text-foreground placeholder:text-primary
-                           focus:outline-none focus:ring-2 focus:ring-primary"
-                        disabled={historyLoading} // Disable input while loading history
+                        className="flex-1 px-4 py-2 rounded-lg border"
                     />
                     <button
-                        onClick={handleSubmit}
-                        disabled={historyLoading} // Disable button while loading history
-                        className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 
-                           focus:outline-none focus:ring-2 focus:ring-primary h-full w-64
-                           disabled:opacity-50 disabled:cursor-not-allowed"
+                        type="submit"
+                        disabled={!input.trim() || !currentOrchestratorId}
+                        className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
                     >
                         Send
                     </button>
                 </div>
-            </div>
+            </form>
         </div>
     );
 }

@@ -28,7 +28,6 @@ const scheduledTaskDb = new MongoDb(
 await scheduledTaskDb.connect();
 console.log(chalk.green("✅ Scheduled task database connected"));
 
-await scheduledTaskDb.deleteAll();
 
 // ------------------------------------------------------
 // 1) CREATE DAYDREAMS AGENT
@@ -122,9 +121,10 @@ function sendJSON(ws: WebSocket, data: unknown) {
 wss.on("connection", (ws) => {
     console.log(chalk.blue("[WS] New client connected."));
 
+    // Envoyer uniquement le message de bienvenue
     sendJSON(ws, {
         type: "welcome",
-        message: "being human is hard",
+        message: "Welcome to Daydreams WebSocket server!"
     });
 
     ws.on("message", async (rawData) => {
@@ -145,9 +145,10 @@ wss.on("connection", (ws) => {
                 throw new Error("userId is required");
             }
 
-            orchestrator.initializeOrchestrator(userId);
-
+            console.log("orchestratorId", orchestratorId);  
             // Process the message using the orchestrator with the provided userId
+            const currentOrchestrator = await scheduledTaskDb.getOrchestratorById(orchestratorId)
+
             const outputs = await orchestrator.dispatchToInput(
                 "user_chat",
                 {
@@ -195,29 +196,73 @@ process.on("SIGINT", async () => {
     process.exit(0);
 });
 
+// Configuration CORS plus détaillée
+const corsOptions = {
+    origin: ['http://localhost:5173', 'http://localhost:3000'], // Ajoutez vos origines autorisées
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    optionsSuccessStatus: 200
+};
+
 // Create Express app for REST API
 const app = express();
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Add REST endpoint for chat history
 app.get("/api/history/:userId", async (req, res) => {
     try {
         const { userId } = req.params;
-        console.log("Fetching history for userId:", userId);
+        const { orchestratorId } = req.query;
+        console.log(chalk.blue("[API] Fetching history:"), { userId, orchestratorId });
 
-        // Get all orchestrator records for this user
-        const histories =
-            await scheduledTaskDb.getOrchestratorsByUserId(userId);
-
-        if (!histories || histories.length === 0) {
-            console.log("No histories found");
-            return res.status(404).json({ error: "No history found for user" });
+        let query: any = { userId: userId.toString() };
+        if (orchestratorId) {
+            query._id = new ObjectId(orchestratorId.toString());
         }
 
+        let histories = await scheduledTaskDb.collection
+            .find(query)
+            .toArray();
+
+        // Si aucun historique n'est trouvé et qu'aucun orchestratorId n'est spécifié,
+        // créer un orchestrateur par défaut
+        if (histories.length === 0 && !orchestratorId) {
+            console.log(chalk.yellow("[API] No histories found, creating default orchestrator"));
+            
+            const id = new ObjectId();
+            const defaultOrchestrator = {
+                _id: id,
+                name: "Default Orchestrator",
+                userId: userId.toString(),
+                messages: [{
+                    role: "system",
+                    name: "system",
+                    data: {
+                        content: "Default orchestrator initialized",
+                        userId
+                    },
+                    timestamp: new Date()
+                }],
+                createdAt: new Date(),
+                updatedAt: new Date()
+            };
+
+            await scheduledTaskDb.collection.insertOne(defaultOrchestrator);
+            histories = [defaultOrchestrator];
+            console.log(chalk.green("[API] Created default orchestrator:", id.toString()));
+        }
+
+        if (histories.length === 0) {
+            console.log(chalk.yellow("[API] No histories found after creation attempt"));
+            return res.status(404).json({ error: "No history found" });
+        }
+
+        console.log(chalk.blue("[API] Returning histories:"), histories);
         res.json(histories);
     } catch (error) {
-        console.error("Error fetching chat history:", error);
+        console.error(chalk.red("[API] Error fetching chat history:"), error);
         res.status(500).json({
             error: "Failed to fetch chat history",
             details: error instanceof Error ? error.message : String(error),
@@ -225,9 +270,14 @@ app.get("/api/history/:userId", async (req, res) => {
     }
 });
 
+
+// Récupérer l'historique d'un chat spécifique
 app.get("/api/history/:userId/:chatId", async (req, res) => {
     try {
         const { userId, chatId } = req.params;
+        const { orchestratorId } = req.query; // Ajout du orchestratorId depuis la query
+
+        console.log("[API] Fetching chat history:", { userId, chatId, orchestratorId });
 
         // Convert string chatId to ObjectId
         let objectId;
@@ -237,17 +287,177 @@ app.get("/api/history/:userId/:chatId", async (req, res) => {
             return res.status(400).json({ error: "Invalid chat ID format" });
         }
 
-        const history = await scheduledTaskDb.getOrchestratorById(objectId);
+        // Récupérer l'historique avec l'orchestratorId
+        const history = await scheduledTaskDb.collection.findOne({
+            _id: objectId,
+            userId: userId,
+            ...(orchestratorId && { orchestratorId: orchestratorId })
+        });
 
         if (!history) {
             return res.status(404).json({ error: "History not found" });
         }
 
+        console.log("[API] Found history:", history);
         res.json(history);
     } catch (error) {
-        console.error("Error fetching chat history:", error);
+        console.error("[API] Error fetching chat history:", error);
         res.status(500).json({
             error: "Failed to fetch chat history",
+            details: error instanceof Error ? error.message : String(error),
+        });
+    }
+});
+
+// Lister les orchestrateurs
+app.get("/api/orchestrators", async (req, res) => {
+    try {
+        const { userId } = req.query;
+        if (!userId) {
+            return res.status(400).json({ error: "userId is required" });
+        }
+
+        console.log(chalk.blue("[API] Listing orchestrators for user:", userId));
+
+        // Récupérer les orchestrateurs depuis la base de données
+        let orchestrators = await scheduledTaskDb.getOrchestratorsByUserId(userId)
+
+        // Si aucun orchestrateur n'existe pour cet utilisateur, en créer un par défaut
+        if (orchestrators.length === 0) {
+            console.log(chalk.yellow("[API] No orchestrators found, creating default one"));
+            
+            const id = new ObjectId();
+            const defaultOrchestrator = {
+                _id: id,
+                name: "Default Orchestrator",
+                userId: userId.toString(),
+                messages: [{
+                    role: "system",
+                    name: "system",
+                    data: {
+                        content: "Default orchestrator initialized",
+                        userId
+                    },
+                    timestamp: new Date()
+                }],
+                createdAt: new Date(),
+                updatedAt: new Date()
+            };
+
+            await scheduledTaskDb.createOrchestrator(userId);
+            orchestrators = [defaultOrchestrator];
+            console.log(chalk.green("[API] Created default orchestrator"));
+        }
+
+        console.log(chalk.blue("[API] Returning orchestrators:"), orchestrators);
+
+        res.json(orchestrators.map(orch => ({
+            id: orch._id.toString(),
+            name: orch.name || `Chat ${new Date(orch.createdAt).toLocaleString()}`,
+            userId: orch.userId,
+            messages: orch.messages || [],
+            createdAt: orch.createdAt,
+            updatedAt: orch.updatedAt
+        })));
+    } catch (error) {
+        console.error(chalk.red("[API] Error listing orchestrators:"), error);
+        res.status(500).json({
+            error: "Failed to list orchestrators",
+            details: error instanceof Error ? error.message : String(error),
+        });
+    }
+});
+
+// Créer un orchestrateur
+app.post("/api/orchestrators", async (req, res) => {
+    try {
+        const { name, userId } = req.body;
+        if (!userId) {
+            return res.status(400).json({ error: "userId is required" });
+        }
+
+        console.log(chalk.blue("[API] Creating orchestrator:"), { name, userId });
+        const id = new ObjectId();
+
+        // Message initial pour debug
+        const initialMessage = {
+            role: "system",
+            name: "system",
+            data: {
+                content: "Orchestrator initialized",
+                userId
+            },
+            timestamp: new Date()
+        };
+
+        // Créer un objet simplifié pour la sauvegarde
+        const orchestratorData = {
+            _id: id,
+            name: name || `Orchestrator ${id}`,
+            userId,
+            messages: [initialMessage],
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+        
+        console.log(chalk.blue("[API] Saving orchestrator data:"), orchestratorData);
+        await scheduledTaskDb.createOrchestrator(userId);
+
+        // Envoyer la réponse
+        res.json({
+            id: id.toString(),
+            name: orchestratorData.name,
+            userId: orchestratorData.userId,
+        });
+    } catch (error) {
+        console.error(chalk.red("[API] Error creating orchestrator:"), error);
+        res.status(500).json({
+            error: "Failed to create orchestrator",
+            details: error instanceof Error ? error.message : String(error),
+        });
+    }
+});
+
+// Récupérer un orchestrateur spécifique avec ses messages
+app.get("/api/orchestrators/:orchestratorId", async (req, res) => {
+    try {
+        const { orchestratorId } = req.params;
+        const { userId } = req.query; // Ajout de userId en query param
+
+        console.log(chalk.blue("[API] Fetching orchestrator:"), { orchestratorId, userId });
+
+        let objectId;
+        try {
+            objectId = new ObjectId(orchestratorId);
+        } catch (err) {
+            return res.status(400).json({ error: "Invalid orchestrator ID format" });
+        }
+
+        // Rechercher l'orchestrateur avec l'ID et le userId
+        const orchestrator = await scheduledTaskDb.collection.findOne({
+            _id: objectId,
+            userId: userId?.toString() // Vérifier que l'orchestrateur appartient à l'utilisateur
+        });
+
+        if (!orchestrator) {
+            return res.status(404).json({ error: "Orchestrator not found" });
+        }
+
+        console.log(chalk.blue("[API] Found orchestrator:"), orchestrator);
+
+        // Formater la réponse
+        res.json({
+            id: orchestrator._id.toString(),
+            name: orchestrator.name,
+            userId: orchestrator.userId,
+            messages: orchestrator.messages || [],
+            createdAt: orchestrator.createdAt,
+            updatedAt: orchestrator.updatedAt
+        });
+    } catch (error) {
+        console.error(chalk.red("[API] Error fetching orchestrator:"), error);
+        res.status(500).json({
+            error: "Failed to fetch orchestrator",
             details: error instanceof Error ? error.message : String(error),
         });
     }
