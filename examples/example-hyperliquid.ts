@@ -1,7 +1,14 @@
 /**
- * Example demonstrating a Hyperliquid bot using the Daydreams package.
- * This bot can:
- * - Place order
+ * Example demonstrating a comprehensive Hyperliquid trading bot using the Daydreams package.
+ * This bot provides full trading capabilities including:
+ * - Place limit orders (instant-or-cancel & good-til-cancel)
+ * - Place market orders with size or USD amount
+ * - Get account balances and positions
+ * - Monitor open orders
+ * - Cancel existing orders
+ * - Market sell positions
+ * - Interactive console interface for manual trading
+ * - Real-time order status monitoring
  */
 
 import { Orchestrator } from "../packages/core/src/core/orchestrator";
@@ -14,7 +21,7 @@ import { LLMClient } from "../packages/core/src/core/llm-client";
 import { env } from "../packages/core/src/core/env";
 import { LogLevel } from "../packages/core/src/core/types";
 import chalk from "chalk";
-import { defaultCharacter } from "../packages/core/src/core/character";
+import { defaultCharacter } from "../packages/core/src/core/character_trading_sage";
 import { z } from "zod";
 import readline from "readline";
 import { MongoDb } from "../packages/core/src/core/mongo-db";
@@ -80,12 +87,16 @@ async function main() {
         loglevel
     );
 
-    // Register input handler for Discord mentions
+    // Register handler for placing instant-or-cancel limit orders
     core.registerIOHandler({
         name: "hyperliquid_place_limit_order_instantorcancel",
         role: HandlerRole.ACTION,
         schema: z.object({
-            ticker: z.string(),
+            ticker: z
+                .string()
+                .describe(
+                    "Ticker must be only the letter of the ticker in uppercase without the -PERP or -SPOT suffix"
+                ),
             sz: z.number(),
             limit_px: z.number(),
             is_buy: z.boolean(),
@@ -111,14 +122,18 @@ async function main() {
         },
     });
 
-    // Register input handler for Discord mentions
+    // Register handler for placing good-til-cancel limit orders
     core.registerIOHandler({
         name: "hyperliquid_place_limit_order_goodtilcancel",
         role: HandlerRole.ACTION,
         schema: z.object({
-            ticker: z.string(),
-            sz: z.number(),
-            limit_px: z.number(),
+            ticker: z
+                .string()
+                .describe(
+                    "Ticker must be only the letter of the ticker in uppercase without the -PERP or -SPOT suffix"
+                ),
+            sz: z.number().positive(),
+            limit_px: z.number().positive(),
             is_buy: z.boolean(),
         }),
         handler: async (data: unknown) => {
@@ -142,12 +157,12 @@ async function main() {
         },
     });
 
-    // Register input handler for Discord mentions
+    // Register handler for market selling positions
     core.registerIOHandler({
         name: "hyperliquid_market_sell_positions",
         role: HandlerRole.ACTION,
         schema: z.object({
-            tickers: z.array(z.string()),
+            tickers: z.array(z.string()).min(1),
         }),
         handler: async (data: unknown) => {
             const message = data as {
@@ -162,13 +177,39 @@ async function main() {
         },
     });
 
-    // Register input handler for Discord mentions
+    // Register handler for getting open orders
+    core.registerIOHandler({
+        name: "hyperliquid_get_open_orders",
+        role: HandlerRole.ACTION,
+        schema: z.object({}),
+        handler: async () => {
+            console.log(chalk.blue(`🔍 Looking at current open orders...`));
+            return await hyperliquid.getOpenOrders();
+        },
+    });
+
+    // Register handler for getting account balance
+    core.registerIOHandler({
+        name: "hyperliquid_get_account_balances_and_positions",
+        role: HandlerRole.ACTION,
+        schema: z.object({}),
+        handler: async () => {
+            console.log(chalk.blue(`🔍 Looking at balances...`));
+            return await hyperliquid.getAccountBalancesAndPositions();
+        },
+    });
+
+    // Register handler for placing market orders
     core.registerIOHandler({
         name: "hyperliquid_place_market_order",
         role: HandlerRole.ACTION,
         schema: z.object({
-            ticker: z.string(),
-            sz: z.number(),
+            ticker: z
+                .string()
+                .describe(
+                    "Ticker must be only the letter of the ticker in uppercase without the -PERP or -SPOT suffix"
+                ),
+            sz: z.number().positive(),
             is_buy: z.boolean(),
         }),
         handler: async (data: unknown) => {
@@ -190,13 +231,17 @@ async function main() {
         },
     });
 
-    // Register input handler for Discord mentions
+    // Register handler for placing market orders with USDC amount
     core.registerIOHandler({
         name: "hyperliquid_place_market_order_from_total_usdc_amount",
         role: HandlerRole.ACTION,
         schema: z.object({
-            ticker: z.string(),
-            usdtotalprice: z.number(),
+            ticker: z
+                .string()
+                .describe(
+                    "Ticker must be only the letter of the ticker in uppercase without the -PERP or -SPOT suffix"
+                ),
+            usdtotalprice: z.number().positive(),
             is_buy: z.boolean(),
         }),
         handler: async (data: unknown) => {
@@ -207,7 +252,7 @@ async function main() {
             };
             console.log(
                 chalk.blue(
-                    `🔍 ${message.is_buy ? "Buying" : "Selling"} all ${message.ticker}...`
+                    `🔍 ${message.is_buy ? "Buying" : "Selling"} ${message.ticker} for $${message.usdtotalprice}...`
                 )
             );
             try {
@@ -222,18 +267,40 @@ async function main() {
         },
     });
 
-    // Register input handler for Discord mentions
+    // Cancel orders handler
     core.registerIOHandler({
-        name: "hyperliquid_get_positions",
+        name: "hyperliquid_cancel_order",
         role: HandlerRole.ACTION,
         schema: z.object({
-            user: z.string(),
+            ticker: z
+                .string()
+                .describe(
+                    "Ticker must be only the letter of the ticker in uppercase without the -PERP or -SPOT suffix"
+                ),
+            orderId: z.number(),
         }),
-        handler: async () => {
-            console.log(chalk.blue(`🔍 Retrieving all positions...`));
-            return await hyperliquid.getPositions();
+        handler: async (data: unknown) => {
+            const order = data as {
+                ticker: string;
+                orderId: number;
+            };
+            return await hyperliquid.cancelOrder(order.ticker, order.orderId);
         },
     });
+
+    // // Get market data/price feeds
+    // core.registerIOHandler({
+    //     name: "hyperliquid_get_market_data",
+    //     role: HandlerRole.ACTION,
+    //     schema: z.object({
+    //         ticker: z.string().describe(
+    //     "Ticker must be only the letter of the ticker in uppercase without the -PERP or -SPOT suffix"
+    // ),
+    //     }),
+    //     handler: async (data: unknown) => {
+    //         // Implementation
+    //     },
+    // });
 
     core.registerIOHandler({
         name: "user_chat",
@@ -318,11 +385,13 @@ async function main() {
         core.removeIOHandler("hyperliquid_place_limit_order_instantorcancel");
         core.removeIOHandler("hyperliquid_place_limit_order_goodtilcancel");
         core.removeIOHandler("hyperliquid_market_sell_positions");
+        core.removeIOHandler("hyperliquid_get_open_orders");
+        core.removeIOHandler("hyperliquid_get_account_balances_and_positions");
         core.removeIOHandler("hyperliquid_place_market_order");
         core.removeIOHandler(
             "hyperliquid_place_market_order_from_total_usdc_amount"
         );
-        core.removeIOHandler("hyperliquid_get_positions");
+        core.removeIOHandler("hyperliquid_cancel_order");
         core.removeIOHandler("user_chat");
         core.removeIOHandler("ui_chat_reply");
         rl.close();
