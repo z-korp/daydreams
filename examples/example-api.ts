@@ -220,9 +220,11 @@ async function main() {
                 const outputs: any = await orchestrator.dispatchToInput(
                     "user_chat",
                     {
-                        content: userMessage,
-                        userId,
+                        headers: {
+                            "x-user-id": userId,
+                        },
                     },
+                    userMessage,
                     userId
                 );
 
