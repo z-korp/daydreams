@@ -20,7 +20,8 @@ import chalk from "chalk";
 import { defaultCharacter } from "../packages/core/src/core/character_helpful_assistant";
 import { z } from "zod";
 import readline from "readline";
-import { MongoDb } from "../packages/core/src/core/mongo-db";
+import { MongoDb } from "../packages/core/src/core/db/mongo-db";
+import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
 
 async function main() {
     const loglevel = LogLevel.ERROR;
@@ -41,12 +42,20 @@ async function main() {
         temperature: 0.3,
     });
 
-    // Initialize processor with default character personality
-    const processor = new MessageAndVisionProcessor(
+    const masterProcessor = new MasterProcessor(
         llmClient,
         defaultCharacter,
         loglevel
     );
+
+    // Initialize processor with default character personality
+    const messageProcessor = new MessageAndVisionProcessor(
+        llmClient,
+        defaultCharacter,
+        loglevel
+    );
+
+    masterProcessor.addProcessor(messageProcessor);
 
     // Initialize core system
     const scheduledTaskDb = new MongoDb(
@@ -64,7 +73,7 @@ async function main() {
     const core = new Orchestrator(
         roomManager,
         vectorDb,
-        [processor],
+        masterProcessor,
         scheduledTaskDb,
         {
             level: loglevel,
@@ -150,11 +159,11 @@ async function main() {
                 // Dispatch the message
                 await core.dispatchToInput(
                     "user_chat",
+                    { headers: { userId } },
                     {
                         content: userMessage,
                         userId,
-                    },
-                    userId
+                    }
                 );
 
                 // Continue prompting
