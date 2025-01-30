@@ -16,7 +16,7 @@ import chalk from "chalk";
 import { defaultCharacter } from "../packages/core/src/core/character";
 import { z } from "zod";
 import readline from "readline";
-import { MongoDb } from "../packages/core/src/core/mongo-db";
+import { MongoDb } from "../packages/core/src/core/db/mongo-db";
 import { Message } from "discord.js";
 
 async function main() {

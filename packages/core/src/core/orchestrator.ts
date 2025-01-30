@@ -1,12 +1,11 @@
 import { Logger } from "./logger";
 import { RoomManager } from "./room-manager";
-import { TaskScheduler } from "./task-scheduler";
 import type { BaseProcessor } from "./processor";
 import type { Memory, ProcessedResult, VectorDB } from "./types";
 import { HandlerRole, LogLevel, type LoggerConfig } from "./types";
 import type { IOHandler } from "./types";
-import type { MongoDb } from "./mongo-db";
-import { ObjectId } from "mongodb";
+
+import type { OrchestratorDb } from "./memory";
 
 /**
  * Orchestrator system that manages both "input" and "output" handlers
@@ -19,22 +18,32 @@ export class Orchestrator {
      */
     private readonly ioHandlers = new Map<string, IOHandler>();
 
-    private pollIntervalId?: ReturnType<typeof setInterval>;
-
+    /**
+     * Collection of processors used to handle different types of content.
+     * Keyed by processor name.
+     */
     private processors: Map<string, BaseProcessor> = new Map();
 
     /**
-     * A TaskScheduler that only schedules and runs input handlers
+     * Logger instance for logging messages and errors.
      */
-    private readonly inputScheduler: TaskScheduler<
-        IOHandler & { nextRun: number }
-    >;
-
     private readonly logger: Logger;
 
-    private readonly mongoDb: MongoDb;
+    /**
+     * orchestratorDb instance for database operations.
+     */
+    private readonly orchestratorDb: OrchestratorDb;
 
+    /**
+     * User ID associated with the orchestrator.
+     */
     public userId: string;
+
+    /**
+     * Map of unsubscribe functions for various handlers.
+     * Keyed by handler name.
+     */
+    private unsubscribers = new Map<string, () => void>();
 
     /**
      * Other references in your system. Adjust as needed.
@@ -44,7 +53,7 @@ export class Orchestrator {
         private readonly roomManager: RoomManager,
         vectorDb: VectorDB,
         processors: BaseProcessor[],
-        mongoDb: MongoDb,
+        orchestratorDb: OrchestratorDb,
         config?: LoggerConfig
     ) {
         this.vectorDb = vectorDb;
@@ -53,7 +62,7 @@ export class Orchestrator {
                 return [p.getName(), p];
             })
         );
-        this.mongoDb = mongoDb;
+        this.orchestratorDb = orchestratorDb;
 
         this.logger = new Logger(
             config ?? {
@@ -66,19 +75,20 @@ export class Orchestrator {
         // Initialize userId to an empty string
         this.userId = "";
 
-        // Our TaskScheduler will handle only input-type IOHandlers
-        this.inputScheduler = new TaskScheduler(async (handler) => {
-            await this.processInputTask(handler);
-        });
+        this.logger.info(
+            "Orchestrator.constructor",
+            "Orchestrator initialized"
+        );
+    }
 
-        this.startPolling();
+    public getHandler(name: string): IOHandler | undefined {
+        return this.ioHandlers.get(name);
     }
 
     public initializeOrchestrator(userId: string) {
         this.userId = userId;
     }
 
-    private unsubscribers = new Map<string, () => void>();
     /**
      * Primary method to register any IOHandler (input or output).
      * - If it's an input with an interval, schedule it for recurring runs.
@@ -131,7 +141,9 @@ export class Orchestrator {
         // Remove the handler itself
         this.ioHandlers.delete(name);
 
-        console.log(`Removed IOHandler: ${name}`);
+        this.logger.info("Orchestrator.removeIOHandler", "Removed IOHandler", {
+            name,
+        });
     }
 
     /**
@@ -175,54 +187,6 @@ export class Orchestrator {
     }
 
     /**
-     * The method the TaskScheduler calls for each scheduled input.
-     * We only schedule inputs in the constructor's scheduler.
-     */
-    private async processInputTask(handler: IOHandler): Promise<void> {
-        if (!handler.execute) {
-            this.logger.error(
-                "Orchestrator.processInputTask",
-                "Handler has no execute method",
-                { handler }
-            );
-            return;
-        }
-        try {
-            // it's undefined because this might be fetching data from an api or something
-            const result = await handler.execute(undefined);
-            if (!result) return;
-
-            if (Array.isArray(result)) {
-                for (const item of result) {
-                    await this.runAutonomousFlow(
-                        item,
-                        handler.name,
-                        this.userId
-                    );
-                }
-            } else {
-                await this.runAutonomousFlow(result, handler.name, this.userId);
-            }
-        } catch (error) {
-            this.logger.error(
-                "Orchestrator.processInputTask",
-                "Error processing input",
-                {
-                    name: handler.name,
-                    error:
-                        error instanceof Error
-                            ? {
-                                  message: error.message,
-                                  stack: error.stack,
-                                  name: error.name,
-                              }
-                            : error,
-                    handlerType: handler.role,
-                }
-            );
-        }
-    }
-    /**
      * Dispatches data to a registered action handler and returns its result.
      *
      * @param name - The name of the registered action handler to dispatch to
@@ -257,12 +221,18 @@ export class Orchestrator {
         if (handler.role !== "action") {
             throw new Error(`Handler "${name}" is not an action handler`);
         }
-        this.logger.debug("Orchestrator.dispatchToAction", "Executing action", {
-            name,
-            data,
-        });
+
         try {
             const result = await handler.execute(data);
+
+            this.logger.debug(
+                "Orchestrator.dispatchToAction",
+                "Executing action",
+                {
+                    name,
+                    data,
+                }
+            );
             return result;
         } catch (error) {
             this.logger.error(
@@ -285,7 +255,7 @@ export class Orchestrator {
         initialData: unknown,
         sourceName: string,
         userId: string,
-        orchestratorId?: ObjectId
+        orchestratorId?: string
     ) {
         const queue: Array<{ data: unknown; source: string }> = [];
 
@@ -304,12 +274,12 @@ export class Orchestrator {
         // check if we have an orchestratorId
         if (orchestratorId) {
             // check if it exists in the db
-            const existingOrchestrator = await this.mongoDb.getOrchestratorById(
-                new ObjectId(orchestratorId)
-            );
+            const existingOrchestrator =
+                await this.orchestratorDb.getOrchestratorById(orchestratorId);
 
             if (!existingOrchestrator) {
-                orchestratorId = await this.mongoDb.createOrchestrator(userId);
+                orchestratorId =
+                    await this.orchestratorDb.createOrchestrator(userId);
             }
         }
 
@@ -317,7 +287,7 @@ export class Orchestrator {
 
         if (orchestratorId) {
             // Record the initial input
-            await this.mongoDb.addMessage(
+            await this.orchestratorDb.addMessage(
                 orchestratorId,
                 HandlerRole.INPUT,
                 sourceName,
@@ -340,7 +310,7 @@ export class Orchestrator {
 
             // Record any action results if we have an orchestratorId
             if (orchestratorId) {
-                await this.mongoDb.addMessage(
+                await this.orchestratorDb.addMessage(
                     orchestratorId,
                     HandlerRole.INPUT,
                     source,
@@ -383,19 +353,29 @@ export class Orchestrator {
                 // If any tasks need to be scheduled in the DB, do so
                 if (processed.updateTasks) {
                     for (const task of processed.updateTasks) {
-                        await this.scheduleTaskInDb(
-                            userId,
-                            task.name,
-                            task.data,
-                            task.intervalMs
+                        const now = Date.now();
+                        const nextRunAt = new Date(
+                            now + (task.intervalMs ?? 0)
                         );
 
-                        this.logger.debug(
+                        this.logger.info(
                             "Orchestrator.runAutonomousFlow",
-                            "Scheduled task in DB",
+                            `Scheduling task ${task.name}`,
                             {
-                                task,
+                                nextRunAt,
+                                intervalMs: task.intervalMs,
                             }
+                        );
+
+                        await this.orchestratorDb.createTask(
+                            userId,
+                            task.name,
+                            {
+                                request: task.name,
+                                task_data: JSON.stringify(task.data),
+                            },
+                            nextRunAt,
+                            task.intervalMs
                         );
                     }
                 }
@@ -427,7 +407,7 @@ export class Orchestrator {
 
                         // Record output in DB
                         if (orchestratorId) {
-                            await this.mongoDb.addMessage(
+                            await this.orchestratorDb.addMessage(
                                 orchestratorId,
                                 HandlerRole.OUTPUT,
                                 output.name,
@@ -452,7 +432,7 @@ export class Orchestrator {
 
                         // Record action in DB
                         if (orchestratorId) {
-                            await this.mongoDb.addMessage(
+                            await this.orchestratorDb.addMessage(
                                 orchestratorId,
                                 HandlerRole.ACTION,
                                 output.name,
@@ -530,7 +510,7 @@ export class Orchestrator {
         name: string,
         data: T,
         userId: string,
-        orchestratorId?: ObjectId
+        orchestratorId?: string
     ): Promise<unknown> {
         const handler = this.ioHandlers.get(name);
         if (!handler) throw new Error(`No IOHandler: ${name}`);
@@ -558,159 +538,6 @@ export class Orchestrator {
                 `dispatchToInput Error: ${
                     error instanceof Error ? error.message : String(error)
                 }`
-            );
-        }
-    }
-
-    public async scheduleTaskInDb(
-        userId: string,
-        handlerName: string,
-        data: Record<string, unknown> = {},
-        intervalMs?: number
-    ): Promise<ObjectId> {
-        const now = Date.now();
-        const nextRunAt = new Date(now + (intervalMs ?? 0));
-
-        this.logger.info(
-            "Orchestrator.scheduleTaskInDb",
-            `Scheduling task ${handlerName}`,
-            {
-                nextRunAt,
-                intervalMs,
-            }
-        );
-
-        return await this.mongoDb.createTask(
-            userId,
-            handlerName,
-            {
-                request: handlerName,
-                task_data: JSON.stringify(data),
-            },
-            nextRunAt,
-            intervalMs
-        );
-    }
-
-    public startPolling(everyMs = 10_000): void {
-        // Stop existing polling if it exists
-        if (this.pollIntervalId) {
-            clearInterval(this.pollIntervalId);
-        }
-
-        this.pollIntervalId = setInterval(() => {
-            this.pollScheduledTasks().catch((err) => {
-                this.logger.error(
-                    "Orchestrator.startPolling",
-                    "Error in pollScheduledTasks",
-                    err
-                );
-            });
-        }, everyMs);
-
-        this.logger.info(
-            "Orchestrator.startPolling",
-            "Started polling for scheduled tasks",
-            {
-                intervalMs: everyMs,
-            }
-        );
-    }
-
-    private async pollScheduledTasks() {
-        try {
-            // Guard against undefined collection
-            if (!this.mongoDb) {
-                this.logger.error(
-                    "pollScheduledTasks error",
-                    "scheduledTaskDb is not initialized"
-                );
-                return;
-            }
-
-            const tasks = await this.mongoDb.findDueTasks();
-            if (!tasks) {
-                return;
-            }
-
-            for (const task of tasks) {
-                if (!task._id) {
-                    this.logger.error(
-                        "pollScheduledTasks error",
-                        "Task is missing _id"
-                    );
-                    continue;
-                }
-
-                // 2. Mark them as 'running' (or handle concurrency the way you want)
-                await this.mongoDb.markRunning(task._id);
-
-                const handler = this.ioHandlers.get(task.handlerName);
-                if (!handler) {
-                    throw new Error(`No handler found: ${task.handlerName}`);
-                }
-
-                const taskData =
-                    typeof task.taskData.task_data === "string"
-                        ? JSON.parse(task.taskData.task_data)
-                        : task.taskData;
-
-                if (handler.role === HandlerRole.INPUT) {
-                    try {
-                        await this.dispatchToInput(
-                            task.handlerName,
-                            taskData,
-                            task.userId
-                        );
-                    } catch (error) {
-                        this.logger.error(
-                            "Task execution failed",
-                            `Task ${task._id}: ${error instanceof Error ? error.message : String(error)}`
-                        );
-                    }
-                } else if (handler.role === HandlerRole.ACTION) {
-                    try {
-                        const actionResult = await this.dispatchToAction(
-                            task.handlerName,
-                            taskData
-                        );
-                        if (actionResult) {
-                            await this.runAutonomousFlow(
-                                actionResult,
-                                task.handlerName,
-                                task.userId
-                            );
-                        }
-                    } catch (error) {
-                        this.logger.error(
-                            "Task execution failed",
-                            `Task ${task._id}: ${error instanceof Error ? error.message : String(error)}`
-                        );
-                    }
-                } else if (handler.role === HandlerRole.OUTPUT) {
-                    try {
-                        await this.dispatchToOutput(task.handlerName, taskData);
-                    } catch (error) {
-                        this.logger.error(
-                            "Task execution failed",
-                            `Task ${task._id}: ${error instanceof Error ? error.message : String(error)}`
-                        );
-                    }
-                }
-
-                // 4. If the task is recurring (interval_ms), update next_run_at
-                if (task.intervalMs) {
-                    const nextRunAt = new Date(Date.now() + task.intervalMs);
-                    await this.mongoDb.updateNextRun(task._id, nextRunAt);
-                } else {
-                    // Otherwise, mark completed
-                    await this.mongoDb.markCompleted(task._id);
-                }
-            }
-        } catch (err) {
-            this.logger.error(
-                "pollScheduledTasks error",
-                err instanceof Error ? err.message : String(err)
             );
         }
     }
@@ -840,16 +667,5 @@ export class Orchestrator {
         }
 
         return result;
-    }
-
-    /**
-     * Stops all scheduled tasks and shuts down the orchestrator.
-     */
-    public stop(): void {
-        this.inputScheduler.stop();
-        if (this.pollIntervalId) {
-            clearInterval(this.pollIntervalId);
-        }
-        this.logger.info("Orchestrator.stop", "All scheduled inputs stopped.");
     }
 }
