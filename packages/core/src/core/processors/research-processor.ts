@@ -1,10 +1,9 @@
 import { LLMClient } from "../llm-client";
-import type { Character } from "../types";
+import type { ActionIOHandler, Character, OutputIOHandler } from "../types";
 import { LogLevel } from "../types";
 import { getTimeContext, validateLLMResponseSchema } from "../utils";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import { type IOHandler } from "../types";
 import { BaseProcessor } from "../processor";
 import { encodingForModel } from "js-tiktoken";
 
@@ -199,13 +198,16 @@ export class ResearchQuantProcessor extends BaseProcessor {
         }
     }
 
-    private buildHandlerSchemaPart(handlers?: IOHandler[]): string {
+    private buildHandlerSchemaPart(
+        handlers?: OutputIOHandler[] | ActionIOHandler[]
+    ): string {
         if (!handlers || handlers.length === 0) return "None";
         return handlers
+            .filter((handler) => handler.outputSchema)
             .map(
                 (handler) =>
                     `${handler.name}: ${JSON.stringify(
-                        zodToJsonSchema(handler.schema, handler.name),
+                        zodToJsonSchema(handler.outputSchema!, handler.name),
                         null,
                         2
                     )}`
@@ -216,8 +218,8 @@ export class ResearchQuantProcessor extends BaseProcessor {
     private async combineChunkResults(
         results: any[],
         ioContext?: {
-            availableOutputs: IOHandler[];
-            availableActions: IOHandler[];
+            availableOutputs: OutputIOHandler[];
+            availableActions: ActionIOHandler[];
         }
     ): Promise<any> {
         const prompt = `
@@ -320,8 +322,8 @@ export class ResearchQuantProcessor extends BaseProcessor {
         content: any,
         otherContext: string,
         ioContext?: {
-            availableOutputs: IOHandler[];
-            availableActions: IOHandler[];
+            availableOutputs: OutputIOHandler[];
+            availableActions: ActionIOHandler[];
         }
     ): Promise<any> {
         const contentStr =
