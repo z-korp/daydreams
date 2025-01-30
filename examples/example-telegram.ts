@@ -86,8 +86,6 @@ async function main() {
         10000
     );
 
-    scheduler.start();
-
     // Set up Telegram user client with credentials
     const telegram = new TelegramClient(
         {
@@ -100,23 +98,20 @@ async function main() {
         loglevel,
     );
 
+    // Set up Telegram bot client with credentials
+    // const telegram = new TelegramClient(
+    //     {
+    //         bot_token: env.TELEGRAM_TOKEN,
+    //         api_id: parseInt(env.TELEGRAM_API_ID as string),
+    //         api_hash: env.TELEGRAM_API_HASH,
+    //         is_bot: true,
+    //         session: undefined,
+    //     },
+    //     loglevel,
+    // );
+
     // Wait for login to complete before setting up handlers
     await telegram.initialize();
-
-    // Register handlers after successful login
-    orchestrator.registerIOHandler({
-        name: "telegram_channel_scraper",
-        role: HandlerRole.INPUT,
-        execute: async (data: unknown) => {
-            console.log(chalk.green("🤖 Telegram channel scraper registered"));
-            const messageData = data as {
-                chatId: number;
-                limit?: number;
-                offset?: number;
-            };
-            return telegram.createPeriodicChannelScraper([messageData.chatId]).handler(messageData);
-        }
-    });
 
     orchestrator.registerIOHandler({
         name: "telegram_send_message",
@@ -136,40 +131,30 @@ async function main() {
             .describe("This is for sending a message."),
     });
 
-    // Initialize autonomous channel scraping
-    const consciousness = new Consciousness(llmClient, roomManager, {
-        // intervalMs: 300000, // Scrape every 5 minutes
-        intervalMs: 5000, // Scrape every 5 seconds
-        minConfidence: 0.7,
-        logLevel: loglevel,
+    // Register chat list scraper handler
+    orchestrator.registerIOHandler({
+        name: "telegram_chat_list_scraper",
+        role: HandlerRole.INPUT,
+        execute: async () => {
+            try {
+                console.log(chalk.blue("📊 Fetching chat list..."));
+                const result = await telegram.createChatListScraper().handler();
+                return result;
+            } catch (error) {
+                console.error(chalk.red("Error in chat list scraper:"), error);
+                return null;
+            }
+        }
     });
 
-    // Register consciousness thought handler for autonomous channel scraping
-    // orchestrator.registerIOHandler({
-    //     name: "consciousness_channel_scrape",
-    //     role: HandlerRole.OUTPUT,
-    //     execute: async (data: unknown) => {
-    //         const messageData = data as {
-    //             chatId: number;
-    //             limit?: number;
-    //         };
-    //         return telegram.createChannelScraper().handler(messageData);
-    //     },
-    //     outputSchema: z
-    //         .object({
-    //             chatId: z.number().describe("The channel/chat ID to scrape messages from"),
-    //             limit: z.number().optional().describe("Maximum number of messages to fetch"),
-    //         })
-    //         .describe(
-    //             "Use this to automatically fetch messages from a Telegram channel or chat"
-    //         ),
-    // });
+    scheduler.start();
 
-    // Register input handler for getting Telegram messages from channel, chat, etc
-    await scheduler.scheduleTaskInDb("sleever", "telegram_channel_scraper", {}, 5000);
-
-    // Start consciousness only after login is complete
-    await consciousness.start();
+    await scheduler.scheduleTaskInDb(
+        "sleever",
+        "telegram_chat_list_scraper",
+        {},
+        60000 // 1 minute
+    );
 
     // Set up readline interface
     const rl = readline.createInterface({
@@ -187,11 +172,9 @@ async function main() {
         console.log(chalk.yellow("\n\nShutting down..."));
 
         // Clean up resources
-        await consciousness.stop();
         telegram.logout();
-        orchestrator.removeIOHandler("telegram_channel_scraper");
         orchestrator.removeIOHandler("telegram_send_message");
-        orchestrator.removeIOHandler("consciousness_channel_scrape");
+        orchestrator.removeIOHandler("telegram_chat_list_scraper");
         rl.close();
 
         console.log(chalk.green("✅ Shutdown complete"));
