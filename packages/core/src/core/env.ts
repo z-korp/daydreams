@@ -22,5 +22,7 @@ const envSchema = z.object({
     DRY_RUN: z
         .preprocess((val) => val === "1" || val === "true", z.boolean())
         .default(true),
+    TELEGRAM_STARTUP_CHAT_ID: z.string().optional(),
+    TELEGRAM_USER_SESSION: z.string().optional(),
 });
 export const env = envSchema.parse(process.env);

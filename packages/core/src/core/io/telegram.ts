@@ -97,23 +97,23 @@ export class TelegramClient {
             enableColors: true,
             enableTimestamp: true,
         });
-        this.initialize();
     }
 
     async initialize(): Promise<void> {
+        if (this.isInitialized) {
+            this.logger.info("TelegramClient", "Already initialized, skipping...");
+            return;
+        }
+
         try {
-            if (!this.isInitialized) {
-                if (this.credentials.is_bot) {
-                    this.logger.info("TelegramClient", "Logging in as bot.");
-                    await this.botLogin();
-                    this.isInitialized = true;
-                }
-                else {
-                    this.logger.info("TelegramClient", "Logging in as user.");
-                    await this.userLogin();
-                    this.isInitialized = true;
-                }
+            if (this.credentials.is_bot) {
+                this.logger.info("TelegramClient", "Logging in as bot.");
+                await this.botLogin();
+            } else {
+                this.logger.info("TelegramClient", "Logging in as user.");
+                await this.userLogin();
             }
+            this.isInitialized = true;
         } catch (error) {
             this.logger.error("TelegramClient", "Failed to initialize", {
                 error,
@@ -140,9 +140,17 @@ export class TelegramClient {
             });
             console.log(this.client.session.save());
 
-            this.logger.info("TelegramClient", "Bot user:", {
-                client: await this.client.getMe()
-            });
+            const me = await this.client.getMe();
+            this.logger.info("TelegramClient", "Bot user:", { client: me });
+            
+            // Send startup message
+            if (env.TELEGRAM_STARTUP_CHAT_ID) {
+                await this.sendMessage({
+                    chatId: parseInt(env.TELEGRAM_STARTUP_CHAT_ID),
+                    content: `🤖 Bot started successfully!\nBot username: @${(me as Api.User).username}\nTime: ${new Date().toLocaleString()}`
+                });
+            }
+            
             this.logger.info("TelegramClient", "Bot login successful.");
         } catch (error) {
             this.logger.error("TelegramClient", "Failed to login as bot", {
@@ -153,32 +161,127 @@ export class TelegramClient {
     }
     private async userLogin(): Promise<void> {
         try {
-            if (!this.credentials.bot_token || !this.credentials.api_id || !this.credentials.api_hash) {
-                throw new Error("Bot token, Api ID and Api hash are required for bot login.");
+            if (!this.credentials.api_id || !this.credentials.api_hash) {
+                throw new Error("API ID and API hash are required for user login.");
             }
-            this.client = new GramJSClient(
-                new StringSession(this.credentials.session?.toString() || ""),
-                this.credentials.api_id as number,
-                this.credentials.api_hash as string,
-                {
-                    connectionRetries: 5,
-                }
-            );
 
-            await this.client.connect();
-            this.logger.info("TelegramClient", "Telegram client connected.");
-            console.log("Session String: ", await this.client.session.save())
+            // Try to use session string if provided
+            const sessionString = this.credentials.session?.toString();
+            if (!sessionString) {
+                this.logger.info("TelegramClient", "No session string provided, starting interactive login");
+                await this.handleInteractiveLogin();
+                return;
+            }
 
-            this.logger.info("TelegramClient", "User details:", {
-                client: this.client.getMe()
-            });
+            try {
+                // Initialize client with session
+                this.client = new GramJSClient(
+                    new StringSession(sessionString),
+                    this.credentials.api_id,
+                    this.credentials.api_hash,
+                    {
+                        connectionRetries: 5,
+                    }
+                );
 
-            this.logger.info("TelegramClient", "User login successful.");
+                // Try to connect and validate session
+                this.logger.info("TelegramClient", "Attempting to connect with existing session...");
+                await this.client.connect();
+                
+                // Verify the session is valid by getting user info
+                const me = await this.client.getMe();
+                this.logger.info("TelegramClient", "Successfully connected with session", {
+                    id: (me as Api.User).id,
+                    username: (me as Api.User).username
+                });
+
+                // Send startup message
+                await this.sendStartupMessage(me as Api.User);
+                
+            } catch (error) {
+                this.logger.warn("TelegramClient", "Session invalid or expired, falling back to interactive login", { error });
+                // Create new client for interactive login
+                this.client = new GramJSClient(
+                    new StringSession(""),
+                    this.credentials.api_id,
+                    this.credentials.api_hash,
+                    {
+                        connectionRetries: 5,
+                    }
+                );
+                await this.handleInteractiveLogin();
+            }
         } catch (error) {
-            this.logger.error("TelegramClient", "Failed to login as user", {
-                error,
-            });
+            this.logger.error("TelegramClient", "Failed to login as user", { error });
             throw error;
+        }
+    }
+
+    private async handleInteractiveLogin(): Promise<void> {
+        const rl = require('readline').createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+
+        try {
+            await this.client!.start({
+                phoneNumber: async () => {
+                    return await new Promise<string>((resolve) => {
+                        rl.question('Please enter your phone number: ', (phone: string) => {
+                            resolve(phone);
+                        });
+                    });
+                },
+                password: async () => {
+                    return await new Promise<string>((resolve) => {
+                        rl.question('Please enter your 2FA password (if enabled): ', (password: string) => {
+                            resolve(password);
+                        });
+                    });
+                },
+                phoneCode: async () => {
+                    return await new Promise<string>((resolve) => {
+                        rl.question('Please enter the code you received: ', (code: string) => {
+                            resolve(code);
+                        });
+                    });
+                },
+                onError: (err) => {
+                    this.logger.error("TelegramClient", "Error during login", { error: err });
+                },
+            });
+
+            // Save and display the new session string
+            const newSessionString = await this.client!.session.save();
+            console.log("\n⚠️ SAVE THIS SESSION STRING FOR FUTURE USE:");
+            console.log(newSessionString);
+
+            // Get user details and send startup message
+            const me = await this.client!.getMe();
+            await this.sendStartupMessage(me as Api.User);
+
+        } finally {
+            rl.close();
+        }
+    }
+
+    private async sendStartupMessage(user: Api.User): Promise<void> {
+        if (!env.TELEGRAM_STARTUP_CHAT_ID) return;
+
+        try {
+            const message = `🤖 User logged in successfully!\n` +
+                `User ID: ${user.id}\n` +
+                `Username: @${user.username || 'unknown'}\n` +
+                `Time: ${new Date().toLocaleString()}`;
+
+            const result = await this.sendMessage({
+                chatId: parseInt(env.TELEGRAM_STARTUP_CHAT_ID),
+                content: message
+            });
+
+            this.logger.info("TelegramClient", "Startup message sent", { result });
+        } catch (msgError) {
+            this.logger.error("TelegramClient", "Failed to send startup message", { error: msgError });
         }
     }
 
@@ -229,30 +332,70 @@ export class TelegramClient {
         };
     }
 
+    /**
+     * Create a handler for periodic channel scraping
+     */
+    public createPeriodicChannelScraper(channels: number[]) {
+        return {
+            name: "consciousness_channel_scrape",
+            handler: async (data: GetMessagesData) => {
+                const allMessages: Message[] = [];
+                
+                for (const chatId of channels) {
+                    try {
+                        const messages = await this.getMessages({
+                            chatId,
+                            limit: data.limit || 10,
+                        });
+                        allMessages.push(...messages);
+                    } catch (error) {
+                        this.logger.error("TelegramClient.periodicScrape", 
+                            `Error scraping channel ${chatId}`, { error });
+                    }
+                }
+                
+                return {
+                    success: true,
+                    messages: allMessages,
+                };
+            },
+            response: {
+                success: "boolean",
+                messages: "array",
+            }
+        };
+    }
+
     private async sendMessage(data: SendMessageData): Promise<{ success: boolean, chatId?: number, messageId?: number }> {
         try {
-            this.logger.info("TelegramClient.sendMessage", "Would send message", { data });
+            this.logger.info("TelegramClient.sendMessage", "Sending message", { 
+                chatId: data.chatId,
+                contentLength: data.content.length 
+            });
+
+            if (!this.client) {
+                throw new Error("Client not initialized");
+            }
 
             if (env.DRY_RUN) {
-                return {
-                    success: true,
-                };
+                this.logger.info("TelegramClient.sendMessage", "DRY_RUN: Would send message", { data });
+                return { success: true };
             }
 
-            if (this.client) {
-                const result = await this.client.sendMessage(data.chatId, {
-                    message: data.content,
-                });
+            const result = await this.client.sendMessage(data.chatId, {
+                message: data.content,
+            });
 
-                return {
-                    success: true,
-                    chatId: data.chatId,
-                    messageId: result.id,
-                };
-            }
-            else {
-                throw new Error("Neither bot nor user client is initialized.");
-            }
+            this.logger.info("TelegramClient.sendMessage", "Message sent successfully", {
+                messageId: result.id,
+                chatId: data.chatId
+            });
+
+            return {
+                success: true,
+                chatId: data.chatId,
+                messageId: result.id,
+            };
         } catch (error) {
             this.logger.error("TelegramClient.sendMessage", "Error sending message", { error });
             throw error;
