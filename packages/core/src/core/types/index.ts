@@ -285,6 +285,7 @@ export interface ProcessedResult {
     suggestedOutputs: SuggestedOutput<any>[];
     isOutputSuccess?: boolean;
     alreadyProcessed?: boolean;
+    nextProcessor?: string;
     updateTasks?: {
         name: string;
         data?: any;
