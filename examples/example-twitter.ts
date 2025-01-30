@@ -23,6 +23,7 @@ import { z } from "zod";
 import readline from "readline";
 import { MongoDb } from "../packages/core/src/core/db/mongo-db";
 import { SchedulerService } from "../packages/core/src/core/schedule-service";
+import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
 import { Logger } from "../packages/core/src/core/logger";
 
 async function main() {
@@ -42,12 +43,20 @@ async function main() {
         temperature: 0.3,
     });
 
-    // Initialize processor with default character personality
-    const processor = new MessageProcessor(
+    const masterProcessor = new MasterProcessor(
         llmClient,
         defaultCharacter,
         loglevel
     );
+
+    // Initialize processor with default character personality
+    const messageProcessor = new MessageProcessor(
+        llmClient,
+        defaultCharacter,
+        loglevel
+    );
+
+    masterProcessor.addProcessor(messageProcessor);
 
     const scheduledTaskDb = new MongoDb(
         "mongodb://localhost:27017",
@@ -64,7 +73,7 @@ async function main() {
     const orchestrator = new Orchestrator(
         roomManager,
         vectorDb,
-        [processor],
+        masterProcessor,
         scheduledTaskDb,
         {
             level: loglevel,

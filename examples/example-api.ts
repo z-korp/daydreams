@@ -21,6 +21,7 @@ import { Consciousness } from "../packages/core/src/core/consciousness";
 import { z } from "zod";
 import readline from "readline";
 import { MongoDb } from "../packages/core/src/core/db/mongo-db";
+import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
 
 async function main() {
     const loglevel = LogLevel.DEBUG;
@@ -45,6 +46,19 @@ async function main() {
         temperature: 0.3,
     });
 
+    const masterProcessor = new MasterProcessor(
+        llmClient,
+        defaultCharacter,
+        loglevel
+    );
+
+    // Initialize processor with default character personality
+    const messageProcessor = new MessageProcessor(
+        llmClient,
+        defaultCharacter,
+        loglevel
+    );
+
     const researchProcessor = new ResearchQuantProcessor(
         researchClient,
         defaultCharacter,
@@ -52,12 +66,8 @@ async function main() {
         1000 // chunk size, depends
     );
 
-    // Initialize processor with default character personality
-    const processor = new MessageProcessor(
-        llmClient,
-        defaultCharacter,
-        loglevel
-    );
+    // Add processors to the master processor
+    masterProcessor.addProcessor([messageProcessor, researchProcessor]);
 
     const scheduledTaskDb = new MongoDb(
         "mongodb://localhost:27017",
@@ -74,7 +84,7 @@ async function main() {
     const orchestrator = new Orchestrator(
         roomManager,
         vectorDb,
-        [processor, researchProcessor],
+        masterProcessor,
         scheduledTaskDb,
         {
             level: loglevel,

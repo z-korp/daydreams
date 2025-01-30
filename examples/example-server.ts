@@ -18,6 +18,7 @@ import { defaultCharacter } from "../packages/core/src/core/character";
 
 import { LogLevel } from "../packages/core/src/core/types";
 import { MongoDb } from "../packages/core/src/core/db/mongo-db";
+import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
 
 const scheduledTaskDb = new MongoDb(
     "mongodb://localhost:27017",
@@ -51,18 +52,26 @@ async function createDaydreamsAgent() {
     // 1.3. Room manager initialization
     const roomManager = new RoomManager(vectorDb);
 
-    // 1.4. Initialize processor with default character
-    const processor = new MessageProcessor(
+    const masterProcessor = new MasterProcessor(
         llmClient,
         defaultCharacter,
         loglevel
     );
 
+    // Initialize processor with default character personality
+    const messageProcessor = new MessageProcessor(
+        llmClient,
+        defaultCharacter,
+        loglevel
+    );
+
+    masterProcessor.addProcessor(messageProcessor);
+
     // 1.5. Initialize core system
     const orchestrator = new Orchestrator(
         roomManager,
         vectorDb,
-        [processor],
+        masterProcessor,
         scheduledTaskDb,
         {
             level: loglevel,

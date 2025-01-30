@@ -19,12 +19,6 @@ export class Orchestrator {
     private readonly ioHandlers = new Map<string, IOHandler>();
 
     /**
-     * Collection of processors used to handle different types of content.
-     * Keyed by processor name.
-     */
-    private processors: Map<string, BaseProcessor> = new Map();
-
-    /**
      * Logger instance for logging messages and errors.
      */
     private readonly logger: Logger;
@@ -52,16 +46,12 @@ export class Orchestrator {
     constructor(
         private readonly roomManager: RoomManager,
         vectorDb: VectorDB,
-        processors: BaseProcessor[],
+        private processor: BaseProcessor,
         orchestratorDb: OrchestratorDb,
         config?: LoggerConfig
     ) {
         this.vectorDb = vectorDb;
-        this.processors = new Map(
-            processors.map((p) => {
-                return [p.getName(), p];
-            })
-        );
+
         this.orchestratorDb = orchestratorDb;
 
         this.logger = new Logger(
@@ -571,6 +561,13 @@ export class Orchestrator {
         return singleResult ? [singleResult] : [];
     }
 
+    /**
+     * Process a single piece of content. This is where we:
+     *  - Retrieve memories for the content's room (if any)
+     *  - Let the "master" processor do an initial pass
+     *  - Potentially use a child processor (either from `.nextProcessor` or from `canHandle()`)
+     *  - Save the result to memory, mark as processed, etc.
+     */
     private async processContentItem(
         content: any,
         source: string,
@@ -578,6 +575,7 @@ export class Orchestrator {
     ): Promise<ProcessedResult | null> {
         let memories: Memory[] = [];
 
+        // If the content includes some "room" identifier
         if (content.room) {
             const hasProcessed =
                 await this.roomManager.hasProcessedContentInRoom(
@@ -587,7 +585,7 @@ export class Orchestrator {
 
             if (hasProcessed) {
                 this.logger.debug(
-                    "Orchestrator.processContent",
+                    "Orchestrator.processContentItem",
                     "Content already processed",
                     {
                         contentId: content.contentId,
@@ -597,15 +595,18 @@ export class Orchestrator {
                 );
                 return null;
             }
+
+            // Make sure the room is created or retrieved
             const room = await this.roomManager.ensureRoom(
                 content.room,
                 source,
                 userId
             );
+            // Get prior memories from that room
             memories = await this.roomManager.getMemoriesFromRoom(room.id);
 
             this.logger.debug(
-                "Orchestrator.processContent",
+                "Orchestrator.processContentItem",
                 "Processing content with context",
                 {
                     content,
@@ -617,19 +618,7 @@ export class Orchestrator {
             );
         }
 
-        const processor = Array.from(this.processors.values()).find((p) =>
-            p.canHandle(content)
-        );
-
-        if (!processor) {
-            this.logger.debug(
-                "Orchestrator.processContent",
-                "No suitable processor found for content",
-                { content }
-            );
-            return null;
-        }
-
+        // Gather possible outputs & actions to pass to the Processor
         const availableOutputs = Array.from(this.ioHandlers.values()).filter(
             (h) => h.role === HandlerRole.OUTPUT
         );
@@ -638,7 +627,8 @@ export class Orchestrator {
             (h) => h.role === HandlerRole.ACTION
         );
 
-        const result = await processor.process(
+        // Process the content - delegation is now handled inside the processor
+        const result = await this.processor.process(
             content,
             JSON.stringify(memories),
             {
@@ -647,19 +637,17 @@ export class Orchestrator {
             }
         );
 
-        if (content.room) {
-            // Save the result to memory
+        // Save and mark processed if we have a room
+        if (content.room && result) {
             await this.roomManager.addMemory(
                 content.room,
-                JSON.stringify(result?.content),
+                JSON.stringify(result.content),
                 {
                     source,
-                    ...result?.metadata,
-                    ...result?.enrichedContext,
+                    ...result.metadata,
+                    ...result.enrichedContext,
                 }
             );
-
-            // Mark the content as processed
             await this.roomManager.markContentAsProcessed(
                 content.contentId,
                 content.room
