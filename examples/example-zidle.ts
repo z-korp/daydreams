@@ -19,7 +19,8 @@ import { defaultCharacter } from "../packages/core/src/core/character";
 import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
 import { Orchestrator } from "../packages/core/src/core/orchestrator";
 import { WebSocketServer, WebSocket } from "ws";
-import { MongoDb } from "../packages/core/src/core/mongo-db";
+import { MongoDb } from "../packages/core/src/core/db/mongo-db";
+import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
 
 /**
  * Helper function to get user input from CLI
@@ -61,10 +62,13 @@ async function main() {
         model: "anthropic/claude-3-5-sonnet-latest", //"deepseek/deepseek-r1", //"anthropic/claude-3.5-haiku-20241022:beta"
     });
 
-    const memory = new ChromaVectorDB("agent_memory", {
-        chromaUrl: "http://localhost:8000",
-        logLevel: LogLevel.WARN,
+    const starknetChain = new StarknetChain({
+        rpcUrl: env.STARKNET_RPC_URL,
+        address: env.STARKNET_ADDRESS,
+        privateKey: env.STARKNET_PRIVATE_KEY,
     });
+
+    const memory = new ChromaVectorDB("agent_memory");
     await memory.purge(); // Clear previous session data
 
     // Load initial context documents
@@ -92,6 +96,12 @@ async function main() {
         LogLevel.WARN
     );
 
+    const masterProcessor = new MasterProcessor(
+        llmClient,
+        defaultCharacter,
+        loglevel
+    );
+
     const scheduledTaskDb = new MongoDb(
         "mongodb://localhost:27017",
         "myApp",
@@ -105,7 +115,7 @@ async function main() {
     const orchestrator = new Orchestrator(
         roomManager,
         memory,
-        [processor],
+        masterProcessor,
         scheduledTaskDb,
         {
             level: loglevel,
@@ -113,12 +123,6 @@ async function main() {
             enableTimestamp: true,
         }
     );
-
-    const starknetChain = new StarknetChain({
-        rpcUrl: env.STARKNET_RPC_URL,
-        address: env.STARKNET_ADDRESS,
-        privateKey: env.STARKNET_PRIVATE_KEY,
-    });
 
     /*orchestrator.registerIOHandler({
         role: HandlerRole.ACTION,
@@ -426,13 +430,16 @@ async function main() {
                 }
 
                 // Process the message using the orchestrator
+                const userId = "console-user";
                 const outputs = await orchestrator.dispatchToInput(
                     "user_chat",
                     {
-                        content: userMessage,
-                        userId: "ws-user",
+                        headers: {
+                            "x-user-id": userId,
+                        },
                     },
-                    "ws-user"
+                    userMessage,
+                    userId
                 );
 
                 // Send responses back through WebSocket
@@ -489,7 +496,7 @@ async function main() {
     dreams.registerOutput({
         role: HandlerRole.ACTION,
         name: "EXECUTE_READ",
-        handler: async (action: any) => {
+        execute: async (action: any) => {
             console.log(
                 "Preparing to execute read action... " +
                     JSON.stringify(action.payload)
@@ -504,7 +511,7 @@ async function main() {
             const result = await starknetChain.read(action.payload);
             return `[EXECUTE_READ] ${action.context}: ${JSON.stringify(result, null, 2)}`;
         },
-        schema: z
+        outputSchema: z
             .object({
                 contractAddress: z
                     .string()
@@ -524,7 +531,7 @@ async function main() {
     dreams.registerOutput({
         role: HandlerRole.ACTION,
         name: "EXECUTE_TRANSACTION",
-        handler: async (action: any) => {
+        execute: async (action: any) => {
             console.log(
                 "Preparing to execute transaction action... " +
                     JSON.stringify(action.payload)
@@ -542,7 +549,7 @@ async function main() {
             console.log("result", result);
             return `[EXECUTE_TRANSACTION] ${action.context}. STATUS: ${result.statusReceipt}`;
         },
-        schema: z
+        outputSchema: z
             .object({
                 contractAddress: z
                     .string()
@@ -564,7 +571,7 @@ async function main() {
     dreams.registerOutput({
         role: HandlerRole.ACTION,
         name: "GRAPHQL_FETCH",
-        handler: async (action: any) => {
+        execute: async (action: any) => {
             console.log(
                 "Preparing to execute graphql fetch action... " +
                     JSON.stringify(action.payload)
@@ -591,7 +598,7 @@ async function main() {
             ].join("\n\n");
             return `[GRAPHQL_FETCH] ${action.context}: ${resultStr}`;
         },
-        schema: z
+        outputSchema: z
             .object({
                 query: z
                     .string()
