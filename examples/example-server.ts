@@ -150,16 +150,15 @@ wss.on("connection", (ws) => {
                 throw new Error("userId is required");
             }
 
-            orchestrator.initializeOrchestrator(userId);
-
             // Process the message using the orchestrator with the provided userId
             const outputs = await orchestrator.dispatchToInput(
                 "user_chat",
                 {
-                    content: userMessage,
-                    userId: userId,
+                    headers: {
+                        "x-user-id": userId,
+                    },
                 },
-                userId,
+                userMessage,
                 orchestratorId ? orchestratorId : undefined
             );
 
