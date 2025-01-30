@@ -11,7 +11,7 @@ import chalk from "chalk";
 import { defaultCharacter } from "../packages/core/src/core/character";
 import { z } from "zod";
 import readline from "readline";
-import { MongoDb } from "../packages/core/src/core/mongo-db";
+import { MongoDb } from "../packages/core/src/core/db/mongo-db";
 
 
 async function main() {
@@ -54,7 +54,7 @@ async function main() {
     const core = new Orchestrator(
         roomManager,
         vectorDb,
-        [processor],
+        processor,
         scheduledTaskDb,
         {
             level: loglevel,
@@ -93,31 +93,14 @@ async function main() {
     core.registerIOHandler({
         name: "telegram_channel_scraper",
         role: HandlerRole.INPUT,
-        handler: async (data: unknown) => {
+        execute: async (data: unknown) => {
             const messageData = data as {
                 chatId: number;
                 limit?: number;
                 offset?: number;
             };
             return telegram.createChannelScraper().handler(messageData);
-        },
-        schema: z
-            .object({
-                chatId: z
-                    .number()
-                    .describe("The chat ID to retrieve messages from"),
-                limit: z
-                    .number()
-                    .optional()
-                    .describe("The limit for the number of messages to fetch"),
-                offset: z
-                    .number()
-                    .optional()
-                    .describe("The offset for the messages to fetch"),
-            })
-            .describe(
-                "This is for getting messages from a chat"
-            ),
+        }
     });
 
 
@@ -125,14 +108,14 @@ async function main() {
     core.registerIOHandler({
         name: "telegram_send_message",
         role: HandlerRole.OUTPUT,
-        handler: async (data: unknown) => {
+        execute: async (data: unknown) => {
             const messageData = data as {
                 content: string;
                 chatId: number;
             };
             return telegram.createSendMessageOutput().handler(messageData);
         },
-        schema: z
+        outputSchema: z
             .object({
                 content: z.string(),
                 chatId: z
