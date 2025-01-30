@@ -4,9 +4,8 @@ import { MessagesList } from "@/components/message-list";
 import { useDaydreamsWs } from "@/hooks/use-daydreams";
 import { useAppStore } from "@/store/use-app-store";
 import { DebugPanel } from "./debug-panel";
-import type { MessageType } from '@/types/chat';
-import { Route } from '@/routes/chats/$chatId';
 import { useChatHistories } from "@/hooks/use-chat-histories";
+import { useParams } from '@tanstack/react-router';
 
 
 const bladerunnerQuotes = [
@@ -31,7 +30,7 @@ export function ChatUI() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [quoteIndex, setQuoteIndex] = useState(0);
-    const { chatId } = Route.useParams();
+    //const { chatId } = useParams({ from: '/chats/$chatId' });
     
     const { chatItems, loading } = useChatHistories();
     const currentChat = chatItems.find(chat => chat._id === currentOrchestratorId);
@@ -54,7 +53,7 @@ export function ChatUI() {
 
     useEffect(() => {
         if (currentChat?.messages) {
-            console.log('📝 Processing historical messages for chat:', chatId);
+            //console.log('📝 Processing historical messages for chat:', chatId);
             const formattedMessages = currentChat.messages.map(msg => ({
                 type: msg.role.toUpperCase(),
                 message: msg.data.content || msg.data.message || "",
@@ -62,7 +61,7 @@ export function ChatUI() {
             }));
             useAppStore.setState({ messages: formattedMessages });
         }
-    }, [currentChat, chatId]);
+    }, [currentChat]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
