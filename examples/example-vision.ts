@@ -132,7 +132,7 @@ async function main() {
     });
 
     // Start the prompt loop
-    console.log(chalk.cyan("🤖 Bot is now running and monitoring Discord..."));
+    console.log(chalk.cyan("🤖 Bot is now running..."));
     console.log(chalk.cyan("You can type messages in the console."));
     console.log(
         chalk.cyan(
