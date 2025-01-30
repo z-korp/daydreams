@@ -627,7 +627,7 @@ export class Orchestrator {
             (h) => h.role === HandlerRole.ACTION
         );
 
-        // Process the content - delegation is now handled inside the processor
+        // Processor has nested logic for processing content and returns the final result
         const result = await this.processor.process(
             content,
             JSON.stringify(memories),
