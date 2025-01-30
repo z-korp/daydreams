@@ -6,6 +6,7 @@ import type {
     RefinedGoal,
     VectorDB,
     IOHandler,
+    OutputIOHandler,
 } from "./types";
 import { Logger } from "./logger";
 import { EventEmitter } from "events";
@@ -27,7 +28,7 @@ import { LogLevel } from "./types";
 const ajv = new Ajv();
 
 export class ChainOfThought extends EventEmitter {
-    private stepManager: StepManager;
+    stepManager: StepManager;
     private context: ChainOfThoughtContext;
     private snapshots: ChainOfThoughtContext[];
     private logger: Logger;
@@ -1086,13 +1087,16 @@ export class ChainOfThought extends EventEmitter {
 
         try {
             // Get the output handler and schema
-            const output = this.outputs.get(action.type);
-            if (!output) {
+            const output = this.outputs.get(action.type) as OutputIOHandler;
+            if (!output || !output.execute || !output.outputSchema) {
                 return `No handler registered for action type "${action.type}" try again`;
             }
 
             // Convert Zod schema to JSON schema
-            const jsonSchema = zodToJsonSchema(output.schema, action.type);
+            const jsonSchema = zodToJsonSchema(
+                output.outputSchema,
+                action.type
+            );
             const validate = ajv.compile(jsonSchema);
 
             // Validate the payload against the schema
@@ -1100,7 +1104,7 @@ export class ChainOfThought extends EventEmitter {
                 return "Invalid action payload - schema validation failed";
             }
 
-            const result = await output.handler(action);
+            const result = await output.execute(action);
 
             // Format the result for better readability
             const formattedResult =
@@ -1147,7 +1151,17 @@ export class ChainOfThought extends EventEmitter {
 
         const lastSteps = JSON.stringify(this.stepManager.getSteps());
 
-        const availableOutputs = Array.from(this.outputs.entries());
+        const availableOutputs = Array.from(this.outputs.entries()) as [
+            string,
+            OutputIOHandler,
+        ][];
+
+        const availableOutputsSchema = availableOutputs
+            .filter(([_, output]) => output.outputSchema)
+            .map(([name, output]) => {
+                return `${name}: ${JSON.stringify(zodToJsonSchema(output.outputSchema, name), null, 2)}`;
+            })
+            .join("\n\n");
 
         const prompt = `
     <global_context>
@@ -1214,6 +1228,12 @@ export class ChainOfThought extends EventEmitter {
     - meta: A metadata object with requirements for the step. Find this in the context.
     - actions: A list of actions to be executed. You can either use ${this.getAvailableOutputs()}
 
+    ## Output Format
+    Return a JSON array where each step contains:
+    - plan: A short explanation of what you will do
+    - meta: A metadata object with requirements for the step. Find this in the context.
+    - actions: A list of actions to be executed. You can either use ${this.getAvailableOutputs()}
+
     <AVAILABLE_ACTIONS>
     Below is a list of actions you may use. 
     The "payload" must follow the indicated structure exactly. Do not include any markdown formatting, slashes or comments.
@@ -1221,18 +1241,12 @@ export class ChainOfThought extends EventEmitter {
     - **payload**: The action data structured as per the available actions.
     - **context**: A contextual description or metadata related to the action's execution. This can include statuses, results, or any pertinent information that may influence future actions.
 
-    ${availableOutputs
-        .map(
-            ([name, output]) => `${name}:
-        ${JSON.stringify(zodToJsonSchema(output.schema, name), null, 2)}
-    `
-        )
-        .join("\n\n")}
+    ${availableOutputsSchema}
 
     </AVAILABLE_ACTIONS>
 
     </global_context>
-    `;
+`;
 
         return injectTags(tags, prompt);
     }

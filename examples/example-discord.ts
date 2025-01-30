@@ -1,25 +1,27 @@
 /**
- * Example demonstrating a Discord bot using the Daydreams package.
- * This bot can:
- * - Reply to DMs
+ * Example demonstrating a Discord bot using the Daydreams package,
+ * updated to use a streaming IOHandler so we can handle real-time
+ * Discord messages without manual dispatch calls.
  */
 
 import { Orchestrator } from "../packages/core/src/core/orchestrator";
-import { HandlerRole } from "../packages/core/src/core/types";
+import { HandlerRole, LogLevel } from "../packages/core/src/core/types";
 import { DiscordClient } from "../packages/core/src/core/io/discord";
 import { RoomManager } from "../packages/core/src/core/room-manager";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
 import { LLMClient } from "../packages/core/src/core/llm-client";
 import { env } from "../packages/core/src/core/env";
-import { LogLevel } from "../packages/core/src/core/types";
 import chalk from "chalk";
 import { defaultCharacter } from "../packages/core/src/core/character";
 import { z } from "zod";
 import readline from "readline";
-import { MongoDb } from "../packages/core/src/core/mongo-db";
+import { MongoDb } from "../packages/core/src/core/db/mongo-db";
+import { Message } from "discord.js";
+import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
 
 async function main() {
+    // Set logging level as you see fit
     const loglevel = LogLevel.DEBUG;
 
     // Initialize core dependencies
@@ -28,39 +30,48 @@ async function main() {
         logLevel: loglevel,
     });
 
-    await vectorDb.purge(); // Clear previous session data
+    // Optional: Purge previous session data if you want a fresh start
+    await vectorDb.purge();
 
     const roomManager = new RoomManager(vectorDb);
 
     const llmClient = new LLMClient({
-        model: "anthropic/claude-3-5-sonnet-latest", // Using a known supported model
+        model: "anthropic/claude-3-5-sonnet-latest", // Example model
         temperature: 0.3,
     });
 
-    // Initialize processor with default character personality
-    const processor = new MessageProcessor(
+    const masterProcessor = new MasterProcessor(
         llmClient,
         defaultCharacter,
         loglevel
     );
 
-    // Initialize core system
+    // Initialize processor with default character personality
+    const messageProcessor = new MessageProcessor(
+        llmClient,
+        defaultCharacter,
+        loglevel
+    );
+
+    masterProcessor.addProcessor(messageProcessor);
+
+    // Connect to MongoDB (for scheduled tasks, if you use them)
     const scheduledTaskDb = new MongoDb(
         "mongodb://localhost:27017",
         "myApp",
         "scheduled_tasks"
     );
-
     await scheduledTaskDb.connect();
     console.log(chalk.green("✅ Scheduled task database connected"));
 
+    // Clear any existing tasks if you like
     await scheduledTaskDb.deleteAll();
 
-    // Initialize core system
+    // Create the Orchestrator
     const core = new Orchestrator(
         roomManager,
         vectorDb,
-        [processor],
+        masterProcessor,
         scheduledTaskDb,
         {
             level: loglevel,
@@ -69,94 +80,56 @@ async function main() {
         }
     );
 
-    function messageCreate(bot: any, message: any) {
-        const isMention =
-            message.mentions.users.findKey(
-                (user: any) => user.id === bot.id
-            ) !== undefined;
-        if (isMention) {
-            core.dispatchToInput(
-                "discord_mention",
-                {
-                    content: message.content,
-                    sentBy: message.author.id,
-                    channelId: message.channelId,
-                },
-                message.author.id
-            );
-        }
-    }
-
-    // Set up Discord client with credentials
+    // Initialize the Discord client
     const discord = new DiscordClient(
         {
             discord_token: env.DISCORD_TOKEN,
+            discord_bot_name: "DeepLoaf",
         },
-        loglevel,
-        {
-            messageCreate,
-        }
+        loglevel
     );
 
-    // Register input handler for Discord mentions
+    // 1) REGISTER A STREAMING INPUT
+    //    This handler sets up a Discord listener. On mention, it
+    //    pipes data into Orchestrator via "onData".
     core.registerIOHandler({
-        name: "discord_mention",
+        name: "discord_stream",
         role: HandlerRole.INPUT,
-        handler: async (data: unknown) => {
-            const message = data as { content: string; sentBy: string };
-            console.log(chalk.blue("🔍 Received Discord mention..."));
-
-            return [message];
-        },
-        schema: z.object({
-            sentBy: z.string(),
-            content: z.string(),
-            channelId: z.string(),
-        }),
-    });
-
-    // Register output handler for Discord replies
-    core.registerIOHandler({
-        name: "discord_reply",
-        role: HandlerRole.OUTPUT,
-        handler: async (data: unknown) => {
-            const messageData = data as {
-                content: string;
-                channelId: string;
+        subscribe: (onData) => {
+            discord.startMessageStream((incomingMessage: Message) => {
+                onData(incomingMessage);
+            });
+            return () => {
+                discord.stopMessageStream();
             };
-            return discord.createMessageOutput().handler(messageData);
         },
-        schema: z
-            .object({
-                content: z.string(),
-                channelId: z
-                    .string()
-                    .optional()
-                    .describe("The channel ID of the message"),
-            })
-            .describe(
-                "If you have been tagged or mentioned in Discord, use this. This is for replying to a message."
-            ),
     });
 
-    // Set up readline interface
+    // 2) REGISTER AN OUTPUT HANDLER
+    //    This allows your Processor to suggest messages that are posted back to Discord
+
+    core.registerIOHandler(discord.createMessageOutput());
+
+    // (Optional) Set up a console readline for manual input, etc.
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
     });
 
-    // Start the prompt loop
     console.log(chalk.cyan("🤖 Bot is now running and monitoring Discord..."));
-    console.log(chalk.cyan("You can type messages in the console."));
-    console.log(chalk.cyan('Type "exit" to quit'));
+    console.log(
+        chalk.cyan("You can also type messages in this console for debugging.")
+    );
+    console.log(chalk.cyan('Type "exit" to quit.'));
 
-    // Handle graceful shutdown
+    // Handle graceful shutdown (Ctrl-C, etc.)
     process.on("SIGINT", async () => {
         console.log(chalk.yellow("\n\nShutting down..."));
 
-        // Clean up resources
-        discord.destroy();
-        core.removeIOHandler("discord_mention");
+        // If we want to stop the streaming IO handler:
+        core.removeIOHandler("discord_stream");
+
+        // Also remove any other handlers or do cleanup
         core.removeIOHandler("discord_reply");
         rl.close();
 

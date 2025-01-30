@@ -1,7 +1,7 @@
 import { defineConfig } from "vocs";
 
 export default defineConfig({
-    banner: "Head to our new [Discord](https://discord.gg/JbX7WdAD)!",
+    banner: "Head to our new [Discord](https://discord.gg/rt8ajxQvXh)!",
     title: "Daydreams Documentation",
     description: "Daydreams | generative agents",
     iconUrl: "/favicon-32x32.png",
@@ -13,7 +13,6 @@ export default defineConfig({
             link: "https://github.com/daydreamsai/daydreams/releases",
         },
     ],
-    baseUrl: "https://github.com/daydreamsai/daydreams",
     socials: [
         {
             icon: "github",

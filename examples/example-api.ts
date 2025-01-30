@@ -20,7 +20,8 @@ import { defaultCharacter } from "../packages/core/src/core/character";
 import { Consciousness } from "../packages/core/src/core/consciousness";
 import { z } from "zod";
 import readline from "readline";
-import { MongoDb } from "../packages/core/src/core/mongo-db";
+import { MongoDb } from "../packages/core/src/core/db/mongo-db";
+import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
 
 async function main() {
     const loglevel = LogLevel.DEBUG;
@@ -45,6 +46,19 @@ async function main() {
         temperature: 0.3,
     });
 
+    const masterProcessor = new MasterProcessor(
+        llmClient,
+        defaultCharacter,
+        loglevel
+    );
+
+    // Initialize processor with default character personality
+    const messageProcessor = new MessageProcessor(
+        llmClient,
+        defaultCharacter,
+        loglevel
+    );
+
     const researchProcessor = new ResearchQuantProcessor(
         researchClient,
         defaultCharacter,
@@ -52,12 +66,8 @@ async function main() {
         1000 // chunk size, depends
     );
 
-    // Initialize processor with default character personality
-    const processor = new MessageProcessor(
-        llmClient,
-        defaultCharacter,
-        loglevel
-    );
+    // Add processors to the master processor
+    masterProcessor.addProcessor([messageProcessor, researchProcessor]);
 
     const scheduledTaskDb = new MongoDb(
         "mongodb://localhost:27017",
@@ -74,7 +84,7 @@ async function main() {
     const orchestrator = new Orchestrator(
         roomManager,
         vectorDb,
-        [processor, researchProcessor],
+        masterProcessor,
         scheduledTaskDb,
         {
             level: loglevel,
@@ -93,10 +103,10 @@ async function main() {
     orchestrator.registerIOHandler({
         name: "fetchGithubIssues",
         role: HandlerRole.ACTION,
-        schema: z.object({
+        outputSchema: z.object({
             repo: z.string(),
         }),
-        handler: async (payload) => {
+        execute: async (payload) => {
             // 1. Fetch some info from GitHub
             // 2. Return the fetched data so it can be processed as "new input"
             //    to the next step in the chain.
@@ -114,7 +124,7 @@ async function main() {
         name: "universalApiCall",
         role: HandlerRole.ACTION,
         // The agent must fill out these fields to make a valid request
-        schema: z
+        outputSchema: z
             .object({
                 method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
                 url: z.string().url(),
@@ -124,7 +134,7 @@ async function main() {
             .describe(
                 "Use this to fetch data from an API. It should include the method, url, headers, and body."
             ),
-        handler: async (payload) => {
+        execute: async (payload) => {
             const { method, url, headers, body } = payload as {
                 method: string;
                 url: string;
@@ -162,14 +172,7 @@ async function main() {
     orchestrator.registerIOHandler({
         name: "user_chat",
         role: HandlerRole.INPUT,
-        // This schema describes what a user message looks like
-        schema: z.object({
-            content: z.string(),
-            userId: z.string().optional(),
-        }),
-        // For "on-demand" input handlers, the `handler()` can be a no-op.
-        // We'll call it manually with data, so we don't need an interval.
-        handler: async (payload) => {
+        execute: async (payload) => {
             // We simply return the payload so the Orchestrator can process it
             return payload;
         },
@@ -178,11 +181,11 @@ async function main() {
     orchestrator.registerIOHandler({
         name: "ui_chat_reply",
         role: HandlerRole.OUTPUT,
-        schema: z.object({
+        outputSchema: z.object({
             userId: z.string().optional(),
             message: z.string(),
         }),
-        handler: async (payload) => {
+        execute: async (payload) => {
             const { userId, message } = payload as {
                 userId?: string;
                 message: string;
@@ -217,9 +220,11 @@ async function main() {
                 const outputs: any = await orchestrator.dispatchToInput(
                     "user_chat",
                     {
-                        content: userMessage,
-                        userId,
+                        headers: {
+                            "x-user-id": userId,
+                        },
                     },
+                    userMessage,
                     userId
                 );
 

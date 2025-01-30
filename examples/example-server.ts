@@ -13,7 +13,8 @@ import { RoomManager } from "../packages/core/src/core/room-manager";
 import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
 import { defaultCharacter } from "../packages/core/src/core/character";
 import { LogLevel } from "../packages/core/src/core/types";
-import { MongoDb } from "../packages/core/src/core/mongo-db";
+import { MongoDb } from "../packages/core/src/core/db/mongo-db";
+import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
 
 const scheduledTaskDb = new MongoDb(
     "mongodb://localhost:27017",
@@ -31,19 +32,42 @@ class OrchestratorManager {
   private roomManagers: Map<string, RoomManager> = new Map();
   private scheduledTaskDb: ScheduledTaskMongoDb;
 
-  constructor() {
-    this.scheduledTaskDb = new ScheduledTaskMongoDb(
-      "mongodb://localhost:27017",
-      "myApp",
-      "scheduled_tasks"
+    // 1.1. LLM Initialization
+    const llmClient = new LLMClient({
+        model: "anthropic/claude-3-5-sonnet-latest",
+        temperature: 0.3,
+    });
+
+    // 1.2. Vector memory initialization
+    const vectorDb = new ChromaVectorDB("agent_memory", {
+        chromaUrl: "http://localhost:8000",
+        logLevel: loglevel,
+    });
+
+    // 1.3. Room manager initialization
+    const roomManager = new RoomManager(vectorDb);
+
+    const masterProcessor = new MasterProcessor(
+        llmClient,
+        defaultCharacter,
+        loglevel
     );
   }
+
+    // Initialize processor with default character personality
+    const messageProcessor = new MessageProcessor(
+        llmClient,
+        defaultCharacter,
+        loglevel
+    );
+
+    masterProcessor.addProcessor(messageProcessor);
 
     // 1.5. Initialize core system
     const orchestrator = new Orchestrator(
         roomManager,
         vectorDb,
-        [processor],
+        masterProcessor,
         scheduledTaskDb,
         {
             level: loglevel,
@@ -53,31 +77,27 @@ class OrchestratorManager {
     );
 
     orchestrator.registerIOHandler({
-      name: "user_chat",
-      role: HandlerRole.INPUT,
-      schema: z.object({
-        content: z.string(),
-        userId: z.string().optional(),
-      }),
-      handler: async (payload) => {
-        return payload;
-      },
+        name: "user_chat",
+        role: HandlerRole.INPUT,
+        execute: async (payload) => {
+            return payload;
+        },
     });
 
     orchestrator.registerIOHandler({
-      name: "chat_reply",
-      role: HandlerRole.OUTPUT,
-      schema: z.object({
-        userId: z.string().optional(),
-        message: z.string(),
-      }),
-      handler: async (payload) => {
-        const { userId, message } = payload as {
-          userId?: string;
-          message: string;
-        };
-        console.log(`[Orchestrator ${id}] Reply to user ${userId ?? "??"}: ${message}`);
-      },
+        name: "chat_reply",
+        role: HandlerRole.OUTPUT,
+        outputSchema: z.object({
+            userId: z.string().optional(),
+            message: z.string(),
+        }),
+        execute: async (payload) => {
+            const { userId, message } = payload as {
+                userId?: string;
+                message: string;
+            };
+            console.log(`Reply to user ${userId ?? "??"}: ${message}`);
+        },
     });
 
     this.orchestrators.set(id, orchestrator);
@@ -139,17 +159,16 @@ wss.on("connection", (ws) => {
                 throw new Error("userId is required");
             }
 
-            orchestrator.initializeOrchestrator(userId);
-
             // Process the message using the orchestrator with the provided userId
             const outputs = await orchestrator.dispatchToInput(
                 "user_chat",
                 {
-                    content: userMessage,
-                    userId: userId,
+                    headers: {
+                        "x-user-id": userId,
+                    },
                 },
-                userId,
-                orchestratorId ? new ObjectId(orchestratorId) : undefined
+                userMessage,
+                orchestratorId ? orchestratorId : undefined
             );
 
             console.log(chalk.blue(`[WS] Got outputs:`, outputs));
