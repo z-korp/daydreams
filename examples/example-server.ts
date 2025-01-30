@@ -17,7 +17,7 @@ import { MessageProcessor } from "../packages/core/src/core/processors/message-p
 import { defaultCharacter } from "../packages/core/src/core/character";
 
 import { LogLevel } from "../packages/core/src/core/types";
-import { MongoDb } from "../packages/core/src/core/mongo-db";
+import { MongoDb } from "../packages/core/src/core/db/mongo-db";
 
 const scheduledTaskDb = new MongoDb(
     "mongodb://localhost:27017",
@@ -75,10 +75,6 @@ async function createDaydreamsAgent() {
     orchestrator.registerIOHandler({
         name: "user_chat",
         role: HandlerRole.INPUT,
-        outputSchema: z.object({
-            content: z.string(),
-            userId: z.string().optional(),
-        }),
         execute: async (payload) => {
             return payload;
         },
@@ -155,7 +151,7 @@ wss.on("connection", (ws) => {
                     userId: userId,
                 },
                 userId,
-                orchestratorId ? new ObjectId(orchestratorId) : undefined
+                orchestratorId ? orchestratorId : undefined
             );
 
             // Send responses back through WebSocket

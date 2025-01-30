@@ -20,7 +20,7 @@ import { defaultCharacter } from "../packages/core/src/core/character";
 import { Consciousness } from "../packages/core/src/core/consciousness";
 import { z } from "zod";
 import readline from "readline";
-import { MongoDb } from "../packages/core/src/core/mongo-db";
+import { MongoDb } from "../packages/core/src/core/db/mongo-db";
 
 async function main() {
     const loglevel = LogLevel.DEBUG;
@@ -162,13 +162,6 @@ async function main() {
     orchestrator.registerIOHandler({
         name: "user_chat",
         role: HandlerRole.INPUT,
-        // This schema describes what a user message looks like
-        outputSchema: z.object({
-            content: z.string(),
-            userId: z.string().optional(),
-        }),
-        // For "on-demand" input handlers, the `handler()` can be a no-op.
-        // We'll call it manually with data, so we don't need an interval.
         execute: async (payload) => {
             // We simply return the payload so the Orchestrator can process it
             return payload;

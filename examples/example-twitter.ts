@@ -21,7 +21,9 @@ import { defaultCharacter } from "../packages/core/src/core/character";
 import { Consciousness } from "../packages/core/src/core/consciousness";
 import { z } from "zod";
 import readline from "readline";
-import { MongoDb } from "../packages/core/src/core/mongo-db";
+import { MongoDb } from "../packages/core/src/core/db/mongo-db";
+import { SchedulerService } from "../packages/core/src/core/schedule-service";
+import { Logger } from "../packages/core/src/core/logger";
 
 async function main() {
     const loglevel = LogLevel.DEBUG;
@@ -59,7 +61,7 @@ async function main() {
     await scheduledTaskDb.deleteAll();
 
     // Initialize core system
-    const core = new Orchestrator(
+    const orchestrator = new Orchestrator(
         roomManager,
         vectorDb,
         [processor],
@@ -70,6 +72,23 @@ async function main() {
             enableTimestamp: true,
         }
     );
+
+    const scheduler = new SchedulerService(
+        {
+            logger: new Logger({
+                level: loglevel,
+                enableColors: true,
+                enableTimestamp: true,
+            }),
+            orchestratorDb: scheduledTaskDb,
+            roomManager: roomManager,
+            vectorDb: vectorDb,
+        },
+        orchestrator,
+        10000
+    );
+
+    scheduler.start();
 
     // Set up Twitter client with credentials
     const twitter = new TwitterClient(
@@ -89,7 +108,7 @@ async function main() {
     });
 
     //   Register input handler for Twitter mentions
-    core.registerIOHandler({
+    orchestrator.registerIOHandler({
         name: "twitter_mentions",
         role: HandlerRole.INPUT,
         execute: async () => {
@@ -115,7 +134,7 @@ async function main() {
     });
 
     // Register input handler for autonomous thoughts
-    core.registerIOHandler({
+    orchestrator.registerIOHandler({
         name: "consciousness_thoughts",
         role: HandlerRole.INPUT,
         execute: async () => {
@@ -132,7 +151,7 @@ async function main() {
     });
 
     // Register output handler for posting thoughts to Twitter
-    core.registerIOHandler({
+    orchestrator.registerIOHandler({
         name: "twitter_thought",
         role: HandlerRole.OUTPUT,
         execute: async (data: unknown) => {
@@ -157,11 +176,16 @@ async function main() {
     });
 
     // Schedule a task to run every minute
-    await core.scheduleTaskInDb("sleever", "twitter_mentions", {}, 6000); // Check mentions every minute
-    await core.scheduleTaskInDb("sleever", "consciousness_thoughts", {}, 30000); // Think every 5 minutes
+    await scheduler.scheduleTaskInDb("sleever", "twitter_mentions", {}, 6000); // Check mentions every minute
+    await scheduler.scheduleTaskInDb(
+        "sleever",
+        "consciousness_thoughts",
+        {},
+        30000
+    ); // Think every 5 minutes
 
     // Register output handler for Twitter replies
-    core.registerIOHandler({
+    orchestrator.registerIOHandler({
         name: "twitter_reply",
         role: HandlerRole.OUTPUT,
         execute: async (data: unknown) => {
@@ -199,10 +223,10 @@ async function main() {
 
         // Clean up resources
         await consciousness.stop();
-        core.removeIOHandler("twitter_mentions");
-        core.removeIOHandler("consciousness_thoughts");
-        core.removeIOHandler("twitter_reply");
-        core.removeIOHandler("twitter_thought");
+        orchestrator.removeIOHandler("twitter_mentions");
+        orchestrator.removeIOHandler("consciousness_thoughts");
+        orchestrator.removeIOHandler("twitter_reply");
+        orchestrator.removeIOHandler("twitter_thought");
         rl.close();
 
         console.log(chalk.green("✅ Shutdown complete"));
