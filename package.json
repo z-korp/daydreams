@@ -8,6 +8,7 @@
         "server": "bun run examples/example-server.ts",
         "discord": "bun run examples/example-discord.ts",
         "hyperliquid": "bun run examples/example-hyperliquid.ts",
+        "vision": "bun run examples/example-vision.ts",
         "api": "bun run examples/example-api.ts",
         "ui": "pnpm --dir clients/example-ui run dev",
         "test": "bun run packages/core",
