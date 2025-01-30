@@ -79,7 +79,7 @@ export class MasterProcessor extends BaseProcessor {
             })
             .join("\n");
 
-        const prompt = `Analyze the following content and provide a complete analysis:
+        const prompt = `You are a master processor that can delegate to child processors. Decide on what do to with the following content:
 
         # New Content to process: 
         ${contentStr}
@@ -96,6 +96,11 @@ export class MasterProcessor extends BaseProcessor {
         # Available Actions:
         ${actionsSchemaPart}
 
+        <thinking id="processor_decision">
+        1. Decide on what do to with the content. If you an output or action is suggested, you should use it.
+        2. If you can't decide, delegate to a child processor or just return.
+        </thinking>
+
         <thinking id="content_classification">
         1. Content classification and type
         2. Content enrichment (summary, topics, sentiment, entities, intent)
@@ -106,32 +111,6 @@ export class MasterProcessor extends BaseProcessor {
         1. Suggested outputs/actions based on the available handlers based on the content and the available handlers. 
         2. If the content is a message, use the personality of the character to determine if the output was successful.
         3. If possible you should include summary of the content in the output for the user to avoid more processing.
-        </thinking>
-
-        <thinking id="task_suggestion">
-        1. Suggested tasks based on the available handlers based on the content and the available handlers. 
-        2. Only make tasks if you have been told, based off what you think is possible.
-        </thinking>
-
-        <thinking id="should_reply">
-        1. Should you reply to the message?
-        2. You should only reply if you have been mentioned in the message or you think you can help deeply.
-        3. You should never respond to yourself.
-        </thinking>
-
-        <thinking id="message_personality">
-
-        # Speak in the following voice:
-        ${JSON.stringify(this.character.voice)}
-
-        # Use the following traits to define your behavior:
-        ${JSON.stringify(this.character.traits)}
-
-        # Use the following examples to guide your behavior:
-        ${JSON.stringify(this.character.instructions)}
-
-        # Use the following template to craft your message:
-        ${JSON.stringify(this.character.templates?.tweetTemplate)}
         </thinking>
 `;
 
@@ -210,6 +189,10 @@ export class MasterProcessor extends BaseProcessor {
                 }),
                 llmClient: this.llmClient,
                 logger: this.logger,
+            });
+
+            this.logger.debug("MasterProcessor.process", "Result", {
+                result,
             });
 
             // Check if we should delegate to a child processor
