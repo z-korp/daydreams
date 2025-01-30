@@ -19,42 +19,64 @@ export function MessagesList({ messages }: MessagesListProps) {
     }, [messages]);
 
     const getMessageClasses = (msg: MessageType) => {
-        let containerClass = "flex w-full mb-4 px-4";
-        let bubbleClass = `
-            px-4 py-2 rounded-lg max-w-[80%] font-medium 
-            relative overflow-hidden
-            bg-card text-foreground
-            before:absolute before:inset-[1px] before:rounded-lg before:z-0
-            [&>*]:relative [&>*]:z-10
-            shadow-[0_0_30px_hsl(var(--primary)/0.05)]
-            border border-[hsl(var(--primary))]/30
+        const baseBubble = `
+            relative p-4 text-sm
+            shadow-md transition-all duration-200
+            w-[80%] whitespace-pre-wrap break-words
+            border-opacity-50 dither-border
         `;
+
+        let containerClass = "flex items-start mb-4 px-4";
+        let bubbleClass = baseBubble;
 
         switch (msg.type) {
             case "INPUT":
                 containerClass += " justify-end";
+                bubbleClass += `
+                    bg-card text-foreground mr-2
+                    self-end hover:brightness-110
+                `;
                 break;
 
             case "OUTPUT":
                 containerClass += " justify-start";
+                bubbleClass += `
+                    bg-card text-foreground ml-2
+                    hover:brightness-105
+                `;
                 break;
 
             case "SYSTEM":
                 containerClass += " justify-center";
+                bubbleClass += `
+                    bg-card text-muted-foreground
+                    hover:brightness-105
+                `;
                 break;
 
             case "ERROR":
-                containerClass += " justify-start";
+                containerClass += " justify-center";
+                bubbleClass += `
+                    bg-card text-destructive font-semibold
+                    hover:brightness-105
+                `;
+                break;
+
+            case "WELCOME":
+                containerClass += " justify-center";
+                bubbleClass += `
+                    bg-card text-accent-foreground
+                    hover:brightness-105
+                `;
                 break;
 
             default:
                 containerClass += " justify-start";
+                bubbleClass += `
+                    bg-card text-card-foreground ml-2
+                    hover:brightness-105
+                `;
         }
-
-        bubbleClass += ` 
-            hover:brightness-105
-            transition-all duration-300
-        `;
 
         return { containerClass, bubbleClass };
     };
@@ -69,13 +91,13 @@ export function MessagesList({ messages }: MessagesListProps) {
                     <div key={i} className={containerClass}>
                         <div className={bubbleClass}>
                             {msg.type !== "INPUT" && msg.type !== "OUTPUT" && (
-                                <div className="text-xs font-semibold mb-2 opacity-70">
+                                <div className="mb-1 text-xs font-medium uppercase tracking-wider opacity-80">
                                     {msg.type}
                                 </div>
                             )}
 
                             <div className={`
-                                break-words overflow-x-auto
+                                text-base break-words overflow-x-auto
                                 ${time ? 'mb-4' : ''}
                             `}>
                                 {msg.message}
