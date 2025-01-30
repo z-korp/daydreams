@@ -12,10 +12,18 @@ import { defaultCharacter } from "../packages/core/src/core/character";
 import { z } from "zod";
 import readline from "readline";
 import { MongoDb } from "../packages/core/src/core/db/mongo-db";
+import { Consciousness } from "../packages/core/src/core/consciousness";
+import { SchedulerService } from "../packages/core/src/core/schedule-service";
+import { Logger } from "../packages/core/src/core/logger";
 
 
 async function main() {
     const loglevel = LogLevel.DEBUG;
+
+    // Ensure startup chat ID is set
+    if (!env.TELEGRAM_STARTUP_CHAT_ID) {
+        console.warn(chalk.yellow("⚠️ No TELEGRAM_STARTUP_CHAT_ID set - startup message will be skipped"));
+    }
 
     // Initialize core dependencies
     const vectorDb = new ChromaVectorDB("telegram_agent", {
@@ -51,7 +59,7 @@ async function main() {
     await scheduledTaskDb.deleteAll();
 
     // Initialize core system
-    const core = new Orchestrator(
+    const orchestrator = new Orchestrator(
         roomManager,
         vectorDb,
         processor,
@@ -63,49 +71,54 @@ async function main() {
         }
     );
 
-    // Set up Telegram bot client with credentials
+    const scheduler = new SchedulerService(
+        {
+            logger: new Logger({
+                level: loglevel,
+                enableColors: true,
+                enableTimestamp: true,
+            }),
+            orchestratorDb: scheduledTaskDb,
+            roomManager: roomManager,
+            vectorDb: vectorDb,
+        },
+        orchestrator,
+        10000
+    );
+
+    scheduler.start();
+
+    // Set up Telegram user client with credentials
     const telegram = new TelegramClient(
         {
+            session: env.TELEGRAM_USER_SESSION,
             bot_token: env.TELEGRAM_TOKEN,
             api_id: parseInt(env.TELEGRAM_API_ID as string),
             api_hash: env.TELEGRAM_API_HASH,
-            is_bot: true,
+            is_bot: false,
         },
         loglevel,
     );
 
+    // Wait for login to complete before setting up handlers
+    await telegram.initialize();
 
-
-    // Set up Telegram user client with credentials
-    // const telegram = new TelegramClient(
-    //     {
-    //         bot_token: env.TELEGRAM_TOKEN,
-    //         api_id: parseInt(env.TELEGRAM_API_ID as string),
-    //         api_hash: env.TELEGRAM_API_HASH,
-    //         is_bot: false,
-    //     },
-    //     loglevel,
-    // );
-
-
-
-    // Register input handler for getting Telegram messages from channel, chat, etc
-    core.registerIOHandler({
+    // Register handlers after successful login
+    orchestrator.registerIOHandler({
         name: "telegram_channel_scraper",
         role: HandlerRole.INPUT,
         execute: async (data: unknown) => {
+            console.log(chalk.green("🤖 Telegram channel scraper registered"));
             const messageData = data as {
                 chatId: number;
                 limit?: number;
                 offset?: number;
             };
-            return telegram.createChannelScraper().handler(messageData);
+            return telegram.createPeriodicChannelScraper([messageData.chatId]).handler(messageData);
         }
     });
 
-
-    // Register output handler for sending Telegram messages from bot or user
-    core.registerIOHandler({
+    orchestrator.registerIOHandler({
         name: "telegram_send_message",
         role: HandlerRole.OUTPUT,
         execute: async (data: unknown) => {
@@ -118,15 +131,45 @@ async function main() {
         outputSchema: z
             .object({
                 content: z.string(),
-                chatId: z
-                    .number()
-                    .optional()
-                    .describe("The chat ID for the message"),
+                chatId: z.number().optional().describe("The chat ID for the message"),
             })
-            .describe(
-                "This is for sending a message."
-            ),
+            .describe("This is for sending a message."),
     });
+
+    // Initialize autonomous channel scraping
+    const consciousness = new Consciousness(llmClient, roomManager, {
+        // intervalMs: 300000, // Scrape every 5 minutes
+        intervalMs: 5000, // Scrape every 5 seconds
+        minConfidence: 0.7,
+        logLevel: loglevel,
+    });
+
+    // Register consciousness thought handler for autonomous channel scraping
+    // orchestrator.registerIOHandler({
+    //     name: "consciousness_channel_scrape",
+    //     role: HandlerRole.OUTPUT,
+    //     execute: async (data: unknown) => {
+    //         const messageData = data as {
+    //             chatId: number;
+    //             limit?: number;
+    //         };
+    //         return telegram.createChannelScraper().handler(messageData);
+    //     },
+    //     outputSchema: z
+    //         .object({
+    //             chatId: z.number().describe("The channel/chat ID to scrape messages from"),
+    //             limit: z.number().optional().describe("Maximum number of messages to fetch"),
+    //         })
+    //         .describe(
+    //             "Use this to automatically fetch messages from a Telegram channel or chat"
+    //         ),
+    // });
+
+    // Register input handler for getting Telegram messages from channel, chat, etc
+    await scheduler.scheduleTaskInDb("sleever", "telegram_channel_scraper", {}, 5000);
+
+    // Start consciousness only after login is complete
+    await consciousness.start();
 
     // Set up readline interface
     const rl = readline.createInterface({
@@ -144,9 +187,11 @@ async function main() {
         console.log(chalk.yellow("\n\nShutting down..."));
 
         // Clean up resources
+        await consciousness.stop();
         telegram.logout();
-        core.removeIOHandler("telegram_channel_scraper");
-        core.removeIOHandler("telegram_send_message");
+        orchestrator.removeIOHandler("telegram_channel_scraper");
+        orchestrator.removeIOHandler("telegram_send_message");
+        orchestrator.removeIOHandler("consciousness_channel_scrape");
         rl.close();
 
         console.log(chalk.green("✅ Shutdown complete"));
