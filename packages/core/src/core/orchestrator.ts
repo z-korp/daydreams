@@ -520,8 +520,6 @@ export class Orchestrator {
                     }
                 );
             }
-
-            // Grab memories
         }
 
         // Gather possible outputs & actions
