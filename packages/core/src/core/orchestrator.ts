@@ -240,13 +240,13 @@ export class Orchestrator {
     }
 
     /**
-     * Takes some incoming piece of data, processes it through the system,
-     * and handles any follow-on "action" or "output" suggestions in a queue.
+     * Processes incoming data through the system and manages any follow-on
+     * "action" or "output" suggestions in a queue.
      *
-     * @param request        A request-like object (headers, etc.) from which we extract user info
-     * @param initialData    The data payload to process
-     * @param sourceName     The IOHandler name that provided this data
-     * @param orchestratorId An optional existing orchestrator record ID to tie into
+     * @param request        A request-like object containing headers and other metadata
+     * @param initialData    The data payload to be processed
+     * @param sourceName     The name of the IOHandler that provided this data
+     * @param orchestratorId An optional existing orchestrator record ID to associate with
      */
     private async runAutonomousFlow(
         request: AgentRequest,
@@ -254,23 +254,18 @@ export class Orchestrator {
         sourceName: string,
         orchestratorId?: string
     ) {
-        // For illustration, extract userId from headers. Adjust the header name as needed.
         const userId = request.headers["x-user-id"] || "agent";
 
-        const queue: Array<{ data: unknown; source: string }> = [];
+        // Initialize the processing queue with the initial data
+        const queue: Array<{ data: unknown; source: string }> = Array.isArray(
+            initialData
+        )
+            ? initialData.map((item) => ({ data: item, source: sourceName }))
+            : [{ data: initialData, source: sourceName }];
 
-        if (Array.isArray(initialData)) {
-            for (const item of initialData) {
-                queue.push({ data: item, source: sourceName });
-            }
-        } else {
-            queue.push({ data: initialData, source: sourceName });
-        }
-
-        // Optionally store final outputs to return
         const outputs: Array<{ name: string; data: any }> = [];
 
-        // 1. Fire the "flow start" hook (could create or fetch an orchestrator record).
+        // Trigger the onFlowStart hook if defined
         if (this.flowLifecycle?.onFlowStart) {
             const maybeId = await this.flowLifecycle.onFlowStart(
                 userId,
@@ -282,11 +277,11 @@ export class Orchestrator {
             }
         }
 
-        // 2. Process items in a queue
+        // Process each item in the queue
         while (queue.length > 0) {
             const { data, source } = queue.shift()!;
 
-            // 2a. Notify the flowStep hook that we have new input
+            // Notify the onFlowStep hook of new input
             if (this.flowLifecycle?.onFlowStep) {
                 await this.flowLifecycle.onFlowStep(
                     orchestratorId,
@@ -297,12 +292,13 @@ export class Orchestrator {
                 );
             }
 
-            // 2b. The main processing
+            // Main processing of the data
             const processedResults = await this.processContent(
                 data as ProcessableContent | ProcessableContent[],
                 source,
                 userId
             );
+
             if (!processedResults || processedResults.length === 0) {
                 continue;
             }
@@ -310,7 +306,7 @@ export class Orchestrator {
             for (const processed of processedResults) {
                 if (processed.alreadyProcessed) continue;
 
-                // 2c. If we have tasks to schedule, pass them to the hook
+                // Schedule tasks if any are present
                 if (
                     processed.updateTasks?.length &&
                     this.flowLifecycle?.onTasksScheduled
@@ -325,7 +321,7 @@ export class Orchestrator {
                     );
                 }
 
-                // 2d. For each suggested output/action, dispatch them
+                // Dispatch suggested outputs or actions
                 for (const output of processed.suggestedOutputs ?? []) {
                     const handler = this.ioHandlers.get(output.name);
                     if (!handler) {
@@ -344,7 +340,6 @@ export class Orchestrator {
                             output.data
                         );
 
-                        // Notify the flowStep hook that we output something
                         if (this.flowLifecycle?.onFlowStep) {
                             await this.flowLifecycle.onFlowStep(
                                 orchestratorId,
@@ -354,7 +349,7 @@ export class Orchestrator {
                                 output.data
                             );
                         }
-                        // Or specifically call onOutputDispatched if you prefer:
+
                         if (this.flowLifecycle?.onOutputDispatched) {
                             await this.flowLifecycle.onOutputDispatched(
                                 orchestratorId,
@@ -370,8 +365,10 @@ export class Orchestrator {
                             output.data
                         );
 
-                        // Notify a flow step or action-dispatched hook
-                        if (this.flowLifecycle?.onFlowStep) {
+                        if (
+                            this.flowLifecycle?.onActionDispatched &&
+                            this.flowLifecycle?.onFlowStep
+                        ) {
                             await this.flowLifecycle.onFlowStep(
                                 orchestratorId,
                                 userId,
@@ -379,8 +376,6 @@ export class Orchestrator {
                                 output.name,
                                 { input: output.data, result: actionResult }
                             );
-                        }
-                        if (this.flowLifecycle?.onActionDispatched) {
                             await this.flowLifecycle.onActionDispatched(
                                 orchestratorId,
                                 userId,
@@ -390,20 +385,13 @@ export class Orchestrator {
                             );
                         }
 
-                        // If the action returns new data, queue it up
+                        // Queue new data from action results
                         if (actionResult) {
-                            if (Array.isArray(actionResult)) {
-                                for (const item of actionResult) {
-                                    queue.push({
-                                        data: item,
-                                        source: output.name,
-                                    });
-                                }
-                            } else {
-                                queue.push({
-                                    data: actionResult,
-                                    source: output.name,
-                                });
+                            const newItems = Array.isArray(actionResult)
+                                ? actionResult
+                                : [actionResult];
+                            for (const item of newItems) {
+                                queue.push({ data: item, source: output.name });
                             }
                         }
                     } else {
@@ -417,7 +405,7 @@ export class Orchestrator {
             }
         }
 
-        // 3. Return final outputs, or handle them as you see fit
+        // Return the final outputs
         return outputs;
     }
 
