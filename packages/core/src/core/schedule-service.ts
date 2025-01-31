@@ -1,13 +1,13 @@
 import { Orchestrator } from "./orchestrator";
 import { HandlerRole, type VectorDB } from "./types";
 import type { Logger } from "./logger";
-import type { RoomManager } from "./room-manager";
+import type { ConversationManager } from "./conversation-manager";
 import type { OrchestratorDb } from "./memory";
 
 export interface IOrchestratorContext {
     logger: Logger;
     orchestratorDb: OrchestratorDb;
-    roomManager: RoomManager;
+    conversationManager: ConversationManager;
     vectorDb: VectorDB;
 }
 

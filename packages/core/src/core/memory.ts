@@ -1,5 +1,5 @@
 import type { HandlerRole, Memory } from "./types";
-import type { Room } from "./room";
+import type { Conversation } from "./conversation";
 
 // Define interfaces matching MongoDB document shapes
 export interface ScheduledTask {
@@ -62,12 +62,23 @@ export interface OrchestratorDb {
 }
 
 export interface MemoryManager {
-    hasProcessedContentInRoom(
+    hasProcessedContentInConversation(
         contentId: string,
-        roomId: string
+        conversationId: string
     ): Promise<boolean>;
-    ensureRoom(roomId: string, source: string, userId?: string): Promise<Room>;
-    getMemoriesFromRoom(roomId: string): Promise<Memory[]>;
-    addMemory(roomId: string, content: string, metadata?: any): Promise<void>;
-    markContentAsProcessed(contentId: string, roomId: string): Promise<void>;
+    ensureConversation(
+        conversationId: string,
+        source: string,
+        userId?: string
+    ): Promise<Conversation>;
+    getMemoriesFromConversation(conversationId: string): Promise<Memory[]>;
+    addMemory(
+        conversationId: string,
+        content: string,
+        metadata?: any
+    ): Promise<void>;
+    markContentAsProcessed(
+        contentId: string,
+        conversationId: string
+    ): Promise<void>;
 }
