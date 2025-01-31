@@ -214,6 +214,7 @@ export class MongoDb implements OrchestratorDb {
         name: string,
         data: unknown
     ): Promise<void> {
+        console.log("addMessage", orchestratorId, role, name, data);
         await this.orchestratorCollection.updateOne(
             { _id: orchestratorId },
             {
@@ -241,6 +242,7 @@ export class MongoDb implements OrchestratorDb {
         const doc = await this.orchestratorCollection.findOne({
             _id: orchestratorId,
         });
+        console.log("getMessages", orchestratorId, doc);
         if (!doc) return [];
         return doc.messages;
     }
