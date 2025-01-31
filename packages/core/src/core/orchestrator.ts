@@ -283,15 +283,14 @@ export class Orchestrator {
             const { data, source } = queue.shift()!;
 
             // Notify of an incoming step
-            if (this.flowLifecycle?.onFlowStep) {
-                await this.flowLifecycle.onFlowStep(
-                    orchestratorId,
-                    userId,
-                    HandlerRole.INPUT,
-                    source,
-                    data
-                );
-            }
+
+            await this.flowLifecycle.onFlowStep(
+                orchestratorId,
+                userId,
+                HandlerRole.INPUT,
+                source,
+                data
+            );
 
             // Main content processing
             const processedResults = await this.processContent(
@@ -311,10 +310,7 @@ export class Orchestrator {
                 }
 
                 // Schedule tasks if present
-                if (
-                    result.updateTasks?.length &&
-                    this.flowLifecycle?.onTasksScheduled
-                ) {
+                if (result.updateTasks?.length) {
                     await this.flowLifecycle.onTasksScheduled(
                         userId,
                         result.updateTasks.map((task) => ({
@@ -433,7 +429,7 @@ export class Orchestrator {
     public async processContent(
         content: ProcessableContent | ProcessableContent[],
         source: string,
-        userId?: string
+        userId: string
     ): Promise<ProcessedResult[]> {
         if (Array.isArray(content)) {
             const allResults: ProcessedResult[] = [];
@@ -469,25 +465,20 @@ export class Orchestrator {
     private async processContentItem(
         content: ProcessableContent,
         source: string,
-        userId?: string
+        userId: string
     ): Promise<ProcessedResult | null> {
         let memories: {
             memories: Memory[];
             chatHistory: OrchestratorMessage[];
         } = { memories: [], chatHistory: [] };
 
-        if (
-            content.conversationId &&
-            content.contentId &&
-            this.flowLifecycle?.onCheckContentProcessed
-        ) {
-            const hasProcessed =
+        if (content.conversationId && content.contentId) {
+            if (
                 await this.flowLifecycle.onCheckContentProcessed(
                     content.contentId,
                     content.conversationId
-                );
-
-            if (hasProcessed) {
+                )
+            ) {
                 this.logger.debug(
                     "Orchestrator.processContentItem",
                     "Content already processed",
@@ -500,31 +491,28 @@ export class Orchestrator {
                 return null;
             }
 
-            if (userId && this.flowLifecycle?.onMemoriesRequested) {
-                // Ensure the conversation
-                const conversation =
-                    await this.flowLifecycle.onConversationCreated(
-                        userId,
-                        content.conversationId,
-                        source
-                    );
+            // Ensure the conversation
+            const conversation = await this.flowLifecycle.onConversationCreated(
+                userId,
+                content.conversationId,
+                source
+            );
 
-                memories = await this.flowLifecycle.onMemoriesRequested(
-                    conversation.id
-                );
+            memories = await this.flowLifecycle.onMemoriesRequested(
+                conversation.id
+            );
 
-                this.logger.debug(
-                    "Orchestrator.processContentItem",
-                    "Processing content with context",
-                    {
-                        content,
-                        source,
-                        conversationId: conversation.id,
-                        userId,
-                        relevantMemories: memories,
-                    }
-                );
-            }
+            this.logger.debug(
+                "Orchestrator.processContentItem",
+                "Processing content with context",
+                {
+                    content,
+                    source,
+                    conversationId: conversation.id,
+                    userId,
+                    relevantMemories: memories,
+                }
+            );
         }
 
         // Gather possible outputs & actions
@@ -546,13 +534,7 @@ export class Orchestrator {
         );
 
         // If there's a conversationId, store the memory and mark processed
-        if (
-            content.conversationId &&
-            result &&
-            content.contentId &&
-            this.flowLifecycle?.onMemoryAdded &&
-            this.flowLifecycle?.onConversationUpdated
-        ) {
+        if (content.conversationId && content.contentId) {
             await this.flowLifecycle.onMemoryAdded(
                 content.conversationId,
                 JSON.stringify(result.content),
@@ -562,6 +544,18 @@ export class Orchestrator {
                     ...result.enrichedContext,
                 }
             );
+
+            this.logger.debug(
+                "Orchestrator.processContentItem",
+                "Updating conversation",
+                {
+                    contentId: content.contentId,
+                    conversationId: content.conversationId,
+                    userId,
+                    result,
+                }
+            );
+
             await this.flowLifecycle.onConversationUpdated(
                 content.contentId,
                 content.conversationId,

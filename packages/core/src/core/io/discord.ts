@@ -94,7 +94,8 @@ export class DiscordClient {
 
             onData({
                 content: message.content,
-                channelId: message.channelId,
+                contentId: message.id,
+                conversationId: message.channel.id,
                 sentBy: message.author?.id,
             });
         };

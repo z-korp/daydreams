@@ -38,12 +38,12 @@ export interface OrchestratorDb {
     getOrchestratorsByUserId(userId: string): Promise<OrchestratorChat[]>;
     createOrchestrator(userId: string): Promise<string>;
     addMessage(
-        orchestratorId: string,
+        conversationId: string,
         role: HandlerRole,
         name: string,
         data: any
     ): Promise<void>;
-    getMessages(orchestratorId: string): Promise<OrchestratorMessage[]>;
+    getMessages(conversationId: string): Promise<OrchestratorMessage[]>;
 
     // Task management methods
     createTask(

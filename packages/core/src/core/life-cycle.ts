@@ -144,12 +144,23 @@ export function makeFlowLifecycle(
                 source,
                 ...updates,
             });
+
+            await orchestratorDb.addMessage(
+                conversationId,
+                HandlerRole.INPUT,
+                source,
+                {
+                    content,
+                    conversationId,
+                }
+            );
         },
 
         async onMemoriesRequested(
             conversationId: string,
             limit?: number
         ): Promise<{ memories: Memory[]; chatHistory: OrchestratorMessage[] }> {
+            console.log("onMemoriesRequested", conversationId, limit);
             // get vector based memories
             // todo, we could base this on a userID so the agent has memories across conversations
             const memories =
@@ -160,6 +171,8 @@ export function makeFlowLifecycle(
             // TODO: get history from db
             const chatHistory =
                 await orchestratorDb.getMessages(conversationId);
+
+            console.log("chatHistory", memories, chatHistory);
 
             return { memories, chatHistory };
         },
@@ -185,7 +198,7 @@ export interface FlowLifecycle {
      * Called when a new flow is started or continued.
      * Allows you to create or fetch an Orchestrator record, returning an ID if relevant.
      */
-    onFlowStart?(
+    onFlowStart(
         userId: string,
         sourceName: string,
         initialData: unknown
@@ -194,7 +207,7 @@ export interface FlowLifecycle {
     /**
      * Called when new data is processed in the flow (e.g., an input message).
      */
-    onFlowStep?(
+    onFlowStep(
         orchestratorId: string | undefined,
         userId: string,
         role: HandlerRole,
@@ -206,7 +219,7 @@ export interface FlowLifecycle {
      * Called when the Orchestrator wants to schedule tasks (e.g. recurring tasks).
      * You can store them in your DB or in a queue system.
      */
-    onTasksScheduled?(
+    onTasksScheduled(
         userId: string,
         tasks: {
             name: string;
@@ -218,7 +231,7 @@ export interface FlowLifecycle {
     /**
      * Called after an output is dispatched (e.g. store it or log it).
      */
-    onOutputDispatched?(
+    onOutputDispatched(
         orchestratorId: string | undefined,
         userId: string,
         outputName: string,
@@ -228,7 +241,7 @@ export interface FlowLifecycle {
     /**
      * Called after an action is dispatched (e.g. store it or log it).
      */
-    onActionDispatched?(
+    onActionDispatched(
         orchestratorId: string | undefined,
         userId: string,
         actionName: string,
@@ -239,7 +252,7 @@ export interface FlowLifecycle {
     /**
      * Called when content has been processed in a conversation
      */
-    onContentProcessed?(
+    onContentProcessed(
         userId: string,
         conversationId: string,
         content: string,
@@ -259,7 +272,7 @@ export interface FlowLifecycle {
     /**
      * Called when a conversation is updated
      */
-    onConversationUpdated?(
+    onConversationUpdated(
         contentId: string,
         conversationId: string,
         content: string,
@@ -270,7 +283,7 @@ export interface FlowLifecycle {
     /**
      * Called when a new memory needs to be added to a conversation
      */
-    onMemoryAdded?(
+    onMemoryAdded(
         conversationId: string,
         content: string,
         source: string,
@@ -280,7 +293,7 @@ export interface FlowLifecycle {
     /**
      * Called when memories need to be retrieved for a conversation
      */
-    onMemoriesRequested?(
+    onMemoriesRequested(
         conversationId: string,
         limit?: number
     ): Promise<{ memories: Memory[]; chatHistory: OrchestratorMessage[] }>;
@@ -288,7 +301,7 @@ export interface FlowLifecycle {
     /**
      * Called to check if specific content has been processed in a conversation
      */
-    onCheckContentProcessed?(
+    onCheckContentProcessed(
         contentId: string,
         conversationId: string
     ): Promise<boolean>;
