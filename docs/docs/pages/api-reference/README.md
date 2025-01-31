@@ -2,10 +2,7 @@
 
 # Daydreams - for Defai, games and more
 
-Daydreams is a generative agent library for executing anything onchain. It is
-chain agnostic and can be used to perform onchain tasks - including play any
-onchain game - by simply injecting context. Base, Solana, Ethereum, Starknet,
-etc.
+Daydreams is a generative agent library for executing anything onchain. It is chain agnostic and can be used to perform onchain tasks - including play any onchain game - by simply injecting context. Base, Solana, Ethereum, Starknet, etc.
 
 It is designed to be as lite as possible while remaining powerful and flexible.
 
@@ -51,8 +48,7 @@ docker compose up -d
 
 ## Examples
 
-The project includes several example implementations demonstrating different use
-cases:
+The project includes several example implementations demonstrating different use cases:
 
 ### Basic Example
 
@@ -102,8 +98,7 @@ Daydreams is built around the following concepts:
 
 ### Orchestrator
 
-The Orchestrator is the central component that manages the flow of data through
-the system. It is responsible for:
+The Orchestrator is the central component that manages the flow of data through the system. It is responsible for:
 
 - Registering handlers
 - Routing data through the system
@@ -113,18 +108,13 @@ the system. It is responsible for:
 
 ### Handlers
 
-Handlers are the building blocks of the system. They are responsible for
-processing data and producing outputs. They are registered with the Orchestrator
-and are chained together in an autonomous flow.
+Handlers are the building blocks of the system. They are responsible for processing data and producing outputs. They are registered with the Orchestrator and are chained together in an autonomous flow.
 
-Register handlers for inputs, outputs, and actions using `registerIOHandler`.
-Each handler has a role, description, schema, and handler function:
+Register handlers for inputs, outputs, and actions using `registerIOHandler`. Each handler has a role, description, schema, and handler function:
 
 - **Input Handlers**: Process incoming data (e.g., user messages, API webhooks)
-- **Action Handlers**: Execute operations and return results (e.g., API calls,
-  database queries)
-- **Output Handlers**: Produce side effects (e.g., sending messages, updating
-  UI)
+- **Action Handlers**: Execute operations and return results (e.g., API calls, database queries)
+- **Output Handlers**: Produce side effects (e.g., sending messages, updating UI)
 
 ```typescript
 // Register an action handler
@@ -276,8 +266,7 @@ The system works through several coordinated components:
 
 2. **Chain of Thought (CoT)**: The reasoning engine that:
 
-   - Processes complex queries asked - it can be called directly like in the
-     examples or through the orchestrator
+   - Processes complex queries asked - it can be called directly like in the examples or through the orchestrator
    - Makes decisions based on goals
    - Determines required actions
    - Learns from outcomes
@@ -301,9 +290,7 @@ This architecture allows for:
 - Contextual memory and learning
 - Goal-oriented behavior
 
-Each component can be used independently or composed together for more complex
-behaviors. The system is designed to be extensible, allowing new handlers and
-components to be added as needed.
+Each component can be used independently or composed together for more complex behaviors. The system is designed to be extensible, allowing new handlers and components to be added as needed.
 
 ## Development
 
@@ -321,8 +308,7 @@ Design principles:
 - [ ] Swarm Rooms
 - [ ] Create 'sleeves' abstract for dynamic context generation
 
-> ⚠️ **Warning**: Daydreams is currently in pre-alpha stage, we are looking for
-> feedback and collaboration.
+> ⚠️ **Warning**: Daydreams is currently in pre-alpha stage, we are looking for feedback and collaboration.
 
 ## Contributors
 
