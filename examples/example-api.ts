@@ -9,7 +9,7 @@
 
 import { Orchestrator } from "../packages/core/src/core/orchestrator";
 import { HandlerRole } from "../packages/core/src/core/types";
-import { RoomManager } from "../packages/core/src/core/room-manager";
+import { RoomManager } from "../packages/core/src/core/conversation-manager";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
 import { ResearchQuantProcessor } from "../packages/core/src/core/processors/research-processor";

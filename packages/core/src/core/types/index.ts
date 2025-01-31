@@ -328,7 +328,7 @@ export interface Thought {
     type: string;
     source: string;
     metadata?: Record<string, any>;
-    roomId?: string;
+    conversationId?: string;
 }
 
 export type ThoughtType =
@@ -345,7 +345,7 @@ export interface ThoughtTemplate {
     temperature: number;
 }
 
-export interface RoomMetadata {
+export interface ConversationMetadata {
     name: string;
     description?: string;
     participants: string[];
@@ -356,7 +356,7 @@ export interface RoomMetadata {
 
 export interface Memory {
     id: string;
-    roomId: string;
+    conversationId: string;
     content: string;
     timestamp: Date;
     metadata?: Record<string, any>;
@@ -374,15 +374,15 @@ export interface VectorDB {
 
     delete(id: string): Promise<void>;
 
-    storeInRoom(
+    storeInConversation(
         content: string,
-        roomId: string,
+        conversationId: string,
         metadata?: Record<string, any>
     ): Promise<void>;
 
-    findSimilarInRoom(
+    findSimilarInConversation(
         content: string,
-        roomId: string,
+        conversationId: string,
         limit?: number,
         metadata?: Record<string, any>
     ): Promise<SearchResult[]>;
@@ -552,7 +552,7 @@ export interface InputIOHandler extends BaseIOHandler {
     /** Identifies this as an input handler */
     role: HandlerRole.INPUT;
     /** Function to process input data */
-    execute?: (data: any) => Promise<unknown>;
+    execute?: (data: any) => Promise<ProcessableContent | ProcessableContent[]>;
     /** Sets up a subscription to receive streaming data */
     subscribe?: (onData: (data: any) => void) => () => void;
 }
@@ -580,7 +580,7 @@ export interface OutputIOHandler extends BaseIOHandler {
     /** Required schema to validate output data */
     outputSchema: z.ZodType<any>;
     /** Function to process and send output */
-    execute?: (data: any) => Promise<unknown>;
+    execute?: (data: any) => Promise<ProcessableContent | ProcessableContent[]>;
     /** Sets up a subscription to handle output streams */
     subscribe?: (onData: (data: any) => void) => () => void;
 }
@@ -613,4 +613,13 @@ export type IOHandler = InputIOHandler | OutputIOHandler | ActionIOHandler;
 
 export interface AgentRequest {
     headers: Record<string, string>;
+}
+
+/**
+ * Base interface for any content that can be processed
+ */
+export interface ProcessableContent {
+    conversationId?: string;
+    contentId?: string;
+    [key: string]: any; // Allow additional properties
 }

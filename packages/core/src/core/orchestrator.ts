@@ -1,16 +1,17 @@
 import { Logger } from "./logger";
-import { RoomManager } from "./room-manager";
 import type { BaseProcessor } from "./processor";
-import type { AgentRequest, Memory, ProcessedResult, VectorDB } from "./types";
+import type {
+    AgentRequest,
+    Memory,
+    ProcessableContent,
+    ProcessedResult,
+} from "./types";
 import { HandlerRole, LogLevel, type LoggerConfig } from "./types";
 import type { IOHandler } from "./types";
 
-import type { OrchestratorDb } from "./memory";
+import type { FlowLifecycle } from "./life-cycle";
+import type { OrchestratorMessage } from "./memory";
 
-/**
- * Orchestrator system that manages both "input" and "output" handlers
- * in a unified manner, along with scheduling recurring inputs.
- */
 export class Orchestrator {
     /**
      * Unified collection of IOHandlers (both input & output).
@@ -24,30 +25,16 @@ export class Orchestrator {
     private readonly logger: Logger;
 
     /**
-     * orchestratorDb instance for database operations.
-     */
-    private readonly orchestratorDb: OrchestratorDb;
-
-    /**
      * Map of unsubscribe functions for various handlers.
      * Keyed by handler name.
      */
     private unsubscribers = new Map<string, () => void>();
 
-    /**
-     * Other references in your system. Adjust as needed.
-     */
-    public readonly vectorDb: VectorDB;
-
     constructor(
-        private readonly roomManager: RoomManager,
-        vectorDb: VectorDB,
         private processor: BaseProcessor,
-        orchestratorDb: OrchestratorDb,
+        private readonly flowLifecycle: FlowLifecycle,
         config?: LoggerConfig
     ) {
-        this.vectorDb = vectorDb;
-        this.orchestratorDb = orchestratorDb;
         this.logger = new Logger(
             config ?? {
                 level: LogLevel.ERROR,
@@ -82,7 +69,7 @@ export class Orchestrator {
 
         this.ioHandlers.set(handler.name, handler);
 
-        if (handler.role === HandlerRole.INPUT && handler.subscribe) {
+        if (handler.role === "input" && handler.subscribe) {
             const unsubscribe = handler.subscribe(async (data) => {
                 this.logger.info(
                     "Orchestrator.registerIOHandler",
@@ -90,7 +77,6 @@ export class Orchestrator {
                     { data }
                 );
                 // Simulate a request-like object here if you want a consistent approach.
-                // this will register as an agent request
                 const fakeRequest: AgentRequest = { headers: {} };
                 // Whenever data arrives, pass it into runAutonomousFlow
                 await this.runAutonomousFlow(fakeRequest, data, handler.name);
@@ -130,7 +116,7 @@ export class Orchestrator {
     public async dispatchToOutput<T>(
         name: string,
         request: AgentRequest,
-        data: T
+        data: ProcessableContent
     ): Promise<unknown> {
         const handler = this.ioHandlers.get(name);
         if (!handler || !handler.execute) {
@@ -174,7 +160,7 @@ export class Orchestrator {
     public async dispatchToAction<T>(
         name: string,
         request: AgentRequest,
-        data: T
+        data: ProcessableContent
     ): Promise<unknown> {
         const handler = this.ioHandlers.get(name);
         if (!handler || !handler.execute) {
@@ -217,7 +203,7 @@ export class Orchestrator {
     public async dispatchToInput<T>(
         name: string,
         request: AgentRequest,
-        data: T,
+        data: ProcessableContent,
         orchestratorId?: string
     ): Promise<unknown> {
         const handler = this.ioHandlers.get(name);
@@ -273,7 +259,6 @@ export class Orchestrator {
 
         const queue: Array<{ data: unknown; source: string }> = [];
 
-        // If the initial data is already an array, enqueue each item
         if (Array.isArray(initialData)) {
             for (const item of initialData) {
                 queue.push({ data: item, source: sourceName });
@@ -282,112 +267,65 @@ export class Orchestrator {
             queue.push({ data: initialData, source: sourceName });
         }
 
-        // Optionally store final outputs to return or do something with them
+        // Optionally store final outputs to return
         const outputs: Array<{ name: string; data: any }> = [];
 
-        // If orchestratorId is provided, verify it in the DB or create a new record
-        if (orchestratorId) {
-            const existing =
-                await this.orchestratorDb.getOrchestratorById(orchestratorId);
-            if (!existing) {
-                orchestratorId =
-                    await this.orchestratorDb.createOrchestrator(userId);
-            }
-        }
-
-        // Otherwise, create a new orchestrator record if needed
-        if (!orchestratorId) {
-            orchestratorId =
-                await this.orchestratorDb.createOrchestrator(userId);
-        }
-
-        // Record initial data as an input message
-        if (orchestratorId) {
-            await this.orchestratorDb.addMessage(
-                orchestratorId,
-                HandlerRole.INPUT,
+        // 1. Fire the "flow start" hook (could create or fetch an orchestrator record).
+        if (this.flowLifecycle?.onFlowStart) {
+            const maybeId = await this.flowLifecycle.onFlowStart(
+                userId,
                 sourceName,
                 initialData
             );
-            this.logger.debug(
-                "Orchestrator.runAutonomousFlow",
-                "Created or continued orchestrator record",
-                {
-                    orchestratorId,
-                    userId,
-                }
-            );
+            if (maybeId) {
+                orchestratorId = maybeId;
+            }
         }
 
-        // Process items in a queue
+        // 2. Process items in a queue
         while (queue.length > 0) {
             const { data, source } = queue.shift()!;
 
-            // Record each chunk of data if you want
-            if (orchestratorId) {
-                await this.orchestratorDb.addMessage(
+            // 2a. Notify the flowStep hook that we have new input
+            if (this.flowLifecycle?.onFlowStep) {
+                await this.flowLifecycle.onFlowStep(
                     orchestratorId,
+                    userId,
                     HandlerRole.INPUT,
                     source,
                     data
                 );
-
-                this.logger.debug(
-                    "Orchestrator.runAutonomousFlow",
-                    "Added message to orchestrator record",
-                    {
-                        orchestratorId,
-                        message: {
-                            role: HandlerRole.INPUT,
-                            name: source,
-                            data,
-                        },
-                    }
-                );
             }
 
-            // processContent can return an array of ProcessedResult
+            // 2b. The main processing
             const processedResults = await this.processContent(
-                data,
+                data as ProcessableContent | ProcessableContent[],
                 source,
                 userId
             );
-
             if (!processedResults || processedResults.length === 0) {
                 continue;
             }
 
             for (const processed of processedResults) {
-                // If the item was already processed, skip
                 if (processed.alreadyProcessed) continue;
 
-                // Possibly schedule any tasks in the DB
-                if (processed.updateTasks) {
-                    for (const task of processed.updateTasks) {
-                        const now = Date.now();
-                        const nextRunAt = new Date(
-                            now + (task.intervalMs ?? 0)
-                        );
-                        this.logger.info(
-                            "Orchestrator.runAutonomousFlow",
-                            `Scheduling task ${task.name}`,
-                            { nextRunAt, intervalMs: task.intervalMs }
-                        );
-
-                        await this.orchestratorDb.createTask(
-                            userId,
-                            task.name,
-                            {
-                                request: task.name,
-                                task_data: JSON.stringify(task.data),
-                            },
-                            nextRunAt,
-                            task.intervalMs
-                        );
-                    }
+                // 2c. If we have tasks to schedule, pass them to the hook
+                if (
+                    processed.updateTasks?.length &&
+                    this.flowLifecycle?.onTasksScheduled
+                ) {
+                    await this.flowLifecycle.onTasksScheduled(
+                        userId,
+                        processed.updateTasks.map((task) => ({
+                            name: task.name,
+                            data: task.data,
+                            intervalMs: task.intervalMs,
+                        }))
+                    );
                 }
 
-                // For each suggested output or action
+                // 2d. For each suggested output/action, dispatch them
                 for (const output of processed.suggestedOutputs ?? []) {
                     const handler = this.ioHandlers.get(output.name);
                     if (!handler) {
@@ -399,7 +337,6 @@ export class Orchestrator {
                     }
 
                     if (handler.role === HandlerRole.OUTPUT) {
-                        // e.g. send a Slack message
                         outputs.push({ name: output.name, data: output.data });
                         await this.dispatchToOutput(
                             output.name,
@@ -407,49 +344,49 @@ export class Orchestrator {
                             output.data
                         );
 
-                        this.logger.debug(
-                            "Orchestrator.runAutonomousFlow",
-                            "Dispatched output",
-                            {
-                                name: output.name,
-                                data: output.data,
-                            }
-                        );
-
-                        if (orchestratorId) {
-                            await this.orchestratorDb.addMessage(
+                        // Notify the flowStep hook that we output something
+                        if (this.flowLifecycle?.onFlowStep) {
+                            await this.flowLifecycle.onFlowStep(
                                 orchestratorId,
+                                userId,
                                 HandlerRole.OUTPUT,
                                 output.name,
                                 output.data
                             );
                         }
+                        // Or specifically call onOutputDispatched if you prefer:
+                        if (this.flowLifecycle?.onOutputDispatched) {
+                            await this.flowLifecycle.onOutputDispatched(
+                                orchestratorId,
+                                userId,
+                                output.name,
+                                output.data
+                            );
+                        }
                     } else if (handler.role === HandlerRole.ACTION) {
-                        // e.g. fetch data from an external API
                         const actionResult = await this.dispatchToAction(
                             output.name,
                             request,
                             output.data
                         );
 
-                        this.logger.debug(
-                            "Orchestrator.runAutonomousFlow",
-                            "Dispatched action",
-                            {
-                                name: output.name,
-                                data: output.data,
-                            }
-                        );
-
-                        if (orchestratorId) {
-                            await this.orchestratorDb.addMessage(
+                        // Notify a flow step or action-dispatched hook
+                        if (this.flowLifecycle?.onFlowStep) {
+                            await this.flowLifecycle.onFlowStep(
                                 orchestratorId,
+                                userId,
                                 HandlerRole.ACTION,
                                 output.name,
-                                {
-                                    input: output.data,
-                                    result: actionResult,
-                                }
+                                { input: output.data, result: actionResult }
+                            );
+                        }
+                        if (this.flowLifecycle?.onActionDispatched) {
+                            await this.flowLifecycle.onActionDispatched(
+                                orchestratorId,
+                                userId,
+                                output.name,
+                                output.data,
+                                actionResult
                             );
                         }
 
@@ -480,7 +417,7 @@ export class Orchestrator {
             }
         }
 
-        // Return the final outputs array, or handle them in your own way
+        // 3. Return final outputs, or handle them as you see fit
         return outputs;
     }
 
@@ -489,14 +426,14 @@ export class Orchestrator {
      * calling the single-item processor.
      */
     public async processContent(
-        content: any,
+        content: ProcessableContent | ProcessableContent[],
         source: string,
         userId?: string
     ): Promise<ProcessedResult[]> {
         if (Array.isArray(content)) {
             const allResults: ProcessedResult[] = [];
             for (const item of content) {
-                // Example delay to show chunk processing, remove if not needed
+                // Example delay: remove if not needed
                 await new Promise((resolve) => setTimeout(resolve, 5000));
                 const result = await this.processContentItem(
                     item,
@@ -519,59 +456,75 @@ export class Orchestrator {
     }
 
     /**
-     * Processes a single item of content:
-     *  - Retrieves prior memories from its room
-     *  - Lets the "master" processor handle it
-     *  - Optionally saves the result to memory/marks it processed
+     * Process a single item:
+     *  - Retrieves prior memories from its conversation
+     *  - Passes it to the main (or "master") processor
+     *  - Saves result to memory & marks processed if relevant
      */
     private async processContentItem(
-        content: any,
+        content: ProcessableContent,
         source: string,
         userId?: string
     ): Promise<ProcessedResult | null> {
-        let memories: Memory[] = [];
+        let memories: {
+            memories: Memory[];
+            chatHistory: OrchestratorMessage[];
+        } = { memories: [], chatHistory: [] };
 
-        // If the content indicates a "room" property
-        if (content.room) {
+        if (
+            content.conversationId &&
+            content.contentId &&
+            this.flowLifecycle?.onCheckContentProcessed
+        ) {
             const hasProcessed =
-                await this.roomManager.hasProcessedContentInRoom(
+                await this.flowLifecycle.onCheckContentProcessed(
                     content.contentId,
-                    content.room
+                    content.conversationId
                 );
+
             if (hasProcessed) {
                 this.logger.debug(
                     "Orchestrator.processContentItem",
                     "Content already processed",
                     {
                         contentId: content.contentId,
-                        roomId: content.room,
+                        conversationId: content.conversationId,
                         userId,
                     }
                 );
                 return null;
             }
 
-            const room = await this.roomManager.ensureRoom(
-                content.room,
-                source,
-                userId
-            );
-            memories = await this.roomManager.getMemoriesFromRoom(room.id);
+            if (userId && this.flowLifecycle?.onMemoriesRequested) {
+                // Ensure the conversation
+                const conversation =
+                    await this.flowLifecycle.onConversationCreated(
+                        userId,
+                        content.conversationId,
+                        source
+                    );
 
-            this.logger.debug(
-                "Orchestrator.processContentItem",
-                "Processing content with context",
-                {
-                    content,
-                    source,
-                    roomId: room.id,
-                    userId,
-                    relevantMemories: memories,
-                }
-            );
+                memories = await this.flowLifecycle.onMemoriesRequested(
+                    conversation.id
+                );
+
+                this.logger.debug(
+                    "Orchestrator.processContentItem",
+                    "Processing content with context",
+                    {
+                        content,
+                        source,
+                        conversationId: conversation.id,
+                        userId,
+                        relevantMemories: memories,
+                    }
+                );
+            }
+
+            // Grab memories
         }
 
-        // Gather possible outputs & actions to pass to the Processor
+        // Gather possible outputs & actions
         const availableOutputs = Array.from(this.ioHandlers.values()).filter(
             (h) => h.role === HandlerRole.OUTPUT
         );
@@ -579,7 +532,7 @@ export class Orchestrator {
             (h) => h.role === HandlerRole.ACTION
         );
 
-        // Processor's main entry point
+        // Processor main entry point
         const result = await this.processor.process(
             content,
             JSON.stringify(memories),
@@ -589,20 +542,29 @@ export class Orchestrator {
             }
         );
 
-        // If there's a room, save the memory and mark processed
-        if (content.room && result) {
-            await this.roomManager.addMemory(
-                content.room,
+        // If there's a conversationId, store the memory and mark processed
+        if (
+            content.conversationId &&
+            result &&
+            content.contentId &&
+            this.flowLifecycle?.onMemoryAdded &&
+            this.flowLifecycle?.onConversationUpdated
+        ) {
+            await this.flowLifecycle.onMemoryAdded(
+                content.conversationId,
                 JSON.stringify(result.content),
+                source,
                 {
-                    source,
                     ...result.metadata,
                     ...result.enrichedContext,
                 }
             );
-            await this.roomManager.markContentAsProcessed(
+            await this.flowLifecycle.onConversationUpdated(
                 content.contentId,
-                content.room
+                content.conversationId,
+                JSON.stringify(result.content),
+                source,
+                result.metadata
             );
         }
 
