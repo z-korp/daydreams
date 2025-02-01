@@ -1,16 +1,9 @@
 import { Logger } from "./logger";
 import type { BaseProcessor } from "./processor";
-import type {
-    AgentRequest,
-    Memory,
-    ProcessableContent,
-    ProcessedResult,
-} from "./types";
+import type { Memory, ProcessableContent, ProcessedResult } from "./types";
 import { HandlerRole, LogLevel, type LoggerConfig } from "./types";
 import type { IOHandler } from "./types";
-
 import type { FlowLifecycle } from "./life-cycle";
-import type { OrchestratorMessage } from "./memory";
 
 export class Orchestrator {
     /**

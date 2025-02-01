@@ -613,10 +613,6 @@ export interface ActionIOHandler extends BaseIOHandler {
 /** Union type of all possible IO handler types */
 export type IOHandler = InputIOHandler | OutputIOHandler | ActionIOHandler;
 
-export interface AgentRequest {
-    headers: Record<string, string>;
-}
-
 /**
  * Base interface for any content that can be processed
  */
