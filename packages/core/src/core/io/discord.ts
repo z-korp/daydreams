@@ -9,7 +9,12 @@ import {
     type Channel,
 } from "discord.js";
 import { Logger } from "../../core/logger";
-import { HandlerRole, LogLevel, type IOHandler } from "../types";
+import {
+    HandlerRole,
+    LogLevel,
+    type IOHandler,
+    type ProcessableContent,
+} from "../types";
 import { env } from "../../core/env";
 import { z } from "zod";
 
@@ -78,7 +83,9 @@ export class DiscordClient {
      *  Optionally start listening to Discord messages.
      *  The onData callback typically feeds data into Orchestrator or similar.
      */
-    public startMessageStream(onData: (data: any) => void) {
+    public startMessageStream(
+        onData: (data: ProcessableContent | ProcessableContent[]) => void
+    ) {
         this.logger.info("DiscordClient", "Starting message stream...");
 
         // If you want to capture the listener reference for removal:
@@ -96,9 +103,13 @@ export class DiscordClient {
             }
 
             onData({
-                content: message.content,
-                channelId: message.channelId,
-                sentBy: message.author?.id,
+                userId: message.author?.displayName,
+                platformId: "discord",
+                threadId: message.channel.id,
+                contentId: message.id,
+                data: {
+                    content: message.content,
+                },
             });
         };
 
@@ -135,7 +146,10 @@ export class DiscordClient {
             role: HandlerRole.OUTPUT,
             name: "discord_message",
             execute: async (data: T) => {
-                return await this.sendMessage(data as MessageData);
+                // Cast the result to ProcessableContent to satisfy the IOHandler signature.
+                return (await this.sendMessage(
+                    data as MessageData
+                )) as unknown as ProcessableContent;
             },
             outputSchema: messageSchema,
         };
