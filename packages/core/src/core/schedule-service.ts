@@ -52,33 +52,20 @@ export class SchedulerService {
                     case HandlerRole.INPUT:
                         await this.orchestrator.dispatchToInput(
                             task.handlerName,
-                            {
-                                headers: {
-                                    "x-user-id": task.userId,
-                                },
-                            },
+
                             data
                         );
                         break;
                     case HandlerRole.ACTION:
                         await this.orchestrator.dispatchToAction(
                             task.handlerName,
-                            {
-                                headers: {
-                                    "x-user-id": task.userId,
-                                },
-                            },
+
                             data
                         );
                         break;
                     case HandlerRole.OUTPUT:
                         await this.orchestrator.dispatchToOutput(
                             task.handlerName,
-                            {
-                                headers: {
-                                    "x-user-id": task.userId,
-                                },
-                            },
                             data
                         );
                         break;
