@@ -7,8 +7,7 @@ import type { FlowLifecycle } from "./life-cycle";
 
 export class Orchestrator {
     /**
-     * Unified collection of IOHandlers (both input & output).
-     * Keyed by .name
+     * Unified collection of IOHandlers (both input & output), keyed by name.
      */
     private readonly ioHandlers = new Map<string, IOHandler>();
 
@@ -18,8 +17,7 @@ export class Orchestrator {
     private readonly logger: Logger;
 
     /**
-     * Map of unsubscribe functions for various handlers.
-     * Keyed by handler name.
+     * Map of unsubscribe functions for various handlers, keyed by handler name.
      */
     private unsubscribers = new Map<string, () => void>();
 
@@ -47,9 +45,8 @@ export class Orchestrator {
     }
 
     /**
-     * Primary method to register any IOHandler (input or output).
-     * - If it's an input with an interval, schedule it for recurring runs.
-     * - Otherwise, just store it in the ioHandlers map.
+     * Registers an IOHandler (input or output). For input handlers with a subscribe method,
+     * registers the subscription and stores its unsubscriber.
      */
     public registerIOHandler(handler: IOHandler): void {
         if (this.ioHandlers.has(handler.name)) {
@@ -69,7 +66,6 @@ export class Orchestrator {
                     "Starting stream",
                     { data }
                 );
-
                 await this.run(data, handler.name);
             });
             this.unsubscribers.set(handler.name, unsubscribe);
@@ -83,17 +79,15 @@ export class Orchestrator {
     }
 
     /**
-     * Removes a handler (input or output) by name, stopping scheduling if needed.
+     * Removes a handler (input or output) by name and stops its scheduling if needed.
      */
     public removeIOHandler(name: string): void {
-        // If we have an unsubscribe function, call it
         const unsub = this.unsubscribers.get(name);
         if (unsub) {
-            unsub(); // e.g. remove event listeners, clear intervals, etc.
+            unsub(); // E.g. remove event listeners, clear intervals, etc.
             this.unsubscribers.delete(name);
         }
 
-        // Remove the handler itself
         this.ioHandlers.delete(name);
 
         this.logger.info("Orchestrator.removeIOHandler", "Removed IOHandler", {
@@ -102,7 +96,7 @@ export class Orchestrator {
     }
 
     /**
-     * Dispatches data to a registered *output* handler by name, passing in a request plus data.
+     * Dispatches data to a registered *output* handler by name.
      */
     public async dispatchToOutput<T>(
         name: string,
@@ -112,8 +106,7 @@ export class Orchestrator {
         if (!handler || !handler.execute) {
             throw new Error(`No IOHandler registered with name: ${name}`);
         }
-
-        if (handler.role !== "output") {
+        if (handler.role !== HandlerRole.OUTPUT) {
             throw new Error(`Handler "${name}" is not an output handler`);
         }
 
@@ -124,27 +117,22 @@ export class Orchestrator {
 
         try {
             const result = await handler.execute(data);
-
             this.logger.info("Orchestrator.dispatchToOutput", "Output result", {
                 result,
             });
-
             return result;
         } catch (error) {
             this.logger.error(
                 "Orchestrator.dispatchToOutput",
                 "Handler threw an error",
-                {
-                    name,
-                    error,
-                }
+                { name, error }
             );
             throw error;
         }
     }
 
     /**
-     * Dispatches data to a registered *action* handler by name, passing in a request plus data.
+     * Dispatches data to a registered *action* handler by name.
      */
     public async dispatchToAction<T>(
         name: string,
@@ -154,13 +142,12 @@ export class Orchestrator {
         if (!handler || !handler.execute) {
             throw new Error(`No IOHandler registered with name: ${name}`);
         }
-        if (handler.role !== "action") {
+        if (handler.role !== HandlerRole.ACTION) {
             throw new Error(`Handler "${name}" is not an action handler`);
         }
 
         try {
             const result = await handler.execute(data);
-
             this.logger.debug(
                 "Orchestrator.dispatchToAction",
                 "Executing action",
@@ -174,36 +161,32 @@ export class Orchestrator {
             this.logger.error(
                 "Orchestrator.dispatchToAction",
                 "Handler threw an error",
-                {
-                    name,
-                    error,
-                }
+                { name, error }
             );
             throw error;
         }
     }
 
     /**
-     * Dispatches data to a registered *input* handler by name, passing in a request plus data.
-     * Then continues through the autonomous flow.
+     * Dispatches data to a registered *input* handler by name, then continues through the autonomous flow.
      */
     public async dispatchToInput<T>(
         name: string,
         data: ProcessableContent
     ): Promise<unknown> {
         const handler = this.ioHandlers.get(name);
-        if (!handler) throw new Error(`No IOHandler: ${name}`);
+        if (!handler) {
+            throw new Error(`No IOHandler: ${name}`);
+        }
         if (!handler.execute) {
             throw new Error(`Handler "${name}" has no execute method`);
         }
-        if (handler.role !== "input") {
+        if (handler.role !== HandlerRole.INPUT) {
             throw new Error(`Handler "${name}" is not role=input`);
         }
 
         try {
-            // Possibly run a transformation or normalizing step inside `handler.execute`
             const result = await handler.execute(data);
-
             if (result) {
                 return await this.run(result, handler.name);
             }
@@ -220,148 +203,158 @@ export class Orchestrator {
     }
 
     /**
-     * Processes incoming data through the system and manages any follow-on
-     * "action" or "output" suggestions in a queue.
+     * Main processing loop: feeds incoming data into the processing queue and
+     * dispatches any suggested outputs or actions.
      *
-     * @param data    The data payload to be processed
-     * @param sourceName     The name of the IOHandler that provided this data
+     * @param data       The initial data or array of data to process.
+     * @param sourceName The name of the IOHandler that provided this data.
      */
     private async run(
         data: ProcessableContent | ProcessableContent[],
         sourceName: string
     ): Promise<Array<{ name: string; data: any }>> {
-        // Prepare the processing queue
+        // Initialize the processing queue
         const queue: Array<{ data: ProcessableContent; source: string }> =
             Array.isArray(data)
                 ? data.map((item) => ({ data: item, source: sourceName }))
-                : [{ data: data, source: sourceName }];
+                : [{ data, source: sourceName }];
 
-        // Initialize an array to collect outputs
+        const collectedOutputs: Array<{ name: string; data: any }> = [];
+
+        while (queue.length > 0) {
+            const currentItem = queue.shift()!;
+            const outputs = await this.processQueueItem(currentItem, queue);
+            collectedOutputs.push(...outputs);
+        }
+
+        return collectedOutputs;
+    }
+
+    /**
+     * Processes one queue item:
+     *  - Starts a conversation flow.
+     *  - Processes the content.
+     *  - Dispatches any suggested outputs or actions.
+     *
+     * @param item  The queue item containing the data and its source.
+     * @param queue The current processing queue (to which new items may be added).
+     */
+    private async processQueueItem(
+        item: { data: ProcessableContent; source: string },
+        queue: Array<{ data: ProcessableContent; source: string }>
+    ): Promise<Array<{ name: string; data: any }>> {
+        const { data, source } = item;
         const outputs: Array<{ name: string; data: any }> = [];
 
-        // Process the queue until empty
-        while (queue.length > 0) {
-            const { data, source } = queue.shift()!;
+        // Start the conversation/flow.
+        const chatId = await this.flowHooks.onFlowStart(
+            data.userId,
+            data.platformId,
+            data.threadId,
+            data.data
+        );
 
-            // Starts the chat
-            const chatId = await this.flowHooks.onFlowStart(
-                data.userId,
-                data.platformId,
-                data.threadId,
-                data.data
-            );
+        await this.flowHooks.onFlowStep(
+            chatId,
+            HandlerRole.INPUT,
+            source,
+            data
+        );
 
-            await this.flowHooks.onFlowStep(
-                chatId,
-                HandlerRole.INPUT,
-                source,
-                data
-            );
+        // Process the content.
+        const processedResults = await this.processContent(data, source);
+        if (!processedResults?.length) {
+            return outputs;
+        }
 
-            // Main content processing
-            const processedResults = await this.processContent(data, source);
-
-            if (!processedResults?.length) {
+        // Handle each processed result.
+        for (const result of processedResults) {
+            if (result.alreadyProcessed) {
                 continue;
             }
 
-            // Handle each processed result
-            for (const result of processedResults) {
-                if (result.alreadyProcessed) {
+            // Schedule any tasks if present.
+            if (result.updateTasks?.length) {
+                await this.flowHooks.onTasksScheduled(
+                    data.userId,
+                    result.updateTasks.map((task) => ({
+                        name: task.name,
+                        data: task.data,
+                        intervalMs: task.intervalMs,
+                    }))
+                );
+            }
+
+            // Process any suggested outputs or actions.
+            for (const suggestion of result.suggestedOutputs ?? []) {
+                const handler = this.ioHandlers.get(suggestion.name);
+                if (!handler) {
+                    this.logger.warn(
+                        "Orchestrator.processQueueItem",
+                        `No handler found for suggested output: ${suggestion.name}`
+                    );
                     continue;
                 }
 
-                // Schedule tasks if present
-                if (result.updateTasks?.length) {
-                    await this.flowHooks.onTasksScheduled(
-                        data.userId,
-                        result.updateTasks.map((task) => ({
-                            name: task.name,
-                            data: task.data,
-                            intervalMs: task.intervalMs,
-                        }))
-                    );
-                }
-
-                // Dispatch suggested outputs or actions
-                for (const output of result.suggestedOutputs ?? []) {
-                    const handler = this.ioHandlers.get(output.name);
-
-                    if (!handler) {
-                        this.logger.warn(
-                            "Orchestrator.run",
-                            `No handler found for suggested output: ${output.name}`
+                switch (handler.role) {
+                    case HandlerRole.OUTPUT:
+                        outputs.push({
+                            name: suggestion.name,
+                            data: suggestion.data,
+                        });
+                        await this.dispatchToOutput(
+                            suggestion.name,
+                            suggestion.data
                         );
-                        continue;
-                    }
+                        await this.flowHooks.onFlowStep(
+                            chatId,
+                            HandlerRole.OUTPUT,
+                            suggestion.name,
+                            suggestion.data
+                        );
+                        break;
 
-                    // Depending on the handler role, dispatch appropriately
-                    switch (handler.role) {
-                        case HandlerRole.OUTPUT:
-                            outputs.push({
-                                name: output.name,
-                                data: output.data,
-                            });
-
-                            await this.dispatchToOutput(
-                                output.name,
-                                output.data
-                            );
-
-                            await this.flowHooks.onFlowStep(
-                                chatId,
-                                HandlerRole.OUTPUT,
-                                output.name,
-                                output.data
-                            );
-
-                            break;
-
-                        case HandlerRole.ACTION:
-                            const actionResult = await this.dispatchToAction(
-                                output.name,
-                                output.data
-                            );
-
-                            await this.flowHooks.onFlowStep(
-                                chatId,
-                                HandlerRole.ACTION,
-                                output.name,
-                                { input: output.data, result: actionResult }
-                            );
-
-                            // Queue any new data returned from the action
-                            if (actionResult) {
-                                const newItems = Array.isArray(actionResult)
-                                    ? actionResult
-                                    : [actionResult];
-                                for (const item of newItems) {
-                                    queue.push({
-                                        data: item,
-                                        source: output.name,
-                                    });
-                                }
+                    case HandlerRole.ACTION: {
+                        const actionResult = await this.dispatchToAction(
+                            suggestion.name,
+                            suggestion.data
+                        );
+                        await this.flowHooks.onFlowStep(
+                            chatId,
+                            HandlerRole.ACTION,
+                            suggestion.name,
+                            { input: suggestion.data, result: actionResult }
+                        );
+                        if (actionResult) {
+                            const newItems = Array.isArray(actionResult)
+                                ? actionResult
+                                : [actionResult];
+                            for (const newItem of newItems) {
+                                queue.push({
+                                    data: newItem,
+                                    source: suggestion.name,
+                                });
                             }
-                            break;
-
-                        default:
-                            this.logger.warn(
-                                "Orchestrator.run",
-                                "Suggested output has an unrecognized role",
-                                handler.role
-                            );
+                        }
+                        break;
                     }
+
+                    default:
+                        this.logger.warn(
+                            "Orchestrator.processQueueItem",
+                            "Suggested output has an unrecognized role",
+                            handler.role
+                        );
                 }
             }
         }
 
-        // Return all collected outputs
         return outputs;
     }
 
     /**
-     * Processes *any* content by splitting it into items (if needed) and
-     * calling the single-item processor.
+     * Processes content by handling both single items and arrays.
+     * A small delay is introduced for each item (if processing an array).
      */
     public async processContent(
         content: ProcessableContent | ProcessableContent[],
@@ -370,8 +363,7 @@ export class Orchestrator {
         if (Array.isArray(content)) {
             const allResults: ProcessedResult[] = [];
             for (const item of content) {
-                // Example delay: remove if not needed
-                await new Promise((resolve) => setTimeout(resolve, 5000));
+                await this.delay(5000); // Example delay; remove if not needed.
                 const result = await this.processContentItem(item, source);
                 if (result) {
                     allResults.push(result);
@@ -385,18 +377,16 @@ export class Orchestrator {
     }
 
     /**
-     * Process a single item:
-     *  - Retrieves prior memories from its conversation
-     *  - Passes it to the main (or "master") processor
-     *  - Saves result to memory & marks processed if relevant
+     * Processes a single content item:
+     *  - Retrieves conversation context and prior memories.
+     *  - Passes the item to the processor.
+     *  - Updates conversation and memory.
      */
     private async processContentItem(
         content: ProcessableContent,
         source: string
     ): Promise<ProcessedResult | null> {
-        let memories: {
-            memories: Memory[];
-        } = { memories: [] };
+        let memories: { memories: Memory[] } = { memories: [] };
 
         const conversation = await this.flowHooks.onConversationCreated(
             content.userId,
@@ -405,7 +395,6 @@ export class Orchestrator {
         );
 
         if (content.threadId && content.userId) {
-            // Ensure the conversation exists
             memories = await this.flowHooks.onMemoriesRequested(
                 conversation.id
             );
@@ -423,7 +412,7 @@ export class Orchestrator {
             );
         }
 
-        // Gather possible outputs & actions
+        // Collect available outputs and actions.
         const availableOutputs = Array.from(this.ioHandlers.values()).filter(
             (h) => h.role === HandlerRole.OUTPUT
         );
@@ -431,7 +420,7 @@ export class Orchestrator {
             (h) => h.role === HandlerRole.ACTION
         );
 
-        // Processor main entry point
+        // Process the content.
         const result = await this.processor.process(
             content,
             JSON.stringify(memories),
@@ -441,7 +430,7 @@ export class Orchestrator {
             }
         );
 
-        // Save the memory
+        // Save memory and update the conversation.
         await this.flowHooks.onMemoryAdded(
             conversation.id,
             JSON.stringify(result.content),
@@ -464,7 +453,6 @@ export class Orchestrator {
             }
         );
 
-        // Update the conversation
         await this.flowHooks.onConversationUpdated(
             content.contentId,
             conversation.id,
@@ -474,5 +462,12 @@ export class Orchestrator {
         );
 
         return result;
+    }
+
+    /**
+     * A helper method to introduce a delay.
+     */
+    private delay(ms: number): Promise<void> {
+        return new Promise((resolve) => setTimeout(resolve, ms));
     }
 }

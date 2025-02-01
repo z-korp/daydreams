@@ -142,8 +142,7 @@ export function makeFlowLifecycle(
 }
 
 /**
- * A set of optional lifecycle callbacks for orchestrator events.
- * The Orchestrator will call these methods if they are defined.
+ * A set of lifecycle callbacks for orchestrator events.
  */
 export interface FlowLifecycle {
     /**

@@ -642,3 +642,50 @@ export interface ChatMessage {
     timestamp: Date;
     messageId?: string; // Platform-specific message ID if available
 }
+
+// Define interfaces matching MongoDB document shapes
+export interface ScheduledTask {
+    _id: string;
+    userId: string;
+    handlerName: string;
+    taskData: Record<string, any>;
+    nextRunAt: Date;
+    intervalMs?: number;
+    status: "pending" | "running" | "completed" | "failed";
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface OrchestratorMessage {
+    role: HandlerRole;
+    name: string;
+    data: unknown;
+    timestamp: Date;
+}
+
+export interface OrchestratorChat {
+    _id?: string;
+    userId: string;
+    createdAt: Date;
+    updatedAt: Date;
+    messages: OrchestratorMessage[];
+}
+
+export interface Chat {
+    _id?: string;
+    userId: string;
+    platformId: string; // e.g., "twitter", "telegram"
+    threadId: string; // platform-specific thread/conversation ID
+    createdAt: Date;
+    updatedAt: Date;
+    messages: ChatMessage[];
+    metadata?: Record<string, any>;
+}
+
+export interface ChatMessage {
+    role: HandlerRole;
+    name: string;
+    data: unknown;
+    timestamp: Date;
+    messageId?: string; // Platform-specific message ID if available
+}
