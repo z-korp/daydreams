@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import type { LLMClient } from "../../core/llm-client";
 import type { Logger } from "../../core/logger";
+import type { FilePart, ImagePart } from "ai";
 
 /**
  * ChainOfThoughtContext can hold any relevant data
@@ -234,6 +235,7 @@ export interface RefinedGoal {
 
 export interface LLMValidationOptions<T> {
     prompt: string;
+    filesAndImages?: Array<ImagePart | FilePart>;
     systemPrompt: string;
     schema: z.ZodSchema<T>;
     maxRetries?: number;
