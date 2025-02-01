@@ -70,7 +70,7 @@ export class Orchestrator {
                     { data }
                 );
 
-                await this.runAutonomousFlow(data, handler.name);
+                await this.run(data, handler.name);
             });
             this.unsubscribers.set(handler.name, unsubscribe);
         }
@@ -205,7 +205,7 @@ export class Orchestrator {
             const result = await handler.execute(data);
 
             if (result) {
-                return await this.runAutonomousFlow(result, handler.name);
+                return await this.run(result, handler.name);
             }
             return [];
         } catch (error) {
@@ -226,7 +226,7 @@ export class Orchestrator {
      * @param data    The data payload to be processed
      * @param sourceName     The name of the IOHandler that provided this data
      */
-    private async runAutonomousFlow(
+    private async run(
         data: ProcessableContent | ProcessableContent[],
         sourceName: string
     ): Promise<Array<{ name: string; data: any }>> {
@@ -251,7 +251,6 @@ export class Orchestrator {
                 data.data
             );
 
-            // process the input as a step - recording the input
             await this.flowHooks.onFlowStep(
                 chatId,
                 HandlerRole.INPUT,
@@ -290,7 +289,7 @@ export class Orchestrator {
 
                     if (!handler) {
                         this.logger.warn(
-                            "Orchestrator.runAutonomousFlow",
+                            "Orchestrator.run",
                             `No handler found for suggested output: ${output.name}`
                         );
                         continue;
@@ -316,12 +315,6 @@ export class Orchestrator {
                                 output.data
                             );
 
-                            await this.flowHooks.onOutputDispatched(
-                                chatId,
-                                output.name,
-                                output.data
-                            );
-
                             break;
 
                         case HandlerRole.ACTION:
@@ -335,13 +328,6 @@ export class Orchestrator {
                                 HandlerRole.ACTION,
                                 output.name,
                                 { input: output.data, result: actionResult }
-                            );
-
-                            await this.flowHooks.onActionDispatched(
-                                chatId,
-                                output.name,
-                                output.data,
-                                actionResult
                             );
 
                             // Queue any new data returned from the action
@@ -360,7 +346,7 @@ export class Orchestrator {
 
                         default:
                             this.logger.warn(
-                                "Orchestrator.runAutonomousFlow",
+                                "Orchestrator.run",
                                 "Suggested output has an unrecognized role",
                                 handler.role
                             );
