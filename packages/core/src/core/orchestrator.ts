@@ -194,8 +194,7 @@ export class Orchestrator {
         } catch (error) {
             this.logger.error(
                 "Orchestrator.dispatchToInput",
-                `dispatchToInput Error: ${
-                    error instanceof Error ? error.message : String(error)
+                `dispatchToInput Error: ${error instanceof Error ? error.message : String(error)
                 }`
             );
             throw error;
