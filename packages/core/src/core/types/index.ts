@@ -554,7 +554,9 @@ export interface InputIOHandler extends BaseIOHandler {
     /** Function to process input data */
     execute?: (data: any) => Promise<ProcessableContent | ProcessableContent[]>;
     /** Sets up a subscription to receive streaming data */
-    subscribe?: (onData: (data: any) => void) => () => void;
+    subscribe?: (
+        onData: (data: ProcessableContent | ProcessableContent[]) => void
+    ) => () => void;
 }
 
 /**
@@ -580,7 +582,7 @@ export interface OutputIOHandler extends BaseIOHandler {
     /** Required schema to validate output data */
     outputSchema: z.ZodType<any>;
     /** Function to process and send output */
-    execute?: (data: any) => Promise<ProcessableContent | ProcessableContent[]>;
+    execute?: (data: any) => any;
     /** Sets up a subscription to handle output streams */
     subscribe?: (onData: (data: any) => void) => () => void;
 }
@@ -619,7 +621,28 @@ export interface AgentRequest {
  * Base interface for any content that can be processed
  */
 export interface ProcessableContent {
-    conversationId?: string;
-    contentId?: string;
-    [key: string]: any; // Allow additional properties
+    contentId: string;
+    userId: string;
+    platformId: string;
+    threadId: string;
+    data: unknown;
+}
+
+export interface Chat {
+    _id?: string;
+    userId: string; // the user the agent is interacting with  could be an agent or a human
+    platformId: string; // e.g., "twitter", "telegram"
+    threadId: string; // platform-specific thread/conversation ID
+    createdAt: Date;
+    updatedAt: Date;
+    messages: ChatMessage[];
+    metadata?: Record<string, any>; // Platform-specific data
+}
+
+export interface ChatMessage {
+    role: HandlerRole;
+    name: string;
+    data: unknown;
+    timestamp: Date;
+    messageId?: string; // Platform-specific message ID if available
 }

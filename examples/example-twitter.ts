@@ -136,15 +136,21 @@ async function main() {
                 return [];
             }
 
-            // Map mentions to the required format
-            return mentions.map((mention) => ({
-                type: "tweet",
-                conversationId: mention.metadata.conversationId,
-                contentId: mention.metadata.tweetId,
-                user: mention.metadata.username,
-                content: mention.content,
-                metadata: mention,
-            }));
+            // Filter out mentions that do not have the required non-null properties before mapping
+            return mentions
+                .filter(
+                    (mention) =>
+                        mention.metadata.tweetId !== undefined &&
+                        mention.metadata.conversationId !== undefined &&
+                        mention.metadata.userId !== undefined
+                )
+                .map((mention) => ({
+                    userId: mention.metadata.userId!,
+                    threadId: mention.metadata.conversationId!,
+                    contentId: mention.metadata.tweetId!,
+                    platformId: "twitter",
+                    data: mention,
+                }));
         },
     });
 
@@ -161,7 +167,13 @@ async function main() {
                 return [];
             }
 
-            return thought;
+            return {
+                userId: "internal",
+                threadId: "internal",
+                contentId: "internal",
+                platformId: "internal",
+                data: thought,
+            };
         },
     });
 

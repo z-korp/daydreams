@@ -90,9 +90,7 @@ async function main() {
         name: "discord_stream",
         role: HandlerRole.INPUT,
         subscribe: (onData) => {
-            discord.startMessageStream((incomingMessage: Message) => {
-                onData(incomingMessage);
-            });
+            discord.startMessageStream(onData);
             return () => {
                 discord.stopMessageStream();
             };

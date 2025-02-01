@@ -1,7 +1,4 @@
-// MyFlowLifecycle.ts
-
-import { HandlerRole, type Memory } from "./types";
-// Suppose we have an OrchestratorDb or some DB client:
+import { HandlerRole, type ChatMessage, type Memory } from "./types";
 import type { OrchestratorDb, OrchestratorMessage } from "./memory";
 import type { ConversationManager } from "./conversation-manager";
 import type { Conversation } from "./conversation";
@@ -13,26 +10,25 @@ export function makeFlowLifecycle(
     return {
         async onFlowStart(
             userId: string,
-            sourceName: string,
+            platformId: string,
+            threadId: string,
             initialData: unknown
         ): Promise<string | undefined> {
-            return await orchestratorDb.createOrchestrator(userId);
+            return await orchestratorDb.getOrCreateChat(
+                userId,
+                platformId,
+                threadId
+            );
         },
 
         async onFlowStep(
-            orchestratorId: string | undefined,
-            userId: string,
+            chatId: string | undefined,
             role: HandlerRole,
             sourceName: string,
             data: unknown
         ): Promise<void> {
-            if (!orchestratorId) return;
-            await orchestratorDb.addMessage(
-                orchestratorId,
-                role,
-                sourceName,
-                data
-            );
+            if (!chatId) return;
+            await orchestratorDb.addChatMessage(chatId, role, sourceName, data);
         },
 
         async onTasksScheduled(
@@ -56,14 +52,13 @@ export function makeFlowLifecycle(
         },
 
         async onOutputDispatched(
-            orchestratorId: string | undefined,
-            userId: string,
+            chatId: string | undefined,
             outputName: string,
             outputData: unknown
         ): Promise<void> {
-            if (!orchestratorId) return;
-            await orchestratorDb.addMessage(
-                orchestratorId,
+            if (!chatId) return;
+            await orchestratorDb.addChatMessage(
+                chatId,
                 HandlerRole.OUTPUT,
                 outputName,
                 outputData
@@ -71,15 +66,14 @@ export function makeFlowLifecycle(
         },
 
         async onActionDispatched(
-            orchestratorId: string | undefined,
-            userId: string,
+            chatId: string | undefined,
             actionName: string,
             inputData: unknown,
             result: unknown
         ): Promise<void> {
-            if (!orchestratorId) return;
-            await orchestratorDb.addMessage(
-                orchestratorId,
+            if (!chatId) return;
+            await orchestratorDb.addChatMessage(
+                chatId,
                 HandlerRole.ACTION,
                 actionName,
                 {
@@ -91,31 +85,31 @@ export function makeFlowLifecycle(
 
         async onContentProcessed(
             contentId: string,
-            conversationId: string,
+            threadId: string,
             content: string,
             metadata?: Record<string, unknown>
         ): Promise<void> {
             const hasProcessed =
                 await conversationManager.hasProcessedContentInConversation(
                     contentId,
-                    conversationId
+                    threadId
                 );
             if (hasProcessed) {
                 return;
             }
             await conversationManager.markContentAsProcessed(
                 contentId,
-                conversationId
+                threadId
             );
         },
 
         async onConversationCreated(
             userId: string,
-            conversationId: string,
+            threadId: string,
             source: string
         ): Promise<Conversation> {
             return await conversationManager.ensureConversation(
-                conversationId,
+                threadId,
                 source,
                 userId
             );
@@ -123,67 +117,61 @@ export function makeFlowLifecycle(
 
         async onConversationUpdated(
             contentId: string,
-            conversationId: string,
+            threadId: string,
             content: string,
             source: string,
             updates: Record<string, unknown>
         ): Promise<void> {
             await conversationManager.markContentAsProcessed(
                 contentId,
-                conversationId
+                threadId
             );
         },
 
         async onMemoryAdded(
-            conversationId: string,
+            chatId: string,
             content: string,
             source: string,
             updates: Record<string, unknown>
         ): Promise<void> {
-            await conversationManager.addMemory(conversationId, content, {
+            await conversationManager.addMemory(chatId, content, {
                 source,
                 ...updates,
             });
 
-            await orchestratorDb.addMessage(
-                conversationId,
+            await orchestratorDb.addChatMessage(
+                chatId,
                 HandlerRole.INPUT,
                 source,
                 {
                     content,
-                    conversationId,
+                    chatId,
                 }
             );
         },
 
         async onMemoriesRequested(
-            conversationId: string,
+            chatId: string,
             limit?: number
-        ): Promise<{ memories: Memory[]; chatHistory: OrchestratorMessage[] }> {
-            console.log("onMemoriesRequested", conversationId, limit);
+        ): Promise<{ memories: Memory[] }> {
             // get vector based memories
             // todo, we could base this on a userID so the agent has memories across conversations
             const memories =
                 await conversationManager.getMemoriesFromConversation(
-                    conversationId,
+                    chatId,
                     limit
                 );
-            // TODO: get history from db
-            const chatHistory =
-                await orchestratorDb.getMessages(conversationId);
 
-            console.log("chatHistory", memories, chatHistory);
-
-            return { memories, chatHistory };
+            return { memories };
         },
 
         async onCheckContentProcessed(
             contentId: string,
-            conversationId: string
+            chatId: string
         ): Promise<boolean> {
             return await conversationManager.hasProcessedContentInConversation(
                 contentId,
-                conversationId
+                chatId
             );
         },
     };
@@ -200,7 +188,8 @@ export interface FlowLifecycle {
      */
     onFlowStart(
         userId: string,
-        sourceName: string,
+        platformId: string,
+        threadId: string,
         initialData: unknown
     ): Promise<string | undefined>;
 
@@ -208,8 +197,7 @@ export interface FlowLifecycle {
      * Called when new data is processed in the flow (e.g., an input message).
      */
     onFlowStep(
-        orchestratorId: string | undefined,
-        userId: string,
+        chatId: string | undefined,
         role: HandlerRole,
         sourceName: string,
         data: unknown
@@ -232,8 +220,7 @@ export interface FlowLifecycle {
      * Called after an output is dispatched (e.g. store it or log it).
      */
     onOutputDispatched(
-        orchestratorId: string | undefined,
-        userId: string,
+        chatId: string | undefined,
         outputName: string,
         outputData: unknown
     ): Promise<void>;
@@ -242,8 +229,7 @@ export interface FlowLifecycle {
      * Called after an action is dispatched (e.g. store it or log it).
      */
     onActionDispatched(
-        orchestratorId: string | undefined,
-        userId: string,
+        chatId: string | undefined,
         actionName: string,
         inputData: unknown,
         result: unknown
@@ -254,7 +240,7 @@ export interface FlowLifecycle {
      */
     onContentProcessed(
         userId: string,
-        conversationId: string,
+        threadId: string,
         content: string,
         metadata?: Record<string, unknown>
     ): Promise<void>;
@@ -264,7 +250,7 @@ export interface FlowLifecycle {
      */
     onConversationCreated(
         userId: string,
-        conversationId: string,
+        threadId: string,
         source: string,
         metadata?: Record<string, unknown>
     ): Promise<Conversation>;
@@ -274,7 +260,7 @@ export interface FlowLifecycle {
      */
     onConversationUpdated(
         contentId: string,
-        conversationId: string,
+        threadId: string,
         content: string,
         source: string,
         updates: Record<string, unknown>
@@ -284,7 +270,7 @@ export interface FlowLifecycle {
      * Called when a new memory needs to be added to a conversation
      */
     onMemoryAdded(
-        conversationId: string,
+        chatId: string,
         content: string,
         source: string,
         updates: Record<string, unknown>
@@ -294,15 +280,15 @@ export interface FlowLifecycle {
      * Called when memories need to be retrieved for a conversation
      */
     onMemoriesRequested(
-        conversationId: string,
+        chatId: string,
         limit?: number
-    ): Promise<{ memories: Memory[]; chatHistory: OrchestratorMessage[] }>;
+    ): Promise<{ memories: Memory[] }>;
 
     /**
      * Called to check if specific content has been processed in a conversation
      */
     onCheckContentProcessed(
         contentId: string,
-        conversationId: string
+        chatId: string
     ): Promise<boolean>;
 }
