@@ -14,10 +14,8 @@ import { LLMClient } from "../packages/core/src/core/llm-client";
 import { env } from "../packages/core/src/core/env";
 import chalk from "chalk";
 import { defaultCharacter } from "../packages/core/src/core/character";
-import { z } from "zod";
 import readline from "readline";
 import { MongoDb } from "../packages/core/src/core/db/mongo-db";
-import { Message } from "discord.js";
 import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
 import { makeFlowLifecycle } from "../packages/core/src/core/life-cycle";
 
@@ -52,21 +50,21 @@ async function main() {
     );
 
     // Connect to MongoDB (for scheduled tasks, if you use them)
-    const scheduledTaskDb = new MongoDb(
+    const KVDB = new MongoDb(
         "mongodb://localhost:27017",
         "myApp",
         "scheduled_tasks"
     );
-    await scheduledTaskDb.connect();
+    await KVDB.connect();
     console.log(chalk.green("✅ Scheduled task database connected"));
 
     // Clear any existing tasks if you like
-    await scheduledTaskDb.deleteAll();
+    await KVDB.deleteAll();
 
     // Create the Orchestrator
     const core = new Orchestrator(
         masterProcessor,
-        makeFlowLifecycle(scheduledTaskDb, conversationManager),
+        makeFlowLifecycle(KVDB, conversationManager),
         {
             level: loglevel,
             enableColors: true,
