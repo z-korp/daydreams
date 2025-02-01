@@ -154,16 +154,13 @@ wss.on("connection", (ws) => {
             }
 
             // Process the message using the orchestrator with the provided userId
-            const outputs = await orchestrator.dispatchToInput(
-                "user_chat",
-                {
-                    headers: {
-                        "x-user-id": userId,
-                    },
-                },
-                { content: userMessage },
-                orchestratorId ? orchestratorId : undefined
-            );
+            const outputs = await orchestrator.dispatchToInput("user_chat", {
+                userId,
+                platformId: "discord",
+                threadId: orchestratorId,
+                data: { content: userMessage },
+                contentId: orchestratorId,
+            });
 
             // Send responses back through WebSocket
             if (outputs && (outputs as any).length > 0) {
