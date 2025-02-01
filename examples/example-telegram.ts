@@ -98,18 +98,6 @@ async function main() {
         loglevel,
     );
 
-    // Set up Telegram bot client with credentials
-    // const telegram = new TelegramClient(
-    //     {
-    //         bot_token: env.TELEGRAM_TOKEN,
-    //         api_id: parseInt(env.TELEGRAM_API_ID as string),
-    //         api_hash: env.TELEGRAM_API_HASH,
-    //         is_bot: true,
-    //         session: undefined,
-    //     },
-    //     loglevel,
-    // );
-
     // Wait for login to complete before setting up handlers
     await telegram.initialize();
 
