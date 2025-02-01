@@ -11,17 +11,18 @@
 
 import { Orchestrator } from "../packages/core/src/core/orchestrator";
 import { HandlerRole } from "../packages/core/src/core/types";
-import { RoomManager } from "../packages/core/src/core/room-manager";
+import { ConversationManager } from "../packages/core/src/core/conversation-manager";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { MessageAndVisionProcessor } from "../packages/core/src/core/processors/message-and-vision-processor";
 import { LLMClient } from "../packages/core/src/core/llm-client";
 import { LogLevel } from "../packages/core/src/core/types";
 import chalk from "chalk";
-import { defaultCharacter } from "../packages/core/src/core/character_helpful_assistant";
+import { defaultCharacter } from "../packages/core/src/core/characters/character-helpful-assistant";
 import { z } from "zod";
 import readline from "readline";
 import { MongoDb } from "../packages/core/src/core/db/mongo-db";
 import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
+import { makeFlowLifecycle } from "../packages/core/src/core/life-cycle";
 
 async function main() {
     const loglevel = LogLevel.ERROR;
@@ -34,7 +35,7 @@ async function main() {
 
     await vectorDb.purge(); // Clear previous session data
 
-    const roomManager = new RoomManager(vectorDb);
+    const conversationManager = new ConversationManager(vectorDb);
     const userId = "console-user";
 
     const llmClient = new LLMClient({
@@ -69,18 +70,16 @@ async function main() {
 
     await scheduledTaskDb.deleteAll();
 
-    // Initialize core system
     const core = new Orchestrator(
-        roomManager,
-        vectorDb,
         masterProcessor,
-        scheduledTaskDb,
+        makeFlowLifecycle(scheduledTaskDb, conversationManager),
         {
             level: loglevel,
             enableColors: true,
             enableTimestamp: true,
         }
     );
+
 
     core.registerIOHandler({
         name: "user_chat",
@@ -107,7 +106,13 @@ async function main() {
                 images: images.length > 0 ? images : undefined,
                 files: files.length > 0 ? files : undefined,
             };
-            return output;
+            return {
+                userId: payload.userId,
+                threadId: payload.threadId,
+                contentId: payload.contentId,
+                platformId: "console",
+                data: output,
+            };
         },
     });
 
@@ -159,10 +164,14 @@ async function main() {
                 // Dispatch the message
                 await core.dispatchToInput(
                     "user_chat",
-                    { headers: { userId } },
                     {
-                        content: userMessage,
+                        contentId: userMessage,
                         userId,
+                        threadId: "console",
+                        platformId: "console",
+                        data: {
+                            content: userMessage,
+                        },
                     }
                 );
 

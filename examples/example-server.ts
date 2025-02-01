@@ -14,7 +14,7 @@ import { Orchestrator } from "../packages/core/src/core/orchestrator";
 import { HandlerRole } from "../packages/core/src/core/types";
 import { ConversationManager } from "../packages/core/src/core/conversation-manager";
 import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
-import { defaultCharacter } from "../packages/core/src/core/character";
+import { defaultCharacter } from "../packages/core/src/core/characters/character";
 
 import { LogLevel } from "../packages/core/src/core/types";
 import { MongoDb } from "../packages/core/src/core/db/mongo-db";

@@ -1,20 +1,20 @@
 import { Orchestrator } from "../packages/core/src/core/orchestrator";
 import { HandlerRole } from "../packages/core/src/core/types";
 import { TelegramClient } from "../packages/core/src/core/io/telegram";
-import { RoomManager } from "../packages/core/src/core/room-manager";
+import { ConversationManager } from "../packages/core/src/core/conversation-manager";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
 import { LLMClient } from "../packages/core/src/core/llm-client";
 import { env } from "../packages/core/src/core/env";
 import { LogLevel } from "../packages/core/src/core/types";
 import chalk from "chalk";
-import { defaultCharacter } from "../packages/core/src/core/character";
+import { defaultCharacter } from "../packages/core/src/core/characters/character-helpful-assistant";
 import { z } from "zod";
 import readline from "readline";
 import { MongoDb } from "../packages/core/src/core/db/mongo-db";
-import { Consciousness } from "../packages/core/src/core/consciousness";
 import { SchedulerService } from "../packages/core/src/core/schedule-service";
 import { Logger } from "../packages/core/src/core/logger";
+import { makeFlowLifecycle } from "../packages/core/src/core/life-cycle";
 
 
 async function main() {
@@ -33,7 +33,7 @@ async function main() {
 
     await vectorDb.purge(); // Clear previous session data
 
-    const roomManager = new RoomManager(vectorDb);
+    const conversationManager = new ConversationManager(vectorDb);
 
     const llmClient = new LLMClient({
         // model: "openrouter:deepseek/deepseek-r1", // Using a supported model
@@ -60,10 +60,8 @@ async function main() {
 
     // Initialize core system
     const orchestrator = new Orchestrator(
-        roomManager,
-        vectorDb,
         processor,
-        scheduledTaskDb,
+        makeFlowLifecycle(scheduledTaskDb, conversationManager),
         {
             level: loglevel,
             enableColors: true,
@@ -79,7 +77,7 @@ async function main() {
                 enableTimestamp: true,
             }),
             orchestratorDb: scheduledTaskDb,
-            roomManager: roomManager,
+            conversationManager: conversationManager,
             vectorDb: vectorDb,
         },
         orchestrator,
@@ -127,12 +125,28 @@ async function main() {
             try {
                 console.log(chalk.blue("📊 Fetching chat list..."));
                 const result = await telegram.createChatListScraper().handler();
-                return result;
+                // Return default string values for required identifiers since the result object
+                // does not include userId, threadId, and contentId.
+                return {
+                    userId: "telegram_scraper",
+                    threadId: "telegram_scraper",
+                    contentId: "telegram_scraper",
+                    platformId: "telegram",
+                    data: result,
+                };
             } catch (error) {
                 console.error(chalk.red("Error in chat list scraper:"), error);
-                return null;
+                // In the error case, provide fallback values with empty strings for the id fields
+                // and a default error structure for data.
+                return {
+                    userId: "telegram_scraper",
+                    threadId: "telegram_scraper",
+                    contentId: "telegram_scraper",
+                    platformId: "telegram",
+                    data: { success: false, error, chats: [] },
+                };
             }
-        }
+        },
     });
 
     scheduler.start();
