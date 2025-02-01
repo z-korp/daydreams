@@ -4,6 +4,7 @@ import type {
     ActionIOHandler,
     Character,
     OutputIOHandler,
+    ProcessableContent,
     ProcessedResult,
     SuggestedOutput,
 } from "../types";
@@ -46,7 +47,7 @@ export class MasterProcessor extends BaseProcessor {
     }
 
     async process(
-        content: any,
+        content: ProcessableContent,
         otherContext: string,
         ioContext?: {
             availableOutputs: OutputIOHandler[];

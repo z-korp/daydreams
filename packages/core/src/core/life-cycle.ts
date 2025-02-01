@@ -13,12 +13,8 @@ export function makeFlowLifecycle(
             platformId: string,
             threadId: string,
             initialData: unknown
-        ): Promise<string | undefined> {
-            return await orchestratorDb.getOrCreateChat(
-                userId,
-                platformId,
-                threadId
-            );
+        ): Promise<string> {
+            return orchestratorDb.getOrCreateChat(userId, platformId, threadId);
         },
 
         async onFlowStep(
@@ -49,38 +45,6 @@ export function makeFlowLifecycle(
                     task.intervalMs
                 );
             }
-        },
-
-        async onOutputDispatched(
-            chatId: string | undefined,
-            outputName: string,
-            outputData: unknown
-        ): Promise<void> {
-            if (!chatId) return;
-            await orchestratorDb.addChatMessage(
-                chatId,
-                HandlerRole.OUTPUT,
-                outputName,
-                outputData
-            );
-        },
-
-        async onActionDispatched(
-            chatId: string | undefined,
-            actionName: string,
-            inputData: unknown,
-            result: unknown
-        ): Promise<void> {
-            if (!chatId) return;
-            await orchestratorDb.addChatMessage(
-                chatId,
-                HandlerRole.ACTION,
-                actionName,
-                {
-                    input: inputData,
-                    result,
-                }
-            );
         },
 
         async onContentProcessed(
@@ -191,13 +155,13 @@ export interface FlowLifecycle {
         platformId: string,
         threadId: string,
         initialData: unknown
-    ): Promise<string | undefined>;
+    ): Promise<string>;
 
     /**
      * Called when new data is processed in the flow (e.g., an input message).
      */
     onFlowStep(
-        chatId: string | undefined,
+        chatId: string,
         role: HandlerRole,
         sourceName: string,
         data: unknown
@@ -214,25 +178,6 @@ export interface FlowLifecycle {
             data: unknown;
             intervalMs?: number;
         }[]
-    ): Promise<void>;
-
-    /**
-     * Called after an output is dispatched (e.g. store it or log it).
-     */
-    onOutputDispatched(
-        chatId: string | undefined,
-        outputName: string,
-        outputData: unknown
-    ): Promise<void>;
-
-    /**
-     * Called after an action is dispatched (e.g. store it or log it).
-     */
-    onActionDispatched(
-        chatId: string | undefined,
-        actionName: string,
-        inputData: unknown,
-        result: unknown
     ): Promise<void>;
 
     /**
