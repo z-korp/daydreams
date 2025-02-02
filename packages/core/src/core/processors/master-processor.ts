@@ -14,6 +14,35 @@ import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { BaseProcessor } from "../processor";
 import { LogLevel } from "../types";
+import type { MemoryManager } from "../memory";
+import type { IOHandlerInterface } from "../new";
+
+// add output schema
+// add always child processor
+
+interface ProcessorInterface {
+    // hold the schema
+    outputSchema: z.ZodType;
+
+    // hold the processors
+    processors: BaseProcessor[];
+
+    // hold the always child processor
+    alwaysChildProcessor?: BaseProcessor;
+
+    // hold the IOHandlers
+    IOHandlers: IOHandlerInterface;
+
+    // based on inputs and outputs
+    process: (content: ProcessableContent) => Promise<ProcessedResult>;
+
+    // based on inputs and outputs
+    evaluate: (result: ProcessedResult) => Promise<boolean>;
+
+    // memory manager
+    memory: MemoryManager;
+}
+
 
 export class MasterProcessor extends BaseProcessor {
     constructor(
