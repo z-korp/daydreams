@@ -1,8 +1,33 @@
-import { Handler } from "./orchestrator";
+import type { z } from "zod";
+import type { MemoryManager } from "./memory";
 import type { Goal, IOHandler, ProcessableContent, ProcessedResult } from "./types";
 
+// Routers to handlers or processors
+export interface ProcessorInterface {
+    // hold the schema
+    outputSchema: z.ZodType;
+
+    // hold the processors
+    processors: ProcessorInterface[];
+
+    // hold the always child processor
+    alwaysChildProcessor?: ProcessorInterface;
+
+    // hold the IOHandlers
+    handlers: HandlerInterface;
+
+    // based on inputs and outputs
+    process: (content: ProcessableContent) => Promise<ProcessedResult>;
+
+    // based on inputs and outputs
+    evaluate: (result: ProcessedResult) => Promise<boolean>;
+
+    // memory manager // what it's done
+    memory: MemoryManager;
+}
+
 // IOHandlers.ts
-export interface IOHandlerInterface {
+export interface HandlerInterface {
     dispatchToAction(
         name: string,
         data: ProcessableContent
@@ -17,23 +42,6 @@ export interface IOHandlerInterface {
     ): Promise<unknown>;
     registerIOHandler(handler: IOHandler): void;
     removeIOHandler(name: string): void;
-}
-
-// Processor.ts - a processor is a function that takes in a ProcessableContent and returns a Promise<unknown>
-export interface ProcessorInterface {
-    process(data: ProcessableContent): Promise<ProcessedResult>;
-}
-
-// Router.ts
-export interface RouterInterface {
-    routeRequest(request: any): any;
-    configurePipeline(pipelineSteps: Array<Function>): void;
-    addPipelineStep(step: Function): void;
-    removePipelineStep(step: Function): void;
-    setReflectionHook(hook: (context: any, stepIndex: number) => {
-        shouldContinue: boolean;
-        updatedContext: any;
-    }): void;
 }
 
 // GoalManager.ts

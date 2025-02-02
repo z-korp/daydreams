@@ -1,29 +1,14 @@
 import chalk from "chalk";
-import { Handler } from "../packages/core/src/core/orchestrator";
-import { HandlerRole, LogLevel, ProcessableContent } from "../packages/core/src/core/types";
+import { Dispatcher } from "../packages/core/src/core/orchestrator";
+import { HandlerRole, ProcessableContent } from "../packages/core/src/core/types";
 import { env } from "../packages/core/src/core/env";
 import { TwitterClient } from "../packages/core/src/core/io/twitter";
-import { defaultCharacter } from "../packages/core/src/core/characters/character";
+import { defaultCharacter as character } from "../packages/core/src/core/characters/character";
 import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
-import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
+import { ResearchQuantProcessor } from "../packages/core/src/core/processors/research-processor";
 import { LLMClient } from "../packages/core/src/core/llm-client";
 
-const llmClient = new LLMClient({
-    model: "anthropic/claude-3-5-sonnet-latest",
-    temperature: 0.3,
-});
-
-const messageProcessor = new MasterProcessor(
-    llmClient,
-    defaultCharacter,
-    LogLevel.INFO
-);
-
-messageProcessor.addProcessor([
-    new MessageProcessor(llmClient, defaultCharacter, LogLevel.INFO),
-]);
-
-const handler = new Handler();
+// Chain of Thought...
 
 const twitter = new TwitterClient(
     {
@@ -33,7 +18,16 @@ const twitter = new TwitterClient(
     },
 );
 
-handler.registerIOHandler({
+const processor = new MasterProcessor(
+    new LLMClient({
+        model: "anthropic/claude-3-5-sonnet-latest"
+    }),
+    character
+);
+
+const messageAgent = new Dispatcher();
+
+messageAgent.registerIOHandler({
     name: "twitter_mentions",
     role: HandlerRole.INPUT,
     execute: async () => {
@@ -64,3 +58,18 @@ handler.registerIOHandler({
             }));
     },
 });
+
+// Add Handler class to the processor
+processor.addHandlers(messageAgent);
+
+const decomposeProcessor = new DecomposeObjectiveIntoGoals()
+const validateProcessor = new ValidateGoalPrerequisites()
+const refineProcessor = new RefineGoal()
+const executeProcessor = new ExecuteGoal()
+
+const researchProcessor = new ResearchQuantProcessor(new LLMClient({
+    model: "anthropic/claude-3-5-sonnet-latest"
+}), character);
+
+processor.addProcessor(researchProcessor.addProcessor(decomposeProcessor).addProcessor(validateProcessor).addProcessor(refineProcessor).addProcessor(executeProcessor));
+

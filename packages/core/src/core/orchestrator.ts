@@ -1,12 +1,11 @@
 import { Logger } from "./logger";
 import type { BaseProcessor } from "./processor";
-import type { Memory, ProcessableContent, ProcessedResult } from "./types";
+import type { ProcessableContent } from "./types";
 import { HandlerRole, LogLevel, type LoggerConfig } from "./types";
 import type { IOHandler } from "./types";
-import type { FlowLifecycle } from "./life-cycle";
 import type { IOHandlerInterface } from "./new";
 
-export class Handler implements IOHandlerInterface {
+export class Dispatcher implements IOHandlerInterface {
     /**
      * Unified collection of IOHandlers (both input & output), keyed by name.
      */
@@ -23,11 +22,17 @@ export class Handler implements IOHandlerInterface {
     private unsubscribers = new Map<string, () => void>();
 
     /**
+     * Array of processors to be used in the orchestrator
+     */
+    private readonly processors: BaseProcessor[];
+
+    /**
      * Run hook for processing data from input handlers
      */
     private readonly runHook: (data: ProcessableContent | ProcessableContent[], sourceName: string) => Promise<Array<{ name: string; data: any }>>;
 
     constructor(
+        processors: BaseProcessor[],
         runHook?: (data: ProcessableContent | ProcessableContent[], sourceName: string) => Promise<Array<{ name: string; data: any }>>,
         config?: LoggerConfig,
     ) {
@@ -38,6 +43,8 @@ export class Handler implements IOHandlerInterface {
                 enableTimestamp: true,
             }
         );
+
+        this.processors = processors ?? [];
 
         // Initialize runHook with default empty implementation if not provided
         this.runHook = runHook ?? (async () => []);
