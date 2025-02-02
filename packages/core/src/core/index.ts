@@ -9,7 +9,7 @@ import { Logger } from "./logger";
 import { Consciousness } from "./consciousness";
 import { LLMClient } from "./llm-client";
 import { StepManager } from "./step-manager";
-import { defaultCharacter } from "./character";
+import { defaultCharacter } from "./characters/character-helpful-assistant";
 import * as Utils from "./utils";
 import * as Providers from "./providers";
 import * as Chains from "./chains";
