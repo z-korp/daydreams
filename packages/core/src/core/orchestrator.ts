@@ -4,8 +4,9 @@ import type { Memory, ProcessableContent, ProcessedResult } from "./types";
 import { HandlerRole, LogLevel, type LoggerConfig } from "./types";
 import type { IOHandler } from "./types";
 import type { FlowLifecycle } from "./life-cycle";
+import type { IOHandlerInterface } from "./new";
 
-export class Orchestrator {
+export class Handler implements IOHandlerInterface {
     /**
      * Unified collection of IOHandlers (both input & output), keyed by name.
      */
@@ -21,10 +22,14 @@ export class Orchestrator {
      */
     private unsubscribers = new Map<string, () => void>();
 
+    /**
+     * Run hook for processing data from input handlers
+     */
+    private readonly runHook: (data: ProcessableContent | ProcessableContent[], sourceName: string) => Promise<Array<{ name: string; data: any }>>;
+
     constructor(
-        private processor: BaseProcessor,
-        private readonly flowHooks: FlowLifecycle,
-        config?: LoggerConfig
+        runHook?: (data: ProcessableContent | ProcessableContent[], sourceName: string) => Promise<Array<{ name: string; data: any }>>,
+        config?: LoggerConfig,
     ) {
         this.logger = new Logger(
             config ?? {
@@ -33,6 +38,9 @@ export class Orchestrator {
                 enableTimestamp: true,
             }
         );
+
+        // Initialize runHook with default empty implementation if not provided
+        this.runHook = runHook ?? (async () => []);
 
         this.logger.info(
             "Orchestrator.constructor",
@@ -66,7 +74,8 @@ export class Orchestrator {
                     "Starting stream",
                     { data }
                 );
-                await this.run(data, handler.name);
+                // called to start the flow
+                await this.runHook(data, handler.name);
             });
             this.unsubscribers.set(handler.name, unsubscribe);
         }
@@ -188,7 +197,7 @@ export class Orchestrator {
         try {
             const result = await handler.execute(data);
             if (result) {
-                return await this.run(result, handler.name);
+                return await this.runHook(result, handler.name);
             }
             return [];
         } catch (error) {
@@ -201,272 +210,272 @@ export class Orchestrator {
         }
     }
 
-    /**
-     * Main processing loop: feeds incoming data into the processing queue and
-     * dispatches any suggested outputs or actions.
-     *
-     * @param data       The initial data or array of data to process.
-     * @param sourceName The name of the IOHandler that provided this data.
-     */
-    private async run(
-        data: ProcessableContent | ProcessableContent[],
-        sourceName: string
-    ): Promise<Array<{ name: string; data: any }>> {
-        // Initialize the processing queue
-        const queue: Array<{ data: ProcessableContent; source: string }> =
-            Array.isArray(data)
-                ? data.map((item) => ({ data: item, source: sourceName }))
-                : [{ data, source: sourceName }];
+    // /**
+    //  * Main processing loop: feeds incoming data into the processing queue and
+    //  * dispatches any suggested outputs or actions.
+    //  *
+    //  * @param data       The initial data or array of data to process.
+    //  * @param sourceName The name of the IOHandler that provided this data.
+    //  */
+    // private async run(
+    //     data: ProcessableContent | ProcessableContent[],
+    //     sourceName: string
+    // ): Promise<Array<{ name: string; data: any }>> {
+    //     // Initialize the processing queue
+    //     const queue: Array<{ data: ProcessableContent; source: string }> =
+    //         Array.isArray(data)
+    //             ? data.map((item) => ({ data: item, source: sourceName }))
+    //             : [{ data, source: sourceName }];
 
-        const collectedOutputs: Array<{ name: string; data: any }> = [];
+    //     const collectedOutputs: Array<{ name: string; data: any }> = [];
 
-        while (queue.length > 0) {
-            const currentItem = queue.shift()!;
-            const outputs = await this.processQueueItem(currentItem, queue);
-            collectedOutputs.push(...outputs);
-        }
+    //     while (queue.length > 0) {
+    //         const currentItem = queue.shift()!;
+    //         const outputs = await this.processQueueItem(currentItem, queue);
+    //         collectedOutputs.push(...outputs);
+    //     }
 
-        return collectedOutputs;
-    }
+    //     return collectedOutputs;
+    // }
 
-    /**
-     * Processes one queue item:
-     *  - Starts a conversation flow.
-     *  - Processes the content.
-     *  - Dispatches any suggested outputs or actions.
-     *
-     * @param item  The queue item containing the data and its source.
-     * @param queue The current processing queue (to which new items may be added).
-     */
-    private async processQueueItem(
-        item: { data: ProcessableContent; source: string },
-        queue: Array<{ data: ProcessableContent; source: string }>
-    ): Promise<Array<{ name: string; data: any }>> {
-        const { data, source } = item;
-        const outputs: Array<{ name: string; data: any }> = [];
+    // /**
+    //  * Processes one queue item:
+    //  *  - Starts a conversation flow.
+    //  *  - Processes the content.
+    //  *  - Dispatches any suggested outputs or actions.
+    //  *
+    //  * @param item  The queue item containing the data and its source.
+    //  * @param queue The current processing queue (to which new items may be added).
+    //  */
+    // private async processQueueItem(
+    //     item: { data: ProcessableContent; source: string },
+    //     queue: Array<{ data: ProcessableContent; source: string }>
+    // ): Promise<Array<{ name: string; data: any }>> {
+    //     const { data, source } = item;
+    //     const outputs: Array<{ name: string; data: any }> = [];
 
-        // Start the conversation/flow.
-        const chatId = await this.flowHooks.onFlowStart(
-            data.userId,
-            data.platformId,
-            data.threadId,
-            data.data
-        );
+    //     // Start the conversation/flow.
+    //     const chatId = await this.flowHooks.onFlowStart(
+    //         data.userId,
+    //         data.platformId,
+    //         data.threadId,
+    //         data.data
+    //     );
 
-        await this.flowHooks.onFlowStep(
-            chatId,
-            HandlerRole.INPUT,
-            source,
-            data
-        );
+    //     await this.flowHooks.onFlowStep(
+    //         chatId,
+    //         HandlerRole.INPUT,
+    //         source,
+    //         data
+    //     );
 
-        // Process the content.
-        const processedResults = await this.processContent(data, source);
-        if (!processedResults?.length) {
-            return outputs;
-        }
+    //     // Process the content.
+    //     const processedResults = await this.processContent(data, source);
+    //     if (!processedResults?.length) {
+    //         return outputs;
+    //     }
 
-        // Handle each processed result.
-        for (const result of processedResults) {
-            if (result.alreadyProcessed) {
-                continue;
-            }
+    //     // Handle each processed result.
+    //     for (const result of processedResults) {
+    //         if (result.alreadyProcessed) {
+    //             continue;
+    //         }
 
-            // Schedule any tasks if present.
-            if (result.updateTasks?.length) {
-                await this.flowHooks.onTasksScheduled(
-                    data.userId,
-                    result.updateTasks.map((task) => ({
-                        name: task.name,
-                        data: task.data,
-                        intervalMs: task.intervalMs,
-                    }))
-                );
-            }
+    //         // Schedule any tasks if present.
+    //         if (result.updateTasks?.length) {
+    //             await this.flowHooks.onTasksScheduled(
+    //                 data.userId,
+    //                 result.updateTasks.map((task) => ({
+    //                     name: task.name,
+    //                     data: task.data,
+    //                     intervalMs: task.intervalMs,
+    //                 }))
+    //             );
+    //         }
 
-            // Process any suggested outputs or actions.
-            for (const suggestion of result.suggestedOutputs ?? []) {
-                const handler = this.ioHandlers.get(suggestion.name);
-                if (!handler) {
-                    this.logger.warn(
-                        "Orchestrator.processQueueItem",
-                        `No handler found for suggested output: ${suggestion.name}`
-                    );
-                    continue;
-                }
+    //         // Process any suggested outputs or actions.
+    //         for (const suggestion of result.suggestedOutputs ?? []) {
+    //             const handler = this.ioHandlers.get(suggestion.name);
+    //             if (!handler) {
+    //                 this.logger.warn(
+    //                     "Orchestrator.processQueueItem",
+    //                     `No handler found for suggested output: ${suggestion.name}`
+    //                 );
+    //                 continue;
+    //             }
 
-                switch (handler.role) {
-                    case HandlerRole.OUTPUT:
-                        outputs.push({
-                            name: suggestion.name,
-                            data: suggestion.data,
-                        });
-                        await this.dispatchToOutput(
-                            suggestion.name,
-                            suggestion.data
-                        );
-                        await this.flowHooks.onFlowStep(
-                            chatId,
-                            HandlerRole.OUTPUT,
-                            suggestion.name,
-                            suggestion.data
-                        );
-                        break;
+    //             switch (handler.role) {
+    //                 case HandlerRole.OUTPUT:
+    //                     outputs.push({
+    //                         name: suggestion.name,
+    //                         data: suggestion.data,
+    //                     });
+    //                     await this.dispatchToOutput(
+    //                         suggestion.name,
+    //                         suggestion.data
+    //                     );
+    //                     await this.flowHooks.onFlowStep(
+    //                         chatId,
+    //                         HandlerRole.OUTPUT,
+    //                         suggestion.name,
+    //                         suggestion.data
+    //                     );
+    //                     break;
 
-                    case HandlerRole.ACTION: {
-                        const actionResult = await this.dispatchToAction(
-                            suggestion.name,
-                            suggestion.data
-                        );
-                        await this.flowHooks.onFlowStep(
-                            chatId,
-                            HandlerRole.ACTION,
-                            suggestion.name,
-                            { input: suggestion.data, result: actionResult }
-                        );
-                        if (actionResult) {
-                            const newItems = Array.isArray(actionResult)
-                                ? actionResult
-                                : [actionResult];
-                            for (const newItem of newItems) {
-                                queue.push({
-                                    data: newItem,
-                                    source: suggestion.name,
-                                });
-                            }
-                        }
-                        break;
-                    }
+    //                 case HandlerRole.ACTION: {
+    //                     const actionResult = await this.dispatchToAction(
+    //                         suggestion.name,
+    //                         suggestion.data
+    //                     );
+    //                     await this.flowHooks.onFlowStep(
+    //                         chatId,
+    //                         HandlerRole.ACTION,
+    //                         suggestion.name,
+    //                         { input: suggestion.data, result: actionResult }
+    //                     );
+    //                     if (actionResult) {
+    //                         const newItems = Array.isArray(actionResult)
+    //                             ? actionResult
+    //                             : [actionResult];
+    //                         for (const newItem of newItems) {
+    //                             queue.push({
+    //                                 data: newItem,
+    //                                 source: suggestion.name,
+    //                             });
+    //                         }
+    //                     }
+    //                     break;
+    //                 }
 
-                    default:
-                        this.logger.warn(
-                            "Orchestrator.processQueueItem",
-                            "Suggested output has an unrecognized role",
-                            handler.role
-                        );
-                }
-            }
-        }
+    //                 default:
+    //                     this.logger.warn(
+    //                         "Orchestrator.processQueueItem",
+    //                         "Suggested output has an unrecognized role",
+    //                         handler.role
+    //                     );
+    //             }
+    //         }
+    //     }
 
-        return outputs;
-    }
+    //     return outputs;
+    // }
 
-    /**
-     * Processes content by handling both single items and arrays.
-     * A small delay is introduced for each item (if processing an array).
-     */
-    public async processContent(
-        content: ProcessableContent | ProcessableContent[],
-        source: string
-    ): Promise<ProcessedResult[]> {
-        if (Array.isArray(content)) {
-            const allResults: ProcessedResult[] = [];
-            for (const item of content) {
-                await this.delay(5000); // Example delay; remove if not needed.
-                const result = await this.processContentItem(item, source);
-                if (result) {
-                    allResults.push(result);
-                }
-            }
-            return allResults;
-        }
+    // /**
+    //  * Processes content by handling both single items and arrays.
+    //  * A small delay is introduced for each item (if processing an array).
+    //  */
+    // public async processContent(
+    //     content: ProcessableContent | ProcessableContent[],
+    //     source: string
+    // ): Promise<ProcessedResult[]> {
+    //     if (Array.isArray(content)) {
+    //         const allResults: ProcessedResult[] = [];
+    //         for (const item of content) {
+    //             await this.delay(5000); // Example delay; remove if not needed.
+    //             const result = await this.processContentItem(item, source);
+    //             if (result) {
+    //                 allResults.push(result);
+    //             }
+    //         }
+    //         return allResults;
+    //     }
 
-        const singleResult = await this.processContentItem(content, source);
-        return singleResult ? [singleResult] : [];
-    }
+    //     const singleResult = await this.processContentItem(content, source);
+    //     return singleResult ? [singleResult] : [];
+    // }
 
-    /**
-     * Processes a single content item:
-     *  - Retrieves conversation context and prior memories.
-     *  - Passes the item to the processor.
-     *  - Updates conversation and memory.
-     */
-    private async processContentItem(
-        content: ProcessableContent,
-        source: string
-    ): Promise<ProcessedResult | null> {
-        let memories: { memories: Memory[] } = { memories: [] };
+    // /**
+    //  * Processes a single content item:
+    //  *  - Retrieves conversation context and prior memories.
+    //  *  - Passes the item to the processor.
+    //  *  - Updates conversation and memory.
+    //  */
+    // private async processContentItem(
+    //     content: ProcessableContent,
+    //     source: string
+    // ): Promise<ProcessedResult | null> {
+    //     let memories: { memories: Memory[] } = { memories: [] };
 
-        const conversation = await this.flowHooks.onConversationCreated(
-            content.userId,
-            content.threadId,
-            source
-        );
+    //     const conversation = await this.flowHooks.onConversationCreated(
+    //         content.userId,
+    //         content.threadId,
+    //         source
+    //     );
 
-        if (content.threadId && content.userId) {
-            memories = await this.flowHooks.onMemoriesRequested(
-                conversation.id
-            );
+    //     if (content.threadId && content.userId) {
+    //         memories = await this.flowHooks.onMemoriesRequested(
+    //             conversation.id
+    //         );
 
-            this.logger.debug(
-                "Orchestrator.processContentItem",
-                "Processing content with context",
-                {
-                    content,
-                    source,
-                    conversationId: conversation.id,
-                    userId: content.userId,
-                    relevantMemories: memories,
-                }
-            );
-        }
+    //         this.logger.debug(
+    //             "Orchestrator.processContentItem",
+    //             "Processing content with context",
+    //             {
+    //                 content,
+    //                 source,
+    //                 conversationId: conversation.id,
+    //                 userId: content.userId,
+    //                 relevantMemories: memories,
+    //             }
+    //         );
+    //     }
 
-        // Collect available outputs and actions.
-        const availableOutputs = Array.from(this.ioHandlers.values()).filter(
-            (h) => h.role === HandlerRole.OUTPUT
-        );
-        const availableActions = Array.from(this.ioHandlers.values()).filter(
-            (h) => h.role === HandlerRole.ACTION
-        );
+    //     // Collect available outputs and actions.
+    //     const availableOutputs = Array.from(this.ioHandlers.values()).filter(
+    //         (h) => h.role === HandlerRole.OUTPUT
+    //     );
+    //     const availableActions = Array.from(this.ioHandlers.values()).filter(
+    //         (h) => h.role === HandlerRole.ACTION
+    //     );
 
-        // Process the content.
-        const result = await this.processor.process(
-            content,
-            JSON.stringify(memories),
-            {
-                availableOutputs,
-                availableActions,
-            }
-        );
+    //     // Process the content.
+    //     const result = await this.processor.process(
+    //         content,
+    //         JSON.stringify(memories),
+    //         {
+    //             availableOutputs,
+    //             availableActions,
+    //         }
+    //     );
 
-        // Save memory and update the conversation.
-        await this.flowHooks.onMemoryAdded(
-            conversation.id,
-            JSON.stringify(result.content),
-            source,
-            {
-                ...result.metadata,
-                ...result.enrichedContext,
-            }
-        );
+    //     // Save memory and update the conversation.
+    //     await this.flowHooks.onMemoryAdded(
+    //         conversation.id,
+    //         JSON.stringify(result.content),
+    //         source,
+    //         {
+    //             ...result.metadata,
+    //             ...result.enrichedContext,
+    //         }
+    //     );
 
-        this.logger.debug(
-            "Orchestrator.processContentItem",
-            "Updating conversation",
-            {
-                conversationId: conversation.id,
-                contentId: content.contentId,
-                threadId: content.threadId,
-                userId: content.userId,
-                result,
-            }
-        );
+    //     this.logger.debug(
+    //         "Orchestrator.processContentItem",
+    //         "Updating conversation",
+    //         {
+    //             conversationId: conversation.id,
+    //             contentId: content.contentId,
+    //             threadId: content.threadId,
+    //             userId: content.userId,
+    //             result,
+    //         }
+    //     );
 
-        await this.flowHooks.onConversationUpdated(
-            content.contentId,
-            conversation.id,
-            JSON.stringify(result.content),
-            source,
-            result.metadata
-        );
+    //     await this.flowHooks.onConversationUpdated(
+    //         content.contentId,
+    //         conversation.id,
+    //         JSON.stringify(result.content),
+    //         source,
+    //         result.metadata
+    //     );
 
-        return result;
-    }
+    //     return result;
+    // }
 
-    /**
-     * A helper method to introduce a delay.
-     */
-    private delay(ms: number): Promise<void> {
-        return new Promise((resolve) => setTimeout(resolve, ms));
-    }
+    // /**
+    //  * A helper method to introduce a delay.
+    //  */
+    // private delay(ms: number): Promise<void> {
+    //     return new Promise((resolve) => setTimeout(resolve, ms));
+    // }
 }
