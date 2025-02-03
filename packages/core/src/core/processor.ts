@@ -117,10 +117,10 @@ export abstract class BaseProcessor implements ProcessorInterface {
 
         const result = await this.process(content);
 
-        if (result.suggestedOutputs.length > 0) {
+        if (result.suggestedOutputs?.length > 0) {
             const outputs = await Promise.all(
                 result.suggestedOutputs.map(async (suggestedOutput) => {
-                    const handler = this.handlers.ioHandlers.get(suggestedOutput.name);
+                    const handler = this.handlers?.ioHandlers?.get(suggestedOutput.name);
 
                     if (handler && handler.execute) {
                         return handler.execute(content);
@@ -130,7 +130,10 @@ export abstract class BaseProcessor implements ProcessorInterface {
                 })
             );
 
-            return outputs.find(output => output !== null);
+            const validOutput = outputs.find(output => output !== null);
+            if (validOutput) {
+                return validOutput;
+            }
         }
 
         return result;
