@@ -10,6 +10,7 @@
         "telegram": "bun run examples/example-telegram.ts",
         "hyperliquid": "bun run examples/example-hyperliquid.ts",
         "vision": "bun run examples/example-vision.ts",
+        "new": "bun run examples/example-new.ts",
         "api": "bun run examples/example-api.ts",
         "ui": "pnpm --dir clients/example-ui run dev",
         "test": "bun run packages/core",
