@@ -1,12 +1,14 @@
 import chalk from "chalk";
-import { Dispatcher } from "../packages/core/src/core/orchestrator";
-import { HandlerRole, ProcessableContent } from "../packages/core/src/core/types";
+import { Handler } from "../packages/core/src/core/orchestrator";
+import { HandlerRole } from "../packages/core/src/core/types";
 import { env } from "../packages/core/src/core/env";
 import { TwitterClient } from "../packages/core/src/core/io/twitter";
 import { defaultCharacter as character } from "../packages/core/src/core/characters/character";
 import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
 import { ResearchQuantProcessor } from "../packages/core/src/core/processors/research-processor";
 import { LLMClient } from "../packages/core/src/core/llm-client";
+import { MemoryManagerInterface } from "../packages/core/src/core/new";
+import { z } from "zod";
 
 // Chain of Thought...
 
@@ -18,16 +20,9 @@ const twitter = new TwitterClient(
     },
 );
 
-const processor = new MasterProcessor(
-    new LLMClient({
-        model: "anthropic/claude-3-5-sonnet-latest"
-    }),
-    character
-);
+const handlers = new Handler();
 
-const messageAgent = new Dispatcher();
-
-messageAgent.registerIOHandler({
+handlers.registerIOHandler({
     name: "twitter_mentions",
     role: HandlerRole.INPUT,
     execute: async () => {
@@ -59,17 +54,17 @@ messageAgent.registerIOHandler({
     },
 });
 
+
+const processor = new MasterProcessor(
+    new LLMClient({
+        model: "anthropic/claude-3-5-sonnet-latest"
+    }),
+    character,
+    handlers,
+    z.object({}),
+);
+
+
 // Add Handler class to the processor
-processor.addHandlers(messageAgent);
 
-const decomposeProcessor = new DecomposeObjectiveIntoGoals()
-const validateProcessor = new ValidateGoalPrerequisites()
-const refineProcessor = new RefineGoal()
-const executeProcessor = new ExecuteGoal()
-
-const researchProcessor = new ResearchQuantProcessor(new LLMClient({
-    model: "anthropic/claude-3-5-sonnet-latest"
-}), character);
-
-processor.addProcessor(researchProcessor.addProcessor(decomposeProcessor).addProcessor(validateProcessor).addProcessor(refineProcessor).addProcessor(executeProcessor));
 

@@ -13,52 +13,33 @@ import { getTimeContext, validateLLMResponseSchema } from "../utils";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { BaseProcessor } from "../processor";
-import { LogLevel } from "../types";
-import type { MemoryManager } from "../memory";
-import type { IOHandlerInterface } from "../new";
-
-// add output schema
-// add always child processor
-
-interface ProcessorInterface {
-    // hold the schema
-    outputSchema: z.ZodType;
-
-    // hold the processors
-    processors: BaseProcessor[];
-
-    // hold the always child processor
-    alwaysChildProcessor?: BaseProcessor;
-
-    // hold the IOHandlers
-    IOHandlers: IOHandlerInterface;
-
-    // based on inputs and outputs
-    process: (content: ProcessableContent) => Promise<ProcessedResult>;
-
-    // based on inputs and outputs
-    evaluate: (result: ProcessedResult) => Promise<boolean>;
-
-    // memory manager
-    memory: MemoryManager;
-}
+import { HandlerRole, LogLevel } from "../types";
+// import type { MemoryManager } from "../memory";
+import type { HandlerInterface } from "../new";
 
 
 export class MasterProcessor extends BaseProcessor {
     constructor(
         protected llmClient: LLMClient,
         protected character: Character,
-        logLevel: LogLevel = LogLevel.ERROR
+        handlers: HandlerInterface,
+        // memory: MemoryManager,
+        outputSchema: z.ZodType,
+        logLevel: LogLevel = LogLevel.ERROR,
+        protected contentLimit: number = 1000
     ) {
         super(
+            outputSchema,
+            handlers,
+            // memory,
             {
                 name: "master",
-                description:
-                    "This processor handles messages or short text inputs.",
+                description: "This processor handles messages or short text inputs.",
             },
             logLevel,
             character,
-            llmClient
+            llmClient,
+            contentLimit
         );
     }
 
@@ -75,14 +56,7 @@ export class MasterProcessor extends BaseProcessor {
         return contentStr.length < this.contentLimit;
     }
 
-    async process(
-        content: ProcessableContent,
-        otherContext: string,
-        ioContext?: {
-            availableOutputs: OutputIOHandler[];
-            availableActions: ActionIOHandler[];
-        }
-    ): Promise<ProcessedResult> {
+    async process(content: ProcessableContent): Promise<ProcessedResult> {
         this.logger.debug("Processor.process", "Processing content", {
             content,
         });
@@ -97,25 +71,30 @@ export class MasterProcessor extends BaseProcessor {
             })
             .join("\n");
 
-        const outputsSchemaPart = ioContext?.availableOutputs
-            .map((handler) => {
-                return `${handler.name}: ${JSON.stringify(zodToJsonSchema(handler.outputSchema!, handler.name))}`;
+        const outputsSchemaPart = Array.from(this.handlers.ioHandlers.entries())
+            .map(([name, handler]) => {
+                if (handler.role === HandlerRole.OUTPUT && 'outputSchema' in handler) {
+                    return `${name}: ${JSON.stringify(zodToJsonSchema(handler.outputSchema, name))}`;
+                }
+                return '';
             })
+            .filter(Boolean)
             .join("\n");
 
-        const actionsSchemaPart = ioContext?.availableActions
-            .map((handler) => {
-                return `${handler.name}: ${JSON.stringify(zodToJsonSchema(handler.outputSchema!, handler.name))}`;
+        const actionsSchemaPart = Array.from(this.handlers.ioHandlers.entries())
+            .map(([name, handler]) => {
+                if (handler.role === HandlerRole.ACTION && 'outputSchema' in handler) {
+                    return `${name}: ${JSON.stringify(zodToJsonSchema(handler.outputSchema!, name))}`;
+                }
+                return '';
             })
+            .filter(Boolean)
             .join("\n");
 
         const prompt = `You are a master processor that can delegate to child processors. Decide on what do to with the following content:
 
         # New Content to process: 
         ${contentStr}
-
-        # Other context:
-        ${otherContext}
 
         # Available Child Processors:
         ${processorContext}
@@ -240,11 +219,7 @@ export class MasterProcessor extends BaseProcessor {
                                 result.classification.delegateToProcessor,
                         }
                     );
-                    return childProcessor.process(
-                        content,
-                        otherContext,
-                        ioContext
-                    );
+                    return childProcessor.process(content);
                 }
             }
 
@@ -263,9 +238,9 @@ export class MasterProcessor extends BaseProcessor {
                     ...result.enrichment,
                     timeContext: getTimeContext(new Date()),
                     relatedMemories: [], // TODO: fix this abstraction
-                    availableOutputs: ioContext?.availableOutputs.map(
-                        (handler) => handler.name
-                    ),
+                    availableOutputs: Array.from(this.handlers.ioHandlers.entries())
+                        .filter(([_, handler]) => handler.role === HandlerRole.OUTPUT)
+                        .map(([name]) => name),
                 },
                 updateTasks: result.updateTasks,
                 suggestedOutputs:
@@ -287,13 +262,19 @@ export class MasterProcessor extends BaseProcessor {
                     sentiment: "neutral",
                     entities: [],
                     intent: "unknown",
-                    availableOutputs: ioContext?.availableOutputs.map(
-                        (handler) => handler.name
-                    ),
+                    availableOutputs: Array.from(this.handlers.ioHandlers.entries())
+                        .filter(([_, handler]) => handler.role === HandlerRole.OUTPUT)
+                        .map(([name]) => name),
                 },
                 suggestedOutputs: [],
                 alreadyProcessed: false,
             };
         }
+    }
+
+    async evaluate(result: ProcessedResult): Promise<boolean> {
+        // Implement evaluation logic here
+        // For now, return true as a placeholder
+        return true;
     }
 }
