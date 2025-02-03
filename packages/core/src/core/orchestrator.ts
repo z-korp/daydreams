@@ -15,17 +15,6 @@ export class Handler implements HandlerInterface {
      */
     private readonly logger: Logger;
 
-    /**
-     * Map of unsubscribe functions for various handlers, keyed by handler name.
-     */
-    private unsubscribers = new Map<string, () => void>();
-
-    /**
-     * Run hook for processing data from input handlers
-     */
-    private processPipeline: (data: ProcessableContent | ProcessableContent[], sourceName: string) => Promise<any>
-        = async () => [];
-
     constructor(
         config?: LoggerConfig,
     ) {
@@ -36,72 +25,40 @@ export class Handler implements HandlerInterface {
                 enableTimestamp: true,
             }
         );
-
-
-
-        this.logger.info(
-            "Orchestrator.constructor",
-            "Orchestrator initialized"
-        );
-    }
-
-    public pipe(
-        pipe: (data: ProcessableContent | ProcessableContent[], sourceName: string) => Promise<any>
-    ) {
-        this.processPipeline = pipe;
     }
 
     public getHandler(name: string): IOHandler | undefined {
         return this.ioHandlers.get(name);
     }
 
-    // /**
-    //  * Registers an IOHandler (input or output). For input handlers with a subscribe method,
-    //  * registers the subscription and stores its unsubscriber.
-    //  */
-    // public registerIOHandler(handler: IOHandler): void {
-    //     if (this.ioHandlers.has(handler.name)) {
-    //         this.logger.warn(
-    //             "Orchestrator.registerIOHandler",
-    //             "Overwriting handler with same name",
-    //             { name: handler.name }
-    //         );
-    //     }
+    /**
+ * Registers an IOHandler (input or output). For input handlers with a subscribe method,
+ * registers the subscription and stores its unsubscriber.
+ */
+    public registerIOHandler(handler: IOHandler): void {
+        if (this.ioHandlers.has(handler.name)) {
+            this.logger.warn(
+                "Orchestrator.registerIOHandler",
+                "Overwriting handler with same name",
+                { name: handler.name }
+            );
+        }
 
-    //     this.ioHandlers.set(handler.name, handler);
+        this.ioHandlers.set(handler.name, handler);
 
-    //     if (handler.role === HandlerRole.INPUT && handler.subscribe) {
-    //         const unsubscribe = handler.subscribe(async (data) => {
-    //             this.logger.info(
-    //                 "Orchestrator.registerIOHandler",
-    //                 "Starting stream",
-    //                 { data }
-    //             );
-    //             // called to start the flow
-    //             await this.processPipeline(data, handler.name);
-    //         });
-    //         this.unsubscribers.set(handler.name, unsubscribe);
-    //     }
+        this.logger.info(
+            "Orchestrator.registerIOHandler",
+            `Registered ${handler.role}`,
+            { name: handler.name }
+        );
+    }
 
-    //     this.logger.info(
-    //         "Orchestrator.registerIOHandler",
-    //         `Registered ${handler.role}`,
-    //         { name: handler.name }
-    //     );
-    // }
 
     /**
      * Removes a handler (input or output) by name and stops its scheduling if needed.
      */
     public removeIOHandler(name: string): void {
-        const unsub = this.unsubscribers.get(name);
-        if (unsub) {
-            unsub(); // E.g. remove event listeners, clear intervals, etc.
-            this.unsubscribers.delete(name);
-        }
-
         this.ioHandlers.delete(name);
-
         this.logger.info("Orchestrator.removeIOHandler", "Removed IOHandler", {
             name,
         });

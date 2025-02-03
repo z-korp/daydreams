@@ -128,74 +128,7 @@ export class MasterProcessor extends BaseProcessor {
                 prompt,
                 systemPrompt:
                     "You are an expert system that analyzes content and provides comprehensive analysis with appropriate automated responses. You can delegate to specialized processors when needed.",
-                schema: z.object({
-                    classification: z.object({
-                        contentType: z.string(),
-                        requiresProcessing: z.boolean(),
-                        delegateToProcessor: z
-                            .string()
-                            .optional()
-                            .describe(
-                                "The name of the processor to delegate to"
-                            ),
-                        context: z.object({
-                            topic: z.string(),
-                            urgency: z.enum(["high", "medium", "low"]),
-                            additionalContext: z.string(),
-                        }),
-                    }),
-                    enrichment: z.object({
-                        summary: z.string().max(1000),
-                        topics: z.array(z.string()).max(20),
-                        sentiment: z.enum(["positive", "negative", "neutral"]),
-                        entities: z.array(z.string()),
-                        intent: z
-                            .string()
-                            .describe("The intent of the content"),
-                    }),
-                    updateTasks: z
-                        .array(
-                            z.object({
-                                name: z
-                                    .string()
-                                    .describe(
-                                        "The name of the task to schedule. This should be a handler name."
-                                    ),
-                                confidence: z
-                                    .number()
-                                    .describe("The confidence score (0-1)"),
-                                intervalMs: z
-                                    .number()
-                                    .describe("The interval in milliseconds"),
-                                data: z
-                                    .any()
-                                    .describe(
-                                        "The data that matches the task's schema"
-                                    ),
-                            })
-                        )
-                        .describe(
-                            "Suggested tasks to schedule based on the content and the available handlers. Making this will mean the handlers will be called in the future."
-                        ),
-                    suggestedOutputs: z.array(
-                        z.object({
-                            name: z
-                                .string()
-                                .describe("The name of the output or action"),
-                            data: z
-                                .any()
-                                .describe(
-                                    "The data that matches the output's schema. leave empty if you don't have any data to provide."
-                                ),
-                            confidence: z
-                                .number()
-                                .describe("The confidence score (0-1)"),
-                            reasoning: z
-                                .string()
-                                .describe("The reasoning for the suggestion"),
-                        })
-                    ),
-                }),
+                schema: this.outputSchema,
                 llmClient: this.llmClient,
                 logger: this.logger,
             });
@@ -204,8 +137,6 @@ export class MasterProcessor extends BaseProcessor {
                 result,
             });
 
-            // Check if we should delegate to a child processor
-            // @dev maybe this should be elsewhere
             if (result.classification.delegateToProcessor) {
                 const childProcessor = this.getProcessor(
                     result.classification.delegateToProcessor
@@ -222,11 +153,6 @@ export class MasterProcessor extends BaseProcessor {
                     return childProcessor.process(content);
                 }
             }
-
-            this.logger.debug("Processor.process", "Processed content", {
-                content,
-                result,
-            });
 
             return {
                 content,
@@ -278,3 +204,73 @@ export class MasterProcessor extends BaseProcessor {
         return true;
     }
 }
+
+
+export const masterProcessorSchema = z.object({
+    classification: z.object({
+        contentType: z.string(),
+        requiresProcessing: z.boolean(),
+        delegateToProcessor: z
+            .string()
+            .optional()
+            .describe(
+                "The name of the processor to delegate to"
+            ),
+        context: z.object({
+            topic: z.string(),
+            urgency: z.enum(["high", "medium", "low"]),
+            additionalContext: z.string(),
+        }),
+    }),
+    enrichment: z.object({
+        summary: z.string().max(1000),
+        topics: z.array(z.string()).max(20),
+        sentiment: z.enum(["positive", "negative", "neutral"]),
+        entities: z.array(z.string()),
+        intent: z
+            .string()
+            .describe("The intent of the content"),
+    }),
+    updateTasks: z
+        .array(
+            z.object({
+                name: z
+                    .string()
+                    .describe(
+                        "The name of the task to schedule. This should be a handler name."
+                    ),
+                confidence: z
+                    .number()
+                    .describe("The confidence score (0-1)"),
+                intervalMs: z
+                    .number()
+                    .describe("The interval in milliseconds"),
+                data: z
+                    .any()
+                    .describe(
+                        "The data that matches the task's schema"
+                    ),
+            })
+        )
+        .describe(
+            "Suggested tasks to schedule based on the content and the available handlers. Making this will mean the handlers will be called in the future."
+        ),
+    suggestedOutputs: z.array(
+        z.object({
+            name: z
+                .string()
+                .describe("The name of the output or action"),
+            data: z
+                .any()
+                .describe(
+                    "The data that matches the output's schema. leave empty if you don't have any data to provide."
+                ),
+            confidence: z
+                .number()
+                .describe("The confidence score (0-1)"),
+            reasoning: z
+                .string()
+                .describe("The reasoning for the suggestion"),
+        })
+    ),
+})

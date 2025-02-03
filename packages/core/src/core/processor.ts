@@ -2,7 +2,8 @@
 
 import { Logger } from "./logger";
 import { LogLevel, type Character, type ProcessedResult } from "./types";
-import type { HandlerRole, IOHandler, ProcessableContent } from "./types";
+import { HandlerRole, type IOHandler, type ProcessableContent } from "./types";
+
 import type { HandlerInterface } from "./new";
 import type { MemoryManager } from "./memory";
 import type { z } from "zod";
@@ -29,7 +30,8 @@ export interface ProcessorInterface {
 
     run: (content: ProcessableContent | ProcessableContent[]) => Promise<ProcessedResult | ProcessedResult[]>;
 
-
+    // based on inputs and outputs
+    getHandler(name: string): IOHandler | undefined;
 
     // memory manager // what it's done
     // memory: MemoryManager;
@@ -40,6 +42,9 @@ export abstract class BaseProcessor implements ProcessorInterface {
     protected logger: Logger;
     /** Map of child processors (sub-processors) that this processor can delegate to */
     public processors: Map<string, BaseProcessor> = new Map();
+
+    /** Map of unsubscribe functions for various handlers, keyed by handler name. */
+    private unsubscribers = new Map<string, () => void>();
 
     constructor(
         public outputSchema: z.ZodType,
@@ -101,9 +106,7 @@ export abstract class BaseProcessor implements ProcessorInterface {
         return this;
     }
 
-    public registerIOHandler(handler: IOHandler): void {
-
-
+    public addStream(handler: IOHandler): void {
         this.handlers.ioHandlers.set(handler.name, handler);
 
         if (handler.role === HandlerRole.INPUT && handler.subscribe) {
@@ -135,11 +138,14 @@ export abstract class BaseProcessor implements ProcessorInterface {
     public abstract evaluate(result: ProcessedResult): Promise<boolean>;
 
     public async run(content: ProcessableContent | ProcessableContent[]): Promise<ProcessedResult | ProcessedResult[]> {
+
         if (Array.isArray(content)) {
             return Promise.all(content.map(c => this.process(c)));
         }
 
         const result = await this.process(content);
+
+        this.logger.info("Processor.run", "Result", { result });
 
         if (result.suggestedOutputs?.length > 0) {
             const outputs = await Promise.all(
@@ -161,5 +167,9 @@ export abstract class BaseProcessor implements ProcessorInterface {
         }
 
         return result;
+    }
+
+    public getHandler(name: string): IOHandler | undefined {
+        return this.handlers.ioHandlers.get(name);
     }
 }

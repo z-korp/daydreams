@@ -1,45 +1,32 @@
-import { Orchestrator } from "./orchestrator";
-import { HandlerRole, type VectorDB } from "./types";
-import type { Logger } from "./logger";
-import type { ConversationManager } from "./conversation-manager";
+import { Logger } from "./logger";
 import type { OrchestratorDb } from "./memory";
+import type { ProcessorInterface } from "./processor";
+import { LogLevel } from "./types";
 
-export interface IOrchestratorContext {
-    logger: Logger;
-    orchestratorDb: OrchestratorDb;
-    conversationManager: ConversationManager;
-    vectorDb: VectorDB;
-}
+export function createScheduler(
+    orchestratorDb: OrchestratorDb,
+    processor: ProcessorInterface,
+    pollMs = 10_000,
+    logLevel: LogLevel = LogLevel.INFO
+) {
+    let intervalId: ReturnType<typeof setInterval> | undefined;
 
-export class SchedulerService {
-    private intervalId?: ReturnType<typeof setInterval>;
+    const logger = new Logger({
+        level: logLevel,
+        enableColors: true,
+        enableTimestamp: true,
+    });
 
-    constructor(
-        private context: IOrchestratorContext,
-        private orchestrator: Orchestrator,
-        private pollMs: number = 10_000
-    ) {}
-
-    public start() {
-        if (this.intervalId) {
-            clearInterval(this.intervalId);
-        }
-        this.intervalId = setInterval(() => this.pollTasks(), this.pollMs);
-        this.context.logger.info(
-            "SchedulerService.start",
-            `Scheduler started polling with pollMs: ${this.pollMs}`
-        );
-    }
-
-    private async pollTasks() {
+    async function pollTasks() {
         try {
-            const tasks = await this.context.orchestratorDb.findDueTasks();
-            for (const task of tasks) {
-                await this.context.orchestratorDb.markRunning(task._id);
+            const tasks = await orchestratorDb.findDueTasks();
 
-                const handler = this.orchestrator.getHandler(task.handlerName);
+            for (const task of tasks) {
+                await orchestratorDb.markRunning(task._id);
+
+                const handler = processor.getHandler(task.handlerName);
                 if (!handler) {
-                    this.context.logger.warn("No handler found", "warn", {
+                    logger.warn("No handler found", "warn", {
                         name: task.handlerName,
                     });
                     continue;
@@ -48,47 +35,31 @@ export class SchedulerService {
                 // parse out data
                 const data = JSON.parse(task.taskData.task_data);
 
-                switch (handler.role) {
-                    case HandlerRole.INPUT:
-                        await this.orchestrator.dispatchToInput(
-                            task.handlerName,
-
-                            data
-                        );
-                        break;
-                    case HandlerRole.ACTION:
-                        await this.orchestrator.dispatchToAction(
-                            task.handlerName,
-
-                            data
-                        );
-                        break;
-                    case HandlerRole.OUTPUT:
-                        await this.orchestrator.dispatchToOutput(
-                            task.handlerName,
-                            data
-                        );
-                        break;
+                if (!handler.execute) {
+                    continue;
                 }
+
+                await processor.run(await handler.execute(data));
 
                 // handle recurring or complete
                 if (task.intervalMs) {
-                    await this.context.orchestratorDb.updateNextRun(
+                    await orchestratorDb.updateNextRun(
                         task._id,
                         new Date(Date.now() + task.intervalMs)
                     );
                 } else {
-                    await this.context.orchestratorDb.markCompleted(task._id);
+                    await orchestratorDb.markCompleted(task._id);
                 }
             }
         } catch (err) {
-            this.context.logger.error("pollTasks error", "error", {
+            logger.error("pollTasks error", "error", {
                 data: err,
             });
         }
     }
 
-    public async scheduleTaskInDb(
+    // -- scheduleTaskInDb also as a standalone function
+    async function scheduleTaskInDb(
         userId: string,
         handlerName: string,
         data: Record<string, unknown> = {},
@@ -97,7 +68,7 @@ export class SchedulerService {
         const now = Date.now();
         const nextRunAt = new Date(now + (intervalMs ?? 0));
 
-        this.context.logger.info(
+        logger.info(
             "SchedulerService.scheduleTaskInDb",
             `Scheduling task ${handlerName}`,
             {
@@ -106,7 +77,7 @@ export class SchedulerService {
             }
         );
 
-        return await this.context.orchestratorDb.createTask(
+        return orchestratorDb.createTask(
             userId,
             handlerName,
             {
@@ -118,9 +89,29 @@ export class SchedulerService {
         );
     }
 
-    public stop() {
-        if (this.intervalId) {
-            clearInterval(this.intervalId);
+    // -- start function
+    function start() {
+        if (intervalId) {
+            clearInterval(intervalId);
+        }
+        intervalId = setInterval(() => pollTasks(), pollMs);
+        logger.info(
+            "SchedulerService.start",
+            `Scheduler started polling with pollMs: ${pollMs}`
+        );
+    }
+
+    // -- stop function
+    function stop() {
+        if (intervalId) {
+            clearInterval(intervalId);
         }
     }
+
+    // Return an object that gives you your needed “API”
+    return {
+        start,
+        stop,
+        scheduleTaskInDb,
+    };
 }

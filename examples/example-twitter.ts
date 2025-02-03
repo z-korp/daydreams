@@ -237,11 +237,6 @@ async function main() {
             ),
     });
 
-    // Set up readline interface
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-    });
 
     // Start the prompt loop
     console.log(chalk.cyan("🤖 Bot is now running and monitoring Twitter..."));
@@ -258,7 +253,6 @@ async function main() {
         orchestrator.removeIOHandler("consciousness_thoughts");
         orchestrator.removeIOHandler("twitter_reply");
         orchestrator.removeIOHandler("twitter_thought");
-        rl.close();
 
         console.log(chalk.green("✅ Shutdown complete"));
         process.exit(0);

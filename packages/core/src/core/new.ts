@@ -31,6 +31,8 @@ export interface HandlerInterface {
     // hold the IOHandlers
     ioHandlers: Map<string, IOHandler>;
 
+    registerIOHandler(handler: IOHandler): void;
+
     dispatchToAction(
         name: string,
         data: ProcessableContent
@@ -39,11 +41,6 @@ export interface HandlerInterface {
         name: string,
         data: ProcessableContent
     ): Promise<unknown>;
-    dispatchToInput(
-        name: string,
-        data: ProcessableContent
-    ): Promise<unknown>;
-    registerIOHandler(handler: IOHandler): void;
     removeIOHandler(name: string): void;
 }
 
