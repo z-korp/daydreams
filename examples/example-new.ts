@@ -64,7 +64,20 @@ const processor = new MasterProcessor(
     z.object({}),
 );
 
+const result = await processor.run({
+    userId: "123",
+    threadId: "456",
+    contentId: "789",
+    platformId: "twitter",
+    data: {
+        text: "Hello, world!",
+        author: {
+            id: "123",
+            name: "John Doe",
+            username: "john_doe",
+        },
+    },
+});
 
-// Add Handler class to the processor
 
 
