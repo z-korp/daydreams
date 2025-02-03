@@ -2,7 +2,7 @@
 
 import { Logger } from "./logger";
 import { LogLevel, type Character, type ProcessedResult } from "./types";
-import type { ProcessableContent } from "./types";
+import type { HandlerRole, IOHandler, ProcessableContent } from "./types";
 import type { HandlerInterface } from "./new";
 import type { MemoryManager } from "./memory";
 import type { z } from "zod";
@@ -101,6 +101,30 @@ export abstract class BaseProcessor implements ProcessorInterface {
         return this;
     }
 
+    public registerIOHandler(handler: IOHandler): void {
+
+
+        this.handlers.ioHandlers.set(handler.name, handler);
+
+        if (handler.role === HandlerRole.INPUT && handler.subscribe) {
+            const unsubscribe = handler.subscribe(async (data) => {
+                this.logger.info(
+                    "Orchestrator.registerIOHandler",
+                    "Starting stream",
+                    { data }
+                );
+                // called to start the flow
+                await this.run(data);
+            });
+            this.unsubscribers.set(handler.name, unsubscribe);
+        }
+
+        this.logger.info(
+            "Orchestrator.registerIOHandler",
+            `Registered ${handler.role}`,
+            { name: handler.name }
+        );
+    }
     /**
      * Gets a child processor by name
      */
