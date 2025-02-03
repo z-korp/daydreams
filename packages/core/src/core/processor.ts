@@ -6,6 +6,7 @@ import type { ProcessableContent } from "./types";
 import type { HandlerInterface } from "./new";
 import type { MemoryManager } from "./memory";
 import type { z } from "zod";
+import type { LLMClient } from "./llm-client";
 
 export interface ProcessorInterface {
     // hold the schema
@@ -26,6 +27,10 @@ export interface ProcessorInterface {
     // based on inputs and outputs
     evaluate: (result: ProcessedResult) => Promise<boolean>;
 
+    run: (content: ProcessableContent | ProcessableContent[]) => Promise<ProcessedResult | ProcessedResult[]>;
+
+
+
     // memory manager // what it's done
     // memory: MemoryManager;
 }
@@ -43,7 +48,7 @@ export abstract class BaseProcessor implements ProcessorInterface {
         protected metadata: { name: string; description: string },
         protected loggerLevel: LogLevel,
         protected character: Character,
-        protected llmClient: any, // your LLM client type
+        protected llmClient: LLMClient, // your LLM client type
         protected contentLimit: number = 1000,
         public alwaysChildProcessor?: BaseProcessor,
     ) {
@@ -104,4 +109,30 @@ export abstract class BaseProcessor implements ProcessorInterface {
     }
 
     public abstract evaluate(result: ProcessedResult): Promise<boolean>;
+
+    public async run(content: ProcessableContent | ProcessableContent[]): Promise<ProcessedResult | ProcessedResult[]> {
+        if (Array.isArray(content)) {
+            return Promise.all(content.map(c => this.process(c)));
+        }
+
+        const result = await this.process(content);
+
+        if (result.suggestedOutputs.length > 0) {
+            const outputs = await Promise.all(
+                result.suggestedOutputs.map(async (suggestedOutput) => {
+                    const handler = this.handlers.ioHandlers.get(suggestedOutput.name);
+
+                    if (handler && handler.execute) {
+                        return handler.execute(content);
+                    }
+
+                    return null;
+                })
+            );
+
+            return outputs.find(output => output !== null);
+        }
+
+        return result;
+    }
 }
