@@ -139,10 +139,13 @@ export abstract class BaseProcessor implements ProcessorInterface {
 
     public async run(content: ProcessableContent | ProcessableContent[]): Promise<ProcessedResult | ProcessedResult[]> {
 
+        this.logger.info("Processor.run", "Running", { content });
         if (Array.isArray(content)) {
             return Promise.all(content.map(c => this.process(c)));
         }
 
+
+        this.logger.info("Processor.run", "Processing content", { content });
         const result = await this.process(content);
 
         this.logger.info("Processor.run", "Result", { result });

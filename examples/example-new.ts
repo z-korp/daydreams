@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import { Handler } from "../packages/core/src/core/orchestrator";
-import { HandlerRole } from "../packages/core/src/core/types";
+import { HandlerRole, LogLevel } from "../packages/core/src/core/types";
 import { env } from "../packages/core/src/core/env";
 import { TwitterClient } from "../packages/core/src/core/io/twitter";
 import { defaultCharacter as character } from "../packages/core/src/core/characters/character";
@@ -68,6 +68,7 @@ async function main() {
         character,
         handlers,
         masterProcessorSchema,
+        LogLevel.DEBUG,
     );
 
     processor.addStream({
