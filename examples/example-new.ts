@@ -104,14 +104,14 @@ async function main() {
         },
     });
 
-    const scheduleService = createScheduler(
+    const scheduler = createScheduler(
         kvDb,
         processor,
     );
 
-    await scheduleService.scheduleTaskInDb("sleever", "twitter_mentions", {}, 10000);
+    await scheduler.scheduleTask("sleever", "twitter_mentions", {}, 10000);
 
-    scheduleService.start();
+    scheduler.start();
 }
 
 main().catch((error) => {

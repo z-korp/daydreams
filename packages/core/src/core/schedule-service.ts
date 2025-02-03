@@ -59,7 +59,7 @@ export function createScheduler(
     }
 
     // -- scheduleTaskInDb also as a standalone function
-    async function scheduleTaskInDb(
+    async function scheduleTask(
         userId: string,
         handlerName: string,
         data: Record<string, unknown> = {},
@@ -112,6 +112,6 @@ export function createScheduler(
     return {
         start,
         stop,
-        scheduleTaskInDb,
+        scheduleTask,
     };
 }
