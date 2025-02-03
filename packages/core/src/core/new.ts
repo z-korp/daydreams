@@ -28,6 +28,9 @@ export interface ProcessorInterface {
 
 // IOHandlers.ts
 export interface HandlerInterface {
+    // hold the IOHandlers
+    ioHandlers: Map<string, IOHandler>;
+
     dispatchToAction(
         name: string,
         data: ProcessableContent
