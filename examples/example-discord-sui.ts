@@ -19,7 +19,7 @@ import { MongoDb } from "../packages/core/src/core/db/mongo-db";
 import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
 import { makeFlowLifecycle } from "../packages/core/src/core/life-cycle";
 import { z } from "zod";
-import { FaucetNetwork, SuiChain, SuiNetwork } from "../packages/core/src/core/chains/sui";
+import { FaucetNetwork, SuiChain, SuiNetwork, supportedSuiTokens } from "../packages/core/src/core/chains/sui";
 
 async function main() {
     // Set logging level as you see fit
@@ -126,21 +126,30 @@ async function main() {
     });
 
     core.registerIOHandler({
-        name: "BTC_API_CALL",
+        name: "SUI_SWAP",
         role: HandlerRole.ACTION,
         outputSchema: z.object({
-            content: z
-                .string(),
+            fromToken: z
+                .string().describe(`The token name to be swapped. It can be one of these: ${supportedSuiTokens}. This token and target token should not be same.`),
+            targetToken: z
+                .string().describe(`The token name to be swapped. It can be one of these: ${supportedSuiTokens}. This tokena and from token should not be same.`),
+            amount: z.string().describe("The amount of token to be swapped. It should be in MIST. 1 SUI = 10^9 MIST. User mostly doesn't provide the value in mist, if he does, use that. Or else, do the conversation of multiplication and provide the value."),
+            out_min_amount: z.number().optional().describe("This is the minimum expected output token amount. If not provided should be null and will execute the swap anyhow."),
             channelId: z.string().describe("Discord channel ID where the message is supposed to be replied! This should be taken from the input data"),
         }), execute: async (data: unknown) => {
-            const { channelId } = data as { channelId: string };
-            const result = await fetch(`https://api.coindesk.com/v1/bpi/currentprice.json`);
-            const btcData = await result.json();
-            console.log({ btcData: JSON.stringify(btcData, null, 2) })
-            return {
-                content: `Current BTC data: ${btcData.bpi.USD.rate}`,
-                channelId
+            const { fromToken, amount, out_min_amount, targetToken, channelId } = data as {
+                fromToken: string,
+                amount: string,
+                targetToken: string,
+                out_min_amount: number | null,
+                channelId: string,
             }
+
+            const result = await suiChain.swapToken({ fromToken, amount, out_min_amount, targetToken });
+            return {
+                content: `Transaction: ${JSON.stringify(result, null, 2)}`,
+                channelId
+            };
         }
     });
 
@@ -171,7 +180,7 @@ async function main() {
         // Also remove any other handlers or do cleanup
         core.removeIOHandler("discord_reply");
 
-        core.removeIOHandler("BTC_API_CALL");
+        core.removeIOHandler("SUI_SWAP");
         core.removeIOHandler("SUI_FAUCET");
         rl.close();
 
