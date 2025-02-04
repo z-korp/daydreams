@@ -4,13 +4,14 @@ import { HandlerRole, LogLevel } from "../packages/core/src/core/types";
 import { env } from "../packages/core/src/core/env";
 import { TwitterClient } from "../packages/core/src/core/io/twitter";
 import { defaultCharacter as character } from "../packages/core/src/core/characters/character";
-import { MasterProcessor, masterProcessorSchema } from "../packages/core/src/core/processors/master-processor";
+import { MasterProcessor, masterProcessorSchema as outputSchema } from "../packages/core/src/core/processors/master-processor";
 import { ResearchQuantProcessor } from "../packages/core/src/core/processors/research-processor";
 import { LLMClient } from "../packages/core/src/core/llm-client";
 import { MemoryManagerInterface } from "../packages/core/src/core/new";
 import { z } from "zod";
 import { createScheduler } from "../packages/core/src/core/schedule-service";
 import { MongoDb } from "../packages/core/src/core/db/mongo-db";
+
 // Chain of Thought...
 
 const kvDb = new MongoDb(
@@ -34,9 +35,14 @@ const twitter = new TwitterClient(
 
 async function main() {
 
-    const handlers = new Handler();
+    const processor = new MasterProcessor(
+        new LLMClient({
+            model: "anthropic/claude-3-5-sonnet-latest"
+        }),
+        outputSchema
+    );
 
-    handlers.registerIOHandler({
+    processor.registerIOHandler({
         name: "twitter_thought",
         role: HandlerRole.OUTPUT,
         execute: async (data: unknown) => {
@@ -61,15 +67,6 @@ async function main() {
             ),
     });
 
-    const processor = new MasterProcessor(
-        new LLMClient({
-            model: "anthropic/claude-3-5-sonnet-latest"
-        }),
-        character,
-        handlers,
-        masterProcessorSchema,
-        LogLevel.DEBUG,
-    );
 
     processor.addStream({
         name: "twitter_mentions",
@@ -105,6 +102,7 @@ async function main() {
         },
     });
 
+    // scheduler tasks to call the processor
     const scheduler = createScheduler(
         kvDb,
         processor,

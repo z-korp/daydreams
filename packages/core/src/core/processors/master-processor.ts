@@ -21,25 +21,15 @@ import type { HandlerInterface } from "../new";
 export class MasterProcessor extends BaseProcessor {
     constructor(
         protected llmClient: LLMClient,
-        protected character: Character,
-        handlers: HandlerInterface,
-        // memory: MemoryManager,
-        outputSchema: z.ZodType,
-        logLevel: LogLevel = LogLevel.ERROR,
-        protected contentLimit: number = 1000
+        outputSchema: z.ZodType
     ) {
         super(
-            outputSchema,
-            handlers,
-            // memory,
             {
                 name: "master",
                 description: "This processor handles messages or short text inputs.",
             },
-            logLevel,
-            character,
             llmClient,
-            contentLimit
+            outputSchema,
         );
     }
 

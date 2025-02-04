@@ -8,6 +8,7 @@ import type { HandlerInterface } from "./new";
 import type { MemoryManager } from "./memory";
 import type { z } from "zod";
 import type { LLMClient } from "./llm-client";
+import { Handler } from "./orchestrator";
 
 export interface ProcessorInterface {
     // hold the schema
@@ -15,9 +16,6 @@ export interface ProcessorInterface {
 
     // hold the processors
     processors: Map<string, BaseProcessor>;
-
-    // hold the always child processor
-    alwaysChildProcessor?: BaseProcessor;
 
     // hold the IOHandlers
     handlers: HandlerInterface;
@@ -32,30 +30,27 @@ export interface ProcessorInterface {
 
     // based on inputs and outputs
     getHandler(name: string): IOHandler | undefined;
-
-    // memory manager // what it's done
-    // memory: MemoryManager;
 }
 
 export abstract class BaseProcessor implements ProcessorInterface {
     /** Logger instance for this processor */
     protected logger: Logger;
+
     /** Map of child processors (sub-processors) that this processor can delegate to */
     public processors: Map<string, BaseProcessor> = new Map();
 
     /** Map of unsubscribe functions for various handlers, keyed by handler name. */
     private unsubscribers = new Map<string, () => void>();
 
+    public handlers: HandlerInterface = new Handler();
+
     constructor(
-        public outputSchema: z.ZodType,
-        public handlers: HandlerInterface,
-        // public memory: MemoryManager,
         protected metadata: { name: string; description: string },
-        protected loggerLevel: LogLevel,
-        protected character: Character,
-        protected llmClient: LLMClient, // your LLM client type
+        protected llmClient: LLMClient,
+        public outputSchema: z.ZodType,
         protected contentLimit: number = 1000,
-        public alwaysChildProcessor?: BaseProcessor,
+        protected loggerLevel: LogLevel = LogLevel.ERROR,
+
     ) {
         this.logger = new Logger({
             level: loggerLevel,
@@ -128,6 +123,108 @@ export abstract class BaseProcessor implements ProcessorInterface {
             { name: handler.name }
         );
     }
+
+    public registerIOHandler(handler: IOHandler): void {
+        if (this.handlers.ioHandlers.has(handler.name)) {
+            this.logger.warn(
+                "Orchestrator.registerIOHandler",
+                "Overwriting handler with same name",
+                { name: handler.name }
+            );
+        }
+
+        this.handlers.ioHandlers.set(handler.name, handler);
+
+        this.logger.info(
+            "Orchestrator.registerIOHandler",
+            `Registered ${handler.role}`,
+            { name: handler.name }
+        );
+    }
+
+
+    /**
+     * Removes a handler (input or output) by name and stops its scheduling if needed.
+     */
+    public removeIOHandler(name: string): void {
+        this.handlers.ioHandlers.delete(name);
+        this.logger.info("Orchestrator.removeIOHandler", "Removed IOHandler", {
+            name,
+        });
+    }
+
+    /**
+     * Dispatches data to a registered *output* handler by name.
+     */
+    public async dispatchToOutput<T>(
+        name: string,
+        data: ProcessableContent
+    ): Promise<unknown> {
+        const handler = this.handlers.ioHandlers.get(name);
+        if (!handler || !handler.execute) {
+            throw new Error(`No IOHandler registered with name: ${name}`);
+        }
+        if (handler.role !== HandlerRole.OUTPUT) {
+            throw new Error(`Handler "${name}" is not an output handler`);
+        }
+
+        this.logger.debug("Orchestrator.dispatchToOutput", "Executing output", {
+            name,
+            data,
+        });
+
+        try {
+            const result = await handler.execute(data);
+            this.logger.info("Orchestrator.dispatchToOutput", "Output result", {
+                result,
+            });
+            return result;
+        } catch (error) {
+            this.logger.error(
+                "Orchestrator.dispatchToOutput",
+                "Handler threw an error",
+                { name, error }
+            );
+            throw error;
+        }
+    }
+
+    /**
+     * Dispatches data to a registered *action* handler by name.
+     */
+    public async dispatchToAction<T>(
+        name: string,
+        data: ProcessableContent
+    ): Promise<unknown> {
+        const handler = this.handlers.ioHandlers.get(name);
+        if (!handler || !handler.execute) {
+            throw new Error(`No IOHandler registered with name: ${name}`);
+        }
+        if (handler.role !== HandlerRole.ACTION) {
+            throw new Error(`Handler "${name}" is not an action handler`);
+        }
+
+        try {
+            const result = await handler.execute(data);
+            this.logger.debug(
+                "Orchestrator.dispatchToAction",
+                "Executing action",
+                {
+                    name,
+                    data,
+                }
+            );
+            return result;
+        } catch (error) {
+            this.logger.error(
+                "Orchestrator.dispatchToAction",
+                "Handler threw an error",
+                { name, error }
+            );
+            throw error;
+        }
+    }
+
     /**
      * Gets a child processor by name
      */
