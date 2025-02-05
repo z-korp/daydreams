@@ -232,12 +232,6 @@ export class SuiChain implements IChain {
                     "AFTERMATH",
                     "FLOWX",
                     "TURBOS",
-                    // "AFSUI",
-                    // "VOLO",
-                    // "SPRINGSUI",
-                    // "ALPHAFI",
-                    // "HAEDAL",
-                    // "HAEDALPMM",
                 ],
             });
             if (routerRes === null) {
