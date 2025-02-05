@@ -36,14 +36,6 @@ async function main() {
         privateKey: env.SUI_PRIVATE_KEY,
     });
 
-    // const res = await suiChain.swapToken({
-    //     fromToken: "USDC",
-    //     amount: "1000000",
-    //     out_min_amount: null,
-    //     targetToken: "SUI"
-    // })
-    // console.log({ res })
-
     const conversationManager = new ConversationManager(vectorDb);
 
     const llmClient = new LLMClient({
