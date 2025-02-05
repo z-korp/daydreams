@@ -1,12 +1,9 @@
 /**
- * Example demonstrating a Discord bot using the Daydreams package,
- * updated to use a streaming IOHandler so we can handle real-time
- * Discord messages without manual dispatch calls.
+ * Example demonstrating Sui interactions using the Daydreams package,
  */
 
 import { Orchestrator } from "../packages/core/src/core/orchestrator";
 import { HandlerRole, LogLevel } from "../packages/core/src/core/types";
-import { DiscordClient } from "../packages/core/src/core/io/discord";
 import { ConversationManager } from "../packages/core/src/core/conversation-manager";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
@@ -38,6 +35,14 @@ async function main() {
         network: env.SUI_NETWORK as SuiNetwork,
         privateKey: env.SUI_PRIVATE_KEY,
     });
+
+    // const res = await suiChain.swapToken({
+    //     fromToken: "USDC",
+    //     amount: "1000000",
+    //     out_min_amount: null,
+    //     targetToken: "SUI"
+    // })
+    // console.log({ res })
 
     const conversationManager = new ConversationManager(vectorDb);
 
@@ -79,29 +84,6 @@ async function main() {
         }
     );
 
-    // Initialize the Discord client
-    const discord = new DiscordClient(
-        {
-            discord_token: env.DISCORD_TOKEN,
-            discord_bot_name: "DeepLoaf",
-        },
-        loglevel
-    );
-
-    // 1) REGISTER A STREAMING INPUT
-    //    This handler sets up a Discord listener. On mention, it
-    //    pipes data into Orchestrator via "onData".
-    core.registerIOHandler({
-        name: "discord_stream",
-        role: HandlerRole.INPUT,
-        subscribe: (onData) => {
-            discord.startMessageStream(onData);
-            return () => {
-                discord.stopMessageStream();
-            };
-        },
-    });
-
     core.registerIOHandler({
         name: "SUI_FAUCET",
         role: HandlerRole.ACTION,
@@ -109,18 +91,15 @@ async function main() {
             network: z
                 .string().describe("The network to request SUI from. This should be taken from the input data. Default is testnet if the user does not provide a valid network"),
             recipient: z.string().describe("The account address to receive SUI. This should be taken from the input data"),
-            channelId: z.string().describe("Discord channel ID where the message is supposed to be replied! This should be taken from the input data"),
         }), execute: async (data: unknown) => {
-            const { network, recipient, channelId } = data as {
+            const { network, recipient } = data as {
                 network: FaucetNetwork,
                 recipient: string,
-                channelId: string,
             }
 
             const result = await suiChain.requestSui({ network, recipient });
             return {
                 content: `Transaction: ${JSON.stringify(result, null, 2)}`,
-                channelId
             };
         }
     });
@@ -133,56 +112,73 @@ async function main() {
                 .string().describe(`The token name to be swapped. It can be one of these: ${supportedSuiTokens}. This token and target token should not be same.`),
             targetToken: z
                 .string().describe(`The token name to be swapped. It can be one of these: ${supportedSuiTokens}. This tokena and from token should not be same.`),
-            amount: z.string().describe("The amount of token to be swapped. It should be in MIST. 1 SUI = 10^9 MIST. User mostly doesn't provide the value in mist, if he does, use that. Or else, do the conversation of multiplication and provide the value."),
+            amount: z.string().describe("The amount of token to be swapped. It should be in MIST. 1 SUI = 10^9 MIST. User mostly doesn't provide the value in mist, if he does, use that. Or else, do the conversation of multiplication and provide the value. However, for the case of USDC, the amount should be provided by multiplying 10^6. If a user says 1 USDC, amount you should add is 10^6. Take note of the amount of the from token."),
             out_min_amount: z.number().optional().describe("This is the minimum expected output token amount. If not provided should be null and will execute the swap anyhow."),
-            channelId: z.string().describe("Discord channel ID where the message is supposed to be replied! This should be taken from the input data"),
         }), execute: async (data: unknown) => {
-            const { fromToken, amount, out_min_amount, targetToken, channelId } = data as {
+            const { fromToken, amount, out_min_amount, targetToken } = data as {
                 fromToken: string,
                 amount: string,
                 targetToken: string,
                 out_min_amount: number | null,
-                channelId: string,
             }
 
             const result = await suiChain.swapToken({ fromToken, amount, out_min_amount, targetToken });
             return {
                 content: `Transaction: ${JSON.stringify(result, null, 2)}`,
-                channelId
             };
         }
     });
 
-    // 2) REGISTER AN OUTPUT HANDLER
-    //    This allows your Processor to suggest messages that are posted back to Discord
+    core.registerIOHandler({
+        name: "user_chat",
+        role: HandlerRole.INPUT,
+        execute: async (payload) => {
+            return payload;
+        },
+    });
 
-    core.registerIOHandler(discord.createMessageOutput());
-
-    // (Optional) Set up a console readline for manual input, etc.
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
     });
 
-    console.log(chalk.cyan("🤖 Bot is now running and monitoring Discord..."));
-    console.log(
-        chalk.cyan("You can also type messages in this console for debugging.")
-    );
-    console.log(chalk.cyan('Type "exit" to quit.'));
+    const promptUser = () => {
+        rl.question(
+            'Enter your message (or "exit" to quit): ',
+            async (userMessage) => {
+                if (userMessage.toLowerCase() === "exit") {
+                    rl.close();
+                    process.exit(0);
+                }
+
+                // Dispatch the message
+                await core.dispatchToInput(
+                    "user_chat",
+                    {
+                        contentId: userMessage,
+                        userId: suiChain.getAddress(),
+                        threadId: "console",
+                        platformId: "console",
+                        data: {
+                            content: userMessage,
+                        },
+                    }
+                );
+
+                // Continue prompting
+                promptUser();
+            }
+        );
+    };
+    promptUser();
+
 
     // Handle graceful shutdown (Ctrl-C, etc.)
     process.on("SIGINT", async () => {
         console.log(chalk.yellow("\n\nShutting down..."));
 
-        // If we want to stop the streaming IO handler:
-        core.removeIOHandler("discord_stream");
-
-        // Also remove any other handlers or do cleanup
-        core.removeIOHandler("discord_reply");
-
         core.removeIOHandler("SUI_SWAP");
         core.removeIOHandler("SUI_FAUCET");
-        rl.close();
 
         console.log(chalk.green("✅ Shutdown complete"));
         process.exit(0);
