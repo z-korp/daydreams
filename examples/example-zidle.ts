@@ -14,13 +14,13 @@ import {
     HandlerRole,
     LogLevel,
 } from "../packages/core/src/core/types";
-import { RoomManager } from "../packages/core/src/core/room-manager";
-import { defaultCharacter } from "../packages/core/src/core/character";
-import { MessageProcessor } from "../packages/core/src/core/processors/message-processor";
 import { Orchestrator } from "../packages/core/src/core/orchestrator";
 import { WebSocketServer, WebSocket } from "ws";
 import { MongoDb } from "../packages/core/src/core/db/mongo-db";
 import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
+import { makeFlowLifecycle } from "../packages/core/src/core/life-cycle";
+import { ConversationManager } from "../packages/core/src/core/conversation-manager";
+import { defaultCharacter } from "../packages/core/src/core/characters/character";
 
 /**
  * Helper function to get user input from CLI
@@ -71,6 +71,8 @@ async function main() {
     const memory = new ChromaVectorDB("agent_memory");
     await memory.purge(); // Clear previous session data
 
+    const conversationManager = new ConversationManager(memory);
+
     // Load initial context documents
     await memory.storeDocument({
         title: "Game Rules",
@@ -88,15 +90,7 @@ async function main() {
         lastUpdated: new Date(),
     });
 
-    const roomManager = new RoomManager(memory);
-
-    const processor = new MessageProcessor(
-        llmClient,
-        defaultCharacter,
-        LogLevel.WARN
-    );
-
-    const masterProcessor = new MasterProcessor(
+    const processor = new MasterProcessor(
         llmClient,
         defaultCharacter,
         loglevel
@@ -113,10 +107,8 @@ async function main() {
     await scheduledTaskDb.deleteAll();
 
     const orchestrator = new Orchestrator(
-        roomManager,
-        memory,
-        masterProcessor,
-        scheduledTaskDb,
+        processor,
+        makeFlowLifecycle(scheduledTaskDb, conversationManager),
         {
             level: loglevel,
             enableColors: true,
@@ -300,28 +292,28 @@ async function main() {
 
     function broadcastGoalCreated(id: string, description: string) {
         const goalCreatedMsg: Omit<GoalCreatedMessage, "timestamp" | "emoji"> =
-            {
-                type: "goal_created",
-                data: {
-                    id,
-                    description,
-                    timestamp: new Date().toISOString(),
-                },
-            };
+        {
+            type: "goal_created",
+            data: {
+                id,
+                description,
+                timestamp: new Date().toISOString(),
+            },
+        };
 
         broadcastMessage(createMessage(goalCreatedMsg));
     }
 
     function broadcastGoalUpdated(id: string, status: string) {
         const goalUpdatedMsg: Omit<GoalUpdatedMessage, "timestamp" | "emoji"> =
-            {
-                type: "goal_updated",
-                data: {
-                    id,
-                    status,
-                    timestamp: new Date().toISOString(),
-                },
-            };
+        {
+            type: "goal_updated",
+            data: {
+                id,
+                status,
+                timestamp: new Date().toISOString(),
+            },
+        };
 
         broadcastMessage(createMessage(goalUpdatedMsg));
     }
@@ -357,13 +349,13 @@ async function main() {
 
     function broadcastActionStart(actionType: string, payload: any) {
         const actionStartMsg: Omit<ActionStartMessage, "timestamp" | "emoji"> =
-            {
-                type: "action_start",
-                data: {
-                    actionType,
-                    payload,
-                },
-            };
+        {
+            type: "action_start",
+            data: {
+                actionType,
+                payload,
+            },
+        };
 
         broadcastMessage(createMessage(actionStartMsg));
     }
@@ -386,14 +378,14 @@ async function main() {
 
     function broadcastActionError(actionType: string, error: string) {
         const actionErrorMsg: Omit<ActionErrorMessage, "timestamp" | "emoji"> =
-            {
-                type: "action_error",
-                data: {
-                    actionType,
-                    error,
-                    timestamp: new Date().toISOString(),
-                },
-            };
+        {
+            type: "action_error",
+            data: {
+                actionType,
+                error,
+                timestamp: new Date().toISOString(),
+            },
+        };
 
         broadcastMessage(createMessage(actionErrorMsg));
     }
@@ -434,12 +426,12 @@ async function main() {
                 const outputs = await orchestrator.dispatchToInput(
                     "user_chat",
                     {
-                        headers: {
-                            "x-user-id": userId,
-                        },
+                        contentId: userMessage,
+                        userId,
+                        platformId: "console",
+                        threadId: "console",
+                        data: {},
                     },
-                    userMessage,
-                    userId
                 );
 
                 // Send responses back through WebSocket
@@ -499,7 +491,7 @@ async function main() {
         execute: async (action: any) => {
             console.log(
                 "Preparing to execute read action... " +
-                    JSON.stringify(action.payload)
+                JSON.stringify(action.payload)
             );
             const shouldProceed = await getCliInput(
                 chalk.yellow("\nProceed with the read action? (y/n): ")
@@ -534,7 +526,7 @@ async function main() {
         execute: async (action: any) => {
             console.log(
                 "Preparing to execute transaction action... " +
-                    JSON.stringify(action.payload)
+                JSON.stringify(action.payload)
             );
             const shouldProceed = await getCliInput(
                 chalk.yellow(
@@ -574,7 +566,7 @@ async function main() {
         execute: async (action: any) => {
             console.log(
                 "Preparing to execute graphql fetch action... " +
-                    JSON.stringify(action.payload)
+                JSON.stringify(action.payload)
             );
             const shouldProceed = await getCliInput(
                 chalk.yellow(
