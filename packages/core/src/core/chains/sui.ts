@@ -82,11 +82,6 @@ export const getTokenMetadata = (symbol: string) => {
     return metadata;
 };
 
-export const getAmount = (amount: string, meta: TokenMetadata) => {
-    const v = parseFloat(amount);
-    return BigInt(v * 10 ** meta.decimals);
-};
-
 /**
  * Configuration options for initializing a Sui chain connection
  */
