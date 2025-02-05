@@ -43,8 +43,8 @@ export const ZIDLE_PROVIDER = `{
   "contracts": {
     "goldErc20": "0x041a8602ddf005594d1a6149325eaa21a103216a15c2883188ee912ed9a59cb0",
     "characterNft": "0x051d88174534ea0e084f1eb6669da78a1e3a0c1fe4fd23542397815385550cd2",
-    "characterSystem": "0x180e55d0357658cb9b48eceeb511331b02024e6db84022a6a3a2be6cf2e4a52",
-    "resourcesSystem": "0x40f638e57740f4e0c2e64e60e2cee00df77aff3c96b5ba4de1c909761774cc8"
+    "characterSystem": "0x7065f221124ca95cbba9d863bae35d498e32bfa2a5047a01c5c8dec35e0d1d8",
+    "resourcesSystem": "0x46a51d013617a242a1aacb1bebc2bb55e46f1291e5078e51517907c2983856e"
   },
 
   "providerGuide": {
@@ -56,6 +56,22 @@ export const ZIDLE_PROVIDER = `{
         "entrypoint": "token_of_owner_by_index",
         "calldata": ["$WALLET_ADDRESS", 1, 0],
         "returns": [TOKEN_ID_LOW, TOKEN_ID_HIGH]
+      },
+      {
+        "name": "GET_NFT_WALLET_ADDRESS",
+        "type": "EXECUTE_READ",
+        "contract": "$CHARACTER_NFT",
+        "entrypoint": "wallet_of",
+        "calldata": ["$TOKEN_ID_LOW", "$TOKEN_ID_HIGH"],
+        "returns": [NFT_WALLET_ADDRESS]
+      },
+      {
+        "name": "GET_GOLD_BALANCE",
+        "type": "EXECUTE_READ",
+        "contract": "$GOLD_ERC20",
+        "entrypoint": "balance_of",
+        "calldata": ["$WALLET_ADDRESS"],
+        "returns": [GOLD_BALANCE_LOW, GOLD_BALANCE_HIGH]
       },
       {
         "name": "MINE_RCS",
@@ -70,6 +86,13 @@ export const ZIDLE_PROVIDER = `{
         "contract": "$RESOURCES_SYSTEM",
         "entrypoint": "harvest",
         "calldata": ["$TOKEN_ID_LOW", "$RESOURCE_TYPE"]
+      },
+      {
+        "name": "SELL_RCS_FOR_GOLD",
+        "type": "EXECUTE_TRANSACTION",
+        "contract": "$RESOURCES_SYSTEM",
+        "entrypoint": "sell",
+        "calldata": ["$TOKEN_ID_LOW", "$RESOURCE_TYPE", "$RESOURCE_SUBTYPE", "$AMOUNT"]
       }
     ],
     "queries": [

@@ -782,7 +782,7 @@ async function main() {
 
     // Main interaction loop
     const main_goal =
-        "Mine resources (wood and mineral) efficiently to maximize XP gain";
+        "Get 50 gold in the NFT wallet";
     while (true) {
         try {
             // Plan and execute goals

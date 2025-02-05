@@ -18,8 +18,8 @@ export const ZIDLE_CONTEXT = `{
   "contracts": {
     "goldErc20": "0x041a8602ddf005594d1a6149325eaa21a103216a15c2883188ee912ed9a59cb0",
     "characterNft": "0x051d88174534ea0e084f1eb6669da78a1e3a0c1fe4fd23542397815385550cd2",
-    "characterSystem": "0x180e55d0357658cb9b48eceeb511331b02024e6db84022a6a3a2be6cf2e4a52",
-    "resourcesSystem": "0x40f638e57740f4e0c2e64e60e2cee00df77aff3c96b5ba4de1c909761774cc8"
+    "characterSystem": "0x7065f221124ca95cbba9d863bae35d498e32bfa2a5047a01c5c8dec35e0d1d8",
+    "resourcesSystem": "0x46a51d013617a242a1aacb1bebc2bb55e46f1291e5078e51517907c2983856e"
   },
 
   "rules": {
@@ -102,14 +102,33 @@ export const ZIDLE_CONTEXT = `{
     "xpTable": "XP required for each level. Tracks progression and unlocks."
   }
 
-  "gameFlow": {
-    "updatedSteps": [
+  "initialization": {
+    "steps": [
       "CHECK_NFT => store TOKEN_ID_LOW",
-      "CHECK_MINING => if totalCount>0 => HARVEST_RCS for each resource => then CHECK_XP to confirm updated XP",
-      "If totalCount=0 => check XP (if needed), then MINE_RCS."
+      "GET_NFT_WALLET_ADDRESS => store NFT_WALLET_ADDRESS (since gold is stored in the NFT wallet, not the user wallet)",
+      "GET_GOLD_BALANCE => check gold amount in NFT_WALLET_ADDRESS"
+    ],
+    "notes": [
+      "Gold is stored in the NFT's wallet, not the player's main wallet.",
+      "Before doing anything, the agent must retrieve the NFT wallet address using GET_NFT_WALLET_ADDRESS.",
+      "Once the NFT wallet is known, the agent should use GET_GOLD_BALANCE to check the available gold."
+    ]
+  }
+
+  "gameFlow": {
+    "steps": [
+      "Ensure NFT_WALLET_ADDRESS is known (if not, call GET_NFT_WALLET_ADDRESS)",
+      "GET_GOLD_BALANCE for NFT_WALLET_ADDRESS before proceeding",
+      "CHECK_MINING => if totalCount > 0 => HARVEST_RCS for each mined resource => then CHECK_XP to confirm updated XP",
+      "If gold is needed, execute SELL_RCS_FOR_GOLD for the harvested resources",
+      "If no active mining, check XP and then execute MINE_RCS for the appropriate resource type"
     ],
     "mustHarvestIfMining": "Never skip HARVEST_RCS if any resource is actively mined.",
-  },
+    "notes": [
+      "Gold is stored in the NFT's wallet, so the agent must always check NFT_WALLET_ADDRESS first.",
+      "Before selling resources, the agent should verify if additional gold is needed using GET_GOLD_BALANCE."
+    ]
+  }
 
   "executionRules": [
     "If mining_status.is_mining=true, do HARVEST_RCS immediately.",
