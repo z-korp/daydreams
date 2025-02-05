@@ -166,14 +166,13 @@ export class SuiChain implements IChain {
      * @throws Error if the transaction fails
      */
     public async write(call: unknown): Promise<SuiTransactionBlockResponse> {
-        const { packageId, moduleName, functionName, params } = call as {
+        const { packageId, moduleName, functionName, params, tx } = call as {
             packageId: string,
             moduleName: string,
             functionName: string,
-            params: Array<any>
+            params: Array<any>,
+            tx: Transaction,
         }
-
-        const tx = new Transaction();
 
         tx.moveCall({
             target: `${packageId}::${moduleName}::${functionName}`,
