@@ -1,6 +1,5 @@
 import { getFullnodeUrl, SuiClient, type SuiTransactionBlockResponse } from "@mysten/sui/client";
 import { getFaucetHost, requestSuiFromFaucetV0 } from '@mysten/sui/faucet';
-import type { IChain } from "../types";
 import type { Signer } from "@mysten/sui/cryptography";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { Secp256k1Keypair } from "@mysten/sui/keypairs/secp256k1";
@@ -9,6 +8,7 @@ import { Transaction, type TransactionObjectArgument } from "@mysten/sui/transac
 import { SUI_DECIMALS } from "@mysten/sui/utils";
 import { AggregatorClient, Env } from "@cetusprotocol/aggregator-sdk";
 import BN from "bignumber.js";
+import type { IChain } from "../types";
 
 interface SwapResult {
     success: boolean;
@@ -128,52 +128,8 @@ export class SuiChain implements IChain {
                 config.network,
             ),
         });
-        this.network = config.network,
-            this.wallet = parseAccount(config.privateKey)
-    }
-
-    /**
-     * Returns testnet sui tokens
-     * @param call - The params for faucet
-     * @returns Success/Failure message
-     */
-    public async requestSui(call: unknown): Promise<any> {
-        try {
-            const { network, recipient } = call as {
-                network: FaucetNetwork,
-                recipient: string,
-            }
-
-            await requestSuiFromFaucetV0({
-                host: getFaucetHost(network),
-                recipient,
-            });
-
-            return {
-                message: `Successfully requested SUI to ${recipient} on ${network}`,
-            };
-        } catch (e) {
-            return {
-                message: `Failed to request SUI: ${e}`,
-            };
-        }
-    }
-
-    /**
-     * Returns a transaction link based on network
-     * @param tx - The sui transaction
-     * @returns The the transaction link
-     */
-    public getTransactionLink(tx: string) {
-        if (this.network === "mainnet") {
-            return `https://suivision.xyz/txblock/${tx}`;
-        } else if (this.network === "testnet") {
-            return `https://testnet.suivision.xyz/txblock/${tx}`;
-        } else if (this.network === "devnet") {
-            return `https://devnet.suivision.xyz/txblock/${tx}`;
-        } else if (this.network === "localnet") {
-            return `localhost : ${tx}`;
-        }
+        this.network = config.network;
+        this.wallet = parseAccount(config.privateKey);
     }
 
     /**
@@ -329,14 +285,14 @@ export class SuiChain implements IChain {
 
                 const mergeCoins = [];
 
-                for (let i = 0; i < allCoins.data.length; i++) {
+                for (let i = 1; i < allCoins.data.length; i++) {
                     mergeCoins.push(allCoins.data[i].coinObjectId);
                 }
 
-                routerTx.mergeCoins(allCoins.data[0].coinObjectId, mergeCoins);
+                if (mergeCoins.length > 0) {
+                    routerTx.mergeCoins(allCoins.data[0].coinObjectId, mergeCoins);
+                }
                 coin = routerTx.splitCoins(allCoins.data[0].coinObjectId, [amount]);
-
-                console.log({ coinPing: coin })
             }
 
             const targetCoin = await client.routerSwap({
@@ -347,19 +303,6 @@ export class SuiChain implements IChain {
                 slippage: 0.5,
             });
 
-            // checking threshold
-
-            // routerTx.moveCall({
-            //     package:
-            //         "0x57d4f00af225c487fd21eed6ee0d11510d04347ee209d2ab48d766e48973b1a4",
-            //     module: "utils",
-            //     function: "check_coin_threshold",
-            //     arguments: [
-            //         targetCoin,
-            //         routerTx.pure(bcs.U64.serialize(out_min_amount)),
-            //     ],
-            //     typeArguments: [otherType],
-            // });
             routerTx.transferObjects([targetCoin], this.wallet.toSuiAddress());
             routerTx.setSender(this.wallet.toSuiAddress());
             const result = await client.signAndExecuteTransaction(
@@ -383,5 +326,39 @@ export class SuiChain implements IChain {
                 message: "Swap unsuccessful " + e?.toString(),
             };
         }
+    }
+
+    /**
+     * Returns testnet sui tokens
+     * @param call - The params for faucet
+     * @returns Success/Failure message
+     */
+    public async requestSui(call: unknown): Promise<any> {
+        try {
+            const { network, recipient } = call as {
+                network: FaucetNetwork,
+                recipient: string,
+            }
+
+            await requestSuiFromFaucetV0({
+                host: getFaucetHost(network),
+                recipient,
+            });
+
+            return {
+                message: `Successfully requested SUI to ${recipient} on ${network}`,
+            };
+        } catch (e) {
+            return {
+                message: `Failed to request SUI: ${e}`,
+            };
+        }
+    }
+
+    /**
+     * Returns the sui address of the connected account
+     */
+    public getAddress(): string {
+        return this.wallet.toSuiAddress();
     }
 }
