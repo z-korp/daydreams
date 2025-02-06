@@ -1,8 +1,11 @@
+import { randomUUID } from "crypto";
 import { chainOfTought } from "./cot";
-import { Agent, Config } from "./types";
+import { ActionCall, Agent, AgentContext, AgentMemory, Config } from "./types";
 
-export function createDreams(config: Config): Agent {
-    const memory = {
+export function createDreams(
+    config: Config<AgentContext>
+): Agent<AgentContext> {
+    const memory: AgentMemory = {
         working: {
             inputs: [],
             outputs: [],
@@ -13,7 +16,7 @@ export function createDreams(config: Config): Agent {
         shortTerm: {},
     };
 
-    const agent: Agent = {
+    const agent: Agent<AgentContext> = {
         inputs: config.inputs,
         outputs: config.outputs,
         events: config.events,
@@ -49,14 +52,14 @@ export function createDreams(config: Config): Agent {
             const response = await chainOfTought({
                 model: config.model,
                 plan: ``,
-                actions: this.actions,
+                actions: agent.actions,
                 inputs: agent.memory.working.inputs,
                 outputs,
             });
 
             for (const thought of response.thinking) {
-                this.emit("agent:thought", thought);
-                this.memory.working.thoughts.push(thought);
+                agent.emit("agent:thought", thought);
+                agent.memory.working.thoughts.push(thought);
             }
 
             for (let { type, data } of response.outputs) {
@@ -66,16 +69,22 @@ export function createDreams(config: Config): Agent {
 
                 try {
                     data = JSON.parse(data);
-                } catch {}
+                } catch {
+                    // continue;
+                }
+
+                data = output.params.parse(data);
 
                 const response = {
                     type,
-                    data: output.params.parse(data),
+                    data,
                 };
 
                 agent.emit("agent:output", response);
 
                 agent.memory.working.outputs.push(response);
+
+                await output.handler(data, agent);
             }
 
             for (let { name, data } of response.actions) {
@@ -85,26 +94,31 @@ export function createDreams(config: Config): Agent {
 
                 if (!action) continue;
 
-                const call = {
+                const call: ActionCall = {
+                    id: randomUUID(),
                     name,
                     data: action.params.parse(data),
                 };
 
-                this.emit("agent:action:call", call);
-                this.memory.working.calls.push(call);
+                agent.emit("agent:action:call", call);
+                agent.memory.working.calls.push(call);
+
+                const result = await action.handler(call.data, agent);
+
+                call.result = result;
             }
         },
 
         send: async (input: { type: string; data: any }) => {
-            if (input.type in this.inputs === false) return;
+            if (input.type in agent.inputs === false) return;
 
-            const processor = this.inputs[input.type];
+            const processor = agent.inputs[input.type];
 
             const data = processor.schema.parse(input.data);
-            const shouldContinue = await processor.handler(data, this);
-            if (shouldContinue) await this.run();
+            const shouldContinue = await processor.handler(data, agent);
+            if (shouldContinue) await agent.run();
 
-            // await this.evaluator(agent.context, {});
+            // await agent.evaluator(agent.context, {});
         },
         // evaluator: async (ctx, {}) => {},
     };
