@@ -1654,26 +1654,24 @@ ${availableOutputsSchema}
      */
     async getBlackboardState(): Promise<Record<string, any>> {
         try {
-            // Use findDocumentsByCategory to get all blackboard documents
-            const blackboardDocs = await this.memory.searchDocumentsByCategory(
-                "blackboard",
-            );
+            // Retrieve blackboard documents
+            const blackboardDocs = await this.memory.searchDocumentsByCategory("blackboard");
 
-            // Build current state by applying updates in order
             const state: Record<string, any> = {};
 
+            // Sort by timestamp (oldest first)
             blackboardDocs
-                .sort((a, b) => {
-                    const aContent = JSON.parse(a.content);
-                    const bContent = JSON.parse(b.content);
-                    return aContent.timestamp - bContent.timestamp;
-                })
+                .sort((a, b) => JSON.parse(a.content).timestamp - JSON.parse(b.content).timestamp)
                 .forEach((doc) => {
                     const update = JSON.parse(doc.content);
-                    if (!state[update.type]) {
-                        state[update.type] = {};
+                    if (update.type === "state") {
+                        state[update.key] = update.value;
+                    } else {
+                        if (!state[update.type]) {
+                            state[update.type] = {};
+                        }
+                        state[update.type][update.key] = update.value;
                     }
-                    state[update.type][update.key] = update.value;
                 });
 
             this.logger.info("getBlackboardState", "Found blackboard state", {
@@ -1682,13 +1680,7 @@ ${availableOutputsSchema}
 
             return state;
         } catch (error) {
-            this.logger.error(
-                "getBlackboardState",
-                "Failed to get blackboard state",
-                {
-                    error,
-                }
-            );
+            this.logger.error("getBlackboardState", "Failed to get blackboard state", { error });
             return {};
         }
     }
