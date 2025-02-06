@@ -1687,9 +1687,9 @@ export class ChainOfThought extends EventEmitter {
     async getBlackboardState(): Promise<Record<string, any>> {
         try {
             // Use findDocumentsByCategory to get all blackboard documents
-            const blackboardDocs = await this.memory.searchDocumentsByTag([
+            const blackboardDocs = await this.memory.searchDocumentsByCategory(
                 "blackboard",
-            ]);
+            );
 
             // Build current state by applying updates in order
             const state: Record<string, any> = {};
