@@ -93,6 +93,10 @@ export const ZIDLE_PROVIDER = `{
         "contract": "$RESOURCES_SYSTEM",
         "entrypoint": "sell",
         "calldata": ["$TOKEN_ID_LOW", "$RESOURCE_TYPE", "$RESOURCE_SUBTYPE", "$AMOUNT"]
+        notes": [
+          "$AMOUNT can be different than 1.",
+          "You can sell up to the total number of RCS you possess, not just one at a time."
+        ]
       }
     ],
     "queries": [
