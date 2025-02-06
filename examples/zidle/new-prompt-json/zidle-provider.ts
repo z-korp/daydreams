@@ -27,6 +27,7 @@ export const ZIDLE_PROVIDER = `{
       "before": "query { zidleMinerModels(where: { token_id: $TOKEN_ID_LOW, timestampGT: \"0\" }) { totalCount } }",
       "assign": { "$TOKEN_ID_LOW": "0x6" },
       "after":  "query { zidleMinerModels(where: { token_id: 0x6, timestampGT: \"0\" }) { totalCount } }"
+      "notes": "Ensure that the final query string is raw and does not contain additional backslashes."
     },
     {
       "description": "Substituting $TOKEN_ID_LOW in a transaction calldata",
@@ -93,8 +94,8 @@ export const ZIDLE_PROVIDER = `{
         "contract": "$RESOURCES_SYSTEM",
         "entrypoint": "sell",
         "calldata": ["$TOKEN_ID_LOW", "$RESOURCE_TYPE", "$RESOURCE_SUBTYPE", "$AMOUNT"]
-        notes": [
-          "$AMOUNT can be different than 1.",
+        "notes": [
+          "$AMOUNT represent the number of resources to sell.",
           "You can sell up to the total number of RCS you possess, not just one at a time."
         ]
       }
@@ -129,6 +130,21 @@ export const ZIDLE_PROVIDER = `{
         "example": {
           "query": "query { zidleMinerModels(where: { token_id: \"0x1234\" }) { totalCount edges { node { resource_type xp }}}}"
         }
+      },
+      {
+        "name": "GET_RCS_BALANCE",
+        "type": "GRAPHQL_FETCH",
+        "query": "query { zidleMinerModels(where: { token_id: $TOKEN_ID_LOW }) { edges { node { resource_type rcs_1 rcs_2 rcs_3 rcs_4 rcs_5 rcs_6 rcs_7 }}}}",
+        "interpretation": [
+          "Each node represents a resource type the player owns.",
+          "resource_type = category (Wood, Food, Mineral).",
+          "rcs_1 to rcs_7 = specific subtypes and their amounts.",
+          "Extract rcs_X values for each resource_type to determine the total sellable amount."
+        ],
+        "notes": [
+          "Replace $TOKEN_ID_LOW with the correct NFT ID before execution.",
+          "Use the highest available rcs_X value in SELL_RCS_FOR_GOLD to optimize sales."
+        ]
       }
     ]
   }

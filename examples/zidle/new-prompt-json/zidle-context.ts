@@ -109,6 +109,7 @@ export const ZIDLE_CONTEXT = `{
       "GET_GOLD_BALANCE => check gold amount in NFT_WALLET_ADDRESS"
     ],
     "notes": [
+      "CRITICAL: initialization can be skiped if you have TOKEN_ID_LOW, NFT_WALLET_ADDRESS, and GOLD_BALANCE",
       "Gold is stored in the NFT's wallet, not the player's main wallet.",
       "Before doing anything, the agent must retrieve the NFT wallet address using GET_NFT_WALLET_ADDRESS.",
       "Once the NFT wallet is known, the agent should use GET_GOLD_BALANCE to check the available gold."
@@ -120,13 +121,15 @@ export const ZIDLE_CONTEXT = `{
       "Ensure NFT_WALLET_ADDRESS is known (if not, call GET_NFT_WALLET_ADDRESS)",
       "GET_GOLD_BALANCE for NFT_WALLET_ADDRESS before proceeding",
       "CHECK_MINING => if totalCount > 0 => HARVEST_RCS for each mined resource => then CHECK_XP to confirm updated XP",
-      "If gold is needed, execute SELL_RCS_FOR_GOLD for the harvested resources",
-      "If no active mining, check XP and then execute MINE_RCS for the appropriate resource type"
+      "GET_RCS_BALANCE to determine available resources before selling.",
+      "If resources are available, execute SELL_RCS_FOR_GOLD using the highest quantity available to maximize efficiency.",
+      "If no active mining, check XP and then execute MINE_RCS for the appropriate resource type."
     ],
     "mustHarvestIfMining": "Never skip HARVEST_RCS if any resource is actively mined.",
     "notes": [
       "Gold is stored in the NFT's wallet, so the agent must always check NFT_WALLET_ADDRESS first.",
-      "Before selling resources, the agent should verify if additional gold is needed using GET_GOLD_BALANCE."
+      "Before selling resources, the agent must call GET_RCS_BALANCE to determine the available amount and avoid inefficient one-by-one selling.",
+      "Only execute SELL_RCS_FOR_GOLD if there are sufficient resources to sell in bulk."
     ]
   }
 
