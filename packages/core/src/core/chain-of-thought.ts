@@ -1336,12 +1336,13 @@ ${availableOutputsSchema}
 
                     const completion = await validateLLMResponseSchema({
                         prompt: `${this.buildPrompt({ result })}
-            ${JSON.stringify({
+                        ${JSON.stringify({
                             query: userQuery,
                             currentSteps: this.stepManager.getSteps(),
                             lastAction: currentAction.toString() + " RESULT:" + result,
                         })}
-            
+
+                        
             <current_pending_actions>
                 ${pendingActions
                                 .map(
@@ -1350,7 +1351,7 @@ ${availableOutputsSchema}
                                 )
                                 .join("\n")}
             </current_pending_actions>
-
+            
             <verification_rules>
              # Chain of Verification Analysis
 
@@ -1661,17 +1662,17 @@ ${availableOutputsSchema}
 
             // Sort by timestamp (oldest first)
             blackboardDocs
-                .sort((a, b) => JSON.parse(a.content).timestamp - JSON.parse(b.content).timestamp)
+                .sort((a, b) => {
+                    const aContent = JSON.parse(a.content);
+                    const bContent = JSON.parse(b.content);
+                    return aContent.timestamp - bContent.timestamp;
+                })
                 .forEach((doc) => {
                     const update = JSON.parse(doc.content);
-                    if (update.type === "state") {
-                        state[update.key] = update.value;
-                    } else {
-                        if (!state[update.type]) {
-                            state[update.type] = {};
-                        }
-                        state[update.type][update.key] = update.value;
+                    if (!state[update.type]) {
+                        state[update.type] = {};
                     }
+                    state[update.type][update.key] = update.value;
                 });
 
             this.logger.info("getBlackboardState", "Found blackboard state", {
