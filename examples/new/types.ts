@@ -22,10 +22,15 @@ export type WorkingMemory = {
     chains: Chain[];
 };
 
-export type Action = {
+export type Action<
+    Schema extends z.AnyZodObject = z.AnyZodObject,
+    Result = any,
+    Context = any,
+> = {
     name: string;
-    description: string;
-    params: z.AnyZodObject;
+    description?: string;
+    params: Schema;
+    handler: (params: z.infer<Schema>, ctx: Context) => Promise<Result>;
 };
 
 export type Output = {
@@ -34,9 +39,17 @@ export type Output = {
     params: z.AnyZodObject | z.ZodString;
 };
 
-export type Input = {
+export type Input<
+    Schema extends z.AnyZodObject = z.AnyZodObject,
+    Context = any,
+> = {
     type: string;
-    description: string;
+    description?: string;
+    schema: Schema;
+    handler: (
+        params: z.infer<Schema>,
+        ctx: Context
+    ) => Promise<boolean> | boolean;
 };
 
 export type InputRef = {
@@ -86,3 +99,50 @@ export type ExtractTemplateVariables<T extends string> =
 export type TemplateVariables<T extends string> = Pretty<{
     [K in ExtractTemplateVariables<T>]: string;
 }>;
+
+export type AgentMemory = {
+    working: WorkingMemory;
+    shortTerm: {};
+};
+
+export type Expert = {};
+
+type AgentContext = {
+    memory: AgentMemory;
+};
+
+export interface Agent<Context extends AgentContext = AgentContext> {
+    memory: AgentMemory;
+
+    inputs: Record<string, InputConfig<any, Context>>;
+    outputs: Record<string, Omit<Output, "type">>;
+
+    events: Record<string, z.AnyZodObject>;
+
+    experts?: Record<string, Expert>;
+
+    actions: Action<any, any, Context>[];
+
+    //
+    emit: (...args: any[]) => void;
+    run: () => Promise<void>;
+    send: (input: { type: string; data: any }) => Promise<void>;
+}
+
+export type Config<Context extends AgentContext = AgentContext> = {
+    inputs: Record<string, InputConfig<any, Context>>;
+    outputs: Record<string, Omit<Output, "type">>;
+
+    events: Record<string, z.AnyZodObject>;
+
+    experts?: Record<string, Expert>;
+
+    actions: Action<any, any, Context>[];
+
+    model: LanguageModelV1;
+};
+
+export type InputConfig<
+    T extends z.AnyZodObject = z.AnyZodObject,
+    Context = any,
+> = Omit<Input<T, Context>, "type">;
