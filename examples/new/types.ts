@@ -33,10 +33,17 @@ export type Action<
     handler: (params: z.infer<Schema>, ctx: Context) => Promise<Result>;
 };
 
-export type Output = {
+export type Output<
+    Schema extends z.AnyZodObject = z.AnyZodObject,
+    Context = any,
+> = {
     type: string;
     description: string;
-    params: z.AnyZodObject | z.ZodString;
+    params: Schema;
+    handler: (
+        params: z.infer<Schema>,
+        ctx: Context
+    ) => Promise<boolean> | boolean;
 };
 
 export type Input<
@@ -63,9 +70,11 @@ export type OutputRef = {
     data: any;
 };
 
-export type ActionCall = {
+export type ActionCall<Data = any, Result = any> = {
+    id: string;
     name: string;
-    data: any;
+    data: Data;
+    result?: Result;
 };
 
 export type COTProps = {
@@ -107,15 +116,17 @@ export type AgentMemory = {
 
 export type Expert = {};
 
-type AgentContext = {
+export interface AgentContext {
     memory: AgentMemory;
-};
+}
 
 export interface Agent<Context extends AgentContext = AgentContext> {
+    // context: Context;
+
     memory: AgentMemory;
 
     inputs: Record<string, InputConfig<any, Context>>;
-    outputs: Record<string, Omit<Output, "type">>;
+    outputs: Record<string, Omit<Output<any, Context>, "type">>;
 
     events: Record<string, z.AnyZodObject>;
 
@@ -130,8 +141,10 @@ export interface Agent<Context extends AgentContext = AgentContext> {
 }
 
 export type Config<Context extends AgentContext = AgentContext> = {
+    // context: Context;
+
     inputs: Record<string, InputConfig<any, Context>>;
-    outputs: Record<string, Omit<Output, "type">>;
+    outputs: Record<string, Omit<Output<any, Context>, "type">>;
 
     events: Record<string, z.AnyZodObject>;
 
@@ -146,3 +159,8 @@ export type InputConfig<
     T extends z.AnyZodObject = z.AnyZodObject,
     Context = any,
 > = Omit<Input<T, Context>, "type">;
+
+export type OutputConfig<
+    T extends z.AnyZodObject = z.AnyZodObject,
+    Context = any,
+> = Omit<Output<T, Context>, "type">;

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Action, InputConfig, TemplateVariables } from "./types";
+import { Action, InputConfig, OutputConfig, TemplateVariables } from "./types";
 
 export function render<Template extends string>(
     str: Template,
@@ -30,4 +30,11 @@ export function action<
     Context = any,
 >(action: Action<Schema, Result, Context>): Action<Schema, Result, Context> {
     return action;
+}
+
+export function output<
+    Schema extends z.AnyZodObject = z.AnyZodObject,
+    Context = any,
+>(config: OutputConfig<Schema, Context>): OutputConfig<Schema, Context> {
+    return config;
 }
