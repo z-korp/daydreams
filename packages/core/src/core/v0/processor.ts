@@ -26,7 +26,9 @@ export interface ProcessorInterface {
     // based on inputs and outputs
     evaluate: (result: ProcessedResult) => Promise<boolean>;
 
-    run: (content: ProcessableContent | ProcessableContent[]) => Promise<ProcessedResult | ProcessedResult[]>;
+    run: (
+        content: ProcessableContent | ProcessableContent[]
+    ) => Promise<ProcessedResult | ProcessedResult[]>;
 
     // based on inputs and outputs
     getHandler(name: string): IOHandler | undefined;
@@ -49,8 +51,7 @@ export abstract class BaseProcessor implements ProcessorInterface {
         protected llmClient: LLMClient,
         public outputSchema: z.ZodType,
         protected contentLimit: number = 1000,
-        protected loggerLevel: LogLevel = LogLevel.ERROR,
-
+        protected loggerLevel: LogLevel = LogLevel.ERROR
     ) {
         this.logger = new Logger({
             level: loggerLevel,
@@ -141,7 +142,6 @@ export abstract class BaseProcessor implements ProcessorInterface {
             { name: handler.name }
         );
     }
-
 
     /**
      * Removes a handler (input or output) by name and stops its scheduling if needed.
@@ -234,13 +234,13 @@ export abstract class BaseProcessor implements ProcessorInterface {
 
     public abstract evaluate(result: ProcessedResult): Promise<boolean>;
 
-    public async run(content: ProcessableContent | ProcessableContent[]): Promise<ProcessedResult | ProcessedResult[]> {
-
+    public async run(
+        content: ProcessableContent | ProcessableContent[]
+    ): Promise<ProcessedResult | ProcessedResult[]> {
         this.logger.info("Processor.run", "Running", { content });
         if (Array.isArray(content)) {
-            return Promise.all(content.map(c => this.process(c)));
+            return Promise.all(content.map((c) => this.process(c)));
         }
-
 
         this.logger.info("Processor.run", "Processing content", { content });
         const result = await this.process(content);
@@ -250,7 +250,9 @@ export abstract class BaseProcessor implements ProcessorInterface {
         if (result.suggestedOutputs?.length > 0) {
             const outputs = await Promise.all(
                 result.suggestedOutputs.map(async (suggestedOutput) => {
-                    const handler = this.handlers?.ioHandlers?.get(suggestedOutput.name);
+                    const handler = this.handlers?.ioHandlers?.get(
+                        suggestedOutput.name
+                    );
 
                     if (handler && handler.execute) {
                         return handler.execute(content);
@@ -260,7 +262,7 @@ export abstract class BaseProcessor implements ProcessorInterface {
                 })
             );
 
-            const validOutput = outputs.find(output => output !== null);
+            const validOutput = outputs.find((output) => output !== null);
             if (validOutput) {
                 return validOutput;
             }

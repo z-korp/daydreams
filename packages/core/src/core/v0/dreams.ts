@@ -1,6 +1,6 @@
-import type { BaseProcessor } from './processor';
-import { HandlerRole, type IOHandler, type ProcessableContent } from './types';
-import { EventEmitter } from 'events';
+import type { BaseProcessor } from "./processor";
+import { HandlerRole, type IOHandler, type ProcessableContent } from "./types";
+import { EventEmitter } from "events";
 
 export interface DreamsConfig {
     handlers?: IOHandler[];
@@ -16,10 +16,16 @@ export interface ProcessorMapping {
 
 // Define the events that can be emitted
 export interface DreamsEvents {
-    'input:received': (handlerName: string, data: any) => void;
-    'input:processed': (handlerName: string, result: ProcessableContent | ProcessableContent[]) => void;
-    'processor:route': (processorName: string, data: ProcessableContent | ProcessableContent[]) => void;
-    'error': (error: Error, context: any) => void;
+    "input:received": (handlerName: string, data: any) => void;
+    "input:processed": (
+        handlerName: string,
+        result: ProcessableContent | ProcessableContent[]
+    ) => void;
+    "processor:route": (
+        processorName: string,
+        data: ProcessableContent | ProcessableContent[]
+    ) => void;
+    error: (error: Error, context: any) => void;
 }
 
 export function createProcessor(config: DreamsConfig) {
@@ -33,22 +39,31 @@ export function createProcessor(config: DreamsConfig) {
 
     // Initialize with any provided handlers
     if (config.handlers) {
-        config.handlers.forEach(handler => {
+        config.handlers.forEach((handler) => {
             handlers.set(handler.name, handler);
         });
     }
 
-    function registerHandler(handler: IOHandler, processorMapping?: ProcessorMapping) {
+    function registerHandler(
+        handler: IOHandler,
+        processorMapping?: ProcessorMapping
+    ) {
         handlers.set(handler.name, handler);
 
         // If this is an input handler and has a processor mapping, store it
         if (handler.role === HandlerRole.INPUT && processorMapping) {
             const existingMappings = processorMappings.get(handler.name) || [];
-            processorMappings.set(handler.name, [...existingMappings, processorMapping]);
+            processorMappings.set(handler.name, [
+                ...existingMappings,
+                processorMapping,
+            ]);
 
             // If there's a next processor specified, store the chain
             if (processorMapping.next) {
-                processorChains.set(processorMapping.processorName, processorMapping.next);
+                processorChains.set(
+                    processorMapping.processorName,
+                    processorMapping.next
+                );
             }
         }
     }
@@ -57,13 +72,20 @@ export function createProcessor(config: DreamsConfig) {
         return handlers.get(name);
     }
 
-    async function processInput(handler: string, data: any): Promise<ProcessableContent | ProcessableContent[] | undefined> {
+    async function processInput(
+        handler: string,
+        data: any
+    ): Promise<ProcessableContent | ProcessableContent[] | undefined> {
         try {
             // Emit received event
-            events.emit('input:received', handler, data);
+            events.emit("input:received", handler, data);
 
             const inputHandler = handlers.get(handler);
-            if (!inputHandler || inputHandler.role !== HandlerRole.INPUT || !inputHandler.execute) {
+            if (
+                !inputHandler ||
+                inputHandler.role !== HandlerRole.INPUT ||
+                !inputHandler.execute
+            ) {
                 throw new Error(`Invalid or missing input handler: ${handler}`);
             }
 
@@ -74,11 +96,11 @@ export function createProcessor(config: DreamsConfig) {
             const output = await process(input);
 
             // Emit processed event
-            events.emit('input:processed', handler, output);
+            events.emit("input:processed", handler, output);
 
             return input;
         } catch (error) {
-            events.emit('error', error, { handler, data });
+            events.emit("error", error, { handler, data });
             throw error;
         }
     }
@@ -92,11 +114,13 @@ export function createProcessor(config: DreamsConfig) {
                 const mappings = Array.from(processorMappings.values()).flat();
 
                 // Find the first matching processor based on filters
-                const mapping = mappings.find(m => !m.filter || m.filter(item));
+                const mapping = mappings.find(
+                    (m) => !m.filter || m.filter(item)
+                );
 
                 if (mapping) {
                     // Emit routing event
-                    events.emit('processor:route', mapping.processorName, item);
+                    events.emit("processor:route", mapping.processorName, item);
 
                     // Get the processor handler
                     const processor = handlers.get(mapping.processorName);
@@ -105,7 +129,9 @@ export function createProcessor(config: DreamsConfig) {
                         const result = await processor.execute(item);
 
                         // Check if there's a next processor in the chain
-                        const nextProcessor = processorChains.get(mapping.processorName);
+                        const nextProcessor = processorChains.get(
+                            mapping.processorName
+                        );
                         if (nextProcessor && result) {
                             // Continue the chain with the result
                             return process(result);
@@ -115,7 +141,7 @@ export function createProcessor(config: DreamsConfig) {
                     }
                 }
             } catch (error) {
-                events.emit('error', error, { content: item });
+                events.emit("error", error, { content: item });
                 throw error;
             }
         }
@@ -134,7 +160,6 @@ export function createProcessor(config: DreamsConfig) {
         registerHandler,
         getHandler,
         processInput,
-        on
+        on,
     };
 }
-

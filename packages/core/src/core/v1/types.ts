@@ -118,8 +118,8 @@ export type Pretty<type> = { [key in keyof type]: type[key] } & unknown;
 
 export type ExtractTemplateVariables<T extends string> =
     T extends `${infer Start}{{${infer Var}}}${infer Rest}`
-    ? Var | ExtractTemplateVariables<Rest>
-    : never;
+        ? Var | ExtractTemplateVariables<Rest>
+        : never;
 
 export type TemplateVariables<T extends string> = Pretty<{
     [K in ExtractTemplateVariables<T>]: string;
@@ -180,6 +180,8 @@ export type Config<Context extends AgentContext = AgentContext> = {
     actions: Action<any, any, Context>[];
 
     model: LanguageModelV1;
+
+    logger: LogLevel;
 };
 
 export type InputConfig<
@@ -195,3 +197,26 @@ export type OutputConfig<
 export type ExpertConfig<Context = any> = Omit<Expert<Context>, "type">;
 
 export type Subscription = () => void;
+
+export enum LogLevel {
+    ERROR = 0,
+    WARN = 1,
+    INFO = 2,
+    DEBUG = 3,
+    TRACE = 4,
+}
+export interface LoggerConfig {
+    level: LogLevel;
+    enableTimestamp?: boolean;
+    enableColors?: boolean;
+    logToFile?: boolean;
+    logPath?: string;
+}
+
+export interface LogEntry {
+    level: LogLevel;
+    timestamp: Date;
+    context: string;
+    message: string;
+    data?: any;
+}
