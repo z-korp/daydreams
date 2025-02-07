@@ -1,4 +1,4 @@
-import { MemoryStore, WorkingMemory } from "./types";
+import { MemoryStore, WorkingMemory } from "../../../../../examples/new/types";
 
 export async function getOrCreateConversationMemory(
     memory: MemoryStore,

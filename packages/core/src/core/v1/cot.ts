@@ -2,7 +2,7 @@ import zodToJsonSchema from "zod-to-json-schema";
 import { llm } from "./llm";
 import { createTagRegex, formatXml, parseParams } from "./xml";
 import { render } from "./utils";
-import { COTProps, COTResponse } from "./types";
+import { type COTProps, type COTResponse } from "./types";
 import {
     formatAction,
     formatInput,
@@ -118,8 +118,8 @@ export async function chainOfTought({
         msg.role === "assistant"
             ? Array.isArray(msg.content)
                 ? msg.content
-                      .map((t) => (t.type === "text" ? t.text : ""))
-                      .join("\n")
+                    .map((t) => (t.type === "text" ? t.text : ""))
+                    .join("\n")
                 : msg.content
             : "";
 

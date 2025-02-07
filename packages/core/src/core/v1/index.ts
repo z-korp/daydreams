@@ -1,10 +1,9 @@
-import { z, ZodAnyDef } from "zod";
+import { z } from "zod";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createDreams } from "./dreams";
 import { action, expert, input, output } from "./utils";
 import { Telegraf } from "telegraf";
 import { createMemoryStore } from "./memory";
-// import "dotenv";
 
 const anthropic = createAnthropic({
     apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -87,7 +86,7 @@ const agent = createDreams({
                     }
                 });
 
-                return () => {};
+                return () => { };
             },
         }),
     },
@@ -170,7 +169,7 @@ const agent = createDreams({
             params: z.object({
                 location: z.string(),
             }),
-            async handler(params, ctx) {},
+            async handler(params, ctx) { },
         }),
     ],
 });

@@ -1,4 +1,4 @@
-import { generateText, LanguageModelV1 } from "ai";
+import { generateText, type LanguageModelV1 } from "ai";
 
 export async function llm({
     model,

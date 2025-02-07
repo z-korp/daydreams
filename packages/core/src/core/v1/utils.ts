@@ -1,5 +1,5 @@
 import { z } from "zod";
-import {
+import type {
     Action,
     ExpertConfig,
     InputConfig,
@@ -11,12 +11,12 @@ export function render<Template extends string>(
     str: Template,
     data: TemplateVariables<Template>
 ) {
-    return str.replace(/\{\{(\w+)\}\}/g, (match, key) =>
-        formatValue(data[key] ?? "")
+    return str.replace(/\{\{(\w+)\}\}/g, (match, key: string) =>
+        formatValue(data[key as keyof typeof data] ?? "")
     );
 }
 
-export function formatValue(value: any) {
+export function formatValue(value: any): string {
     if (Array.isArray(value))
         return value.map((t) => formatValue(t)).join("\n");
     if (typeof value !== "string") return JSON.stringify(value);
