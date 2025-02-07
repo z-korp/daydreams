@@ -33,7 +33,7 @@ Next, remember the previous input/output logs
 {{conversation}}
 </logs>
 
-Now, consider the new input information provided:
+Now, consider the new input information provided, you should only respond with one message based on your history and the latest input:
 <inputs>
 {{inputs}}
 </inputs>
@@ -117,8 +117,8 @@ export async function chainOfThought({
         msg.role === "assistant"
             ? Array.isArray(msg.content)
                 ? msg.content
-                      .map((t) => (t.type === "text" ? t.text : ""))
-                      .join("\n")
+                    .map((t) => (t.type === "text" ? t.text : ""))
+                    .join("\n")
                 : msg.content
             : "";
 

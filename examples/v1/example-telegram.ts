@@ -139,8 +139,8 @@ createDreams({
 
         "telegram:direct": output({
             params: z.object({
-                chatId: z.string(),
-                content: z.string(),
+                chatId: z.string().describe("the chat id to send the message to, you must include this"),
+                content: z.string().describe("the content of the message to send"),
             }),
             description: "use this to send a telegram message to user",
             handler: async (data, ctx) => {
