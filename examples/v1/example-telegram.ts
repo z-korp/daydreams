@@ -4,17 +4,17 @@ import { createDreams } from "../../packages/core/src/core/v1/dreams";
 import { action, expert, input, output } from "../../packages/core/src/core/v1/utils";
 import { Telegraf } from "telegraf";
 import { createMemoryStore } from "../../packages/core/src/core/v1/memory";
+import { createGroq } from "@ai-sdk/groq";
 
-const anthropic = createAnthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY!,
+
+const groq = createGroq({
+    apiKey: process.env.GROQ_API_KEY!,
 });
-
-const model = anthropic("claude-3-5-haiku-latest");
 
 const telegraf = new Telegraf(process.env.TELEGRAM_TOKEN!);
 
-const agent = createDreams({
-    model,
+createDreams({
+    model: groq("deepseek-r1-distill-llama-70b"),
     memory: createMemoryStore(),
     experts: {
         analyser: expert({
