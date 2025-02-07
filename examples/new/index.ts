@@ -3,18 +3,38 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createDreams } from "./dreams";
 import { action, input, output } from "./utils";
 import { Telegraf } from "telegraf";
+import { MemoryStore } from "./types";
+// import "dotenv";
+
+console.log(process.env);
 
 const anthropic = createAnthropic({
-    apiKey: "",
+    apiKey: process.env.ANTHROPIC_API_KEY!,
 });
 
 const model = anthropic("claude-3-5-haiku-latest");
 
-const telegraf = new Telegraf("");
+const telegraf = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
+
+const data = new Map<string, any>();
+const memory: MemoryStore = {
+    async get(key) {
+        return data.get(key);
+    },
+    async clear() {
+        data.clear();
+    },
+    async delete(key) {
+        data.delete(key);
+    },
+    async set(key, value) {
+        data.set(key, value);
+    },
+};
 
 const agent = createDreams({
     model,
-
+    memory,
     experts: {
         analyser: {
             description: "Evaluates input context and requirements",
@@ -38,7 +58,7 @@ const agent = createDreams({
         "user:message": input({
             schema: z.object({ user: z.string(), text: z.string() }),
             handler: (message, { memory }) => {
-                memory.working.inputs.push({
+                memory.inputs.push({
                     type: "user:message",
                     params: { user: message.user },
                     data: message.text,
@@ -55,13 +75,33 @@ const agent = createDreams({
                 text: z.string(),
             }),
             handler: (message, { memory }) => {
-                memory.working.inputs.push({
+                memory.inputs.push({
                     type: "telegram:direct",
                     params: { user: message.user.id.toString() },
                     data: message.text,
                 });
 
                 return true;
+            },
+            subscribe(send) {
+                telegraf.on("message", (ctx) => {
+                    const chat = ctx.chat;
+                    const user = ctx.msg.from;
+
+                    if ("text" in ctx.message) {
+                        send(`tg:${chat.id}`, {
+                            chat: {
+                                id: chat.id,
+                            },
+                            user: {
+                                id: user.id,
+                            },
+                            text: ctx.message.text,
+                        });
+                    }
+                });
+
+                return () => {};
             },
         }),
     },
@@ -157,40 +197,6 @@ async function main() {
     const telegrafInfo = await telegraf.telegram.getMe();
 
     console.log(telegrafInfo);
-
-    telegraf.on("message", (ctx) => {
-        const chat = ctx.chat;
-        const user = ctx.msg.from;
-
-        console.log("here", ctx);
-
-        if ("text" in ctx.message) {
-            const isPrivate = chat.type === "private";
-
-            agent.send({
-                type: isPrivate ? "telegram:direct" : "telegram:group",
-                data: {
-                    chat: {
-                        id: chat.id,
-                        title: isPrivate ? "Private chat" : chat.title,
-                    },
-                    user: {
-                        id: user.id,
-                        name: user.username,
-                    },
-                    text: ctx.message.text,
-                },
-            });
-        }
-    });
-
-    // await agent.send({
-    //     type: "user:message",
-    //     data: {
-    //         user: "ze",
-    //         text: "what do you know about eternum?",
-    //     },
-    // });
 }
 
 main().catch((err) => {
