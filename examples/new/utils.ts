@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { Action, InputConfig, OutputConfig, TemplateVariables } from "./types";
+import {
+    Action,
+    ExpertConfig,
+    InputConfig,
+    OutputConfig,
+    TemplateVariables,
+} from "./types";
 
 export function render<Template extends string>(
     str: Template,
@@ -36,5 +42,11 @@ export function output<
     Schema extends z.AnyZodObject = z.AnyZodObject,
     Context = any,
 >(config: OutputConfig<Schema, Context>): OutputConfig<Schema, Context> {
+    return config;
+}
+
+export function expert<Context = any>(
+    config: ExpertConfig<Context>
+): ExpertConfig<Context> {
     return config;
 }

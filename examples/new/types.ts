@@ -124,7 +124,13 @@ export type TemplateVariables<T extends string> = Pretty<{
 //     shortTerm: {};
 // };
 
-export type Expert = {};
+export type Expert<Context = any> = {
+    type: string;
+    description: string;
+    instructions: string;
+    model?: LanguageModelV1;
+    actions?: Action<any, any, Context>[];
+};
 
 export interface AgentContext {
     conversationId: string;
@@ -141,7 +147,7 @@ export interface Agent<Context extends AgentContext = AgentContext> {
 
     events: Record<string, z.AnyZodObject>;
 
-    experts?: Record<string, Expert>;
+    experts: Record<string, ExpertConfig<Context>>;
 
     actions: Action<any, any, Context>[];
 
@@ -159,11 +165,11 @@ export type Config<Context extends AgentContext = AgentContext> = {
     memory: MemoryStore;
 
     inputs: Record<string, InputConfig<any, Context>>;
-    outputs: Record<string, Omit<Output<any, Context>, "type">>;
+    outputs: Record<string, OutputConfig<any, Context>>;
 
     events: Record<string, z.AnyZodObject>;
 
-    experts?: Record<string, Expert>;
+    experts: Record<string, ExpertConfig<Context>>;
 
     actions: Action<any, any, Context>[];
 
@@ -179,5 +185,7 @@ export type OutputConfig<
     T extends z.AnyZodObject = z.AnyZodObject,
     Context = any,
 > = Omit<Output<T, Context>, "type">;
+
+export type ExpertConfig<Context = any> = Omit<Expert<Context>, "type">;
 
 export type Subscription = () => void;

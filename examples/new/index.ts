@@ -1,12 +1,10 @@
 import { z, ZodAnyDef } from "zod";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createDreams } from "./dreams";
-import { action, input, output } from "./utils";
+import { action, expert, input, output } from "./utils";
 import { Telegraf } from "telegraf";
-import { MemoryStore } from "./types";
+import { createMemoryStore } from "./memory";
 // import "dotenv";
-
-console.log(process.env);
 
 const anthropic = createAnthropic({
     apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -16,42 +14,28 @@ const model = anthropic("claude-3-5-haiku-latest");
 
 const telegraf = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
 
-const data = new Map<string, any>();
-const memory: MemoryStore = {
-    async get(key) {
-        return data.get(key);
-    },
-    async clear() {
-        data.clear();
-    },
-    async delete(key) {
-        data.delete(key);
-    },
-    async set(key, value) {
-        data.set(key, value);
-    },
-};
-
 const agent = createDreams({
     model,
-    memory,
+    memory: createMemoryStore(),
     experts: {
-        analyser: {
+        analyser: expert({
             description: "Evaluates input context and requirements",
             instructions:
                 "Break down complex tasks, identify key components, assess dependencies",
-        },
-        researcher: {
+        }),
+
+        researcher: expert({
             description: "Gathers information and explores solutions",
             instructions:
                 "Search knowledge base, compare approaches, document findings",
             actions: [],
-        },
-        planner: {
+        }),
+
+        planner: expert({
             description: "Creates structured action plans and sequences tasks",
             instructions: "",
             actions: [],
-        },
+        }),
     },
 
     inputs: {
