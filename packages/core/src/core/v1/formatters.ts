@@ -1,5 +1,5 @@
 import zodToJsonSchema from "zod-to-json-schema";
-import { Action, InputRef, Output, OutputRef } from "./types";
+import type { Action, InputRef, Output, OutputRef } from "./types";
 import { formatXml } from "./xml";
 
 export function formatInput(input: InputRef) {

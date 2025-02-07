@@ -1,4 +1,4 @@
-import { LanguageModelV1 } from "ai";
+import { type LanguageModelV1 } from "ai";
 import { llm } from "./llm";
 import { render } from "./utils";
 import { formatXml } from "./xml";
