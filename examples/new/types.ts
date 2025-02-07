@@ -13,6 +13,13 @@ export type Chain = {
     experts: { name: string; data: string }[];
 };
 
+export interface MemoryStore {
+    get<T>(key: string): Promise<T | null>;
+    set<T>(key: string, value: T): Promise<void>;
+    delete(key: string): Promise<void>;
+    clear(): Promise<void>;
+}
+
 export type WorkingMemory = {
     inputs: InputRef[];
     outputs: OutputRef[];
@@ -57,6 +64,9 @@ export type Input<
         params: z.infer<Schema>,
         ctx: Context
     ) => Promise<boolean> | boolean;
+    subscribe?: (
+        send: (conversationId: string, data: z.infer<Schema>) => void
+    ) => () => void;
 };
 
 export type InputRef = {
@@ -109,21 +119,22 @@ export type TemplateVariables<T extends string> = Pretty<{
     [K in ExtractTemplateVariables<T>]: string;
 }>;
 
-export type AgentMemory = {
-    working: WorkingMemory;
-    shortTerm: {};
-};
+// export type AgentMemory = {
+//     working: WorkingMemory;
+//     shortTerm: {};
+// };
 
 export type Expert = {};
 
 export interface AgentContext {
-    memory: AgentMemory;
+    conversationId: string;
+    memory: WorkingMemory;
 }
 
 export interface Agent<Context extends AgentContext = AgentContext> {
     // context: Context;
 
-    memory: AgentMemory;
+    memory: MemoryStore;
 
     inputs: Record<string, InputConfig<any, Context>>;
     outputs: Record<string, Omit<Output<any, Context>, "type">>;
@@ -136,12 +147,16 @@ export interface Agent<Context extends AgentContext = AgentContext> {
 
     //
     emit: (...args: any[]) => void;
-    run: () => Promise<void>;
-    send: (input: { type: string; data: any }) => Promise<void>;
+    run: (conversationId: string) => Promise<void>;
+    send: (
+        conversationId: string,
+        input: { type: string; data: any }
+    ) => Promise<void>;
 }
 
 export type Config<Context extends AgentContext = AgentContext> = {
     // context: Context;
+    memory: MemoryStore;
 
     inputs: Record<string, InputConfig<any, Context>>;
     outputs: Record<string, Omit<Output<any, Context>, "type">>;
@@ -164,3 +179,5 @@ export type OutputConfig<
     T extends z.AnyZodObject = z.AnyZodObject,
     Context = any,
 > = Omit<Output<T, Context>, "type">;
+
+export type Subscription = () => void;
