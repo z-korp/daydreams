@@ -164,6 +164,7 @@ export interface Agent<Context extends AgentContext = AgentContext> {
         conversationId: string,
         input: { type: string; data: any }
     ) => Promise<void>;
+    evaluator: (ctx: Context) => Promise<void>;
 }
 
 export type Config<Context extends AgentContext = AgentContext> = {
