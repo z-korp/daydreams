@@ -105,6 +105,7 @@ export function createDreams(
                 };
 
                 agent.emit("agent:action:call", call);
+
                 memory.calls.push(call);
 
                 const result = await action.handler(call.data, {
@@ -138,14 +139,23 @@ export function createDreams(
                 memory,
             });
 
+            await agent.evaluator({
+                conversationId,
+                memory,
+            });
+
             await agent.memory.set(conversationId, memory);
 
             if (shouldContinue) await agent.run(conversationId);
 
-            // await agent.evaluator(agent.context, {});
         },
 
-        // evaluator: async (ctx, {}) => {},
+        evaluator: async (ctx) => {
+            const { conversationId, memory } = ctx;
+
+            console.log("evaluator", memory);
+
+        },
     };
 
     for (const [key, input] of Object.entries(agent.inputs)) {
