@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
 import { chainOfThought } from "./cot";
-import { LogLevel } from "./types";
 import type {
     ActionCall,
     Agent,
@@ -24,13 +23,15 @@ export function createDreams(
         logPath: "./logs",
     });
 
+    const { inputs, outputs, events, actions, experts, memory } = config;
+
     const agent: Agent<AgentContext> = {
-        inputs: config.inputs,
-        outputs: config.outputs,
-        events: config.events,
-        actions: config.actions,
-        experts: config.experts,
-        memory: config.memory,
+        inputs,
+        outputs,
+        events,
+        actions,
+        experts,
+        memory,
 
         emit: (...t: any) => {
             logger.info("agent", "emit", ...t);

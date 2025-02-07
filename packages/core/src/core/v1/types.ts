@@ -118,8 +118,8 @@ export type Pretty<type> = { [key in keyof type]: type[key] } & unknown;
 
 export type ExtractTemplateVariables<T extends string> =
     T extends `${infer Start}{{${infer Var}}}${infer Rest}`
-        ? Var | ExtractTemplateVariables<Rest>
-        : never;
+    ? Var | ExtractTemplateVariables<Rest>
+    : never;
 
 export type TemplateVariables<T extends string> = Pretty<{
     [K in ExtractTemplateVariables<T>]: string;
@@ -205,12 +205,19 @@ export enum LogLevel {
     DEBUG = 3,
     TRACE = 4,
 }
+
+export interface LogWriter {
+    init(logPath: string): void;
+    write(data: string): void;
+}
+
 export interface LoggerConfig {
     level: LogLevel;
     enableTimestamp?: boolean;
     enableColors?: boolean;
     logToFile?: boolean;
     logPath?: string;
+    logWriter?: LogWriter;
 }
 
 export interface LogEntry {
