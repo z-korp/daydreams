@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { chainOfTought } from "./cot";
+import { chainOfThought } from "./cot";
 import type { ActionCall, Agent, AgentContext, Config, Subscription } from "./types";
 import { getOrCreateConversationMemory } from "./memory";
 
@@ -33,14 +33,14 @@ export function createDreams(
                 conversationId
             );
 
-            const response = await chainOfTought({
+            const response = await chainOfThought({
                 model: config.model,
                 plan: ``,
                 actions: agent.actions,
                 inputs: memory.inputs,
                 outputs,
                 thoughts: memory.thoughts,
-                conversation: memory.conversation,
+                conversation: memory.outputs, // TODO:
             });
 
             for (const thought of response.thinking) {
@@ -68,7 +68,10 @@ export function createDreams(
 
                 agent.emit("agent:output", response);
 
-                memory.outputs.push(response);
+                memory.outputs.push({
+                    ...response,
+                    timestamp: Date.now(),
+                });
 
                 await output.handler(data, { conversationId, memory });
             }

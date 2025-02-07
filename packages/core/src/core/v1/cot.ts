@@ -1,6 +1,5 @@
-import zodToJsonSchema from "zod-to-json-schema";
 import { llm } from "./llm";
-import { createTagRegex, formatXml, parseParams } from "./xml";
+import { createTagRegex, parseParams } from "./xml";
 import { render } from "./utils";
 import { type COTProps, type COTResponse } from "./types";
 import {
@@ -66,7 +65,7 @@ Remember to:
 
 Your response should be comprehensive yet concise, demonstrating a clear understanding of the task and the ability to make informed decisions based on the provided information.`;
 
-export async function chainOfTought({
+export async function chainOfThought({
     model,
     plan,
     actions,
