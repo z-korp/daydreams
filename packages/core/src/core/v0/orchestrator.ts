@@ -15,9 +15,7 @@ export class Handler implements HandlerInterface {
      */
     private readonly logger: Logger;
 
-    constructor(
-        config?: LoggerConfig,
-    ) {
+    constructor(config?: LoggerConfig) {
         this.logger = new Logger(
             config ?? {
                 level: LogLevel.ERROR,
@@ -32,9 +30,9 @@ export class Handler implements HandlerInterface {
     }
 
     /**
- * Registers an IOHandler (input or output). For input handlers with a subscribe method,
- * registers the subscription and stores its unsubscriber.
- */
+     * Registers an IOHandler (input or output). For input handlers with a subscribe method,
+     * registers the subscription and stores its unsubscriber.
+     */
     public registerIOHandler(handler: IOHandler): void {
         if (this.ioHandlers.has(handler.name)) {
             this.logger.warn(
@@ -52,7 +50,6 @@ export class Handler implements HandlerInterface {
             { name: handler.name }
         );
     }
-
 
     /**
      * Removes a handler (input or output) by name and stops its scheduling if needed.

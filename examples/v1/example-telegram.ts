@@ -11,7 +11,7 @@ const anthropic = createAnthropic({
 
 const model = anthropic("claude-3-5-haiku-latest");
 
-const telegraf = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
+const telegraf = new Telegraf(process.env.TELEGRAM_TOKEN!);
 
 const agent = createDreams({
     model,

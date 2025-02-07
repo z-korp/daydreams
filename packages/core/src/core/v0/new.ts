@@ -1,6 +1,11 @@
 import type { z } from "zod";
 import type { MemoryManager } from "./memory";
-import type { Goal, IOHandler, ProcessableContent, ProcessedResult } from "./types";
+import type {
+    Goal,
+    IOHandler,
+    ProcessableContent,
+    ProcessedResult,
+} from "./types";
 
 // Routers to handlers or processors
 export interface ProcessorInterface {
@@ -33,14 +38,8 @@ export interface HandlerInterface {
 
     registerIOHandler(handler: IOHandler): void;
 
-    dispatchToAction(
-        name: string,
-        data: ProcessableContent
-    ): Promise<unknown>;
-    dispatchToOutput(
-        name: string,
-        data: ProcessableContent
-    ): Promise<unknown>;
+    dispatchToAction(name: string, data: ProcessableContent): Promise<unknown>;
+    dispatchToOutput(name: string, data: ProcessableContent): Promise<unknown>;
     removeIOHandler(name: string): void;
 }
 
@@ -97,10 +96,12 @@ export interface MemoryManagerInterface {
 
 // Evaluation.ts
 export interface EvaluationInterface {
-    evaluate(result: any, goals: string[]): { success: boolean; details: string };
-    getImprovementSuggestions(
-        evaluationReport: { success: boolean; details: string }
-    ): string[];
+    evaluate(
+        result: any,
+        goals: string[]
+    ): { success: boolean; details: string };
+    getImprovementSuggestions(evaluationReport: {
+        success: boolean;
+        details: string;
+    }): string[];
 }
-
-

@@ -17,7 +17,6 @@ import { HandlerRole, LogLevel } from "../types";
 // import type { MemoryManager } from "../memory";
 import type { HandlerInterface } from "../new";
 
-
 export class MasterProcessor extends BaseProcessor {
     constructor(
         protected llmClient: LLMClient,
@@ -26,10 +25,11 @@ export class MasterProcessor extends BaseProcessor {
         super(
             {
                 name: "master",
-                description: "This processor handles messages or short text inputs.",
+                description:
+                    "This processor handles messages or short text inputs.",
             },
             llmClient,
-            outputSchema,
+            outputSchema
         );
     }
 
@@ -63,20 +63,26 @@ export class MasterProcessor extends BaseProcessor {
 
         const outputsSchemaPart = Array.from(this.handlers.ioHandlers.entries())
             .map(([name, handler]) => {
-                if (handler.role === HandlerRole.OUTPUT && 'outputSchema' in handler) {
+                if (
+                    handler.role === HandlerRole.OUTPUT &&
+                    "outputSchema" in handler
+                ) {
                     return `${name}: ${JSON.stringify(zodToJsonSchema(handler.outputSchema, name))}`;
                 }
-                return '';
+                return "";
             })
             .filter(Boolean)
             .join("\n");
 
         const actionsSchemaPart = Array.from(this.handlers.ioHandlers.entries())
             .map(([name, handler]) => {
-                if (handler.role === HandlerRole.ACTION && 'outputSchema' in handler) {
+                if (
+                    handler.role === HandlerRole.ACTION &&
+                    "outputSchema" in handler
+                ) {
                     return `${name}: ${JSON.stringify(zodToJsonSchema(handler.outputSchema!, name))}`;
                 }
-                return '';
+                return "";
             })
             .filter(Boolean)
             .join("\n");
@@ -154,8 +160,13 @@ export class MasterProcessor extends BaseProcessor {
                     ...result.enrichment,
                     timeContext: getTimeContext(new Date()),
                     relatedMemories: [], // TODO: fix this abstraction
-                    availableOutputs: Array.from(this.handlers.ioHandlers.entries())
-                        .filter(([_, handler]) => handler.role === HandlerRole.OUTPUT)
+                    availableOutputs: Array.from(
+                        this.handlers.ioHandlers.entries()
+                    )
+                        .filter(
+                            ([_, handler]) =>
+                                handler.role === HandlerRole.OUTPUT
+                        )
                         .map(([name]) => name),
                 },
                 updateTasks: result.updateTasks,
@@ -178,8 +189,13 @@ export class MasterProcessor extends BaseProcessor {
                     sentiment: "neutral",
                     entities: [],
                     intent: "unknown",
-                    availableOutputs: Array.from(this.handlers.ioHandlers.entries())
-                        .filter(([_, handler]) => handler.role === HandlerRole.OUTPUT)
+                    availableOutputs: Array.from(
+                        this.handlers.ioHandlers.entries()
+                    )
+                        .filter(
+                            ([_, handler]) =>
+                                handler.role === HandlerRole.OUTPUT
+                        )
                         .map(([name]) => name),
                 },
                 suggestedOutputs: [],
@@ -195,7 +211,6 @@ export class MasterProcessor extends BaseProcessor {
     }
 }
 
-
 export const masterProcessorSchema = z.object({
     classification: z.object({
         contentType: z.string(),
@@ -203,9 +218,7 @@ export const masterProcessorSchema = z.object({
         delegateToProcessor: z
             .string()
             .optional()
-            .describe(
-                "The name of the processor to delegate to"
-            ),
+            .describe("The name of the processor to delegate to"),
         context: z.object({
             topic: z.string(),
             urgency: z.enum(["high", "medium", "low"]),
@@ -217,9 +230,7 @@ export const masterProcessorSchema = z.object({
         topics: z.array(z.string()).max(20),
         sentiment: z.enum(["positive", "negative", "neutral"]),
         entities: z.array(z.string()),
-        intent: z
-            .string()
-            .describe("The intent of the content"),
+        intent: z.string().describe("The intent of the content"),
     }),
     updateTasks: z
         .array(
@@ -229,17 +240,11 @@ export const masterProcessorSchema = z.object({
                     .describe(
                         "The name of the task to schedule. This should be a handler name."
                     ),
-                confidence: z
-                    .number()
-                    .describe("The confidence score (0-1)"),
-                intervalMs: z
-                    .number()
-                    .describe("The interval in milliseconds"),
+                confidence: z.number().describe("The confidence score (0-1)"),
+                intervalMs: z.number().describe("The interval in milliseconds"),
                 data: z
                     .any()
-                    .describe(
-                        "The data that matches the task's schema"
-                    ),
+                    .describe("The data that matches the task's schema"),
             })
         )
         .describe(
@@ -247,20 +252,14 @@ export const masterProcessorSchema = z.object({
         ),
     suggestedOutputs: z.array(
         z.object({
-            name: z
-                .string()
-                .describe("The name of the output or action"),
+            name: z.string().describe("The name of the output or action"),
             data: z
                 .any()
                 .describe(
                     "The data that matches the output's schema. leave empty if you don't have any data to provide."
                 ),
-            confidence: z
-                .number()
-                .describe("The confidence score (0-1)"),
-            reasoning: z
-                .string()
-                .describe("The reasoning for the suggestion"),
+            confidence: z.number().describe("The confidence score (0-1)"),
+            reasoning: z.string().describe("The reasoning for the suggestion"),
         })
     ),
-})
+});

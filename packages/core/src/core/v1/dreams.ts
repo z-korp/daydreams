@@ -1,12 +1,28 @@
 import { randomUUID } from "crypto";
 import { chainOfThought } from "./cot";
-import type { ActionCall, Agent, AgentContext, Config, Subscription } from "./types";
+import { LogLevel } from "./types";
+import type {
+    ActionCall,
+    Agent,
+    AgentContext,
+    Config,
+    Subscription,
+} from "./types";
 import { getOrCreateConversationMemory } from "./memory";
+import { Logger } from "./logger";
 
 export function createDreams(
     config: Config<AgentContext>
 ): Agent<AgentContext> {
     const inputSubscriptions = new Map<string, Subscription>();
+
+    const logger = new Logger({
+        level: config.logger,
+        enableTimestamp: true,
+        enableColors: true,
+        logToFile: true,
+        logPath: "./logs",
+    });
 
     const agent: Agent<AgentContext> = {
         inputs: config.inputs,
@@ -17,7 +33,7 @@ export function createDreams(
         memory: config.memory,
 
         emit: (...t: any) => {
-            console.log(...t);
+            logger.info("agent", "emit", ...t);
         },
 
         run: async (conversationId: string) => {
@@ -136,9 +152,9 @@ export function createDreams(
     for (const [key, input] of Object.entries(agent.inputs)) {
         if (input.subscribe) {
             const subscription = input.subscribe((conversationId, data) => {
-                console.log({ conversationId, data });
+                logger.info("agent", "input", { conversationId, data });
                 agent.send(conversationId, { type: key, data }).catch((err) => {
-                    console.error(err);
+                    logger.error("agent", "input", err);
                 });
             });
 
