@@ -1691,6 +1691,8 @@ export class ChainOfThought extends EventEmitter {
 
             const state: Record<string, any> = {};
 
+            console.log("blackboardDocs", blackboardDocs);
+
             // Sort by timestamp (oldest first)
             blackboardDocs
                 .sort((a, b) => {
@@ -1700,10 +1702,14 @@ export class ChainOfThought extends EventEmitter {
                 })
                 .forEach((doc) => {
                     const update = JSON.parse(doc.content);
-                    if (!state[update.type]) {
-                        state[update.type] = {};
+                    if (update.type === "state") {
+                        state[update.key] = update.value;
+                    } else {
+                        if (!state[update.type]) {
+                            state[update.type] = {};
+                        }
+                        state[update.type][update.key] = update.value;
                     }
-                    state[update.type][update.key] = update.value;
                 });
 
             this.logger.info("getBlackboardState", "Found blackboard state", {
