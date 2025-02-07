@@ -1,6 +1,6 @@
 import { MemoryStore, WorkingMemory } from "./types";
 
-export async function getOrConversationMemory(
+export async function getOrCreateConversationMemory(
     memory: MemoryStore,
     conversationId: string
 ) {

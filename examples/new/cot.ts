@@ -3,7 +3,13 @@ import { llm } from "./llm";
 import { createTagRegex, formatXml, parseParams } from "./xml";
 import { render } from "./utils";
 import { COTProps, COTResponse } from "./types";
-import { formatAction, formatInput, formatOutput } from "./formatters";
+import {
+    formatAction,
+    formatInput,
+    formatOutput,
+    formatOutputInterface,
+} from "./formatters";
+import { randomUUID } from "crypto";
 
 const promptTemplate = `
 You are tasked with analyzing your current plan, inputs, formulating outputs, and initiating actions based on a that context. 
@@ -22,6 +28,11 @@ Next, familiarize yourself with the types of outputs you can generate:
 <outputs>
 {{outputs}}
 </outputs>
+
+Next, remember the previous input/output logs
+<logs>
+{{conversation}}
+</logs>
 
 Now, consider the new input information provided:
 <inputs>
@@ -61,21 +72,43 @@ export async function chainOfTought({
     actions,
     inputs,
     outputs,
+    thoughts,
+    conversation,
 }: COTProps): Promise<COTResponse> {
-    const system = render(promptTemplate, {
+    const prompt = render(promptTemplate, {
         plan,
         actions: actions.map(formatAction).join("\n"),
+        conversation: conversation
+            .map((i) => {
+                const [type, ...key] = i.type.split(":");
+
+                if (type === "input") {
+                    return formatInput({
+                        ...i,
+                        type: key.join(":"),
+                    });
+                }
+
+                if (type === "output") {
+                    return formatOutput({
+                        ...i,
+                        type: key.join(":"),
+                    });
+                }
+                return null;
+            })
+            .filter(Boolean)
+            .join("\n"),
         // data: "",
         inputs: inputs.map(formatInput).join("\n"),
-        outputs: outputs.map(formatOutput).join("\n"),
+        outputs: outputs.map(formatOutputInterface).join("\n"),
     });
 
-    console.log(system);
+    console.log(prompt);
 
     const { response } = await llm({
         model,
-        system,
-        prompt: "<response>",
+        prompt: prompt + "\n<response>",
         stopSequences: ["</response>"],
     });
 
@@ -103,14 +136,14 @@ export async function chainOfTought({
     const outs = Array.from(text.matchAll(createTagRegex("output"))).map(
         (t) => {
             const { name } = parseParams(t[1]);
-            return { type: name, data: t[2] };
+            return { type: name, data: t[2], timestamp: Date.now() };
         }
     );
 
     const calls = Array.from(text.matchAll(createTagRegex("action"))).map(
         (t) => {
             const { name } = parseParams(t[1]);
-            return { name, data: JSON.parse(t[2]) };
+            return { id: randomUUID(), name, data: JSON.parse(t[2]) };
         }
     );
 

@@ -46,6 +46,7 @@ const agent = createDreams({
                     type: "user:message",
                     params: { user: message.user },
                     data: message.text,
+                    timestamp: Date.now(),
                 });
 
                 return true;
@@ -63,6 +64,7 @@ const agent = createDreams({
                     type: "telegram:direct",
                     params: { user: message.user.id.toString() },
                     data: message.text,
+                    timestamp: Date.now(),
                 });
 
                 return true;
