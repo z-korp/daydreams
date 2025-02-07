@@ -1,10 +1,10 @@
 import { LogLevel } from "./types";
 
-import type { LogEntry, LoggerConfig } from "./types";
+import type { LogEntry, LoggerConfig, LogWriter } from "./types";
 
 export class Logger {
-    private config: Required<LoggerConfig>;
-    private logStream: any;
+    private config: Omit<Required<LoggerConfig>, 'logWriter'>;
+    private logWriter?: LogWriter;
 
     constructor(config: LoggerConfig) {
         this.config = {
@@ -15,8 +15,12 @@ export class Logger {
             logPath: config.logPath ?? "./logs",
         };
 
-        if (this.config.logToFile) {
-            this.initLogFile();
+        if (this.config.logToFile && !config.logWriter) {
+            throw new Error("LogWriter must be provided when logToFile is enabled");
+        }
+
+        if (config.logWriter) {
+            this.logWriter = config.logWriter;
         }
     }
 
@@ -96,27 +100,18 @@ export class Logger {
     }
 
     private initLogFile() {
-        const fs = require("fs");
-        const path = require("path");
-
-        // Create logs directory if it doesn't exist
-        if (!fs.existsSync(this.config.logPath)) {
-            fs.mkdirSync(this.config.logPath, { recursive: true });
+        if (!this.logWriter) {
+            throw new Error("LogWriter not configured");
         }
-
-        const logFile = path.join(
-            this.config.logPath,
-            `app-${new Date().toISOString().split("T")[0]}.log`
-        );
-        this.logStream = fs.createWriteStream(logFile, { flags: "a" });
+        this.logWriter.init(this.config.logPath);
     }
 
     private writeToFile(entry: LogEntry) {
-        if (!this.logStream) {
-            this.initLogFile();
+        if (!this.logWriter) {
+            throw new Error("LogWriter not configured");
         }
 
         const logLine = this.formatLogEntry(entry) + "\n";
-        this.logStream.write(logLine);
+        this.logWriter.write(logLine);
     }
 }
