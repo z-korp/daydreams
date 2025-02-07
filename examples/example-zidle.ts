@@ -69,7 +69,7 @@ async function main() {
     });
 
     const memory = new ChromaVectorDB("agent_memory");
-    //await memory.purge(); // Clear previous session data
+    await memory.purge(); // Clear previous session data
 
     const conversationManager = new ConversationManager(memory);
 
