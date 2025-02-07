@@ -73,11 +73,15 @@ export type InputRef = {
     type: string;
     data: any;
     params?: Record<string, string>;
+    timestamp: number;
+    processed?: boolean;
 };
 
 export type OutputRef = {
     type: string;
     data: any;
+    params?: Record<string, string>;
+    timestamp: number;
 };
 
 export type ActionCall<Data = any, Result = any> = {
@@ -93,6 +97,8 @@ export type COTProps = {
     inputs: InputRef[];
     actions: Action[];
     outputs: Output[];
+    thoughts: string[];
+    conversation: (InputRef | OutputRef)[];
 };
 
 export type COTResponse = {

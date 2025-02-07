@@ -1,7 +1,14 @@
 import { randomUUID } from "crypto";
 import { chainOfTought } from "./cot";
-import { ActionCall, Agent, AgentContext, Config, Subscription } from "./types";
-import { getOrConversationMemory } from "./memory";
+import {
+    ActionCall,
+    Agent,
+    AgentContext,
+    Config,
+    OutputRef,
+    Subscription,
+} from "./types";
+import { getOrCreateConversationMemory } from "./memory";
 
 export function createDreams(
     config: Config<AgentContext>
@@ -28,17 +35,40 @@ export function createDreams(
                 })
             );
 
-            const memory = await getOrConversationMemory(
+            const memory = await getOrCreateConversationMemory(
                 agent.memory,
                 conversationId
+            );
+
+            const conversation = [
+                ...memory.inputs
+                    .filter((input) => input.processed)
+                    .map((t) => ({
+                        ...t,
+                        type: "input:" + t.type,
+                    })),
+                ...memory.outputs.map((t) => ({
+                    ...t,
+                    type: "output:" + t.type,
+                })),
+            ].sort((a, b) => (a.timestamp > b.timestamp ? -1 : 1));
+
+            const newInputs = memory.inputs.filter(
+                (input) => input.processed !== true
             );
 
             const response = await chainOfTought({
                 model: config.model,
                 plan: ``,
+                conversation,
                 actions: agent.actions,
-                inputs: memory.inputs,
+                inputs: newInputs,
+                thoughts: memory.thoughts,
                 outputs,
+            });
+
+            newInputs.forEach((i) => {
+                i.processed = true;
             });
 
             for (const thought of response.thinking) {
@@ -59,9 +89,10 @@ export function createDreams(
 
                 data = output.params.parse(data);
 
-                const response = {
+                const response: OutputRef = {
                     type,
                     data,
+                    timestamp: Date.now(),
                 };
 
                 agent.emit("agent:output", response);
@@ -104,7 +135,7 @@ export function createDreams(
         ) => {
             if (input.type in agent.inputs === false) return;
 
-            const memory = await getOrConversationMemory(
+            const memory = await getOrCreateConversationMemory(
                 agent.memory,
                 conversationId
             );

@@ -1,5 +1,5 @@
 import zodToJsonSchema from "zod-to-json-schema";
-import { Action, InputRef, Output } from "./types";
+import { Action, InputRef, Output, OutputRef } from "./types";
 import { formatXml } from "./xml";
 
 export function formatInput(input: InputRef) {
@@ -12,7 +12,18 @@ export function formatInput(input: InputRef) {
                 : JSON.stringify(input.data),
     });
 }
-export function formatOutput(output: Output) {
+
+export function formatOutput(output: OutputRef) {
+    return formatXml({
+        tag: "output",
+        params: { name: output.type, ...output.params },
+        content:
+            typeof output.data === "string"
+                ? output.data
+                : JSON.stringify(output.data),
+    });
+}
+export function formatOutputInterface(output: Output) {
     return formatXml({
         tag: "output",
         params: { name: output.type },
