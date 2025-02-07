@@ -19,8 +19,6 @@ export function createDreams(
         level: config.logger,
         enableTimestamp: true,
         enableColors: true,
-        logToFile: true,
-        logPath: "./logs",
     });
 
     const { inputs, outputs, events, actions, experts, memory } = config;
