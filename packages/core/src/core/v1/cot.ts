@@ -1,7 +1,13 @@
 import { llm } from "./llm";
-import { createTagRegex, parseParams } from "./xml";
+import { createTagRegex, formatXml, parseParams } from "./xml";
 import { render } from "./utils";
-import { type COTProps, type COTResponse } from "./types";
+import type {
+    ActionCall,
+    OutputRef,
+    Thought,
+    COTProps,
+    COTResponse,
+} from "./types";
 import {
     formatAction,
     formatInput,
@@ -28,9 +34,9 @@ Next, familiarize yourself with the types of outputs you can generate:
 {{outputs}}
 </outputs>
 
-Next, remember the previous input/output logs
+Next, remember the previous input/thinking/actions/output logs
 <logs>
-{{conversation}}
+{{logs}}
 </logs>
 
 Now, consider the new input information provided, you should only respond with one message based on your history and the latest input:
@@ -38,11 +44,9 @@ Now, consider the new input information provided, you should only respond with o
 {{inputs}}
 </inputs>
 
-When formulating your response, adhere to the following structure:
-
+When formulating your response, always adhere to the following structure:
+<think>[your think process]</think>
 <response>
-<thinking>[your thoughts]</thinking>
-
 [List of async actions to be initiated, if applicable]
 <action name="[action name]">[action data]</action>
 
@@ -50,9 +54,9 @@ When formulating your response, adhere to the following structure:
 <output name="[output name]">[output data]</output>
 </response>
 
-Begin your response by carefully analyzing the inputs and context. Use the <thinking> tags to articulate your thought process, considering the available actions and potential outputs.
+Begin your response by carefully analyzing the inputs and context. Use the <think> tags to articulate your thought process, considering the available actions and potential outputs.
 
-If you determine that actions should be initiated based on the input and context, list them after your thinking section. Use the <action> tags for each action, specifying the action name and including any relevant action data.
+If you determine that actions should be initiated based on the input and context, list them after your think section. Use the <action> tags for each action, specifying the action name and including any relevant action data.
 
 For any outputs you need to generate, use the <output> tags, specifying the output name and including the appropriate output data.
 
@@ -62,6 +66,11 @@ Remember to:
 3. Justify your decisions within the <thinking> section
 4. Only initiate relevant actions and outputs based on the given context
 5. Maintain a logical flow in your response
+6. Learn from previous results to improve future decisions
+7. Evaluate the effectiveness of previous actions and outputs
+8. Maintain consistency with successful patterns
+9. Adapt strategy based on failed actions
+10. Consider all historical context when making decisions
 
 Your response should be comprehensive yet concise, demonstrating a clear understanding of the task and the ability to make informed decisions based on the provided information.`;
 
@@ -71,30 +80,38 @@ export async function chainOfThought({
     actions,
     inputs,
     outputs,
-    thoughts,
-    conversation,
+    logs,
 }: COTProps): Promise<COTResponse> {
     const prompt = render(promptTemplate, {
         plan,
         actions: actions.map(formatAction).join("\n"),
-        conversation: conversation
+        logs: logs
             .map((i) => {
-                const [type, ...key] = i.type.split(":");
-
-                if (type === "input") {
-                    return formatInput({
-                        ...i,
-                        type: key.join(":"),
-                    });
+                switch (i.ref) {
+                    case "input":
+                        return formatInput(i);
+                    case "output":
+                        return formatOutput(i);
+                    case "thought":
+                        return formatXml({
+                            tag: "thinking",
+                            content: i.content,
+                        });
+                    case "action_call":
+                        return formatXml({
+                            tag: "action_call",
+                            params: { id: i.id, name: i.name },
+                            content: JSON.stringify(i.data),
+                        });
+                    case "action_result":
+                        return formatXml({
+                            tag: "action_result",
+                            params: { callId: i.callId },
+                            content: JSON.stringify(i.data),
+                        });
+                    default:
+                        return null;
                 }
-
-                if (type === "output") {
-                    return formatOutput({
-                        ...i,
-                        type: key.join(":"),
-                    });
-                }
-                return null;
             })
             .filter(Boolean)
             .join("\n"),
@@ -107,13 +124,15 @@ export async function chainOfThought({
 
     const { response } = await llm({
         model,
-        prompt: prompt + "\n<response>",
+        prompt: prompt + "\n<think>",
         stopSequences: ["</response>"],
     });
 
+    const now = Date.now();
+
     const msg = response.messages[0];
 
-    const text =
+    let text =
         msg.role === "assistant"
             ? Array.isArray(msg.content)
                 ? msg.content
@@ -122,34 +141,42 @@ export async function chainOfThought({
                 : msg.content
             : "";
 
+    text = "<think>" + text;
+
+    console.log(text);
+
     // todo: get this ordered for better outputs
 
     const plans = Array.from(text.matchAll(createTagRegex("plan"))).map(
         (t) => t[2]
     );
 
-    const thinking = Array.from(text.matchAll(createTagRegex("thinking"))).map(
-        (t) => t[2]
-    );
+    const thinking = Array.from(
+        text.matchAll(createTagRegex("think"))
+    ).map<Thought>((t) => ({ ref: "thought", content: t[2], timestamp: now }));
 
-    const outs = Array.from(text.matchAll(createTagRegex("output"))).map(
-        (t) => {
-            const { name } = parseParams(t[1]);
-            return { type: name, data: t[2], timestamp: Date.now() };
-        }
-    );
+    const outs = Array.from(
+        text.matchAll(createTagRegex("output"))
+    ).map<OutputRef>((t) => {
+        const { name } = parseParams(t[1]);
+        return { ref: "output", type: name, data: t[2], timestamp: now };
+    });
 
-    const calls = Array.from(text.matchAll(createTagRegex("action"))).map(
-        (t) => {
-            const { name } = parseParams(t[1]);
-            return { id: randomUUID(), name, data: JSON.parse(t[2]) };
-        }
-    );
+    // todo: try catch json parse and repeat?
+    const calls = Array.from(
+        text.matchAll(createTagRegex("action"))
+    ).map<ActionCall>((t) => {
+        const { name } = parseParams(t[1]);
+        return {
+            ref: "action_call",
+            id: randomUUID(),
+            name,
+            data: JSON.parse(t[2]),
+            timestamp: now,
+        };
+    });
 
-    console.dir(
-        { text, thinking, outputs: outs, actions: calls, plans },
-        { depth: Infinity }
-    );
+    // console.dir({ outputs: outs, actions: calls }, { depth: Infinity });
 
     return {
         plan: plans,

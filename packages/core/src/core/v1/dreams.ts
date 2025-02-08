@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { chainOfThought } from "./cot";
 import type {
     ActionCall,
+    ActionResult,
     Agent,
     AgentContext,
     Config,
@@ -31,8 +32,8 @@ export function createDreams(
         experts,
         memory,
 
-        emit: (...t: any) => {
-            logger.info("agent", "emit", ...t);
+        emit: (event: string, data: any) => {
+            logger.info("agent:event", event, data);
         },
 
         run: async (conversationId: string) => {
@@ -48,84 +49,113 @@ export function createDreams(
                 conversationId
             );
 
-            const response = await chainOfThought({
-                model: config.model,
-                plan: ``,
-                actions: agent.actions,
-                inputs: memory.inputs,
-                outputs,
-                thoughts: memory.thoughts,
-                conversation: memory.outputs, // TODO:
-            });
+            const maxSteps = 2;
+            let step = 1;
 
-            for (const thought of response.thinking) {
-                agent.emit("agent:thought", thought);
-                memory.thoughts.push(thought);
-            }
+            while (maxSteps >= step) {
+                console.log({ step });
 
-            for (let { type, data } of response.outputs) {
-                const output = outputs.find((output) => output.type === type);
+                const response = await chainOfThought({
+                    model: config.model,
+                    plan: ``,
+                    actions: agent.actions,
+                    inputs: memory.inputs.filter((i) => i.processed !== true),
+                    outputs,
+                    logs: [
+                        ...memory.inputs.filter((i) => i.processed === true),
+                        ...memory.outputs,
+                        ...memory.calls,
+                        ...memory.results,
+                        ...memory.thoughts,
+                    ].sort((a, b) => (a.timestamp > b.timestamp ? 1 : -1)),
+                });
 
-                if (!output) continue;
+                memory.inputs.forEach((i) => {
+                    i.processed = true;
+                });
 
-                try {
-                    data = JSON.parse(data);
-                } catch {
-                    // continue;
+                memory.results.forEach((i) => {
+                    i.processed = true;
+                });
+
+                for (const thought of response.thinking) {
+                    agent.emit("agent:thought", thought);
+                    memory.thoughts.push(thought);
                 }
 
-                data = output.params.parse(data);
+                for (let { type, data } of response.outputs) {
+                    const output = outputs.find(
+                        (output) => output.type === type
+                    );
 
-                const response = {
-                    type,
-                    data,
-                };
+                    if (!output) continue;
 
-                agent.emit("agent:output", response);
+                    try {
+                        data = JSON.parse(data);
+                    } catch {
+                        // continue;
+                    }
 
-                memory.outputs.push({
-                    ...response,
-                    timestamp: Date.now(),
-                });
+                    data = output.params.parse(data);
 
-                await output.handler(data, { conversationId, memory });
+                    const response = {
+                        type,
+                        data,
+                    };
+
+                    agent.emit("agent:output", response);
+
+                    memory.outputs.push({
+                        ref: "output",
+                        ...response,
+                        timestamp: Date.now(),
+                    });
+
+                    await output.handler(data, { conversationId, memory });
+                }
+
+                const newCalls: ActionCall[] = [];
+
+                for (let call of response.actions) {
+                    const action = agent.actions.find(
+                        (action) => action.name === call.name
+                    );
+
+                    if (!action) continue;
+
+                    newCalls.push(call);
+
+                    agent.emit("agent:action:call", call);
+
+                    memory.calls.push(call);
+
+                    const data = await action.handler(call.data, {
+                        conversationId,
+                        memory,
+                    });
+
+                    const result: ActionResult = {
+                        ref: "action_result",
+                        name: call.name,
+                        callId: call.id,
+                        data,
+                        timestamp: Date.now(),
+                        processed: false,
+                    };
+
+                    memory.results.push(result);
+                }
+
+                await agent.memory.set(conversationId, memory);
+
+                if (
+                    memory.results.filter((c) => c.processed !== true)
+                        .length === 0
+                )
+                    break;
+
+                step++;
             }
-
-            for (let { name, data } of response.actions) {
-                const action = agent.actions.find(
-                    (action) => action.name === name
-                );
-
-                if (!action) continue;
-
-                const call: ActionCall = {
-                    id: randomUUID(),
-                    name,
-                    data: action.params.parse(data),
-                };
-
-                agent.emit("agent:action:call", call);
-
-                memory.calls.push(call);
-
-                const result = await action.handler(call.data, {
-                    conversationId,
-                    memory,
-                });
-
-                call.result = result;
-
-                // After action completes, trigger a new evaluation and response
-                await agent.send(conversationId, {
-                    type: "action_result",
-                    data: {
-                        action: name,
-                        result: result,
-                    },
-                });
-            }
-
-            await agent.memory.set(conversationId, memory);
         },
 
         send: async (
@@ -170,7 +200,8 @@ export function createDreams(
             const subscription = input.subscribe((conversationId, data) => {
                 logger.info("agent", "input", { conversationId, data });
                 agent.send(conversationId, { type: key, data }).catch((err) => {
-                    logger.error("agent", "input", err);
+                    console.error(err);
+                    // logger.error("agent", "input", err);
                 });
             });
 
