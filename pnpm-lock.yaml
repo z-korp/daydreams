@@ -20,6 +20,9 @@ importers:
       '@openrouter/ai-sdk-provider':
         specifier: ^0.2.1
         version: 0.2.1(zod@3.24.1)
+      '@tavily/core':
+        specifier: ^0.0.3
+        version: 0.0.3
       ai:
         specifier: ^4.1.17
         version: 4.1.17(react@19.0.0)(zod@3.24.1)
@@ -2371,6 +2374,9 @@ packages:
   '@tanstack/virtual-file-routes@1.97.8':
     resolution: {integrity: sha512-wGrY0o997lg/xlMlhhJdJHxdllG+cPXnMb1oeaxijL9wqUUnKwAUERoPeKZRLFhuhfH//4cmXsHF23d0F7qGWA==}
     engines: {node: '>=12'}
+
+  '@tavily/core@0.0.3':
+    resolution: {integrity: sha512-17fsQnuxgkUSpKDq0+JWvfy4JZwe/b7/HVb2dqwFKWd5SILR+86OHL5C4TjEu6gO4DT6yWuH7ZNW9s+IlG+K3Q==}
 
   '@telegraf/types@7.1.0':
     resolution: {integrity: sha512-kGevOIbpMcIlCDeorKGpwZmdH7kHbqlk/Yj6dEpJMKEQw5lk0KVQY0OLXaCswy8GqlIVLd5625OB+rAntP9xVw==}
@@ -8827,6 +8833,13 @@ snapshots:
   '@tanstack/store@0.7.0': {}
 
   '@tanstack/virtual-file-routes@1.97.8': {}
+
+  '@tavily/core@0.0.3':
+    dependencies:
+      axios: 1.7.9
+      js-tiktoken: 1.0.16
+    transitivePeerDependencies:
+      - debug
 
   '@telegraf/types@7.1.0': {}
 

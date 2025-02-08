@@ -114,6 +114,15 @@ export function createDreams(
                 });
 
                 call.result = result;
+
+                // After action completes, trigger a new evaluation and response
+                await agent.send(conversationId, {
+                    type: "action_result",
+                    data: {
+                        action: name,
+                        result: result
+                    }
+                });
             }
 
             await agent.memory.set(conversationId, memory);
