@@ -4,7 +4,10 @@ import { HandlerRole, LogLevel } from "../packages/core/src/core/types";
 import { env } from "../packages/core/src/core/env";
 import { TwitterClient } from "../packages/core/src/core/io/twitter";
 import { defaultCharacter as character } from "../packages/core/src/core/characters/character";
-import { MasterProcessor, masterProcessorSchema as outputSchema } from "../packages/core/src/core/processors/master-processor";
+import {
+    MasterProcessor,
+    masterProcessorSchema as outputSchema,
+} from "../packages/core/src/core/processors/master-processor";
 import { ResearchQuantProcessor } from "../packages/core/src/core/processors/research-processor";
 import { LLMClient } from "../packages/core/src/core/llm-client";
 import { MemoryManagerInterface } from "../packages/core/src/core/new";
@@ -25,19 +28,16 @@ console.log(chalk.green("✅ Scheduled task database connected"));
 
 await kvDb.deleteAll();
 
-const twitter = new TwitterClient(
-    {
-        username: env.TWITTER_USERNAME,
-        password: env.TWITTER_PASSWORD,
-        email: env.TWITTER_EMAIL,
-    },
-);
+const twitter = new TwitterClient({
+    username: env.TWITTER_USERNAME,
+    password: env.TWITTER_PASSWORD,
+    email: env.TWITTER_EMAIL,
+});
 
 async function main() {
-
     const processor = new MasterProcessor(
         new LLMClient({
-            model: "anthropic/claude-3-5-sonnet-latest"
+            model: "anthropic/claude-3-5-sonnet-latest",
         }),
         outputSchema
     );
@@ -66,7 +66,6 @@ async function main() {
                 "This is the content of the tweet you are posting. It should be a string of text that is 280 characters or less. Use this to post a tweet on the timeline."
             ),
     });
-
 
     processor.addStream({
         name: "twitter_mentions",
@@ -103,10 +102,7 @@ async function main() {
     });
 
     // scheduler tasks to call the processor
-    const scheduler = createScheduler(
-        kvDb,
-        processor,
-    );
+    const scheduler = createScheduler(kvDb, processor);
 
     await scheduler.scheduleTask("sleever", "twitter_mentions", {}, 10000);
 
@@ -117,4 +113,3 @@ main().catch((error) => {
     console.error(chalk.red("Fatal error:"), error);
     process.exit(1);
 });
-

@@ -3,7 +3,7 @@ import { LogLevel } from "./types";
 import type { LogEntry, LoggerConfig, LogWriter } from "./types";
 
 export class Logger {
-    private config: Omit<Required<LoggerConfig>, 'logWriter'>;
+    private config: Omit<Required<LoggerConfig>, "logWriter">;
     private logWriter?: LogWriter;
 
     constructor(config: LoggerConfig) {
@@ -16,7 +16,9 @@ export class Logger {
         };
 
         if (this.config.logToFile && !config.logWriter) {
-            throw new Error("LogWriter must be provided when logToFile is enabled");
+            throw new Error(
+                "LogWriter must be provided when logToFile is enabled"
+            );
         }
 
         if (config.logWriter) {
