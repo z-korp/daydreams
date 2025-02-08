@@ -23,9 +23,9 @@ export interface MemoryStore {
 export type WorkingMemory = {
     inputs: InputRef[];
     outputs: OutputRef[];
-    thoughts: string[];
+    thoughts: Thought[];
     calls: ActionCall[];
-
+    results: ActionResult[];
     chains: Chain[];
 };
 
@@ -70,6 +70,7 @@ export type Input<
 };
 
 export type InputRef = {
+    ref: "input";
     type: string;
     data: any;
     params?: Record<string, string>;
@@ -78,18 +79,37 @@ export type InputRef = {
 };
 
 export type OutputRef = {
+    ref: "output";
     type: string;
     data: any;
     params?: Record<string, string>;
     timestamp: number;
 };
 
-export type ActionCall<Data = any, Result = any> = {
+export type ActionCall<Data = any> = {
+    ref: "action_call";
     id: string;
     name: string;
     data: Data;
-    result?: Result;
+    timestamp: number;
 };
+
+export type ActionResult<Data = any> = {
+    ref: "action_result";
+    callId: string;
+    name: string;
+    data: Data;
+    timestamp: number;
+    processed?: boolean;
+};
+
+export type Thought = {
+    ref: "thought";
+    content: string;
+    timestamp: number;
+};
+
+type Log = InputRef | OutputRef | Thought | ActionCall | ActionResult;
 
 export type COTProps = {
     model: LanguageModelV1;
@@ -97,15 +117,14 @@ export type COTProps = {
     inputs: InputRef[];
     actions: Action[];
     outputs: Output[];
-    thoughts: string[];
-    conversation: (InputRef | OutputRef)[];
+    logs: Log[];
 };
 
 export type COTResponse = {
-    thinking: string[];
     plan: string[];
     actions: ActionCall[];
     outputs: OutputRef[];
+    thinking: Thought[];
 };
 
 export type XMLElement = {

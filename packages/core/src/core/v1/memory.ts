@@ -11,6 +11,7 @@ export async function getOrCreateConversationMemory(
         outputs: [],
         thoughts: [],
         calls: [],
+        results: [],
         chains: [],
     };
 }
