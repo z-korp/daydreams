@@ -4,7 +4,8 @@
 
 ### MessageProcessor
 
-Defined in: [packages/core/src/core/processors/message-processor.ts:12](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/message-processor.ts#L12)
+Defined in:
+[packages/core/src/core/processors/message-processor.ts:12](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/message-processor.ts#L12)
 
 Base abstract class for content processors that handle different types of input
 and generate appropriate responses using LLM.
@@ -17,9 +18,11 @@ and generate appropriate responses using LLM.
 
 ##### new MessageProcessor()
 
-> **new MessageProcessor**(`llmClient`, `character`, `logLevel`): [`MessageProcessor`](Processors.md#messageprocessor)
+> **new MessageProcessor**(`llmClient`, `character`, `logLevel`):
+> [`MessageProcessor`](Processors.md#messageprocessor)
 
-Defined in: [packages/core/src/core/processors/message-processor.ts:13](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/message-processor.ts#L13)
+Defined in:
+[packages/core/src/core/processors/message-processor.ts:13](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/message-processor.ts#L13)
 
 ###### Parameters
 
@@ -49,7 +52,8 @@ Defined in: [packages/core/src/core/processors/message-processor.ts:13](https://
 
 > `protected` **character**: [`Character`](Types.md#character)
 
-Defined in: [packages/core/src/core/processors/message-processor.ts:15](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/message-processor.ts#L15)
+Defined in:
+[packages/core/src/core/processors/message-processor.ts:15](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/message-processor.ts#L15)
 
 The character personality to use for responses
 
@@ -61,7 +65,8 @@ The character personality to use for responses
 
 > `protected` **contentLimit**: `number` = `1000`
 
-Defined in: [packages/core/src/core/processor.ts:29](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L29)
+Defined in:
+[packages/core/src/core/processor.ts:29](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L29)
 
 ###### Inherited from
 
@@ -71,7 +76,8 @@ Defined in: [packages/core/src/core/processor.ts:29](https://github.com/daydream
 
 > `protected` **llmClient**: [`LLMClient`](../globals.md#llmclient-1)
 
-Defined in: [packages/core/src/core/processors/message-processor.ts:14](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/message-processor.ts#L14)
+Defined in:
+[packages/core/src/core/processors/message-processor.ts:14](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/message-processor.ts#L14)
 
 The LLM client instance to use for processing
 
@@ -83,7 +89,8 @@ The LLM client instance to use for processing
 
 > `protected` **logger**: [`Logger`](../globals.md#logger-1)
 
-Defined in: [packages/core/src/core/processor.ts:15](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L15)
+Defined in:
+[packages/core/src/core/processor.ts:15](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L15)
 
 Logger instance for this processor
 
@@ -93,9 +100,11 @@ Logger instance for this processor
 
 ##### loggerLevel
 
-> `protected` **loggerLevel**: [`LogLevel`](Types.md#loglevel) = `LogLevel.ERROR`
+> `protected` **loggerLevel**: [`LogLevel`](Types.md#loglevel) =
+> `LogLevel.ERROR`
 
-Defined in: [packages/core/src/core/processor.ts:26](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L26)
+Defined in:
+[packages/core/src/core/processor.ts:26](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L26)
 
 The logging level to use
 
@@ -107,7 +116,8 @@ The logging level to use
 
 > `protected` **metadata**: `object`
 
-Defined in: [packages/core/src/core/processor.ts:25](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L25)
+Defined in:
+[packages/core/src/core/processor.ts:25](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L25)
 
 Metadata about this processor including name and description
 
@@ -129,10 +139,11 @@ Metadata about this processor including name and description
 
 > **canHandle**(`content`): `boolean`
 
-Defined in: [packages/core/src/core/processors/message-processor.ts:34](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/message-processor.ts#L34)
+Defined in:
+[packages/core/src/core/processors/message-processor.ts:34](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/message-processor.ts#L34)
 
-Logic to decide if this processor can handle the given content.
-This processor is designed to handle shorter messages and text content.
+Logic to decide if this processor can handle the given content. This processor
+is designed to handle shorter messages and text content.
 
 ###### Parameters
 
@@ -152,7 +163,8 @@ This processor is designed to handle shorter messages and text content.
 
 > **getName**(): `string`
 
-Defined in: [packages/core/src/core/processor.ts:42](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L42)
+Defined in:
+[packages/core/src/core/processor.ts:42](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L42)
 
 Gets the name of this processor
 
@@ -168,9 +180,11 @@ The processor name from metadata
 
 ##### process()
 
-> **process**(`content`, `otherContext`, `ioContext`?): `Promise`\<[`ProcessedResult`](Types.md#processedresult)\>
+> **process**(`content`, `otherContext`, `ioContext`?):
+> `Promise`\<[`ProcessedResult`](Types.md#processedresult)\>
 
-Defined in: [packages/core/src/core/processors/message-processor.ts:43](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/message-processor.ts#L43)
+Defined in:
+[packages/core/src/core/processors/message-processor.ts:43](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/message-processor.ts#L43)
 
 Processes the given content and returns a result.
 
@@ -214,19 +228,23 @@ Promise resolving to the processed result
 
 [`BaseProcessor`](../globals.md#baseprocessor).[`process`](../globals.md#process)
 
-***
+---
 
 ### ResearchQuantProcessor
 
-Defined in: [packages/core/src/core/processors/research-processor.ts:20](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L20)
+Defined in:
+[packages/core/src/core/processors/research-processor.ts:20](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L20)
 
 Example Research/Quant Processor
 
 Responsibilities:
-1. Scrape or read inbound content and attempt to extract relevant data for research
+
+1. Scrape or read inbound content and attempt to extract relevant data for
+   research
 2. Summarize and rank key insights
 3. (Optionally) produce embeddings or structured data suitable for a vector DB
-4. Suggest next steps or tasks (e.g., writing to a vector store, scheduling a scrape, etc.)
+4. Suggest next steps or tasks (e.g., writing to a vector store, scheduling a
+   scrape, etc.)
 
 #### Extends
 
@@ -236,9 +254,12 @@ Responsibilities:
 
 ##### new ResearchQuantProcessor()
 
-> **new ResearchQuantProcessor**(`llmClient`, `character`, `logLevel`, `contentLimit`, `tokenLimit`): [`ResearchQuantProcessor`](Processors.md#researchquantprocessor)
+> **new ResearchQuantProcessor**(`llmClient`, `character`, `logLevel`,
+> `contentLimit`, `tokenLimit`):
+> [`ResearchQuantProcessor`](Processors.md#researchquantprocessor)
 
-Defined in: [packages/core/src/core/processors/research-processor.ts:21](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L21)
+Defined in:
+[packages/core/src/core/processors/research-processor.ts:21](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L21)
 
 ###### Parameters
 
@@ -276,7 +297,8 @@ Defined in: [packages/core/src/core/processors/research-processor.ts:21](https:/
 
 > `protected` **character**: [`Character`](Types.md#character)
 
-Defined in: [packages/core/src/core/processors/research-processor.ts:23](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L23)
+Defined in:
+[packages/core/src/core/processors/research-processor.ts:23](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L23)
 
 The character personality to use for responses
 
@@ -288,7 +310,8 @@ The character personality to use for responses
 
 > `protected` **contentLimit**: `number` = `1000`
 
-Defined in: [packages/core/src/core/processors/research-processor.ts:25](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L25)
+Defined in:
+[packages/core/src/core/processors/research-processor.ts:25](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L25)
 
 ###### Inherited from
 
@@ -298,7 +321,8 @@ Defined in: [packages/core/src/core/processors/research-processor.ts:25](https:/
 
 > `protected` **llmClient**: [`LLMClient`](../globals.md#llmclient-1)
 
-Defined in: [packages/core/src/core/processors/research-processor.ts:22](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L22)
+Defined in:
+[packages/core/src/core/processors/research-processor.ts:22](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L22)
 
 The LLM client instance to use for processing
 
@@ -310,7 +334,8 @@ The LLM client instance to use for processing
 
 > `protected` **logger**: [`Logger`](../globals.md#logger-1)
 
-Defined in: [packages/core/src/core/processor.ts:15](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L15)
+Defined in:
+[packages/core/src/core/processor.ts:15](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L15)
 
 Logger instance for this processor
 
@@ -320,9 +345,11 @@ Logger instance for this processor
 
 ##### loggerLevel
 
-> `protected` **loggerLevel**: [`LogLevel`](Types.md#loglevel) = `LogLevel.ERROR`
+> `protected` **loggerLevel**: [`LogLevel`](Types.md#loglevel) =
+> `LogLevel.ERROR`
 
-Defined in: [packages/core/src/core/processor.ts:26](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L26)
+Defined in:
+[packages/core/src/core/processor.ts:26](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L26)
 
 The logging level to use
 
@@ -334,7 +361,8 @@ The logging level to use
 
 > `protected` **metadata**: `object`
 
-Defined in: [packages/core/src/core/processor.ts:25](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L25)
+Defined in:
+[packages/core/src/core/processor.ts:25](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L25)
 
 Metadata about this processor including name and description
 
@@ -354,7 +382,8 @@ Metadata about this processor including name and description
 
 > `protected` **tokenLimit**: `number` = `100000`
 
-Defined in: [packages/core/src/core/processors/research-processor.ts:26](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L26)
+Defined in:
+[packages/core/src/core/processors/research-processor.ts:26](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L26)
 
 #### Methods
 
@@ -362,10 +391,11 @@ Defined in: [packages/core/src/core/processors/research-processor.ts:26](https:/
 
 > **canHandle**(`content`): `boolean`
 
-Defined in: [packages/core/src/core/processors/research-processor.ts:44](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L44)
+Defined in:
+[packages/core/src/core/processors/research-processor.ts:44](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L44)
 
-Logic to decide if this processor can handle the given content.
-This processor is designed to handle longer-form content like datasets and scraped data.
+Logic to decide if this processor can handle the given content. This processor
+is designed to handle longer-form content like datasets and scraped data.
 
 ###### Parameters
 
@@ -385,7 +415,8 @@ This processor is designed to handle longer-form content like datasets and scrap
 
 > **getName**(): `string`
 
-Defined in: [packages/core/src/core/processor.ts:42](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L42)
+Defined in:
+[packages/core/src/core/processor.ts:42](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L42)
 
 Gets the name of this processor
 
@@ -403,7 +434,8 @@ The processor name from metadata
 
 > **process**(`content`, `otherContext`, `ioContext`?): `Promise`\<`any`\>
 
-Defined in: [packages/core/src/core/processors/research-processor.ts:319](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L319)
+Defined in:
+[packages/core/src/core/processors/research-processor.ts:319](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processors/research-processor.ts#L319)
 
 Processes the given content and returns a result.
 

@@ -118,8 +118,8 @@ export type Pretty<type> = { [key in keyof type]: type[key] } & unknown;
 
 export type ExtractTemplateVariables<T extends string> =
     T extends `${infer Start}{{${infer Var}}}${infer Rest}`
-    ? Var | ExtractTemplateVariables<Rest>
-    : never;
+        ? Var | ExtractTemplateVariables<Rest>
+        : never;
 
 export type TemplateVariables<T extends string> = Pretty<{
     [K in ExtractTemplateVariables<T>]: string;

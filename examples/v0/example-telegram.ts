@@ -16,13 +16,16 @@ import { SchedulerService } from "../packages/core/src/core/schedule-service";
 import { Logger } from "../packages/core/src/core/logger";
 import { makeFlowLifecycle } from "../packages/core/src/core/life-cycle";
 
-
 async function main() {
     const loglevel = LogLevel.DEBUG;
 
     // Ensure startup chat ID is set
     if (!env.TELEGRAM_STARTUP_CHAT_ID) {
-        console.warn(chalk.yellow("⚠️ No TELEGRAM_STARTUP_CHAT_ID set - startup message will be skipped"));
+        console.warn(
+            chalk.yellow(
+                "⚠️ No TELEGRAM_STARTUP_CHAT_ID set - startup message will be skipped"
+            )
+        );
     }
 
     // Initialize core dependencies
@@ -93,7 +96,7 @@ async function main() {
             api_hash: env.TELEGRAM_API_HASH,
             is_bot: false,
         },
-        loglevel,
+        loglevel
     );
 
     // Wait for login to complete before setting up handlers
@@ -112,7 +115,10 @@ async function main() {
         outputSchema: z
             .object({
                 content: z.string(),
-                chatId: z.number().optional().describe("The chat ID for the message"),
+                chatId: z
+                    .number()
+                    .optional()
+                    .describe("The chat ID for the message"),
             })
             .describe("This is for sending a message."),
     });

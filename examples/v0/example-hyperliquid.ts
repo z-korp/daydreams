@@ -334,16 +334,13 @@ async function main() {
                 }
 
                 // Dispatch the message
-                await core.dispatchToInput(
-                    "user_chat",
-                    {
-                        contentId: userMessage,
-                        userId,
-                        platformId: "console",
-                        threadId: "console",
-                        data: {},
-                    },
-                );
+                await core.dispatchToInput("user_chat", {
+                    contentId: userMessage,
+                    userId,
+                    platformId: "console",
+                    threadId: "console",
+                    data: {},
+                });
 
                 // Continue prompting
                 promptUser();

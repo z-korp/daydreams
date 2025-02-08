@@ -1,12 +1,17 @@
 import { z } from "zod";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createDreams } from "../../packages/core/src/core/v1/dreams";
-import { action, expert, input, output } from "../../packages/core/src/core/v1/utils";
+import {
+    action,
+    expert,
+    input,
+    output,
+} from "../../packages/core/src/core/v1/utils";
 import { Telegraf } from "telegraf";
 import { createMemoryStore } from "../../packages/core/src/core/v1/memory";
 import { createGroq } from "@ai-sdk/groq";
 import { tavily } from "@tavily/core";
-
+import { LogLevel } from "../../packages/core/src/core/v1/types";
 
 const groq = createGroq({
     apiKey: process.env.GROQ_API_KEY!,
@@ -19,6 +24,7 @@ const tavilyClient = tavily({
 });
 
 createDreams({
+    logger: LogLevel.DEBUG,
     model: groq("deepseek-r1-distill-llama-70b"),
     memory: createMemoryStore(),
     experts: {
@@ -91,7 +97,7 @@ createDreams({
                     }
                 });
 
-                return () => { };
+                return () => {};
             },
         }),
     },
@@ -144,8 +150,14 @@ createDreams({
 
         "telegram:direct": output({
             params: z.object({
-                chatId: z.string().describe("the chat id to send the message to, you must include this"),
-                content: z.string().describe("the content of the message to send"),
+                chatId: z
+                    .string()
+                    .describe(
+                        "the chat id to send the message to, you must include this"
+                    ),
+                content: z
+                    .string()
+                    .describe("the content of the message to send"),
             }),
             description: "use this to send a telegram message to user",
             handler: async (data, ctx) => {
@@ -174,30 +186,32 @@ createDreams({
             params: z.object({
                 location: z.string(),
             }),
-            async handler(params, ctx) { },
+            async handler(params, ctx) {},
         }),
         action({
             name: "webSearch",
             description: "Search the web for current information using Tavily",
             params: z.object({
                 query: z.string().describe("The search query"),
-                searchDepth: z.enum(["basic", "deep"]).optional().describe("The depth of search - basic is faster, deep is more thorough"),
+                searchDepth: z
+                    .enum(["basic", "deep"])
+                    .optional()
+                    .describe(
+                        "The depth of search - basic is faster, deep is more thorough"
+                    ),
             }),
             async handler(params, ctx) {
-                const response = await tavilyClient.search(
-                    params.query,
-                    {
-                        searchDepth: "advanced",
-                    }
-                );
+                const response = await tavilyClient.search(params.query, {
+                    searchDepth: "advanced",
+                });
 
                 return {
-                    results: response.results.map(result => ({
+                    results: response.results.map((result) => ({
                         title: result.title,
                         url: result.url,
                         content: result.content,
                     })),
-                    totalResults: response.results.length
+                    totalResults: response.results.length,
                 };
             },
         }),

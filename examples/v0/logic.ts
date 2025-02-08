@@ -1,7 +1,9 @@
 // businessLogic.ts
 
-import { ProcessableContent, ProcessedResult } from "../packages/core/src/core/types";
-
+import {
+    ProcessableContent,
+    ProcessedResult,
+} from "../packages/core/src/core/types";
 
 export type HandlerRole = "INPUT" | "OUTPUT" | "ACTION";
 
@@ -36,7 +38,9 @@ export interface Dependencies {
             threadId: string,
             source: string
         ) => Promise<{ id: string }>;
-        onMemoriesRequested: (conversationId: string) => Promise<{ memories: any[] }>;
+        onMemoriesRequested: (
+            conversationId: string
+        ) => Promise<{ memories: any[] }>;
         onMemoryAdded: (
             conversationId: string,
             content: string,
@@ -55,7 +59,10 @@ export interface Dependencies {
         process: (
             content: ProcessableContent,
             memories: string,
-            options: { availableOutputs: IOHandler[]; availableActions: IOHandler[] }
+            options: {
+                availableOutputs: IOHandler[];
+                availableActions: IOHandler[];
+            }
         ) => Promise<ProcessedResult>;
     };
     ioHandlers: Map<string, IOHandler>;
@@ -73,15 +80,20 @@ export async function run(
     dependencies: Dependencies
 ): Promise<Array<{ name: string; data: any }>> {
     // Initialize the processing queue.
-    const queue: Array<{ data: ProcessableContent; source: string }> = Array.isArray(data)
-        ? data.map((item) => ({ data: item, source: sourceName }))
-        : [{ data, source: sourceName }];
+    const queue: Array<{ data: ProcessableContent; source: string }> =
+        Array.isArray(data)
+            ? data.map((item) => ({ data: item, source: sourceName }))
+            : [{ data, source: sourceName }];
 
     const collectedOutputs: Array<{ name: string; data: any }> = [];
 
     while (queue.length > 0) {
         const currentItem = queue.shift()!;
-        const outputs = await processQueueItem(currentItem, queue, dependencies);
+        const outputs = await processQueueItem(
+            currentItem,
+            queue,
+            dependencies
+        );
         collectedOutputs.push(...outputs);
     }
 
@@ -140,7 +152,9 @@ export async function processQueueItem(
         for (const suggestion of result.suggestedOutputs ?? []) {
             const handler = dependencies.ioHandlers.get(suggestion.name);
             if (!handler) {
-                console.warn(`No handler found for suggested output: ${suggestion.name}`);
+                console.warn(
+                    `No handler found for suggested output: ${suggestion.name}`
+                );
                 continue;
             }
 
@@ -150,12 +164,23 @@ export async function processQueueItem(
                         name: suggestion.name,
                         data: suggestion.data,
                     });
-                    await dependencies.dispatchToOutput(suggestion.name, suggestion.data);
-                    await dependencies.flowHooks.onFlowStep(chatId, "OUTPUT", suggestion.name, suggestion.data);
+                    await dependencies.dispatchToOutput(
+                        suggestion.name,
+                        suggestion.data
+                    );
+                    await dependencies.flowHooks.onFlowStep(
+                        chatId,
+                        "OUTPUT",
+                        suggestion.name,
+                        suggestion.data
+                    );
                     break;
 
                 case "ACTION": {
-                    const actionResult = await dependencies.dispatchToAction(suggestion.name, suggestion.data);
+                    const actionResult = await dependencies.dispatchToAction(
+                        suggestion.name,
+                        suggestion.data
+                    );
                     await dependencies.flowHooks.onFlowStep(
                         chatId,
                         "ACTION",
@@ -163,16 +188,24 @@ export async function processQueueItem(
                         { input: suggestion.data, result: actionResult }
                     );
                     if (actionResult) {
-                        const newItems = Array.isArray(actionResult) ? actionResult : [actionResult];
+                        const newItems = Array.isArray(actionResult)
+                            ? actionResult
+                            : [actionResult];
                         for (const newItem of newItems) {
-                            queue.push({ data: newItem, source: suggestion.name });
+                            queue.push({
+                                data: newItem,
+                                source: suggestion.name,
+                            });
                         }
                     }
                     break;
                 }
 
                 default:
-                    console.warn("Suggested output has an unrecognized role", handler.role);
+                    console.warn(
+                        "Suggested output has an unrecognized role",
+                        handler.role
+                    );
             }
         }
     }
@@ -201,7 +234,11 @@ export async function processContent(
         return allResults;
     }
 
-    const singleResult = await processContentItem(content, source, dependencies);
+    const singleResult = await processContentItem(
+        content,
+        source,
+        dependencies
+    );
     return singleResult ? [singleResult] : [];
 }
 
@@ -225,7 +262,9 @@ export async function processContentItem(
     );
 
     if (content.threadId && content.userId) {
-        memories = await dependencies.flowHooks.onMemoriesRequested(conversation.id);
+        memories = await dependencies.flowHooks.onMemoriesRequested(
+            conversation.id
+        );
         console.debug("Processing content with context", {
             content,
             source,
@@ -236,12 +275,12 @@ export async function processContentItem(
     }
 
     // Collect available outputs and actions.
-    const availableOutputs = Array.from(dependencies.ioHandlers.values()).filter(
-        (h) => h.role === "OUTPUT"
-    );
-    const availableActions = Array.from(dependencies.ioHandlers.values()).filter(
-        (h) => h.role === "ACTION"
-    );
+    const availableOutputs = Array.from(
+        dependencies.ioHandlers.values()
+    ).filter((h) => h.role === "OUTPUT");
+    const availableActions = Array.from(
+        dependencies.ioHandlers.values()
+    ).filter((h) => h.role === "ACTION");
 
     // Process the content.
     const result = await dependencies.processor.process(

@@ -117,8 +117,8 @@ export async function chainOfThought({
         msg.role === "assistant"
             ? Array.isArray(msg.content)
                 ? msg.content
-                    .map((t) => (t.type === "text" ? t.text : ""))
-                    .join("\n")
+                      .map((t) => (t.type === "text" ? t.text : ""))
+                      .join("\n")
                 : msg.content
             : "";
 

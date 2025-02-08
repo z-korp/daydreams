@@ -120,8 +120,8 @@ export function createDreams(
                     type: "action_result",
                     data: {
                         action: name,
-                        result: result
-                    }
+                        result: result,
+                    },
                 });
             }
 
@@ -156,14 +156,12 @@ export function createDreams(
             await agent.memory.set(conversationId, memory);
 
             if (shouldContinue) await agent.run(conversationId);
-
         },
 
         evaluator: async (ctx) => {
             const { conversationId, memory } = ctx;
 
             console.log("evaluator", memory);
-
         },
     };
 

@@ -237,7 +237,6 @@ async function main() {
             ),
     });
 
-
     // Start the prompt loop
     console.log(chalk.cyan("🤖 Bot is now running and monitoring Twitter..."));
     console.log(chalk.cyan("You can type messages in the console."));
