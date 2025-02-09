@@ -49,7 +49,7 @@ export function createDreams(
                 conversationId
             );
 
-            const maxSteps = 2;
+            const maxSteps = 10;
             let step = 1;
 
             while (maxSteps >= step) {
@@ -142,6 +142,8 @@ export function createDreams(
                         timestamp: Date.now(),
                         processed: false,
                     };
+
+                    logger.info("agent:action:result", "result", result);
 
                     memory.results.push(result);
                 }

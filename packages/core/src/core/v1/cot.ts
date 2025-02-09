@@ -18,7 +18,7 @@ import { randomUUID } from "crypto";
 
 const promptTemplate = `
 You are tasked with analyzing your current plan, inputs, formulating outputs, and initiating actions based on a that context. 
-Your role is to process the information provided and respond in a structured manner.
+Your role is to process the information provided and respond in a structured manner. Always respond with the tags that are asked for.
 
 <plan>
 {{plan}}
@@ -71,6 +71,8 @@ Remember to:
 8. Maintain consistency with successful patterns
 9. Adapt strategy based on failed actions
 10. Consider all historical context when making decisions
+11. Always at least respond to the user if you think they need a response
+12. Try not to repeat yourself contextually
 
 Your response should be comprehensive yet concise, demonstrating a clear understanding of the task and the ability to make informed decisions based on the provided information.`;
 
@@ -82,7 +84,7 @@ export async function chainOfThought({
     outputs,
     logs,
 }: COTProps): Promise<COTResponse> {
-    const prompt = render(promptTemplate, {
+    let prompt = render(promptTemplate, {
         plan,
         actions: actions.map(formatAction).join("\n"),
         logs: logs
@@ -115,12 +117,14 @@ export async function chainOfThought({
             })
             .filter(Boolean)
             .join("\n"),
-        // data: "",
         inputs: inputs.map(formatInput).join("\n"),
         outputs: outputs.map(formatOutputInterface).join("\n"),
     });
 
-    console.log(prompt);
+    // Add instruction to process results if there are no new inputs
+    if (inputs.length === 0) {
+        prompt += "\n\nThere are no new inputs. Please process any unprocessed action results and provide an appropriate response to the user.";
+    }
 
     const { response } = await llm({
         model,
@@ -136,8 +140,8 @@ export async function chainOfThought({
         msg.role === "assistant"
             ? Array.isArray(msg.content)
                 ? msg.content
-                      .map((t) => (t.type === "text" ? t.text : ""))
-                      .join("\n")
+                    .map((t) => (t.type === "text" ? t.text : ""))
+                    .join("\n")
                 : msg.content
             : "";
 
