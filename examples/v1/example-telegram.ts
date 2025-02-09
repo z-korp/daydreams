@@ -12,6 +12,7 @@ import { createMemoryStore } from "../../packages/core/src/core/v1/memory";
 import { createGroq } from "@ai-sdk/groq";
 import { tavily } from "@tavily/core";
 import { LogLevel } from "../../packages/core/src/core/v1/types";
+import { generateSerpQueriesAction, processSerpResultAction, writeFinalReportAction } from "../../packages/core/src/core/v1/experts/deep-research";
 
 const groq = createGroq({
     apiKey: process.env.GROQ_API_KEY!,
@@ -101,7 +102,7 @@ async function main() {
                         }
                     });
 
-                    return () => {};
+                    return () => { };
                 },
             }),
         },
@@ -190,14 +191,9 @@ async function main() {
         },
 
         actions: [
-            action({
-                name: "getWeather",
-                description: "",
-                params: z.object({
-                    location: z.string(),
-                }),
-                async handler(params, ctx) {},
-            }),
+            generateSerpQueriesAction,
+            processSerpResultAction,
+            writeFinalReportAction,
             action({
                 name: "searchWeb",
                 description:

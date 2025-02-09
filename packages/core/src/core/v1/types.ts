@@ -137,8 +137,8 @@ export type Pretty<type> = { [key in keyof type]: type[key] } & unknown;
 
 export type ExtractTemplateVariables<T extends string> =
     T extends `${infer Start}{{${infer Var}}}${infer Rest}`
-        ? Var | ExtractTemplateVariables<Rest>
-        : never;
+    ? Var | ExtractTemplateVariables<Rest>
+    : never;
 
 export type TemplateVariables<T extends string> = Pretty<{
     [K in ExtractTemplateVariables<T>]: string;
@@ -246,4 +246,17 @@ export interface LogEntry {
     context: string;
     message: string;
     data?: any;
+}
+
+export interface ResearchResult {
+    learnings: string[];
+    visitedUrls: string[];
+}
+
+export interface ResearchConfig {
+    query: string;
+    breadth: number;
+    depth: number;
+    learnings?: string[];
+    visitedUrls?: string[];
 }
