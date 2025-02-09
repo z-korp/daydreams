@@ -2,6 +2,12 @@ import { z } from "zod";
 import type { Action } from "../types";
 import { tavily } from "@tavily/core";
 
+const envSchema = z.object({
+    TAVILY_API_KEY: z.string().min(1, "TAVILY_API_KEY is required"),
+});
+
+envSchema.parse(process.env);
+
 const tavilyClient = tavily({
     apiKey: process.env.TAVILY_API_KEY!,
 });
