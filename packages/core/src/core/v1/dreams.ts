@@ -43,16 +43,20 @@ export function createDreams(
                 })
             );
 
+            logger.debug("agent:run", "outputs", outputs);
+
             const memory = await getOrCreateConversationMemory(
                 agent.memory,
                 conversationId
             );
 
+            logger.debug("agent:run", "memory", memory);
+
             const maxSteps = 10;
             let step = 1;
 
             while (maxSteps >= step) {
-                console.log({ step });
+                logger.debug("agent:run", "step", step);
 
                 const response = await chainOfThought({
                     model: config.model,
