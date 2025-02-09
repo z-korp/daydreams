@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import { chainOfThought } from "./cot";
 import type {
     ActionCall,
@@ -111,6 +110,8 @@ export function createDreams(
                         timestamp: Date.now(),
                     });
 
+                    logger.debug("agent:output", "response", response);
+
                     await output.handler(data, { conversationId, memory });
                 }
 
@@ -173,17 +174,25 @@ export function createDreams(
 
             const processor = agent.inputs[input.type];
 
+            logger.debug("agent:send", "processor", processor);
+
             const data = processor.schema.parse(input.data);
+
+            logger.debug("agent:send", "data", data);
 
             const shouldContinue = await processor.handler(data, {
                 conversationId,
                 memory,
             });
 
+            logger.debug("agent:send", "shouldContinue", shouldContinue);
+
             await agent.evaluator({
                 conversationId,
                 memory,
             });
+
+            logger.debug("agent:send", "memory", memory);
 
             await agent.memory.set(conversationId, memory);
 
@@ -193,7 +202,7 @@ export function createDreams(
         evaluator: async (ctx) => {
             const { conversationId, memory } = ctx;
 
-            console.log("evaluator", memory);
+            logger.debug("agent:evaluator", "memory", memory);
         },
     };
 
@@ -203,7 +212,7 @@ export function createDreams(
                 logger.info("agent", "input", { conversationId, data });
                 agent.send(conversationId, { type: key, data }).catch((err) => {
                     console.error(err);
-                    // logger.error("agent", "input", err);
+                    logger.error("agent:input", "error", err);
                 });
             });
 
