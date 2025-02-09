@@ -6,10 +6,10 @@ import {
     output,
 } from "../../packages/core/src/core/v1/utils";
 import { DiscordClient } from "../../packages/core/src/core/v0/io/discord";
-import { createMemoryStore } from "../../packages/core/src/core/v1/memory";
 import { createGroq } from "@ai-sdk/groq";
 import { LogLevel } from "../../packages/core/src/core/v1/types";
 import { tavilySearch } from "../../packages/core/src/core/v1/actions/tavily";
+import { createMemoryStore } from "../../packages/core/src/core/v1/memory";
 
 const groq = createGroq({
     apiKey: process.env.GROQ_API_KEY!,

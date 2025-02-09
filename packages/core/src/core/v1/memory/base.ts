@@ -1,4 +1,4 @@
-import type { MemoryStore, WorkingMemory } from "./types";
+import type { MemoryStore, WorkingMemory } from "../types";
 
 /**
  * Retrieves or creates a new conversation memory for the given ID
