@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./banner.png" alt="Daydreams">
+  <img src="./github/banner.png" alt="Daydreams">
 </p>
 
 # Daydreams - Generative Agent Framework
