@@ -2,12 +2,10 @@ import { z } from "zod";
 import { createDreams } from "../../packages/core/src/core/v1/dreams";
 import {
     action,
-    expert,
     input,
     output,
 } from "../../packages/core/src/core/v1/utils";
 import { DiscordClient } from "../../packages/core/src/core/v0/io/discord";
-import { Telegraf } from "telegraf";
 import { createMemoryStore } from "../../packages/core/src/core/v1/memory";
 import { createGroq } from "@ai-sdk/groq";
 import { tavily } from "@tavily/core";
@@ -16,8 +14,6 @@ import { LogLevel } from "../../packages/core/src/core/v1/types";
 const groq = createGroq({
     apiKey: process.env.GROQ_API_KEY!,
 });
-
-const telegraf = new Telegraf(process.env.TELEGRAM_TOKEN!);
 
 const tavilyClient = tavily({
     apiKey: process.env.TAVILY_API_KEY!,
@@ -96,14 +92,6 @@ async function main() {
         },
 
         actions: [
-            action({
-                name: "getWeather",
-                description: "",
-                params: z.object({
-                    location: z.string(),
-                }),
-                async handler(params, ctx) { },
-            }),
             action({
                 name: "searchWeb",
                 description:
