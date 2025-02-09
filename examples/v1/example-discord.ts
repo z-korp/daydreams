@@ -37,6 +37,7 @@ async function main() {
                     text: z.string(),
                 }),
                 handler: (message, { memory }) => {
+
                     memory.inputs.push({
                         ref: "input",
                         type: "discord:message",
@@ -57,7 +58,7 @@ async function main() {
                                 user: {
                                     id: content.threadId,
                                 },
-                                text: content.data.content as string,
+                                text: content.data && typeof content.data === 'object' && 'content' in content.data ? content.data.content as string : '',
                             });
                         }
                     });
@@ -123,7 +124,7 @@ async function main() {
         ],
     });
 
-    console.log("starting...");
+    console.log("Starting Daydreams Discord Bot...");
 }
 
 main().catch((err) => {
