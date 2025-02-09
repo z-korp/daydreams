@@ -8,3 +8,4 @@ export * from "./logger";
 export * from "./formatters";
 export * from "./actions";
 export * from "./memory";
+export * from "./chains";

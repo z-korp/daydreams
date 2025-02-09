@@ -12,8 +12,6 @@ import { createMemoryStore } from "../../packages/core/src/core/v1/memory";
 import { Octokit } from "@octokit/rest";
 import { google } from "@ai-sdk/google";
 
-
-
 const discord = new DiscordClient({
     discord_token: process.env.DISCORD_TOKEN!,
     discord_bot_name: process.env.DISCORD_BOT_NAME!,
