@@ -28,11 +28,11 @@ export function formatOutputInterface(output: Output) {
         tag: "output",
         params: { name: output.type },
         content: [
-            output.description,
+            { tag: "instructions", content: output.description },
             {
                 tag: "schema",
                 content: JSON.stringify(
-                    zodToJsonSchema(output.params, "output").definitions!.output
+                    zodToJsonSchema(output.params, "output")
                 ),
             },
         ],
@@ -43,6 +43,19 @@ export function formatAction(action: Action) {
     return formatXml({
         tag: "action",
         params: { name: action.name },
-        content: JSON.stringify(zodToJsonSchema(action.params, "action")),
+        content: [
+            action.description
+                ? {
+                      tag: "description",
+                      content: action.description,
+                  }
+                : null,
+            {
+                tag: "schema",
+                content: JSON.stringify(
+                    zodToJsonSchema(action.params, "action")
+                ),
+            },
+        ].filter((t) => !!t),
     });
 }

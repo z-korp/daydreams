@@ -50,3 +50,37 @@ export function expert<Context = any>(
 ): ExpertConfig<Context> {
     return config;
 }
+
+interface ChunkOptions {
+    maxChunkSize: number;
+}
+
+export function splitTextIntoChunks(
+    text: string,
+    options: ChunkOptions
+): string[] {
+    const { maxChunkSize } = options;
+    const lines = text.split("\n");
+    const chunks: string[] = [];
+    let currentChunk = "";
+
+    for (const line of lines) {
+        // If adding this line would exceed maxChunkSize, start a new chunk
+        if (currentChunk.length + line.length + 1 > maxChunkSize) {
+            if (currentChunk) {
+                chunks.push(currentChunk.trim());
+            }
+            currentChunk = line;
+        } else {
+            // Add line to current chunk with a newline
+            currentChunk = currentChunk ? currentChunk + "\n" + line : line;
+        }
+    }
+
+    // Don't forget to add the last chunk
+    if (currentChunk) {
+        chunks.push(currentChunk.trim());
+    }
+
+    return chunks;
+}

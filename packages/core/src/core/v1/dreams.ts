@@ -49,7 +49,7 @@ export function createDreams(
                 conversationId
             );
 
-            const maxSteps = 2;
+            const maxSteps = 5;
             let step = 1;
 
             while (maxSteps >= step) {
@@ -59,14 +59,14 @@ export function createDreams(
                     model: config.model,
                     plan: ``,
                     actions: agent.actions,
-                    inputs: memory.inputs.filter((i) => i.processed !== true),
+                    inputs: [],
                     outputs,
                     logs: [
-                        ...memory.inputs.filter((i) => i.processed === true),
+                        ...memory.inputs,
                         ...memory.outputs,
                         ...memory.calls,
                         ...memory.results,
-                        ...memory.thoughts,
+                        // ...memory.thoughts,
                     ].sort((a, b) => (a.timestamp > b.timestamp ? 1 : -1)),
                 });
 
@@ -129,21 +129,26 @@ export function createDreams(
 
                     memory.calls.push(call);
 
-                    const data = await action.handler(call.data, {
-                        conversationId,
-                        memory,
-                    });
+                    try {
+                        const data = await action.handler(call.data, {
+                            conversationId,
+                            memory,
+                        });
 
-                    const result: ActionResult = {
-                        ref: "action_result",
-                        name: call.name,
-                        callId: call.id,
-                        data,
-                        timestamp: Date.now(),
-                        processed: false,
-                    };
+                        const result: ActionResult = {
+                            ref: "action_result",
+                            name: call.name,
+                            callId: call.id,
+                            data,
+                            timestamp: Date.now(),
+                            processed: false,
+                        };
 
-                    memory.results.push(result);
+                        memory.results.push(result);
+                    } catch (error) {
+                        console.log("action failed");
+                        console.error(error);
+                    }
                 }
 
                 await agent.memory.set(conversationId, memory);
