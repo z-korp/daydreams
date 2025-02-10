@@ -39,7 +39,7 @@ export type Action<
   description?: string;
   schema: Schema;
   enabled?: (ctx: Context) => boolean;
-  handler: (params: z.infer<Schema>, ctx: Context) => Promise<Result>;
+  handler: (call: ActionCall<z.infer<Schema>>, ctx: Context) => Promise<Result>;
 };
 
 export type OutputSchema = z.AnyZodObject | z.ZodString;
@@ -166,7 +166,10 @@ export interface AgentContext<Memory extends WorkingMemory = WorkingMemory> {
   memory: Memory;
 }
 
-export interface Agent<T extends ContextHandler<any> = ContextHandler<any>> {
+export interface Agent<
+  Memory extends WorkingMemory = WorkingMemory,
+  T extends ContextHandler<Memory> = ContextHandler<Memory>,
+> {
   // context: Context;
 
   memory: MemoryStore;
@@ -210,9 +213,8 @@ export type InferContextFromHandler<THandler extends ContextHandler<any>> =
   AgentContext<InferMemoryFromHandler<THandler>>;
 
 export type Config<
-  // TMemory extends WorkingMemory = WorkingMemory,
-
-  TContextHandler extends ContextHandler<any> = ContextHandler<any>,
+  TMemory extends WorkingMemory = WorkingMemory,
+  TContextHandler extends ContextHandler<TMemory> = ContextHandler<TMemory>,
   Context = InferContextFromHandler<TContextHandler>,
 > = {
   // context: Context;
