@@ -1,5 +1,5 @@
 import { llm } from "./llm";
-import { createTagRegex, formatXml, parseParams } from "./xml";
+import { createTagRegex, formatXml, parseAttributes } from "./xml";
 import { render } from "./utils";
 import type {
   ActionCall,
@@ -151,7 +151,7 @@ export async function chainOfThought({
   const outs = Array.from(
     responseText.matchAll(createTagRegex("output"))
   ).map<OutputRef>((t) => {
-    const { name } = parseParams(t[1]);
+    const { name } = parseAttributes(t[1]);
     return { ref: "output", type: name, data: t[2].trim(), timestamp: now };
   });
 
@@ -159,7 +159,7 @@ export async function chainOfThought({
   const calls = Array.from(
     responseText.matchAll(createTagRegex("action_call"))
   ).map<ActionCall>((t) => {
-    const { name } = parseParams(t[1]);
+    const { name } = parseAttributes(t[1]);
     return {
       ref: "action_call",
       id: randomUUID(),
