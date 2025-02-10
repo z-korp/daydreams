@@ -41,7 +41,7 @@ export const messageSchema = z.object({
     .describe("The conversation ID (if applicable)"),
 });
 export class DiscordClient {
-  private client: Client;
+  public client: Client;
   private logger: Logger;
   private messageListener?: (...args: any[]) => void;
 
@@ -155,7 +155,7 @@ export class DiscordClient {
     return channel?.type === ChannelType.GuildText;
   }
 
-  private async sendMessage(data: MessageData): Promise<{
+  async sendMessage(data: MessageData): Promise<{
     success: boolean;
     messageId?: string;
     content?: string;
