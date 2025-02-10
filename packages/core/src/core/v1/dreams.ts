@@ -29,6 +29,7 @@ import { createTagParser, createTagRegex, formatXml } from "./xml";
 import { chainExpertManagerPrompt } from "./coe";
 import { generateText } from "ai";
 import { format } from "path";
+import { randomUUID } from "crypto";
 
 const prompt = `
 You are tasked with analyzing messages, formulating responses, and initiating actions based on a given context. 
