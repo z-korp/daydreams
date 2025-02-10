@@ -4,7 +4,11 @@ import { TavilyClient } from "@tavily/core";
 import { generateText, LanguageModelV1 } from "ai";
 import { z } from "zod";
 import pLimit from "p-limit";
-import { searchResultsParser, searchResultsPrompt } from "./prompts";
+import {
+  finalReportPrompt,
+  searchResultsParser,
+  searchResultsPrompt,
+} from "./prompts";
 import { researchSchema, searchResultsSchema } from "./schemas";
 
 export type Research = {
@@ -27,7 +31,7 @@ export type ResearchProgress = {
   completedQueries: number;
 };
 
-const ConcurrencyLimit = 2;
+const ConcurrencyLimit = 1;
 const limit = pLimit(ConcurrencyLimit);
 
 async function retry<T>(
@@ -108,8 +112,6 @@ export async function startDeepResearch({
                   schema: searchResultsSchema,
                 });
 
-                console.log(system);
-
                 const res = await generateText({
                   model,
                   abortSignal: AbortSignal.timeout(60_000),
@@ -127,8 +129,7 @@ export async function startDeepResearch({
                 try {
                   const { think, output } = searchResultsParser(text);
                   if (output) {
-                    console.log(output);
-
+                    // console.log(output);
                     research.learnings.push(
                       ...output.learnings.map((l) => l.content)
                     );
@@ -172,19 +173,7 @@ export async function startDeepResearch({
 
   const res = await generateText({
     model,
-    system: render(
-      `
-Given the following research, write a final report on the topic using the learnings from research. 
-Make it as as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:
-Here is all the data from research:
-<research>{{research}}</research>
-
-Return your report in markdown format. Always send the full report, do not cut it off.
-`,
-      {
-        research: JSON.stringify(research),
-      }
-    ),
+    system: finalReportPrompt({ research }),
     messages: [
       {
         role: "assistant",
@@ -195,9 +184,7 @@ Return your report in markdown format. Always send the full report, do not cut i
 
   console.log("====FINAL REPORT=====");
   console.log("<think>" + res.text);
-
   const report = res.text.slice(res.text.lastIndexOf("</think>"));
-
   console.log({ report });
   return report;
 }

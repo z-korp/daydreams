@@ -9,6 +9,14 @@ import { Research } from "./research";
 import { TavilySearchResponse } from "@tavily/core";
 import { SearchResultSchema, searchResultsSchema } from "./schemas";
 
+function formatResearch(research: Research) {
+  return formatXml({
+    tag: "research",
+    params: { id: research.id },
+    content: JSON.stringify(research),
+  });
+}
+
 export const searchResultsPrompt = createPrompt(
   `Given the following results from a SERP search for the query, generate a list of learnings from the results. 
 Return a maximum of 5 learnings, but feel free to return less if the results are clear. 
@@ -32,10 +40,18 @@ Return a maximum of 2 queries, but feel free to return less if the original quer
 Here is the json schema:
 {{schema}}
 
-Here's an example of how to structure your output:
-<output>
+Here's how you structure your output:
+<json>
 [JSON DATA]
-</output>
+</json>
+
+Example:
+<json>
+{
+  learnings: [...],
+  followUpQueries: [...],
+}
+</json>
 `,
   ({
     schema,
@@ -60,11 +76,7 @@ Here's an example of how to structure your output:
       })
     ),
     schema: JSON.stringify(zodToJsonSchema(schema, "schema")),
-    research: formatXml({
-      tag: "research",
-      params: { id: research.id },
-      content: JSON.stringify(research),
-    }),
+    research: formatResearch(research),
   })
 );
 
@@ -79,16 +91,23 @@ export const searchResultsParser = createParser<
     think: (state, element) => {
       state.think = element.content;
     },
-    output: (state, element) => {
+    json: (state, element) => {
       state.output = searchResultsSchema.parse(JSON.parse(element.content));
     },
   }
 );
 
-export const finalReportPrompt = `
+export const finalReportPrompt = createPrompt(
+  `
 Given the following research, write a final report on the topic using the learnings from research. 
 Make it as detailed as possible, aim for 3 or more pages, include ALL the learnings from research.
+
 Here is all the data from research:
-<research>{{research}}</research>
+{{research}}
+
 Return your report in markdown format. Always send the full report, do not cut it off.
-`;
+`,
+  ({ research }: { research: Research }) => ({
+    research: formatResearch(research),
+  })
+);
