@@ -1,61 +1,101 @@
 import zodToJsonSchema from "zod-to-json-schema";
-import type { Action, InputRef, Output, OutputRef } from "./types";
+import type { Action, InputRef, Log, Output, OutputRef } from "./types";
 import { formatXml } from "./xml";
+import { formatValue } from "./utils";
 
 export function formatInput(input: InputRef) {
-    return formatXml({
-        tag: "input",
-        params: { name: input.type, ...input.params },
-        content:
-            typeof input.data === "string"
-                ? input.data
-                : JSON.stringify(input.data),
-    });
+  return formatXml({
+    tag: "input",
+    params: { name: input.type, ...input.params },
+    content:
+      typeof input.data === "string" ? input.data : JSON.stringify(input.data),
+  });
 }
 
 export function formatOutput(output: OutputRef) {
-    return formatXml({
-        tag: "output",
-        params: { name: output.type, ...output.params },
-        content:
-            typeof output.data === "string"
-                ? output.data
-                : JSON.stringify(output.data),
-    });
+  return formatXml({
+    tag: "output",
+    params: { name: output.type, ...output.params },
+    content:
+      typeof output.data === "string"
+        ? output.data
+        : JSON.stringify(output.data),
+  });
 }
 export function formatOutputInterface(output: Output) {
-    return formatXml({
-        tag: "output",
-        params: { name: output.type },
-        content: [
-            { tag: "instructions", content: output.description },
-            {
-                tag: "schema",
-                content: JSON.stringify(
-                    zodToJsonSchema(output.params, "output")
-                ),
-            },
-        ],
-    });
+  return formatXml({
+    tag: "output",
+    params: { name: output.type },
+    content: [
+      { tag: "instructions", content: output.description },
+      {
+        tag: "schema",
+        content: JSON.stringify(zodToJsonSchema(output.schema, "output")),
+      },
+    ],
+  });
 }
 
-export function formatAction(action: Action) {
-    return formatXml({
-        tag: "action",
-        params: { name: action.name },
-        content: [
-            action.description
-                ? {
-                      tag: "description",
-                      content: action.description,
-                  }
-                : null,
-            {
-                tag: "schema",
-                content: JSON.stringify(
-                    zodToJsonSchema(action.params, "action")
-                ),
-            },
-        ].filter((t) => !!t),
-    });
+export function formatAction(action: Action<any, any, any>) {
+  return formatXml({
+    tag: "action",
+    params: { name: action.name },
+    content: [
+      action.description
+        ? {
+            tag: "description",
+            content: action.description,
+          }
+        : null,
+      action.schema
+        ? {
+            tag: "schema",
+            content: JSON.stringify(zodToJsonSchema(action.schema, "action")),
+          }
+        : null,
+    ].filter((t) => !!t),
+  });
+}
+
+export function formatContext(i: Log) {
+  switch (i.ref) {
+    case "input":
+      return formatXml({
+        tag: "msg",
+        params: {
+          ...i.params,
+          role: "user",
+        },
+        content: formatValue(i.data),
+      });
+    case "output":
+      return formatXml({
+        tag: "msg",
+        params: {
+          ...i.params,
+          role: "assistant",
+        },
+        content: formatValue(i.data),
+      });
+    case "thought":
+      return formatXml({
+        tag: "reflection",
+        params: { role: "assistant" },
+        content: i.content,
+      });
+    case "action_call":
+      return formatXml({
+        tag: "action_call",
+        params: { id: i.id, name: i.name },
+        content: JSON.stringify(i.data),
+      });
+    case "action_result":
+      return formatXml({
+        tag: "action_result",
+        params: { name: i.name, callId: i.callId },
+        content: JSON.stringify(i.data),
+      });
+    default:
+      return null;
+  }
 }

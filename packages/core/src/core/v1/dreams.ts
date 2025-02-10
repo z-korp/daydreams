@@ -1,218 +1,313 @@
 import { randomUUID } from "crypto";
 import { chainOfThought } from "./cot";
+
 import type {
-    ActionCall,
-    ActionResult,
-    Agent,
-    AgentContext,
-    Config,
-    Subscription,
+  ActionCall,
+  ActionResult,
+  Agent,
+  AgentContext,
+  Config,
+  ContextHandler,
+  InferContextFromHandler,
+  Subscription,
+  WorkingMemory,
 } from "./types";
-import { getOrCreateConversationMemory } from "./memory";
+import {
+  createContextHandler,
+  defaultContext,
+  getOrCreateConversationMemory,
+} from "./memory";
 import { Logger } from "./logger";
+import { llm } from "./llm";
+import { render } from "./utils";
+import {
+  formatAction,
+  formatContext,
+  formatOutputInterface,
+} from "./formatters";
+import { createTagParser, createTagRegex, formatXml } from "./xml";
+import { chainExpertManagerPrompt } from "./coe";
+import { generateText } from "ai";
+import { format } from "path";
 
-export function createDreams(
-    config: Config<AgentContext>
-): Agent<AgentContext> {
-    const inputSubscriptions = new Map<string, Subscription>();
+const prompt = `
+You are tasked with analyzing messages, formulating responses, and initiating actions based on a given context. 
+You will be provided with a set of available actions, outputs, and a current context. 
+Your instructions is to analyze the situation and respond appropriately.
 
-    const logger = new Logger({
-        level: config.logger,
-        enableTimestamp: true,
-        enableColors: true,
-    });
+Here are the available actions you can initiate:
+<available_actions>
+{{actions}}
+</available_actions>
 
-    const { inputs, outputs, events, actions, experts, memory } = config;
+Here are the available outputs you can use:
+<outputs>
+{{outputs}}
+</outputs>
 
-    const agent: Agent<AgentContext> = {
-        inputs,
-        outputs,
-        events,
-        actions,
-        experts,
-        memory,
+Here is the current context:
+<context>
+{{context}}
+</context>
 
-        emit: (event: string, data: any) => {
-            logger.info("agent:event", event, data);
-        },
+Now, analyze the following new context:
+<context>
+{{updates}}
+</context>
 
-        run: async (conversationId: string) => {
-            const outputs = Object.entries(agent.outputs).map(
-                ([type, output]) => ({
-                    type,
-                    ...output,
-                })
-            );
+Here's an example of how to structure your response:
 
-            const memory = await getOrCreateConversationMemory(
-                agent.memory,
-                conversationId
-            );
+<response>
+<reasoning>
+[Your reasoning of the context, think, messages, and planned actions]
+</reasoning>
+[List of async actions to be initiated, if applicable]
+<action name="[Action name]">[action arguments using the schema as JSON]</action>
+[output to the user message, if applicable]
+<output type="[Output type]>
+[output content]
+</output>
+</response>
+`;
 
-            const maxSteps = 5;
-            let step = 1;
+function createParser() {
+  const thinkParser = createTagParser("think");
+  const responseParser = createTagParser("response");
+  const actionParser = createTagParser("action", (t) => JSON.parse(t));
+  const reasoningParser = createTagParser("reasoning");
+  const outputParser = createTagParser("output");
 
-            while (maxSteps >= step) {
-                console.log({ step });
+  return (content: string) => {
+    const think = thinkParser(content);
 
-                const response = await chainOfThought({
-                    model: config.model,
-                    plan: ``,
-                    actions: agent.actions,
-                    inputs: [],
-                    outputs,
-                    logs: [
-                        ...memory.inputs,
-                        ...memory.outputs,
-                        ...memory.calls,
-                        ...memory.results,
-                        // ...memory.thoughts,
-                    ].sort((a, b) => (a.timestamp > b.timestamp ? 1 : -1)),
-                });
+    const [response] = responseParser(content);
 
-                memory.inputs.forEach((i) => {
-                    i.processed = true;
-                });
+    const outputs = outputParser(response.content);
 
-                memory.results.forEach((i) => {
-                    i.processed = true;
-                });
+    // console.log({ output });
 
-                for (const thought of response.thinking) {
-                    agent.emit("agent:thought", thought);
-                    memory.thoughts.push(thought);
-                }
+    const actions = actionParser(response.content);
+    const reasonings = reasoningParser(response.content);
 
-                for (let { type, data } of response.outputs) {
-                    const output = outputs.find(
-                        (output) => output.type === type
-                    );
-
-                    if (!output) continue;
-
-                    try {
-                        data = JSON.parse(data);
-                    } catch {
-                        // continue;
-                    }
-
-                    data = output.params.parse(data);
-
-                    const response = {
-                        type,
-                        data,
-                    };
-
-                    agent.emit("agent:output", response);
-
-                    memory.outputs.push({
-                        ref: "output",
-                        ...response,
-                        timestamp: Date.now(),
-                    });
-
-                    await output.handler(data, { conversationId, memory });
-                }
-
-                const newCalls: ActionCall[] = [];
-
-                for (let call of response.actions) {
-                    const action = agent.actions.find(
-                        (action) => action.name === call.name
-                    );
-
-                    if (!action) continue;
-
-                    newCalls.push(call);
-
-                    agent.emit("agent:action:call", call);
-
-                    memory.calls.push(call);
-
-                    try {
-                        const data = await action.handler(call.data, {
-                            conversationId,
-                            memory,
-                        });
-
-                        const result: ActionResult = {
-                            ref: "action_result",
-                            name: call.name,
-                            callId: call.id,
-                            data,
-                            timestamp: Date.now(),
-                            processed: false,
-                        };
-
-                        memory.results.push(result);
-                    } catch (error) {
-                        console.log("action failed");
-                        console.error(error);
-                    }
-                }
-
-                await agent.memory.set(conversationId, memory);
-
-                if (
-                    memory.results.filter((c) => c.processed !== true)
-                        .length === 0
-                )
-                    break;
-
-                step++;
-            }
-        },
-
-        send: async (
-            conversationId: string,
-            input: { type: string; data: any }
-        ) => {
-            if (input.type in agent.inputs === false) return;
-
-            const memory = await getOrCreateConversationMemory(
-                agent.memory,
-                conversationId
-            );
-
-            const processor = agent.inputs[input.type];
-
-            const data = processor.schema.parse(input.data);
-
-            const shouldContinue = await processor.handler(data, {
-                conversationId,
-                memory,
-            });
-
-            await agent.evaluator({
-                conversationId,
-                memory,
-            });
-
-            await agent.memory.set(conversationId, memory);
-
-            if (shouldContinue) await agent.run(conversationId);
-        },
-
-        evaluator: async (ctx) => {
-            const { conversationId, memory } = ctx;
-
-            console.log("evaluator", memory);
-        },
+    return {
+      think,
+      response,
+      reasonings,
+      actions,
+      outputs,
     };
+  };
+}
 
-    for (const [key, input] of Object.entries(agent.inputs)) {
-        if (input.subscribe) {
-            const subscription = input.subscribe((conversationId, data) => {
-                logger.info("agent", "input", { conversationId, data });
-                agent.send(conversationId, { type: key, data }).catch((err) => {
-                    console.error(err);
-                    // logger.error("agent", "input", err);
-                });
-            });
+const parse = createParser();
 
-            inputSubscriptions.set(key, subscription);
+const defaultContextHandler: ContextHandler =
+  createContextHandler(defaultContext);
+
+export function createDreams<T extends ContextHandler = ContextHandler>(
+  config: Config<T>
+): Agent<T> {
+  const inputSubscriptions = new Map<string, Subscription>();
+
+  const logger = new Logger({
+    level: config.logger,
+    enableTimestamp: true,
+    enableColors: true,
+  });
+
+  const { inputs, outputs, events, actions, experts, memory } = config;
+
+  const context = config.context ?? (defaultContextHandler as T);
+
+  const getContext = context(memory);
+
+  const agent: Agent<T> = {
+    inputs,
+    outputs,
+    events,
+    actions,
+    experts,
+    memory,
+    context,
+    emit: (event: string, data: any) => {
+      logger.info("agent:event", event, data);
+    },
+
+    run: async (contextId: string) => {
+      const outputs = Object.entries(agent.outputs).map(([type, output]) => ({
+        type,
+        ...output,
+      }));
+
+      const ctx = await getContext(contextId);
+
+      const { memory } = ctx;
+
+      const maxSteps = 5;
+      let step = 1;
+
+      const newInputs = memory.inputs.filter((i) => i.processed !== true);
+
+      while (true) {
+        const system = render(prompt, {
+          context: [
+            ...memory.inputs.filter((i) => i.processed === true),
+            ...memory.outputs,
+            ...memory.calls,
+            ...memory.results.filter((i) => i.processed === true),
+          ].map((i) => formatContext(i)),
+          outputs: outputs.map(formatOutputInterface),
+          actions: actions.map(formatAction),
+          updates: [
+            ...memory.inputs.filter((i) => i.processed !== true),
+            ...memory.results.filter((i) => i.processed !== true),
+          ],
+        });
+
+        console.log("==========");
+        console.log(system);
+        console.log("==========");
+        const result = await generateText({
+          model: config.reasioningModel ?? config.model,
+          system,
+          messages: [
+            {
+              role: "assistant",
+              content: "<think>",
+            },
+          ],
+          stopSequences: ["</response>"],
+        });
+
+        const text = "<think>" + result.text + "</response>";
+        console.log(text);
+
+        const data = parse(text);
+
+        console.dir(data, {
+          depth: Infinity,
+        });
+
+        memory.inputs.forEach((i) => {
+          i.processed = true;
+        });
+
+        memory.results.forEach((i) => {
+          i.processed = true;
+        });
+
+        for (const { content } of data.think) {
+          console.log("Think:\n" + content);
         }
-    }
 
-    return agent;
+        for (const { content } of data.reasonings) {
+          console.log("Reasoning:\n" + content);
+        }
+
+        for (const { params, content } of data.outputs) {
+          const output = config.outputs[params.type];
+          try {
+            await output.handler(
+              output.schema.parse(content),
+              ctx as InferContextFromHandler<T>
+            );
+          } catch (error) {}
+        }
+
+        await Promise.allSettled(
+          data.actions.map(async ({ params, content }) => {
+            const action = config.actions.find((a) => a.name === params.name);
+
+            const call: ActionCall = {
+              ref: "action_call",
+              id: randomUUID(),
+              data: content,
+              name: params.name,
+              timestamp: Date.now(),
+            };
+
+            memory.calls.push(call);
+
+            if (!action) {
+              console.log("ACTION MISMATCH", { params, content });
+              return Promise.reject(new Error("ACTION MISMATCH"));
+            }
+
+            try {
+              const result = await action.handler(
+                action.schema.parse(content),
+                ctx as InferContextFromHandler<T>
+              );
+
+              memory.results.push({
+                ref: "action_result",
+                callId: call.id,
+                data: result,
+                name: call.name,
+                timestamp: Date.now(),
+                processed: false,
+              });
+            } catch (error) {
+              console.log("ACTION FAILED", { error });
+
+              throw error;
+            }
+          })
+        );
+
+        break;
+      }
+
+      config.memory.set(contextId, memory);
+    },
+
+    send: async (
+      conversationId: string,
+      input: { type: string; data: any }
+    ) => {
+      if (input.type in agent.inputs === false) return;
+
+      const { memory } = await getContext(conversationId);
+
+      const processor = agent.inputs[input.type];
+
+      const data = processor.schema.parse(input.data);
+
+      const shouldContinue = await processor.handler(data, {
+        id: conversationId,
+        memory,
+      } as any);
+
+      await agent.evaluator({
+        id: conversationId,
+        memory,
+      } as any);
+
+      await agent.memory.set(conversationId, memory);
+
+      if (shouldContinue) await agent.run(conversationId);
+    },
+
+    evaluator: async (ctx) => {
+      const { id, memory } = ctx;
+
+      console.log("evaluator", memory);
+    },
+  };
+
+  for (const [key, input] of Object.entries(agent.inputs)) {
+    if (input.subscribe) {
+      const subscription = input.subscribe((conversationId, data) => {
+        logger.info("agent", "input", { conversationId, data });
+        agent.send(conversationId, { type: key, data }).catch((err) => {
+          console.error(err);
+          // logger.error("agent", "input", err);
+        });
+      });
+
+      inputSubscriptions.set(key, subscription);
+    }
+  }
+
+  return agent;
 }
