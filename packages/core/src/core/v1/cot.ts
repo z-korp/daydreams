@@ -2,19 +2,19 @@ import { llm } from "./llm";
 import { createTagRegex, formatXml, parseParams } from "./xml";
 import { render } from "./utils";
 import type {
-  ActionCall,
-  OutputRef,
-  Thought,
-  COTProps,
-  COTResponse,
-  Action,
+    ActionCall,
+    OutputRef,
+    Thought,
+    COTProps,
+    COTResponse,
+    Action,
 } from "./types";
 import {
-  formatAction,
-  formatContext,
-  formatInput,
-  formatOutput,
-  formatOutputInterface,
+    formatAction,
+    formatContext,
+    formatInput,
+    formatOutput,
+    formatOutputInterface,
 } from "./formatters";
 import { randomUUID } from "crypto";
 
@@ -71,108 +71,110 @@ Remember to:
 8. Maintain consistency with successful patterns
 9. Adapt strategy based on failed actions
 10. Consider all historical context when making decisions
+11. Always at least respond to the user if you think they need a response
+12. Try not to repeat yourself contextually
 
 Your response should be comprehensive yet concise, demonstrating a clear understanding of the task and the ability to make informed decisions based on the provided information.`;
 
 const cotTemplate = "";
 
 export async function chainOfThought({
-  model,
-  plan,
-  actions,
-  inputs,
-  outputs,
-  logs,
-}: COTProps): Promise<COTResponse> {
-  const prompt = render(promptTemplate, {
-    // plan,
-    actions: [
-      ...actions,
-      // outputs.map<Action>((o) => ({
-      //     name: o.type,
-      //     params: o.params,
-      //     description: o.description,
-      //     handler: async () => {},
-      // })),
-    ]
-      .map(formatAction)
-      .join("\n"),
-    context: logs.map(formatContext).filter(Boolean).join("\n"),
-    // data: "",
-    // inputs: inputs.map(formatInput).join("\n"),
-    outputs: outputs.map(formatOutputInterface).join("\n"),
-  });
-
-  console.log(prompt);
-
-  const { response } = await llm({
     model,
-    system: prompt,
-    prompt: "<think>",
-    stopSequences: ["</response>"],
-  });
+    plan,
+    actions,
+    inputs,
+    outputs,
+    logs,
+}: COTProps): Promise<COTResponse> {
+    const prompt = render(promptTemplate, {
+        // plan,
+        actions: [
+            ...actions,
+            // outputs.map<Action>((o) => ({
+            //     name: o.type,
+            //     params: o.params,
+            //     description: o.description,
+            //     handler: async () => {},
+            // })),
+        ]
+            .map(formatAction)
+            .join("\n"),
+        context: logs.map(formatContext).filter(Boolean).join("\n"),
+        // data: "",
+        // inputs: inputs.map(formatInput).join("\n"),
+        outputs: outputs.map(formatOutputInterface).join("\n"),
+    });
 
-  const now = Date.now();
+    console.log(prompt);
 
-  const msg = response.messages[0];
+    const { response } = await llm({
+        model,
+        system: prompt,
+        prompt: "<think>",
+        stopSequences: ["</response>"],
+    });
 
-  let text =
-    msg.role === "assistant"
-      ? Array.isArray(msg.content)
-        ? msg.content.map((t) => (t.type === "text" ? t.text : "")).join("\n")
-        : msg.content
-      : "";
+    const now = Date.now();
 
-  text = "<think>" + text;
+    const msg = response.messages[0];
 
-  console.log(text);
+    let text =
+        msg.role === "assistant"
+            ? Array.isArray(msg.content)
+                ? msg.content.map((t) => (t.type === "text" ? t.text : "")).join("\n")
+                : msg.content
+            : "";
 
-  const responseText = Array.from(
-    text.matchAll(createTagRegex("response"))
-  ).map((t) => t[2].trim())[0];
+    text = "<think>" + text;
 
-  console.log(responseText);
-  // todo: get this ordered for better outputs
+    console.log(text);
 
-  const plans = Array.from(text.matchAll(createTagRegex("plan"))).map(
-    (t) => t[2]
-  );
+    const responseText = Array.from(
+        text.matchAll(createTagRegex("response"))
+    ).map((t) => t[2].trim())[0];
 
-  const thinking = Array.from(
-    text.matchAll(createTagRegex("think"))
-  ).map<Thought>((t) => ({
-    ref: "thought",
-    content: t[2].trim(),
-    timestamp: now,
-  }));
+    console.log(responseText);
+    // todo: get this ordered for better outputs
 
-  const outs = Array.from(
-    responseText.matchAll(createTagRegex("output"))
-  ).map<OutputRef>((t) => {
-    const { name } = parseParams(t[1]);
-    return { ref: "output", type: name, data: t[2].trim(), timestamp: now };
-  });
+    const plans = Array.from(text.matchAll(createTagRegex("plan"))).map(
+        (t) => t[2]
+    );
 
-  // todo: try catch json parse and repeat?
-  const calls = Array.from(
-    responseText.matchAll(createTagRegex("action_call"))
-  ).map<ActionCall>((t) => {
-    const { name } = parseParams(t[1]);
+    const thinking = Array.from(
+        text.matchAll(createTagRegex("think"))
+    ).map<Thought>((t) => ({
+        ref: "thought",
+        content: t[2].trim(),
+        timestamp: now,
+    }));
+
+    const outs = Array.from(
+        responseText.matchAll(createTagRegex("output"))
+    ).map<OutputRef>((t) => {
+        const { name } = parseParams(t[1]);
+        return { ref: "output", type: name, data: t[2].trim(), timestamp: now };
+    });
+
+    // todo: try catch json parse and repeat?
+    const calls = Array.from(
+        responseText.matchAll(createTagRegex("action_call"))
+    ).map<ActionCall>((t) => {
+        const { name } = parseParams(t[1]);
+        return {
+            ref: "action_call",
+            id: randomUUID(),
+            name,
+            data: JSON.parse(t[2]),
+            timestamp: now,
+        };
+    });
+
+    console.dir({ outputs: outs, actions: calls }, { depth: Infinity });
+
     return {
-      ref: "action_call",
-      id: randomUUID(),
-      name,
-      data: JSON.parse(t[2]),
-      timestamp: now,
+        plan: plans,
+        actions: calls,
+        outputs: outs,
+        thinking,
     };
-  });
-
-  console.dir({ outputs: outs, actions: calls }, { depth: Infinity });
-
-  return {
-    plan: plans,
-    actions: calls,
-    outputs: outs,
-    thinking,
-  };
 }
