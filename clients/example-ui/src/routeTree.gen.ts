@@ -23,96 +23,96 @@ const IndexLazyImport = createFileRoute("/")();
 // Create/Update Routes
 
 const IndexLazyRoute = IndexLazyImport.update({
-    id: "/",
-    path: "/",
-    getParentRoute: () => rootRoute,
+  id: "/",
+  path: "/",
+  getParentRoute: () => rootRoute,
 } as any).lazy(() => import("./routes/index.lazy").then((d) => d.Route));
 
 const ChatsIndexRoute = ChatsIndexImport.update({
-    id: "/chats/",
-    path: "/chats/",
-    getParentRoute: () => rootRoute,
+  id: "/chats/",
+  path: "/chats/",
+  getParentRoute: () => rootRoute,
 } as any);
 
 const ChatsChatIdRoute = ChatsChatIdImport.update({
-    id: "/chats/$chatId",
-    path: "/chats/$chatId",
-    getParentRoute: () => rootRoute,
+  id: "/chats/$chatId",
+  path: "/chats/$chatId",
+  getParentRoute: () => rootRoute,
 } as any);
 
 // Populate the FileRoutesByPath interface
 
 declare module "@tanstack/react-router" {
-    interface FileRoutesByPath {
-        "/": {
-            id: "/";
-            path: "/";
-            fullPath: "/";
-            preLoaderRoute: typeof IndexLazyImport;
-            parentRoute: typeof rootRoute;
-        };
-        "/chats/$chatId": {
-            id: "/chats/$chatId";
-            path: "/chats/$chatId";
-            fullPath: "/chats/$chatId";
-            preLoaderRoute: typeof ChatsChatIdImport;
-            parentRoute: typeof rootRoute;
-        };
-        "/chats/": {
-            id: "/chats/";
-            path: "/chats";
-            fullPath: "/chats";
-            preLoaderRoute: typeof ChatsIndexImport;
-            parentRoute: typeof rootRoute;
-        };
-    }
+  interface FileRoutesByPath {
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexLazyImport;
+      parentRoute: typeof rootRoute;
+    };
+    "/chats/$chatId": {
+      id: "/chats/$chatId";
+      path: "/chats/$chatId";
+      fullPath: "/chats/$chatId";
+      preLoaderRoute: typeof ChatsChatIdImport;
+      parentRoute: typeof rootRoute;
+    };
+    "/chats/": {
+      id: "/chats/";
+      path: "/chats";
+      fullPath: "/chats";
+      preLoaderRoute: typeof ChatsIndexImport;
+      parentRoute: typeof rootRoute;
+    };
+  }
 }
 
 // Create and export the route tree
 
 export interface FileRoutesByFullPath {
-    "/": typeof IndexLazyRoute;
-    "/chats/$chatId": typeof ChatsChatIdRoute;
-    "/chats": typeof ChatsIndexRoute;
+  "/": typeof IndexLazyRoute;
+  "/chats/$chatId": typeof ChatsChatIdRoute;
+  "/chats": typeof ChatsIndexRoute;
 }
 
 export interface FileRoutesByTo {
-    "/": typeof IndexLazyRoute;
-    "/chats/$chatId": typeof ChatsChatIdRoute;
-    "/chats": typeof ChatsIndexRoute;
+  "/": typeof IndexLazyRoute;
+  "/chats/$chatId": typeof ChatsChatIdRoute;
+  "/chats": typeof ChatsIndexRoute;
 }
 
 export interface FileRoutesById {
-    __root__: typeof rootRoute;
-    "/": typeof IndexLazyRoute;
-    "/chats/$chatId": typeof ChatsChatIdRoute;
-    "/chats/": typeof ChatsIndexRoute;
+  __root__: typeof rootRoute;
+  "/": typeof IndexLazyRoute;
+  "/chats/$chatId": typeof ChatsChatIdRoute;
+  "/chats/": typeof ChatsIndexRoute;
 }
 
 export interface FileRouteTypes {
-    fileRoutesByFullPath: FileRoutesByFullPath;
-    fullPaths: "/" | "/chats/$chatId" | "/chats";
-    fileRoutesByTo: FileRoutesByTo;
-    to: "/" | "/chats/$chatId" | "/chats";
-    id: "__root__" | "/" | "/chats/$chatId" | "/chats/";
-    fileRoutesById: FileRoutesById;
+  fileRoutesByFullPath: FileRoutesByFullPath;
+  fullPaths: "/" | "/chats/$chatId" | "/chats";
+  fileRoutesByTo: FileRoutesByTo;
+  to: "/" | "/chats/$chatId" | "/chats";
+  id: "__root__" | "/" | "/chats/$chatId" | "/chats/";
+  fileRoutesById: FileRoutesById;
 }
 
 export interface RootRouteChildren {
-    IndexLazyRoute: typeof IndexLazyRoute;
-    ChatsChatIdRoute: typeof ChatsChatIdRoute;
-    ChatsIndexRoute: typeof ChatsIndexRoute;
+  IndexLazyRoute: typeof IndexLazyRoute;
+  ChatsChatIdRoute: typeof ChatsChatIdRoute;
+  ChatsIndexRoute: typeof ChatsIndexRoute;
 }
 
 const rootRouteChildren: RootRouteChildren = {
-    IndexLazyRoute: IndexLazyRoute,
-    ChatsChatIdRoute: ChatsChatIdRoute,
-    ChatsIndexRoute: ChatsIndexRoute,
+  IndexLazyRoute: IndexLazyRoute,
+  ChatsChatIdRoute: ChatsChatIdRoute,
+  ChatsIndexRoute: ChatsIndexRoute,
 };
 
 export const routeTree = rootRoute
-    ._addFileChildren(rootRouteChildren)
-    ._addFileTypes<FileRouteTypes>();
+  ._addFileChildren(rootRouteChildren)
+  ._addFileTypes<FileRouteTypes>();
 
 /* ROUTE_MANIFEST_START
 {

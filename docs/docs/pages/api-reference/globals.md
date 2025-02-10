@@ -302,7 +302,7 @@ v13.4.0, v12.16.0
 
 ##### captureRejectionSymbol
 
-> `readonly` `static` **captureRejectionSymbol**: _typeof_
+> `readonly` `static` **captureRejectionSymbol**: _typeof_ >
 > [`captureRejectionSymbol`](globals.md#capturerejectionsymbol)
 
 Defined in: docs/node_modules/@types/node/events.d.ts:452
@@ -370,7 +370,7 @@ v0.11.2
 
 ##### errorMonitor
 
-> `readonly` `static` **errorMonitor**: _typeof_
+> `readonly` `static` **errorMonitor**: _typeof_ >
 > [`errorMonitor`](globals.md#errormonitor)
 
 Defined in: docs/node_modules/@types/node/events.d.ts:445
@@ -3703,7 +3703,7 @@ v13.4.0, v12.16.0
 
 ##### captureRejectionSymbol
 
-> `readonly` `static` **captureRejectionSymbol**: _typeof_
+> `readonly` `static` **captureRejectionSymbol**: _typeof_ >
 > [`captureRejectionSymbol`](globals.md#capturerejectionsymbol)
 
 Defined in: docs/node_modules/@types/node/events.d.ts:452
@@ -3771,7 +3771,7 @@ v0.11.2
 
 ##### errorMonitor
 
-> `readonly` `static` **errorMonitor**: _typeof_
+> `readonly` `static` **errorMonitor**: _typeof_ >
 > [`errorMonitor`](globals.md#errormonitor)
 
 Defined in: docs/node_modules/@types/node/events.d.ts:445
@@ -3863,7 +3863,7 @@ v0.1.26
 
 ##### analyze()
 
-> **analyze**(`prompt`, `options`): `Promise`\<`string` \|
+> **analyze**(`prompt`, `options`): `Promise`\<`string` \| >
 > [`StructuredAnalysis`](namespaces/Types.md#structuredanalysis)\>
 
 Defined in:
@@ -6329,7 +6329,7 @@ Defined in:
 
 ##### getRoomByPlatformId()
 
-> **getRoomByPlatformId**(`platformId`, `platform`): `Promise`\<`undefined` \|
+> **getRoomByPlatformId**(`platformId`, `platform`): `Promise`\<`undefined` \| >
 > [`Room`](globals.md#room)\>
 
 Defined in:

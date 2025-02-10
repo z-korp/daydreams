@@ -3235,7 +3235,7 @@ Defined in:
 
 ### GoalStatus
 
-> **GoalStatus**: `"pending"` \| `"active"` \| `"completed"` \| `"failed"` \|
+> **GoalStatus**: `"pending"` \| `"active"` \| `"completed"` \| `"failed"` \| >
 > `"ready"` \| `"blocked"`
 
 Defined in:
@@ -3254,9 +3254,9 @@ Defined in:
 
 ### Step
 
-> **Step**: [`ActionStep`](Types.md#actionstep) \|
-> [`PlanningStep`](Types.md#planningstep) \| [`SystemStep`](Types.md#systemstep)
-> \| [`TaskStep`](Types.md#taskstep)
+> **Step**: [`ActionStep`](Types.md#actionstep) \| >
+> [`PlanningStep`](Types.md#planningstep) \|
+> [`SystemStep`](Types.md#systemstep) > \| [`TaskStep`](Types.md#taskstep)
 
 Defined in:
 [packages/core/src/core/types/index.ts:116](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/types/index.ts#L116)
@@ -3274,8 +3274,8 @@ Defined in:
 
 ### ThoughtType
 
-> **ThoughtType**: `"social_share"` \| `"research"` \| `"analysis"` \| `"alert"`
-> \| `"inquiry"`
+> **ThoughtType**: `"social_share"` \| `"research"` \| `"analysis"` \|
+> `"alert"` > \| `"inquiry"`
 
 Defined in:
 [packages/core/src/core/types/index.ts:333](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/types/index.ts#L333)
