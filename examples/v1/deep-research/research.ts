@@ -4,6 +4,8 @@ import { TavilyClient } from "@tavily/core";
 import { generateText, LanguageModelV1 } from "ai";
 import { z } from "zod";
 import zodToJsonSchema from "zod-to-json-schema";
+import pLimit from 'p-limit';
+import { searchResultsPrompt } from "./prompts";
 
 export type Research = {
   id: string;
@@ -70,124 +72,137 @@ export const researchSchema = z.object({
     ),
 });
 
+export type ResearchProgress = {
+  currentDepth: number;
+  totalDepth: number;
+  currentQuery?: string;
+  totalQueries: number;
+  completedQueries: number;
+};
+
+const ConcurrencyLimit = 2;
+const limit = pLimit(ConcurrencyLimit);
+
 export async function startDeepResearch({
   model,
   research,
   tavilyClient,
   maxDepth,
+  onProgress,
 }: {
   model: LanguageModelV1;
   research: Research;
   tavilyClient: TavilyClient;
   maxDepth: number;
+  onProgress?: (progress: ResearchProgress) => void;
 }) {
   console.log("=======STARTING-DEEP-RESEARCH=======");
 
   let queries = research.queries.slice();
   let depth = 1;
 
+  const progress: ResearchProgress = {
+    currentDepth: depth,
+    totalDepth: maxDepth,
+    totalQueries: queries.length,
+    completedQueries: 0
+  };
+
+  const reportProgress = (update: Partial<ResearchProgress>) => {
+    Object.assign(progress, update);
+    onProgress?.(progress);
+  };
+
   while (queries.length > 0) {
     const _queries = queries.slice();
-
     queries = [];
 
     await Promise.all(
-      _queries.map(async (query) => {
-        console.log("Executing query:", query);
-        const { results } = await tavilyClient.search(query.query, {
-          maxResults: 5,
-          searchDepth: "advanced",
-        });
+      _queries.map((query) =>
+        limit(async () => {
+          console.log("Executing query:", query);
+          reportProgress({
+            currentQuery: query.query,
+            currentDepth: depth
+          });
 
-        const res = await generateText({
-          model: model,
-          // abortSignal: AbortSignal.timeout(60_000),
-          system: render(
-            `
-{{research}}
+          try {
+            const { results } = await tavilyClient.search(query.query, {
+              maxResults: 5,
+              searchDepth: "advanced",
+            });
 
-<goal>{{goal}}</goal>
-
-<query>{{query}}</query>
-
-<results>
-{{results}}
-</results>
-
-Given the following results from a SERP search for the query, generate a list of learnings from the results. 
-Return a maximum of 5 learnings, but feel free to return less if the results are clear. 
-Make sure each learning is unique and not similar to each other. 
-The learnings should be concise and to the point, as detailed and information dense as possible. 
-Make sure to include any entities like people, places, companies, products, things, etc in the learnings, as well as any exact metrics, numbers, or dates. 
-The learnings will be used to research the topic further.
-Given the following query and results from the research, create some follow up queries to clarify the research direction. 
-Return a maximum of 2 queries, but feel free to return less if the original query is clearer
-
-Here is the json schema:
-{{schema}}
-
-Here's an example of how to structure your output:
-<output>
-[JSON RESPONSE FROM SCHEMA]
-</output>
-`,
-            {
-              research: formatXml({
-                tag: "research",
-                params: { id: research.id },
-                content: JSON.stringify(research),
+            const res = await generateText({
+              model: model,
+              abortSignal: AbortSignal.timeout(60_000),
+              system: render(searchResultsPrompt, {
+                research: formatXml({
+                  tag: "research",
+                  params: { id: research.id },
+                  content: JSON.stringify(research),
+                }),
+                goal: query.goal,
+                query: query.query,
+                results: results.map((r) =>
+                  formatXml({
+                    tag: "result",
+                    params: { url: r.url },
+                    content: r.content,
+                  })
+                ),
+                schema: JSON.stringify(zodToJsonSchema(searchResultsSchema)),
               }),
-              goal: query.goal,
-              query: query.query,
-              results: results.map((r) =>
-                formatXml({
-                  tag: "result",
-                  params: { url: r.url },
-                  content: r.content,
-                })
-              ),
-              schema: JSON.stringify(zodToJsonSchema(searchResultsSchema)),
+              messages: [
+                {
+                  role: "assistant",
+                  content: "<think>",
+                },
+              ],
+            });
+
+            const text = "<think>" + res.text;
+
+            try {
+              const [think] = thinkParser(text);
+              const [output] = outputParser(text);
+
+              if (output) {
+                console.log(output);
+
+                research.learnings.push(
+                  ...output.content.learnings.map((l) => l.content)
+                );
+
+                if (depth < maxDepth) {
+                  queries.push(...output.content.followUpQueries);
+                }
+              } else {
+                console.log(text);
+              }
+            } catch (error) {
+              console.log("failed parsing");
             }
-          ),
-          messages: [
-            {
-              role: "assistant",
-              content: "<think>",
-            },
-          ],
-        });
 
-        const text = "<think>" + res.text;
+            reportProgress({
+              completedQueries: progress.completedQueries + 1
+            });
 
-        try {
-          const [think] = thinkParser(text);
-          const [output] = outputParser(text);
-
-          if (output) {
-            console.log(output);
-
-            research.learnings.push(
-              ...output.content.learnings.map((l) => l.content)
-            );
-
-            if (depth < maxDepth) {
-              queries.push(...output.content.followUpQueries);
-            }
-          } else {
-            console.log(text);
+          } catch (error) {
+            console.error("Error processing query:", query.query, error);
+            reportProgress({
+              completedQueries: progress.completedQueries + 1
+            });
           }
-        } catch (error) {
-          console.log("failed parsing");
-        }
-
-        // query.results = [...results];
-        // query.learnings = [...res.object.learnings];
-      })
+        })
+      )
     );
 
     depth++;
-
     research.queries.push(...queries);
+
+    reportProgress({
+      totalQueries: progress.totalQueries + queries.length
+    });
   }
 
   console.log(research);
