@@ -7,7 +7,7 @@ import type {
     Config,
     Subscription,
 } from "./types";
-import { getOrCreateConversationMemory } from "./memory";
+import { getOrCreateConversationMemory } from "./memory/base";
 import { Logger } from "./logger";
 
 export function createDreams(
