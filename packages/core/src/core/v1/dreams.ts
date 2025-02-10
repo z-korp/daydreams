@@ -157,7 +157,9 @@ export function createDreams<
         const system = render(prompt, {
           context: context.render(ctx.memory),
           outputs: outputs.map(formatOutputInterface),
-          actions: actions.map(formatAction),
+          actions: actions
+            .filter((action) => (action.enabled ? action.enabled(ctx) : true))
+            .map(formatAction),
           updates: [
             ...newInputs,
             ...memory.results.filter((i) => i.processed !== true),

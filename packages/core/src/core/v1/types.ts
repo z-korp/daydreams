@@ -38,6 +38,7 @@ export type Action<
   name: string;
   description?: string;
   schema: Schema;
+  enabled?: (ctx: Context) => boolean;
   handler: (params: z.infer<Schema>, ctx: Context) => Promise<Result>;
 };
 
