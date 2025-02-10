@@ -108,9 +108,9 @@ const defaultContextHandler: ContextHandler = createContextHandler(
 );
 
 export function createDreams<
-  C extends WorkingMemory = WorkingMemory,
-  T extends ContextHandler<C> = ContextHandler<C>,
->(config: Config<T>): Agent<T> {
+  Memory extends WorkingMemory = WorkingMemory,
+  Handler extends ContextHandler<Memory> = ContextHandler<Memory>,
+>(config: Config<Memory, Handler>): Agent<Memory, Handler> {
   const inputSubscriptions = new Map<string, Subscription>();
 
   const logger = new Logger({
@@ -122,9 +122,11 @@ export function createDreams<
   const { inputs, outputs, events, actions, experts, memory } = config;
 
   const contextHandler =
-    config.context ?? (defaultContextHandler as unknown as T);
+    config.context ?? (defaultContextHandler as unknown as Handler);
 
-  const agent: Agent<T> = {
+  const contextsRunning = new Set<string>();
+
+  const agent: Agent<Memory, Handler> = {
     inputs,
     outputs,
     events,
@@ -137,6 +139,9 @@ export function createDreams<
     },
 
     run: async (contextId: string) => {
+      if (contextsRunning.has(contextId)) return;
+      contextsRunning.add(contextId);
+
       const context = contextHandler(agent.memory);
 
       const outputs = Object.entries(agent.outputs).map(([type, output]) => ({
@@ -158,7 +163,9 @@ export function createDreams<
           context: context.render(ctx.memory),
           outputs: outputs.map(formatOutputInterface),
           actions: actions
-            .filter((action) => (action.enabled ? action.enabled(ctx) : true))
+            .filter((action) =>
+              action.enabled ? action.enabled(ctx as any) : true
+            )
             .map(formatAction),
           updates: [
             ...newInputs,
@@ -211,7 +218,7 @@ export function createDreams<
           try {
             await output.handler(
               output.schema.parse(content),
-              ctx as InferContextFromHandler<T>
+              ctx as InferContextFromHandler<Handler>
             );
           } catch (error) {}
         }
@@ -220,25 +227,24 @@ export function createDreams<
           data.actions.map(async ({ params, content }) => {
             const action = config.actions.find((a) => a.name === params.name);
 
-            const call: ActionCall = {
-              ref: "action_call",
-              id: randomUUID(),
-              data: content,
-              name: params.name,
-              timestamp: Date.now(),
-            };
-
-            memory.calls.push(call);
-
             if (!action) {
               console.log("ACTION MISMATCH", { params, content });
               return Promise.reject(new Error("ACTION MISMATCH"));
             }
 
             try {
+              const call: ActionCall = {
+                ref: "action_call",
+                id: randomUUID(),
+                data: action.schema.parse(content),
+                name: params.name,
+                timestamp: Date.now(),
+              };
+
+              memory.calls.push(call);
               const result = await action.handler(
-                action.schema.parse(content),
-                ctx as InferContextFromHandler<T>
+                call,
+                ctx as InferContextFromHandler<Handler>
               );
 
               memory.results.push({
@@ -261,6 +267,8 @@ export function createDreams<
       }
 
       await context.save(contextId, memory);
+
+      contextsRunning.delete(contextId);
     },
 
     send: async (

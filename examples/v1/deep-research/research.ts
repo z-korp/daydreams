@@ -1,3 +1,4 @@
+import { Agent } from "@daydreamsai/core/src/core/v1/types";
 import { render } from "@daydreamsai/core/src/core/v1/utils";
 import { createTagParser, formatXml } from "@daydreamsai/core/src/core/v1/xml";
 import { TavilyClient } from "@tavily/core";
@@ -11,8 +12,6 @@ export type Research = {
   queries: {
     query: string;
     goal: string;
-    results?: any[];
-    learnings?: any[];
   }[];
   questions: string[];
   learnings: string[];
@@ -23,10 +22,6 @@ const thinkParser = createTagParser("think");
 const outputParser = createTagParser("output", (t) =>
   searchResultsSchema.parse(JSON.parse(t))
 );
-
-const actionParser = createTagParser("action", (t) => JSON.parse(t));
-const reasoningParser = createTagParser("reasoning");
-const responseParser = createTagParser("response");
 
 const searchResultsSchema = z.object({
   learnings: z
@@ -80,16 +75,17 @@ export async function startDeepResearch({
   model,
   research,
   tavilyClient,
+  maxDepth,
 }: {
   model: LanguageModelV1;
   research: Research;
   tavilyClient: TavilyClient;
+  maxDepth: number;
 }) {
   console.log("=======STARTING-DEEP-RESEARCH=======");
 
   let queries = research.queries.slice();
-
-  let step = 1;
+  let depth = 1;
 
   while (queries.length > 0) {
     const _queries = queries.slice();
@@ -175,7 +171,7 @@ Here's an example of how to structure your output:
               ...output.content.learnings.map((l) => l.content)
             );
 
-            if (step < 2) {
+            if (depth < maxDepth) {
               queries.push(...output.content.followUpQueries);
             }
           } else {
@@ -190,7 +186,7 @@ Here's an example of how to structure your output:
       })
     );
 
-    step++;
+    depth++;
 
     research.queries.push(...queries);
   }
@@ -205,6 +201,8 @@ Given the following research, write a final report on the topic using the learni
 Make it as as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:
 Here is all the data from research:
 <research>{{research}}</research>
+
+Return your report in mardown format.
 `,
       {
         research: JSON.stringify(research),
@@ -219,32 +217,9 @@ Here is all the data from research:
   });
   console.log("====FINAL REPORT=====");
   console.log("<think>" + res.text);
-}
 
-// function renderContext(context: Context) {
-//   return render(
-//     `
-// <logs>
-// {{logs}}
-// <logs>
-// <researches>
-// {{researches}}
-// </researches>
-//   `,
-//     {
-//       logs: [
-//         ...context.inputs.filter((i) => i.processed === true),
-//         ...context.outputs,
-//         ...context.calls,
-//         ...context.results,
-//       ].map(formatContext),
-//       researches: context.researches.map((r) =>
-//         formatXml({
-//           tag: "research",
-//           params: { id: r.id },
-//           content: JSON.stringify(r),
-//         })
-//       ),
-//     }
-//   );
-// }
+  const report = res.text.slice(res.text.lastIndexOf("</think>"));
+
+  console.log({ report });
+  return report;
+}
