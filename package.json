@@ -18,7 +18,7 @@
         "api": "bun run examples/example-api.ts",
         "ui": "bun --dir clients/example-ui run dev",
         "test": "bun run packages/core",
-        "build": "bun packages/core build",
+        "build:core": "cd packages/core && bun run build",
         "release": "bun build && bun prettier && npx lerna publish --no-private --force-publish",
         "prettier-check": "bun prettier --check packages",
         "prettier": "bun prettier --write packages",
