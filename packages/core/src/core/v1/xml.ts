@@ -44,7 +44,7 @@ export function createTagParser<T = string>(
     try {
       return matches.map((t) => ({
         tag: tagName,
-        params: t[1] ? parseParams(t[1]) : {},
+        params: t[1] ? parseAttributes(t[1]) : {},
         content: (contentParser
           ? contentParser(t[2]?.trim())
           : t[2]?.trim()) as T extends string ? string : T,
@@ -56,17 +56,132 @@ export function createTagParser<T = string>(
   };
 }
 
-/**
- * Parses XML tag attributes into a key-value object
- * @param data - The XML tag opening including attributes (e.g. '<tag attr1="val1" attr2="val2">')
- * @returns Object containing parsed attribute key-value pairs
- */
-export function parseParams(data: string) {
+// new parser
+export type TextNode = {
+  type: "text";
+  content: string;
+  parent?: Node;
+  children?: never;
+};
+
+export type ElementNode<
+  Attributes extends Record<string, string> = Record<string, any>,
+> = {
+  type: "element";
+  name: string;
+  attributes: Attributes;
+  content: string;
+  parent?: Node;
+  children?: Node[];
+  closed?: true;
+};
+
+export type Node = TextNode | ElementNode;
+
+export type NodeVisitor = (node: Node, parse: () => Node[]) => Node;
+
+export function parseAttributes(text: string): Record<string, string> {
   const attrs: Record<string, string> = {};
-  const matches = data.matchAll(/(\w+)="([^"]*)"/g);
+  if (text.length === 0) return attrs;
+  const matches = text.matchAll(/(\w+)="([^"]*)"/g);
   for (const match of matches) {
     attrs[match[1]] = match[2];
   }
-
   return attrs;
+}
+
+export function parse(
+  text: string,
+  visitor: NodeVisitor,
+  depth = 0,
+  parent: Node | undefined = undefined
+): Node[] {
+  const nodes: Node[] = [];
+
+  let workingText = text.trim();
+
+  while (workingText.length > 0) {
+    // Find first opening tag
+    const tagStart = workingText.indexOf("<");
+    if (tagStart === -1) {
+      const textNode: TextNode = {
+        type: "text",
+        content: workingText.trim(),
+      };
+      nodes.push(visitor(textNode, () => []));
+      break;
+    }
+
+    const tagEnd = workingText.indexOf(">", tagStart);
+
+    if (tagStart > 0 || tagEnd === -1) {
+      const textNode: TextNode = {
+        type: "text",
+        content: workingText.slice(0, tagEnd === -1 ? -1 : tagStart).trim(),
+      };
+      nodes.push(visitor(textNode, () => []));
+    }
+
+    // Find end of opening tag
+    if (tagEnd === -1) break;
+
+    // Parse tag and attributes
+    let tagContent = workingText.slice(tagStart + 1, tagEnd);
+    let closed = false;
+    if (tagContent.at(-1) === "/") {
+      closed = true;
+      tagContent = tagContent.slice(0, -1);
+    }
+
+    const [name, ...attrParts] = tagContent.split(" ");
+    const attributes = parseAttributes(attrParts.join(" ").trim());
+
+    // Skip if it's a closing tag
+    if (closed) {
+      workingText = workingText.slice(tagEnd + 1).trim();
+      nodes.push(
+        visitor(
+          {
+            type: "element",
+            name,
+            attributes,
+            content: "",
+            closed,
+          },
+          () => []
+        )
+      );
+      continue;
+    }
+
+    // Find last matching close tag
+    const closeTag = `</${name}>`;
+    const closePos = workingText.indexOf(closeTag);
+    if (closePos === -1) break;
+
+    // Extract content between tags
+    const content = workingText.slice(tagEnd + 1, closePos).trim();
+
+    const node: ElementNode = {
+      type: "element",
+      name,
+      attributes,
+      content,
+    };
+
+    if (parent) node.parent = parent;
+
+    nodes.push(visitor(node, () => parse(content, visitor, depth + 1, node)));
+    // Continue with remaining text before this tag
+    workingText = workingText.slice(closePos + closeTag.length).trim();
+  }
+  return nodes;
+}
+
+export function isElement(node: Node): node is ElementNode {
+  return node.type === "element";
+}
+
+export function isText(node: Node): node is TextNode {
+  return node.type === "text";
 }
