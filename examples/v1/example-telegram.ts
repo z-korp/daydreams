@@ -51,7 +51,7 @@ async function main() {
         //   memory: defaultContext(),
         // }),
         model: anthropic("claude-3-5-haiku-latest"),
-        reasioningModel: groq("deepseek-r1-distill-llama-70b"),
+        reasoningModel: groq("deepseek-r1-distill-llama-70b"),
         memory: createMemoryStore(),
         experts: {
             // analyser: expert({
