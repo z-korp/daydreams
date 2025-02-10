@@ -7,23 +7,23 @@ export const chainExpertManagerPrompt = `
 You are a Chain Expert Manager.
 Your role is to design and coordinate parallel execution chains based on context.
 
-<context>
-{{context}}
-</context>
-
 First, review available experts:
 <available_experts>
 {{experts}}
 </available_experts>
 
+Now, review the current context:
+<context>
+{{context}}
+</context>
+
 When formulating chains, follow this structure:
+<think>[Analysis of problem and required chains]</think>
 
 <response>
-<thinking>[Analysis of problem and required chains]</thinking>
-
 [List of parallel chains needed, use depends attribute only if neeeded]
 <chain id="[chain_id]" depends="[chain dependecies]">
-<thinking>[the thinking processes passed to the expert]</thinking>
+<think>[the think processes passed to the expert]</think>
 <purpose>[purpose of this chain]</purpose>
 [List of experts that will run sequential]
 <expert name="[expert_name]">[Input and expected output]</expert>
@@ -53,40 +53,40 @@ Your response should demonstrate:
 - Effective state management`;
 
 export async function chainOfExperts({
-    state,
-    experts,
-    model,
+  state,
+  experts,
+  model,
 }: {
-    state: any;
-    experts: { name: string; description: string }[];
-    model: LanguageModelV1;
+  state: any;
+  experts: { name: string; description: string }[];
+  model: LanguageModelV1;
 }): Promise<any> {
-    const context = render(chainExpertManagerPrompt, {
-        context: JSON.stringify(state),
-        experts: experts
-            .map((expert) =>
-                formatXml({
-                    tag: "expert",
-                    params: { name: expert.name },
-                    content: [
-                        {
-                            tag: "description",
-                            content: expert.description,
-                        },
-                    ],
-                })
-            )
-            .join("\n"),
-    });
+  const context = render(chainExpertManagerPrompt, {
+    context: JSON.stringify(state),
+    experts: experts
+      .map((expert) =>
+        formatXml({
+          tag: "expert",
+          params: { name: expert.name },
+          content: [
+            {
+              tag: "description",
+              content: expert.description,
+            },
+          ],
+        })
+      )
+      .join("\n"),
+  });
 
-    console.log({ context });
+  console.log({ context });
 
-    const response = await llm({
-        model,
-        system: context,
-        prompt: "<response>",
-        stopSequences: ["</response>"],
-    });
+  const response = await llm({
+    model,
+    system: context,
+    prompt: "<response>",
+    stopSequences: ["</response>"],
+  });
 
-    console.log({ response });
+  console.log({ response });
 }

@@ -2,18 +2,19 @@ import { llm } from "./llm";
 import { createTagRegex, formatXml, parseParams } from "./xml";
 import { render } from "./utils";
 import type {
-    ActionCall,
-    OutputRef,
-    Thought,
-    COTProps,
-    COTResponse,
-    Action,
+  ActionCall,
+  OutputRef,
+  Thought,
+  COTProps,
+  COTResponse,
+  Action,
 } from "./types";
 import {
-    formatAction,
-    formatInput,
-    formatOutput,
-    formatOutputInterface,
+  formatAction,
+  formatContext,
+  formatInput,
+  formatOutput,
+  formatOutputInterface,
 } from "./formatters";
 import { randomUUID } from "crypto";
 
@@ -52,13 +53,13 @@ Always use an output to send content.
 
 When formulating your response, always adhere to the following structure:
 <think>[your think process]</think>
-
+<response>
 [List of async actions to be initiated, if applicable]
 <action_call name="[action name]">[action data]</action>
 
 [List of outputs to send]
 <output name="[output name]">[output data]</output>
-
+</response>
 Remember to:
 1. Create clear plans and revise them when needed
 2. Thoroughly analyze the inputs before deciding on actions or outputs
@@ -76,147 +77,102 @@ Your response should be comprehensive yet concise, demonstrating a clear underst
 const cotTemplate = "";
 
 export async function chainOfThought({
-    model,
-    plan,
-    actions,
-    inputs,
-    outputs,
-    logs,
+  model,
+  plan,
+  actions,
+  inputs,
+  outputs,
+  logs,
 }: COTProps): Promise<COTResponse> {
-    const prompt = render(promptTemplate, {
-        // plan,
-        actions: [
-            ...actions,
-            // outputs.map<Action>((o) => ({
-            //     name: o.type,
-            //     params: o.params,
-            //     description: o.description,
-            //     handler: async () => {},
-            // })),
-        ]
-            .map(formatAction)
-            .join("\n"),
-        context: logs
-            .map((i) => {
-                switch (i.ref) {
-                    case "input":
-                        return formatXml({
-                            tag: "msg",
-                            params: {
-                                ...i.params,
-                                role: "user",
-                            },
-                            content: JSON.stringify(i.data),
-                        });
-                    case "output":
-                        return formatXml({
-                            tag: "msg",
-                            params: {
-                                ...i.params,
-                                role: "assistant",
-                            },
-                            content: JSON.stringify(i.data.content),
-                        });
-                    case "thought":
-                        return formatXml({
-                            tag: "reflection",
-                            params: { role: "assistant" },
-                            content: i.content,
-                        });
-                    case "action_call":
-                        return formatXml({
-                            tag: "action_call",
-                            params: { id: i.id, name: i.name },
-                            content: JSON.stringify(i.data),
-                        });
-                    case "action_result":
-                        return formatXml({
-                            tag: "action_result",
-                            params: { name: i.name, callId: i.callId },
-                            content: JSON.stringify(i.data),
-                        });
-                    default:
-                        return null;
-                }
-            })
-            .filter(Boolean)
-            .join("\n"),
-        // data: "",
-        // inputs: inputs.map(formatInput).join("\n"),
-        outputs: outputs.map(formatOutputInterface).join("\n"),
-    });
+  const prompt = render(promptTemplate, {
+    // plan,
+    actions: [
+      ...actions,
+      // outputs.map<Action>((o) => ({
+      //     name: o.type,
+      //     params: o.params,
+      //     description: o.description,
+      //     handler: async () => {},
+      // })),
+    ]
+      .map(formatAction)
+      .join("\n"),
+    context: logs.map(formatContext).filter(Boolean).join("\n"),
+    // data: "",
+    // inputs: inputs.map(formatInput).join("\n"),
+    outputs: outputs.map(formatOutputInterface).join("\n"),
+  });
 
-    console.log(prompt);
+  console.log(prompt);
 
-    const { response } = await llm({
-        model,
-        prompt: prompt + "\n<think>",
-        stopSequences: ["</response>"],
-    });
+  const { response } = await llm({
+    model,
+    system: prompt,
+    prompt: "<think>",
+    stopSequences: ["</response>"],
+  });
 
-    const now = Date.now();
+  const now = Date.now();
 
-    const msg = response.messages[0];
+  const msg = response.messages[0];
 
-    let text =
-        msg.role === "assistant"
-            ? Array.isArray(msg.content)
-                ? msg.content
-                      .map((t) => (t.type === "text" ? t.text : ""))
-                      .join("\n")
-                : msg.content
-            : "";
+  let text =
+    msg.role === "assistant"
+      ? Array.isArray(msg.content)
+        ? msg.content.map((t) => (t.type === "text" ? t.text : "")).join("\n")
+        : msg.content
+      : "";
 
-    text = "<think>" + text + "</response>";
+  text = "<think>" + text;
 
-    console.log(text);
+  console.log(text);
 
-    const responseText = Array.from(
-        text.matchAll(createTagRegex("response"))
-    ).map((t) => t[2].trim())[0];
+  const responseText = Array.from(
+    text.matchAll(createTagRegex("response"))
+  ).map((t) => t[2].trim())[0];
 
-    console.log(responseText);
-    // todo: get this ordered for better outputs
+  console.log(responseText);
+  // todo: get this ordered for better outputs
 
-    const plans = Array.from(text.matchAll(createTagRegex("plan"))).map(
-        (t) => t[2]
-    );
+  const plans = Array.from(text.matchAll(createTagRegex("plan"))).map(
+    (t) => t[2]
+  );
 
-    const thinking = Array.from(
-        text.matchAll(createTagRegex("think"))
-    ).map<Thought>((t) => ({
-        ref: "thought",
-        content: t[2].trim(),
-        timestamp: now,
-    }));
+  const thinking = Array.from(
+    text.matchAll(createTagRegex("think"))
+  ).map<Thought>((t) => ({
+    ref: "thought",
+    content: t[2].trim(),
+    timestamp: now,
+  }));
 
-    const outs = Array.from(
-        responseText.matchAll(createTagRegex("output"))
-    ).map<OutputRef>((t) => {
-        const { name } = parseParams(t[1]);
-        return { ref: "output", type: name, data: t[2].trim(), timestamp: now };
-    });
+  const outs = Array.from(
+    responseText.matchAll(createTagRegex("output"))
+  ).map<OutputRef>((t) => {
+    const { name } = parseParams(t[1]);
+    return { ref: "output", type: name, data: t[2].trim(), timestamp: now };
+  });
 
-    // todo: try catch json parse and repeat?
-    const calls = Array.from(
-        responseText.matchAll(createTagRegex("action_call"))
-    ).map<ActionCall>((t) => {
-        const { name } = parseParams(t[1]);
-        return {
-            ref: "action_call",
-            id: randomUUID(),
-            name,
-            data: JSON.parse(t[2]),
-            timestamp: now,
-        };
-    });
-
-    console.dir({ outputs: outs, actions: calls }, { depth: Infinity });
-
+  // todo: try catch json parse and repeat?
+  const calls = Array.from(
+    responseText.matchAll(createTagRegex("action_call"))
+  ).map<ActionCall>((t) => {
+    const { name } = parseParams(t[1]);
     return {
-        plan: plans,
-        actions: calls,
-        outputs: outs,
-        thinking,
+      ref: "action_call",
+      id: randomUUID(),
+      name,
+      data: JSON.parse(t[2]),
+      timestamp: now,
     };
+  });
+
+  console.dir({ outputs: outs, actions: calls }, { depth: Infinity });
+
+  return {
+    plan: plans,
+    actions: calls,
+    outputs: outs,
+    thinking,
+  };
 }
