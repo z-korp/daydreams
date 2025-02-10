@@ -96,6 +96,6 @@ export function formatContext(i: Log) {
         content: JSON.stringify(i.data),
       });
     default:
-      return null;
+      throw new Error("invalid context");
   }
 }

@@ -194,17 +194,24 @@ export interface Agent<T extends ContextHandler<any> = ContextHandler<any>> {
   evaluator: (ctx: InferContextFromHandler<T>) => Promise<void>;
 }
 
-export type ContextHandler<T extends AgentContext = AgentContext> = (
+export type ContextHandler<T extends WorkingMemory = WorkingMemory> = (
   memory: MemoryStore
-) => (contextId: string) => Promise<T>;
+) => {
+  get: (id: string) => Promise<{ id: string; memory: T }>;
+  save: (id: string, data: T) => Promise<void>;
+  render: (data: T) => string | string[];
+};
 
-export type InferContextFromHandler<THandler extends ContextHandler> =
-  THandler extends ContextHandler<infer Result> ? Result : unknown;
+export type InferMemoryFromHandler<THandler extends ContextHandler<any>> =
+  THandler extends ContextHandler<infer Memory> ? Memory : unknown;
+
+export type InferContextFromHandler<THandler extends ContextHandler<any>> =
+  AgentContext<InferMemoryFromHandler<THandler>>;
 
 export type Config<
   // TMemory extends WorkingMemory = WorkingMemory,
 
-  TContextHandler extends ContextHandler = ContextHandler,
+  TContextHandler extends ContextHandler<any> = ContextHandler<any>,
   Context = InferContextFromHandler<TContextHandler>,
 > = {
   // context: Context;

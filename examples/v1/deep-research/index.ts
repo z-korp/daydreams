@@ -1,9 +1,13 @@
-import { LogLevel } from "@daydreamsai/core/src/core/v1/types";
+import {
+  InferMemoryFromHandler,
+  LogLevel,
+} from "@daydreamsai/core/src/core/v1/types";
 import { createDreams } from "@daydreamsai/core/src/core/v1/dreams";
 import {
   createContextHandler,
   createMemoryStore,
   defaultContext,
+  defaultContextRender,
   // getContextMemoryHandler,
 } from "@daydreamsai/core/src/core/v1/memory";
 import { createGroq } from "@ai-sdk/groq";
@@ -12,6 +16,7 @@ import { z } from "zod";
 import { researchSchema, startDeepResearch } from "./research";
 import * as readline from "readline/promises";
 import { tavily } from "@tavily/core";
+import { formatXml } from "@daydreamsai/core/src/core/v1/xml";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -37,16 +42,32 @@ type Research = {
 
 const memory = createMemoryStore();
 
-const contextHandler = createContextHandler(() => ({
-  ...defaultContext(),
-  research: [] as Research[],
-}));
-
-type Handler = typeof contextHandler;
-
 const model = groq("deepseek-r1-distill-llama-70b");
 
-const agent = createDreams<Handler>({
+const contextHandler = createContextHandler(
+  () => ({
+    ...defaultContext(),
+    researches: [] as Research[],
+  }),
+  (memory) => {
+    console.log("render", { memory, data: defaultContextRender(memory) });
+    return [
+      ...defaultContextRender(memory),
+      ...memory.researches.map((r) =>
+        formatXml({
+          tag: "research",
+          params: { id: r.id },
+          content: JSON.stringify(r),
+        })
+      ),
+    ];
+  }
+);
+
+type Handler = typeof contextHandler;
+type Memory = InferMemoryFromHandler<Handler>;
+
+const agent = createDreams<Memory, Handler>({
   logger: LogLevel.DEBUG,
   memory,
   context: contextHandler,
@@ -96,7 +117,7 @@ const agent = createDreams<Handler>({
 
         console.log({ research });
 
-        ctx.memory.research.push(research);
+        ctx.memory.researches.push(research);
 
         startDeepResearch({
           model,

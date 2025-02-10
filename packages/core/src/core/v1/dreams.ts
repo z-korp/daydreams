@@ -15,6 +15,7 @@ import type {
 import {
   createContextHandler,
   defaultContext,
+  defaultContextRender,
   getOrCreateConversationMemory,
 } from "./memory";
 import { Logger } from "./logger";
@@ -101,12 +102,15 @@ function createParser() {
 
 const parse = createParser();
 
-const defaultContextHandler: ContextHandler =
-  createContextHandler(defaultContext);
+const defaultContextHandler: ContextHandler = createContextHandler(
+  defaultContext,
+  defaultContextRender
+);
 
-export function createDreams<T extends ContextHandler = ContextHandler>(
-  config: Config<T>
-): Agent<T> {
+export function createDreams<
+  C extends WorkingMemory = WorkingMemory,
+  T extends ContextHandler<C> = ContextHandler<C>,
+>(config: Config<T>): Agent<T> {
   const inputSubscriptions = new Map<string, Subscription>();
 
   const logger = new Logger({
@@ -117,9 +121,8 @@ export function createDreams<T extends ContextHandler = ContextHandler>(
 
   const { inputs, outputs, events, actions, experts, memory } = config;
 
-  const context = config.context ?? (defaultContextHandler as T);
-
-  const getContext = context(memory);
+  const contextHandler =
+    config.context ?? (defaultContextHandler as unknown as T);
 
   const agent: Agent<T> = {
     inputs,
@@ -128,18 +131,20 @@ export function createDreams<T extends ContextHandler = ContextHandler>(
     actions,
     experts,
     memory,
-    context,
+    context: contextHandler,
     emit: (event: string, data: any) => {
       logger.info("agent:event", event, data);
     },
 
     run: async (contextId: string) => {
+      const context = contextHandler(agent.memory);
+
       const outputs = Object.entries(agent.outputs).map(([type, output]) => ({
         type,
         ...output,
       }));
 
-      const ctx = await getContext(contextId);
+      const ctx = await context.get(contextId);
 
       const { memory } = ctx;
 
@@ -150,18 +155,13 @@ export function createDreams<T extends ContextHandler = ContextHandler>(
 
       while (true) {
         const system = render(prompt, {
-          context: [
-            ...memory.inputs.filter((i) => i.processed === true),
-            ...memory.outputs,
-            ...memory.calls,
-            ...memory.results.filter((i) => i.processed === true),
-          ].map((i) => formatContext(i)),
+          context: context.render(ctx.memory),
           outputs: outputs.map(formatOutputInterface),
           actions: actions.map(formatAction),
           updates: [
-            ...memory.inputs.filter((i) => i.processed !== true),
+            ...newInputs,
             ...memory.results.filter((i) => i.processed !== true),
-          ],
+          ].map(formatContext),
         });
 
         console.log("==========");
@@ -258,7 +258,7 @@ export function createDreams<T extends ContextHandler = ContextHandler>(
         break;
       }
 
-      config.memory.set(contextId, memory);
+      await context.save(contextId, memory);
     },
 
     send: async (
@@ -266,8 +266,9 @@ export function createDreams<T extends ContextHandler = ContextHandler>(
       input: { type: string; data: any }
     ) => {
       if (input.type in agent.inputs === false) return;
+      const context = contextHandler(agent.memory);
 
-      const { memory } = await getContext(conversationId);
+      const { memory } = await context.get(conversationId);
 
       const processor = agent.inputs[input.type];
 
@@ -290,7 +291,6 @@ export function createDreams<T extends ContextHandler = ContextHandler>(
 
     evaluator: async (ctx) => {
       const { id, memory } = ctx;
-
       console.log("evaluator", memory);
     },
   };
