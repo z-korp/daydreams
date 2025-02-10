@@ -80,7 +80,6 @@ async function main() {
         }
     );
 
-
     core.registerIOHandler({
         name: "user_chat",
         role: HandlerRole.INPUT,
@@ -162,18 +161,15 @@ async function main() {
                 }
 
                 // Dispatch the message
-                await core.dispatchToInput(
-                    "user_chat",
-                    {
-                        contentId: userMessage,
-                        userId,
-                        threadId: "console",
-                        platformId: "console",
-                        data: {
-                            content: userMessage,
-                        },
-                    }
-                );
+                await core.dispatchToInput("user_chat", {
+                    contentId: userMessage,
+                    userId,
+                    threadId: "console",
+                    platformId: "console",
+                    data: {
+                        content: userMessage,
+                    },
+                });
 
                 // Continue prompting
                 promptUser();
