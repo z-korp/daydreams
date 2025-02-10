@@ -13,17 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version-file: .nvmrc
-          cache: pnpm
+          bun-version: latest
 
       - name: Install dependencies
-        run: pnpm i
+        run: bun install
 
       - name: Build
-        run: pnpm build
+        run: bun run build
