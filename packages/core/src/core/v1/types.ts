@@ -33,7 +33,7 @@ export type WorkingMemory = {
     chains: Chain[];
 };
 
-/** 
+/**
  * Represents an action that can be executed with typed parameters
  * @template Schema - Zod schema defining parameter types
  * @template Result - Return type of the action
@@ -165,14 +165,14 @@ export type XMLElement = {
 /** Utility type to preserve type information */
 export type Pretty<type> = { [key in keyof type]: type[key] } & unknown;
 
-/** 
+/**
  * Extracts variable names from a template string
  * @template T - Template string type
  */
 export type ExtractTemplateVariables<T extends string> =
     T extends `${infer Start}{{${infer Var}}}${infer Rest}`
-    ? Var | ExtractTemplateVariables<Rest>
-    : never;
+        ? Var | ExtractTemplateVariables<Rest>
+        : never;
 
 /**
  * Creates a type mapping template variables to string values
@@ -292,7 +292,6 @@ export interface ResearchConfig {
     learnings?: string[];
     visitedUrls?: string[];
 }
-
 
 export interface IChain {
     /**

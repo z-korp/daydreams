@@ -14,8 +14,7 @@ const tavilyClient = tavily({
 
 export const tavilySearch: Action = {
     name: "searchWeb",
-    description:
-        "Search the web for current information using Tavily",
+    description: "Search the web for current information using Tavily",
     params: z.object({
         query: z.string().describe("The search query"),
         searchDepth: z
@@ -39,4 +38,4 @@ export const tavilySearch: Action = {
             totalResults: response.results.length,
         };
     },
-}
+};

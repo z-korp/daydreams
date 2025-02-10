@@ -10,8 +10,8 @@ import type { XMLElement } from "./types";
 export function formatXml({ tag, params, content }: XMLElement): string {
     const p = params
         ? Object.entries(params)
-            .map(([k, v]) => ` ${k}="${v}"`)
-            .join("")
+              .map(([k, v]) => ` ${k}="${v}"`)
+              .join("")
         : "";
 
     return `<${tag}${p}>${typeof content === "string" ? content : content.map((el) => (typeof el === "string" ? el : formatXml(el))).join("\n")}</${tag}>`;
