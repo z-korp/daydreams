@@ -1,5 +1,4 @@
 import { type LanguageModelV1 } from "ai";
-import type { T } from "vitest/dist/chunks/environment.LoooBwUu.js";
 import { z } from "zod";
 
 /** Represents a task with text content and completion status */
