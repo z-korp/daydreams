@@ -19,17 +19,17 @@ for creating autonomous agents with:
 Prerequisites:
 
 - Node.js 18+ using [nvm](https://github.com/nvm-sh/nvm)
-- [pnpm](https://pnpm.io/)
+- [bun](https://bun.sh/)
 
 ```bash
 # Install dependencies
-pnpm install
+bun install
 
 # Copy environment variables
 cp .env.example .env
 
 # Run an example
-pnpm run example:discord
+bun run example:discord
 ```
 
 ## Core Concepts
@@ -166,26 +166,23 @@ The project includes several example implementations:
 
 ```bash
 # Discord bot
-pnpm run example:discord
+bun run example:discord
 
 # Telegram bot
-pnpm run example:telegram
+bun run example:telegram
 
 # GitHub code assistant
-pnpm run example:github
+bun run example:github
 ```
 
 ## Development
 
 ```bash
 # Build the project
-pnpm build
-
-# Run tests
-pnpm test
+bun build:core
 
 # Generate docs
-pnpm docs
+bun docs
 ```
 
 ## Contributing
