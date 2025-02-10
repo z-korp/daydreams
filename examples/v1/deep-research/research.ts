@@ -1,11 +1,11 @@
-import { render } from "@daydreamsai/core/src/core/v1/utils";
+import { action, render } from "@daydreamsai/core/src/core/v1/utils";
 import { createTagParser, formatXml } from "@daydreamsai/core/src/core/v1/xml";
 import { TavilyClient } from "@tavily/core";
 import { generateText, LanguageModelV1 } from "ai";
 import { z } from "zod";
-import zodToJsonSchema from "zod-to-json-schema";
-import pLimit from 'p-limit';
-import { searchResultsPrompt } from "./prompts";
+import pLimit from "p-limit";
+import { searchResultsParser, searchResultsPrompt } from "./prompts";
+import { researchSchema, searchResultsSchema } from "./schemas";
 
 export type Research = {
   id: string;
@@ -19,59 +19,6 @@ export type Research = {
   status: "in_progress" | "done";
 };
 
-const thinkParser = createTagParser("think");
-const outputParser = createTagParser("output", (t) =>
-  searchResultsSchema.parse(JSON.parse(t))
-);
-
-const searchResultsSchema = z.object({
-  learnings: z
-    .array(
-      z.object({
-        content: z.string().describe("learning content"),
-        references: z.array(z.string()).describe("url references"),
-      })
-    )
-    .describe(`List of learnings, max of 5`),
-
-  followUpQueries: z.array(
-    z.object({
-      query: z
-        .string()
-        .describe(
-          "List of follow-up SERP queries to research the topic further, max of 2"
-        ),
-      goal: z
-        .string()
-        .describe(
-          "The goal of the research that this query is meant to accomplish"
-        ),
-      // nextSteps: z.array(z.string()),
-    })
-  ),
-});
-
-export const researchSchema = z.object({
-  id: z.string().describe("id of the research use memorable ids"),
-  name: z.string().describe("The research name/topic"),
-  prompt: z.string().describe("the user prompt"),
-  queries: z.array(
-    z.object({
-      query: z.string().describe("The SERP query"),
-      goal: z
-        .string()
-        .describe(
-          "The goal of the research that this query is meant to accomplish"
-        ),
-    })
-  ),
-  questions: z
-    .array(z.string())
-    .describe(
-      `Follow up questions to clarify the research direction, max of 5`
-    ),
-});
-
 export type ResearchProgress = {
   currentDepth: number;
   totalDepth: number;
@@ -82,6 +29,24 @@ export type ResearchProgress = {
 
 const ConcurrencyLimit = 2;
 const limit = pLimit(ConcurrencyLimit);
+
+async function retry<T>(
+  key: string,
+  fn: () => Promise<T>,
+  retries: number = 3
+) {
+  console.log("trying", { key });
+  while (retries > 0) {
+    try {
+      return await fn();
+    } catch (error) {
+      retries--;
+      if (retries === 0) {
+        throw error;
+      }
+    }
+  }
+}
 
 export async function startDeepResearch({
   model,
@@ -105,7 +70,7 @@ export async function startDeepResearch({
     currentDepth: depth,
     totalDepth: maxDepth,
     totalQueries: queries.length,
-    completedQueries: 0
+    completedQueries: 0,
   };
 
   const reportProgress = (update: Partial<ResearchProgress>) => {
@@ -117,13 +82,13 @@ export async function startDeepResearch({
     const _queries = queries.slice();
     queries = [];
 
-    await Promise.all(
+    await Promise.allSettled(
       _queries.map((query) =>
         limit(async () => {
           console.log("Executing query:", query);
           reportProgress({
             currentQuery: query.query,
-            currentDepth: depth
+            currentDepth: depth,
           });
 
           try {
@@ -132,65 +97,63 @@ export async function startDeepResearch({
               searchDepth: "advanced",
             });
 
-            const res = await generateText({
-              model: model,
-              abortSignal: AbortSignal.timeout(60_000),
-              system: render(searchResultsPrompt, {
-                research: formatXml({
-                  tag: "research",
-                  params: { id: research.id },
-                  content: JSON.stringify(research),
-                }),
-                goal: query.goal,
-                query: query.query,
-                results: results.map((r) =>
-                  formatXml({
-                    tag: "result",
-                    params: { url: r.url },
-                    content: r.content,
-                  })
-                ),
-                schema: JSON.stringify(zodToJsonSchema(searchResultsSchema)),
-              }),
-              messages: [
-                {
-                  role: "assistant",
-                  content: "<think>",
-                },
-              ],
-            });
+            await retry(
+              "research:results",
+              async () => {
+                const system = searchResultsPrompt({
+                  research,
+                  goal: query.goal,
+                  query: query.query,
+                  results: results,
+                  schema: searchResultsSchema,
+                });
 
-            const text = "<think>" + res.text;
+                console.log(system);
 
-            try {
-              const [think] = thinkParser(text);
-              const [output] = outputParser(text);
+                const res = await generateText({
+                  model,
+                  abortSignal: AbortSignal.timeout(60_000),
+                  system,
+                  messages: [
+                    {
+                      role: "assistant",
+                      content: "<think>",
+                    },
+                  ],
+                });
 
-              if (output) {
-                console.log(output);
+                const text = "<think>" + res.text;
 
-                research.learnings.push(
-                  ...output.content.learnings.map((l) => l.content)
-                );
+                try {
+                  const { think, output } = searchResultsParser(text);
+                  if (output) {
+                    console.log(output);
 
-                if (depth < maxDepth) {
-                  queries.push(...output.content.followUpQueries);
+                    research.learnings.push(
+                      ...output.learnings.map((l) => l.content)
+                    );
+
+                    if (depth < maxDepth) {
+                      queries.push(...output.followUpQueries);
+                    }
+                  } else {
+                    console.log(text);
+                  }
+                } catch (error) {
+                  console.log("failed parsing");
+                  throw error;
                 }
-              } else {
-                console.log(text);
-              }
-            } catch (error) {
-              console.log("failed parsing");
-            }
+              },
+              3
+            );
 
             reportProgress({
-              completedQueries: progress.completedQueries + 1
+              completedQueries: progress.completedQueries + 1,
             });
-
           } catch (error) {
             console.error("Error processing query:", query.query, error);
             reportProgress({
-              completedQueries: progress.completedQueries + 1
+              completedQueries: progress.completedQueries + 1,
             });
           }
         })
@@ -201,7 +164,7 @@ export async function startDeepResearch({
     research.queries.push(...queries);
 
     reportProgress({
-      totalQueries: progress.totalQueries + queries.length
+      totalQueries: progress.totalQueries + queries.length,
     });
   }
 
@@ -238,3 +201,41 @@ Return your report in markdown format. Always send the full report, do not cut i
   console.log({ report });
   return report;
 }
+
+// export const startDeepResearchAction = action({
+//   name: "start-deep-research",
+//   schema: researchSchema,
+//   async handler(call, ctx) {
+//     const research: Research = {
+//       ...call.data,
+//       learnings: [],
+//       status: "in_progress",
+//     };
+
+//     console.log({ research });
+
+//     ctx.memory.researches.push(research);
+
+//     startDeepResearch({
+//       model,
+//       research,
+//       tavilyClient,
+//       maxDepth: 2,
+//     })
+//       .then((res) => {
+//         ctx.memory.results.push({
+//           ref: "action_result",
+//           callId: call.id,
+//           data: res,
+//           name: call.name,
+//           timestamp: Date.now(),
+//           processed: false,
+//         });
+
+//         return agent.run(ctx.id);
+//       })
+//       .catch((err) => console.error(err));
+
+//     return "Research created!";
+//   },
+// });
