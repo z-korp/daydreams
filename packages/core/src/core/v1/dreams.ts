@@ -215,12 +215,26 @@ export function createDreams<
 
                 for (const { params, content } of data.outputs) {
                     const output = config.outputs[params.type];
+
+                    logger.info("agent:output", params.type, content);
                     try {
+
+                        let parsedContent = content;
+                        if (typeof content === 'string') {
+                            try {
+                                parsedContent = JSON.parse(content);
+                            } catch {
+                                parsedContent = content;
+                            }
+                        }
+
                         await output.handler(
-                            output.schema.parse(content),
+                            output.schema.parse(parsedContent),
                             ctx as InferContextFromHandler<Handler>
                         );
-                    } catch (error) { }
+                    } catch (error) {
+                        logger.error("agent:output", params.type, error);
+                    }
                 }
 
                 await Promise.allSettled(
