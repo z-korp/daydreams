@@ -18,10 +18,10 @@
         "api": "bun run examples/example-api.ts",
         "ui": "bun --dir clients/example-ui run dev",
         "test": "bun run packages/core",
-        "build:core": "cd packages/core && bun run build",
+        "build": "bun packages/core build",
         "release": "bun build && bun prettier && npx lerna publish --no-private --force-publish",
-        "prettier-check": "bun prettier --check packages",
-        "prettier": "bun prettier --write packages",
+        "prettier-check": "pnpx prettier --check packages",
+        "prettier": "pnpx prettier --write packages",
         "knip": "knip"
     },
     "dependencies": {
@@ -50,6 +50,6 @@
     "devDependencies": {
         "@types/bun": "^1.2.2",
         "knip": "^5.43.6",
-        "typescript": "~5.7.3"
+        "typescript": "~5.6.3"
     }
 }
