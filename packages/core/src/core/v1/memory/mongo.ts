@@ -1,5 +1,5 @@
-import { Collection, MongoClient, ObjectId } from 'mongodb';
-import type { MemoryStore } from '../types';
+import { Collection, MongoClient, ObjectId } from "mongodb";
+import type { MemoryStore } from "../types";
 
 export interface MongoMemoryOptions {
     uri: string;
@@ -15,8 +15,8 @@ export class MongoMemoryStore implements MemoryStore {
 
     constructor(options: MongoMemoryOptions) {
         this.client = new MongoClient(options.uri);
-        this.dbName = options.dbName || 'dreams_memory';
-        this.collectionName = options.collectionName || 'conversations';
+        this.dbName = options.dbName || "dreams_memory";
+        this.collectionName = options.collectionName || "conversations";
     }
 
     /**
@@ -34,7 +34,7 @@ export class MongoMemoryStore implements MemoryStore {
      * @returns The stored value or null if not found
      */
     async get<T>(key: string): Promise<T | null> {
-        if (!this.collection) throw new Error('MongoDB not initialized');
+        if (!this.collection) throw new Error("MongoDB not initialized");
 
         const doc = await this.collection.findOne({ _id: new ObjectId(key) });
         if (!doc) return null;
@@ -48,7 +48,7 @@ export class MongoMemoryStore implements MemoryStore {
      * @param value - Value to store
      */
     async set(key: string, value: any): Promise<void> {
-        if (!this.collection) throw new Error('MongoDB not initialized');
+        if (!this.collection) throw new Error("MongoDB not initialized");
 
         await this.collection.updateOne(
             { _id: new ObjectId(key) },
@@ -62,7 +62,7 @@ export class MongoMemoryStore implements MemoryStore {
      * @param key - Key to remove
      */
     async delete(key: string): Promise<void> {
-        if (!this.collection) throw new Error('MongoDB not initialized');
+        if (!this.collection) throw new Error("MongoDB not initialized");
 
         await this.collection.deleteOne({ _id: new ObjectId(key) });
     }
@@ -71,7 +71,7 @@ export class MongoMemoryStore implements MemoryStore {
      * Removes all entries from the store
      */
     async clear(): Promise<void> {
-        if (!this.collection) throw new Error('MongoDB not initialized');
+        if (!this.collection) throw new Error("MongoDB not initialized");
 
         await this.collection.deleteMany({});
     }
@@ -89,7 +89,9 @@ export class MongoMemoryStore implements MemoryStore {
  * @param options - MongoDB connection options
  * @returns A MemoryStore implementation using MongoDB for storage
  */
-export async function createMongoMemoryStore(options: MongoMemoryOptions): Promise<MemoryStore> {
+export async function createMongoMemoryStore(
+    options: MongoMemoryOptions
+): Promise<MemoryStore> {
     const store = new MongoMemoryStore(options);
     await store.initialize();
     return store;

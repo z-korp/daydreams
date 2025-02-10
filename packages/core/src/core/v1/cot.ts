@@ -123,7 +123,8 @@ export async function chainOfThought({
 
     // Add instruction to process results if there are no new inputs
     if (inputs.length === 0) {
-        prompt += "\n\nThere are no new inputs. Please process any unprocessed action results and provide an appropriate response to the user.";
+        prompt +=
+            "\n\nThere are no new inputs. Please process any unprocessed action results and provide an appropriate response to the user.";
     }
 
     const { response } = await llm({
@@ -140,8 +141,8 @@ export async function chainOfThought({
         msg.role === "assistant"
             ? Array.isArray(msg.content)
                 ? msg.content
-                    .map((t) => (t.type === "text" ? t.text : ""))
-                    .join("\n")
+                      .map((t) => (t.type === "text" ? t.text : ""))
+                      .join("\n")
                 : msg.content
             : "";
 
