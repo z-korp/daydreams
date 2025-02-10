@@ -13,10 +13,11 @@ import {
 import { createGroq } from "@ai-sdk/groq";
 import { action, input, output } from "@daydreamsai/core/src/core/v1/utils";
 import { z } from "zod";
-import { Research, researchSchema, startDeepResearch } from "./research";
+import { Research, startDeepResearch } from "./research";
 import * as readline from "readline/promises";
 import { tavily } from "@tavily/core";
 import { formatXml } from "@daydreamsai/core/src/core/v1/xml";
+import { researchSchema } from "./schemas";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -53,7 +54,7 @@ type Handler = typeof contextHandler;
 type Memory = InferMemoryFromHandler<Handler>;
 
 const agent = createDreams<Memory, Handler>({
-  logger: LogLevel.DEBUG,
+  logger: LogLevel.INFO,
   memory,
   context: contextHandler,
   model,
@@ -82,7 +83,7 @@ const agent = createDreams<Memory, Handler>({
       description: "",
       schema: z.string(),
       handler(params, ctx) {
-        console.log("Agent:" + params);
+        // console.log("Agent:" + params);
         return true;
       },
     }),
