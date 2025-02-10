@@ -17,8 +17,9 @@ import {
     // getContextMemoryHandler,
 } from "@daydreamsai/core/src/core/v1/memory";
 
-import { Research } from "./deep-research/research";
+import { Research, researchSchema, startDeepResearch } from "./deep-research/research";
 import { formatXml } from "@daydreamsai/core/src/core/v1/xml";
+import { tavily } from "@tavily/core";
 
 const groq = createGroq({
     apiKey: process.env.GROQ_API_KEY!,
@@ -29,6 +30,9 @@ const discord = new DiscordClient({
     discord_bot_name: process.env.DISCORD_BOT_NAME!,
 }, LogLevel.DEBUG);
 
+const tavilyClient = tavily({
+    apiKey: process.env.TAVILY_API_KEY!,
+});
 
 const contextHandler = createContextHandler(
     () => ({
@@ -49,6 +53,8 @@ const contextHandler = createContextHandler(
     }
 );
 
+const model = groq("deepseek-r1-distill-llama-70b")
+
 type Handler = typeof contextHandler;
 type Memory = InferMemoryFromHandler<Handler>;
 
@@ -57,7 +63,7 @@ async function main() {
         logger: LogLevel.DEBUG,
         memory: createMemoryStore(),
         context: contextHandler,
-        model: groq("deepseek-r1-distill-llama-70b"),
+        model,
         inputs: {
             "discord:message": input({
                 schema: z.object({
@@ -127,7 +133,51 @@ async function main() {
         },
 
         actions: [
-            action({ ...tavilySearch }),
+            action({
+                name: "start-deep-research",
+                schema: researchSchema,
+                async handler(call, ctx) {
+                    const research: Research = {
+                        ...call.data,
+                        learnings: [],
+                        status: "in_progress",
+                    };
+
+                    console.log({ research });
+
+                    ctx.memory.researches.push(research);
+
+                    startDeepResearch({
+                        model,
+                        research,
+                        tavilyClient,
+                        maxDepth: 2,
+                    })
+                        .then((res) => {
+                            ctx.memory.results.push({
+                                ref: "action_result",
+                                callId: call.id,
+                                data: res,
+                                name: call.name,
+                                timestamp: Date.now(),
+                                processed: false,
+                            });
+
+                            return agent.run(ctx.id);
+                        })
+                        .catch((err) => console.error(err));
+
+                    return "Research created!";
+                },
+            }),
+            action({
+                name: "cancel-deep-research",
+                schema: researchSchema,
+                enabled: (ctx) => ctx.memory.researches.length > 0,
+                async handler(params, ctx) {
+                    return "Research canceled!";
+                },
+            }),
         ],
     });
 

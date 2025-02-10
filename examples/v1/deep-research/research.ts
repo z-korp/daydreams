@@ -202,7 +202,7 @@ Make it as as detailed as possible, aim for 3 or more pages, include ALL the lea
 Here is all the data from research:
 <research>{{research}}</research>
 
-Return your report in mardown format.
+Return your report in markdown format. Always send the full report, do not cut it off.
 `,
       {
         research: JSON.stringify(research),
