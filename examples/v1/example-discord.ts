@@ -8,7 +8,6 @@ import {
 import { DiscordClient } from "../../packages/core/src/core/v0/io/discord";
 import { createGroq } from "@ai-sdk/groq";
 import { InferMemoryFromHandler, LogLevel } from "../../packages/core/src/core/v1/types";
-import { tavilySearch } from "../../packages/core/src/core/v1/actions/tavily";
 import {
     createContextHandler,
     createMemoryStore,

@@ -1,4 +1,3 @@
-import { Agent } from "@daydreamsai/core/src/core/v1/types";
 import { render } from "@daydreamsai/core/src/core/v1/utils";
 import { createTagParser, formatXml } from "@daydreamsai/core/src/core/v1/xml";
 import { TavilyClient } from "@tavily/core";
@@ -215,6 +214,7 @@ Return your report in markdown format. Always send the full report, do not cut i
       },
     ],
   });
+
   console.log("====FINAL REPORT=====");
   console.log("<think>" + res.text);
 
