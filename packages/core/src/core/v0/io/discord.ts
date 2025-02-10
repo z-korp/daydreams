@@ -8,15 +8,16 @@ import {
     Message,
     type Channel,
 } from "discord.js";
-import { Logger } from "../../core/logger";
+import { Logger } from "../../v1/logger";
 import {
     HandlerRole,
     LogLevel,
     type IOHandler,
     type ProcessableContent,
 } from "../types";
-import { env } from "../../core/env";
+
 import { z } from "zod";
+import { env } from "process";
 
 export interface DiscordCredentials {
     discord_token: string;
@@ -170,21 +171,6 @@ export class DiscordClient {
                 data,
             });
 
-            if (env.DRY_RUN) {
-                this.logger.info(
-                    "DiscordClient.sendMessage",
-                    "Dry run enabled",
-                    {
-                        data,
-                    }
-                );
-                return {
-                    success: true,
-                    messageId: "DRY_RUN",
-                    content: "DRY_RUN",
-                    error: "DRY_RUN",
-                };
-            }
             if (!data?.channelId || !data?.content) {
                 return {
                     success: false,
@@ -207,7 +193,25 @@ export class DiscordClient {
                 throw error;
             }
 
-            const sentMessage = await channel.send(data.content);
+            let sentMessage;
+
+            // Check if message is over 4000 characters
+            if (data.content.length > 4000) {
+                // Create a Buffer with the content
+                const buffer = Buffer.from(data.content, 'utf-8');
+
+                // Send as text file attachment
+                sentMessage = await channel.send({
+                    content: "See attached:",
+                    files: [{
+                        attachment: buffer,
+                        name: 'message.txt',
+                    }]
+                });
+            } else {
+                // Send normal message
+                sentMessage = await channel.send(data.content);
+            }
 
             return {
                 success: true,
