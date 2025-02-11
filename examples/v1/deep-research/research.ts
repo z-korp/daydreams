@@ -1,4 +1,4 @@
-import { TavilyClient } from "@tavily/core";
+import { tavily, TavilyClient } from "@tavily/core";
 import { generateText, LanguageModelV1 } from "ai";
 import pLimit from "p-limit";
 import {
@@ -6,8 +6,8 @@ import {
   searchResultsParser,
   searchResultsPrompt,
 } from "./prompts";
-import { searchResultsSchema } from "./schemas";
-import { Debugger } from "@daydreamsai/core/src/core/v1";
+import { researchSchema, searchResultsSchema } from "./schemas";
+import { action, Debugger } from "@daydreamsai/core/src/core/v1";
 
 export type Research = {
   id: string;
@@ -227,40 +227,54 @@ export async function startDeepResearch({
   return report;
 }
 
-// export const startDeepResearchAction = action({
-//   name: "start-deep-research",
-//   schema: researchSchema,
-//   async handler(call, ctx) {
-//     const research: Research = {
-//       ...call.data,
-//       learnings: [],
-//       status: "in_progress",
-//     };
+const startDeepResearchAction = action({
+  name: "start-deep-research",
+  schema: researchSchema,
+  async handler(call, ctx, agent) {
+    const research: Research = {
+      ...call.data,
+      learnings: [],
+      status: "in_progress",
+    };
 
-//     console.log({ research });
+    ctx.memory.researches.push(research);
 
-//     ctx.memory.researches.push(research);
+    startDeepResearch({
+      model: agent.reasoningModel ?? agent.model,
+      research,
+      tavilyClient: agent.container.resolve(tavily),
+      maxDepth: call.data.maxDepth ?? 2,
+      contextId: ctx.id,
+      debug: agent.debugger,
+    })
+      .then((res) => {
+        ctx.memory.results.push({
+          ref: "action_result",
+          callId: call.id,
+          data: res,
+          name: call.name,
+          timestamp: Date.now(),
+          processed: false,
+        });
 
-//     startDeepResearch({
-//       model,
-//       research,
-//       tavilyClient,
-//       maxDepth: 2,
-//     })
-//       .then((res) => {
-//         ctx.memory.results.push({
-//           ref: "action_result",
-//           callId: call.id,
-//           data: res,
-//           name: call.name,
-//           timestamp: Date.now(),
-//           processed: false,
-//         });
+        return agent.run(ctx.id);
+      })
+      .catch((err) => console.error(err));
 
-//         return agent.run(ctx.id);
-//       })
-//       .catch((err) => console.error(err));
+    return "Research created!";
+  },
+});
 
-//     return "Research created!";
-//   },
-// });
+const cancelResearchAction = action({
+  name: "cancel-deep-research",
+  schema: researchSchema,
+  enabled: (ctx) => ctx.memory.researches.length > 0,
+  async handler(params, ctx) {
+    return "Research canceled!";
+  },
+});
+
+export const researchDeepActions = [
+  startDeepResearchAction,
+  cancelResearchAction,
+];

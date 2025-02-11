@@ -13,18 +13,25 @@ import {
 import { createGroq } from "@ai-sdk/groq";
 import { action, input, output } from "@daydreamsai/core/src/core/v1/utils";
 import { z } from "zod";
-import { Research, startDeepResearch } from "./research";
+import { Research, researchDeepActions, startDeepResearch } from "./research";
 import * as readline from "readline/promises";
 import { tavily } from "@tavily/core";
 import { formatXml } from "@daydreamsai/core/src/core/v1/xml";
 import { researchSchema } from "./schemas";
+import createContainer from "@daydreamsai/core/src/core/v1/container";
+
+const container = createContainer();
+
+container.singleton(tavily, () =>
+  tavily({
+    apiKey: process.env.TAVILY_API_KEY!,
+  })
+);
+
+console.log(container.resolve(tavily));
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
-});
-
-const tavilyClient = tavily({
-  apiKey: process.env.TAVILY_API_KEY!,
 });
 
 const memory = createMemoryStore();
@@ -56,6 +63,7 @@ type Memory = InferMemoryFromHandler<Handler>;
 const agent = createDreams<Memory, Handler>({
   logger: LogLevel.INFO,
   memory,
+  container,
   context: contextHandler,
   debugger: async (contextId, keys, data) => {
     const [type, id] = keys;
@@ -94,55 +102,7 @@ const agent = createDreams<Memory, Handler>({
   },
   events: {},
   experts: {},
-  actions: [
-    action({
-      name: "start-deep-research",
-      schema: researchSchema,
-      async handler(call, ctx, agent) {
-        const research: Research = {
-          ...call.data,
-          learnings: [],
-          status: "in_progress",
-        };
-
-        console.log({ research });
-
-        ctx.memory.researches.push(research);
-
-        startDeepResearch({
-          contextId: ctx.id,
-          model,
-          research,
-          tavilyClient,
-          maxDepth: call.data.maxDepth ?? 2,
-          debug: agent.debugger,
-        })
-          .then((res) => {
-            ctx.memory.results.push({
-              ref: "action_result",
-              callId: call.id,
-              data: res,
-              name: call.name,
-              timestamp: Date.now(),
-              processed: false,
-            });
-
-            return agent.run(ctx.id);
-          })
-          .catch((err) => console.error(err));
-
-        return "Research created!";
-      },
-    }),
-    action({
-      name: "cancel-deep-research",
-      schema: researchSchema,
-      enabled: (ctx) => ctx.memory.researches.length > 0,
-      async handler(params, ctx) {
-        return "Research canceled!";
-      },
-    }),
-  ],
+  actions: [...researchDeepActions],
 });
 
 const rl = readline.createInterface({

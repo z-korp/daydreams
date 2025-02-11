@@ -1,5 +1,6 @@
 import { type LanguageModelV1 } from "ai";
 import { z } from "zod";
+import type { Container } from "./container";
 
 /** Represents a task with text content and completion status */
 export type Task = {
@@ -209,6 +210,11 @@ export interface Agent<
 
   debugger: Debugger;
 
+  container: Container;
+
+  model: LanguageModelV1;
+  reasoningModel?: LanguageModelV1;
+
   inputs: Record<string, InputConfig<any, InferContextFromHandler<T>>>;
   outputs: Record<
     string,
@@ -254,6 +260,7 @@ export type Config<
 > = {
   // context: Context;
   memory: MemoryStore;
+  container?: Container;
   context?: TContextHandler;
   debugger?: Debugger;
   inputs: Record<string, InputConfig<any, Context>>;

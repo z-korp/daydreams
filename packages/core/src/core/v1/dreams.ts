@@ -27,6 +27,7 @@ import { createTagParser } from "./xml";
 import { generateText } from "ai";
 import { randomUUID } from "crypto";
 import { createParser, createPrompt } from "./prompt";
+import createContainer from "./container";
 
 const promptTemplate = `
 You are tasked with analyzing messages, formulating responses, and initiating actions based on a given context. 
@@ -157,10 +158,21 @@ export function createDreams<
     enableColors: true,
   });
 
-  const { inputs, outputs, events, actions, experts, memory } = config;
+  const {
+    inputs,
+    outputs,
+    events,
+    actions,
+    experts,
+    memory,
+    model,
+    reasoningModel,
+  } = config;
 
   const contextHandler =
     config.context ?? (defaultContextHandler as unknown as Handler);
+
+  const container = config.container ?? createContainer();
 
   const contextsRunning = new Set<string>();
 
@@ -178,6 +190,9 @@ export function createDreams<
     actions,
     experts,
     memory,
+    container,
+    model,
+    reasoningModel,
     debugger: debug,
     context: contextHandler,
     emit: (event: string, data: any) => {
