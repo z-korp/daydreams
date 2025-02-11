@@ -43,7 +43,7 @@ export type Action<
   Schema extends z.AnyZodObject = z.AnyZodObject,
   Result = any,
   Context = any,
-  TAgent extends Agent<any, any> = Agent<any, any>,
+  TAgent extends AnyAgent = AnyAgent,
 > = {
   name: string;
   description?: string;
@@ -61,13 +61,15 @@ export type OutputSchema = z.AnyZodObject | z.ZodString;
 export type Output<
   Schema extends OutputSchema = OutputSchema,
   Context = any,
+  TAgent extends AnyAgent = AnyAgent,
 > = {
   type: string;
   description: string;
   schema: Schema;
   handler: (
     params: z.infer<Schema>,
-    ctx: Context
+    ctx: Context,
+    agent: TAgent
   ) => Promise<boolean> | boolean;
 };
 
@@ -79,16 +81,19 @@ export type Output<
 export type Input<
   Schema extends z.AnyZodObject = z.AnyZodObject,
   Context = any,
+  TAgent extends AnyAgent = AnyAgent,
 > = {
   type: string;
   description?: string;
   schema: Schema;
   handler: (
     params: z.infer<Schema>,
-    ctx: Context
+    ctx: Context,
+    agent: TAgent
   ) => Promise<boolean> | boolean;
   subscribe?: (
-    send: (conversationId: string, data: z.infer<Schema>) => void
+    send: (conversationId: string, data: z.infer<Schema>) => void,
+    agent: TAgent
   ) => () => void;
 };
 
@@ -198,6 +203,8 @@ export interface AgentContext<Memory extends WorkingMemory = WorkingMemory> {
   memory: Memory;
 }
 
+export type AnyAgent = Agent<any, any>;
+
 export interface Agent<
   Memory extends WorkingMemory = WorkingMemory,
   T extends ContextHandler<Memory> = ContextHandler<Memory>,
@@ -263,31 +270,39 @@ export type Config<
   container?: Container;
   context?: TContextHandler;
   debugger?: Debugger;
-  inputs: Record<string, InputConfig<any, Context>>;
-  outputs: Record<string, OutputConfig<any, Context>>;
+  inputs: Record<
+    string,
+    InputConfig<any, Context, Agent<TMemory, TContextHandler>>
+  >;
+  outputs: Record<
+    string,
+    OutputConfig<any, Context, Agent<TMemory, TContextHandler>>
+  >;
 
   events: Record<string, z.AnyZodObject>;
 
-  experts: Record<string, ExpertConfig<Context>>;
+  experts?: Record<string, ExpertConfig<Context>>;
 
   actions: Action<any, any, Context, Agent<TMemory, TContextHandler>>[];
 
   model: LanguageModelV1;
   reasoningModel?: LanguageModelV1;
 
-  logger: LogLevel;
+  logger?: LogLevel;
 };
 
 /** Configuration type for inputs without type field */
 export type InputConfig<
   T extends z.AnyZodObject = z.AnyZodObject,
   Context = any,
-> = Omit<Input<T, Context>, "type">;
+  TAgent extends AnyAgent = AnyAgent,
+> = Omit<Input<T, Context, TAgent>, "type">;
 
 /** Configuration type for outputs without type field */
 export type OutputConfig<
   T extends OutputSchema = OutputSchema,
   Context = any,
+  TAgent extends AnyAgent = AnyAgent,
 > = Omit<Output<T, Context>, "type">;
 
 /** Configuration type for experts without type field */

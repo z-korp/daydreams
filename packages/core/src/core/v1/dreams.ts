@@ -1,15 +1,16 @@
-import type {
-  Action,
-  ActionCall,
-  Agent,
-  Config,
-  ContextHandler,
-  Debugger,
-  InferContextFromHandler,
-  Log,
-  Output,
-  Subscription,
-  WorkingMemory,
+import {
+  LogLevel,
+  type Action,
+  type ActionCall,
+  type Agent,
+  type Config,
+  type ContextHandler,
+  type Debugger,
+  type InferContextFromHandler,
+  type Log,
+  type Output,
+  type Subscription,
+  type WorkingMemory,
 } from "./types";
 import {
   createContextHandler,
@@ -153,7 +154,7 @@ export function createDreams<
   const inputSubscriptions = new Map<string, Subscription>();
 
   const logger = new Logger({
-    level: config.logger,
+    level: config.logger ?? LogLevel.INFO,
     enableTimestamp: true,
     enableColors: true,
   });
@@ -188,7 +189,7 @@ export function createDreams<
     outputs,
     events,
     actions,
-    experts,
+    experts: experts ?? {},
     memory,
     container,
     model,
@@ -294,7 +295,8 @@ export function createDreams<
 
             await output.handler(
               output.schema.parse(parsedContent),
-              ctx as InferContextFromHandler<Handler>
+              ctx as InferContextFromHandler<Handler>,
+              agent
             );
           } catch (error) {
             logger.error("agent:output", type, error);
@@ -365,10 +367,14 @@ export function createDreams<
 
       const data = processor.schema.parse(input.data);
 
-      const shouldContinue = await processor.handler(data, {
-        id: conversationId,
-        memory,
-      } as any);
+      const shouldContinue = await processor.handler(
+        data,
+        {
+          id: conversationId,
+          memory,
+        } as InferContextFromHandler<Handler>,
+        agent
+      );
 
       await agent.evaluator({
         id: conversationId,
@@ -394,7 +400,7 @@ export function createDreams<
           console.error(err);
           // logger.error("agent", "input", err);
         });
-      });
+      }, agent);
 
       inputSubscriptions.set(key, subscription);
     }
