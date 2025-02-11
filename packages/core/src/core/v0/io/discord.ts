@@ -191,7 +191,7 @@ export class DiscordClient {
       let sentMessage;
 
       // Check if message is over 4000 characters
-      if (data.content.length > 4000) {
+      if (data.content.length > 3000) {
         // Create a Buffer with the content
         const buffer = Buffer.from(data.content, "utf-8");
 
