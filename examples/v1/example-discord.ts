@@ -80,6 +80,10 @@ const agent = createDreams<Memory, Handler>({
   context: contextHandler,
   container,
   model,
+  debugger: async (contextId, keys, data) => {
+    const [type, id] = keys;
+    await Bun.write(`./logs/${contextId}/${id}-${type}.md`, data);
+  },
   inputs: {
     "discord:message": input({
       schema: z.object({
