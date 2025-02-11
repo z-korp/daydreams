@@ -1,15 +1,13 @@
-import { action, render } from "@daydreamsai/core/src/core/v1/utils";
-import { createTagParser, formatXml } from "@daydreamsai/core/src/core/v1/xml";
 import { TavilyClient } from "@tavily/core";
 import { generateText, LanguageModelV1 } from "ai";
-import { z } from "zod";
 import pLimit from "p-limit";
 import {
   finalReportPrompt,
   searchResultsParser,
   searchResultsPrompt,
 } from "./prompts";
-import { researchSchema, searchResultsSchema } from "./schemas";
+import { searchResultsSchema } from "./schemas";
+import { Debugger } from "@daydreamsai/core/src/core/v1";
 
 export type Research = {
   id: string;
@@ -53,17 +51,21 @@ async function retry<T>(
 }
 
 export async function startDeepResearch({
+  contextId,
   model,
   research,
   tavilyClient,
   maxDepth,
   onProgress,
+  debug,
 }: {
+  contextId: string;
   model: LanguageModelV1;
   research: Research;
   tavilyClient: TavilyClient;
   maxDepth: number;
   onProgress?: (progress: ResearchProgress) => void;
+  debug: Debugger;
 }) {
   console.log("=======STARTING-DEEP-RESEARCH=======");
 
@@ -90,6 +92,9 @@ export async function startDeepResearch({
       _queries.map((query) =>
         limit(async () => {
           console.log("Executing query:", query);
+
+          const id = Date.now().toString();
+
           reportProgress({
             currentQuery: query.query,
             currentDepth: depth,
@@ -104,6 +109,21 @@ export async function startDeepResearch({
             await retry(
               "research:results",
               async () => {
+                debug(
+                  contextId,
+                  ["research-query-results-data", id],
+                  JSON.stringify(
+                    {
+                      research,
+                      goal: query.goal,
+                      query: query.query,
+                      results: results,
+                    },
+                    null,
+                    2
+                  )
+                );
+
                 const system = searchResultsPrompt({
                   research,
                   goal: query.goal,
@@ -111,6 +131,8 @@ export async function startDeepResearch({
                   results: results,
                   schema: searchResultsSchema,
                 });
+
+                debug(contextId, ["research-query-results-prompt", id], system);
 
                 const res = await generateText({
                   model,
@@ -125,6 +147,8 @@ export async function startDeepResearch({
                 });
 
                 const text = "<think>" + res.text;
+
+                debug(contextId, ["research-query-results-response", id], text);
 
                 try {
                   const { think, output } = searchResultsParser(text);
@@ -171,9 +195,21 @@ export async function startDeepResearch({
 
   console.log(research);
 
+  const id = Date.now().toString();
+
+  const reportPrompt = finalReportPrompt({ research });
+
+  debug(
+    contextId,
+    ["research-report-data", id],
+    JSON.stringify(research, null, 2)
+  );
+
+  debug(contextId, ["research-report-prompt", id], reportPrompt);
+
   const res = await generateText({
     model,
-    system: finalReportPrompt({ research }),
+    system: reportPrompt,
     messages: [
       {
         role: "assistant",
@@ -184,6 +220,8 @@ export async function startDeepResearch({
 
   console.log("====FINAL REPORT=====");
   console.log("<think>" + res.text);
+  debug(contextId, ["research-report-response", id], "<think>" + res.text);
+
   const report = res.text.slice(res.text.lastIndexOf("</think>"));
   console.log({ report });
   return report;

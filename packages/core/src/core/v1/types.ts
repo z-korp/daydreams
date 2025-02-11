@@ -42,12 +42,17 @@ export type Action<
   Schema extends z.AnyZodObject = z.AnyZodObject,
   Result = any,
   Context = any,
+  TAgent extends Agent<any, any> = Agent<any, any>,
 > = {
   name: string;
   description?: string;
   schema: Schema;
   enabled?: (ctx: Context) => boolean;
-  handler: (call: ActionCall<z.infer<Schema>>, ctx: Context) => Promise<Result>;
+  handler: (
+    call: ActionCall<z.infer<Schema>>,
+    ctx: Context,
+    agent: TAgent
+  ) => Promise<Result>;
 };
 
 export type OutputSchema = z.AnyZodObject | z.ZodString;
@@ -202,6 +207,8 @@ export interface Agent<
 
   context: T;
 
+  debugger: Debugger;
+
   inputs: Record<string, InputConfig<any, InferContextFromHandler<T>>>;
   outputs: Record<
     string,
@@ -212,7 +219,7 @@ export interface Agent<
 
   experts: Record<string, ExpertConfig<InferContextFromHandler<T>>>;
 
-  actions: Action<any, any, InferContextFromHandler<T>>[];
+  actions: Action<any, any, InferContextFromHandler<T>, Agent<Memory, T>>[];
 
   //
   emit: (...args: any[]) => void;
@@ -238,6 +245,8 @@ export type InferMemoryFromHandler<THandler extends ContextHandler<any>> =
 export type InferContextFromHandler<THandler extends ContextHandler<any>> =
   AgentContext<InferMemoryFromHandler<THandler>>;
 
+export type Debugger = (contextId: string, keys: string[], data: any) => void;
+
 export type Config<
   TMemory extends WorkingMemory = WorkingMemory,
   TContextHandler extends ContextHandler<TMemory> = ContextHandler<TMemory>,
@@ -246,6 +255,7 @@ export type Config<
   // context: Context;
   memory: MemoryStore;
   context?: TContextHandler;
+  debugger?: Debugger;
   inputs: Record<string, InputConfig<any, Context>>;
   outputs: Record<string, OutputConfig<any, Context>>;
 
@@ -253,7 +263,7 @@ export type Config<
 
   experts: Record<string, ExpertConfig<Context>>;
 
-  actions: Action<any, any, Context>[];
+  actions: Action<any, any, Context, Agent<TMemory, TContextHandler>>[];
 
   model: LanguageModelV1;
   reasoningModel?: LanguageModelV1;

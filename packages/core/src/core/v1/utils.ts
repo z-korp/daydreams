@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type {
   Action,
+  Agent,
   ExpertConfig,
   InputConfig,
   OutputConfig,
@@ -63,7 +64,10 @@ export function action<
   Schema extends z.AnyZodObject = z.AnyZodObject,
   Result = any,
   Context = any,
->(action: Action<Schema, Result, Context>): Action<Schema, Result, Context> {
+  TAgent extends Agent<any, any> = Agent<any, any>,
+>(
+  action: Action<Schema, Result, Context, TAgent>
+): Action<Schema, Result, Context, TAgent> {
   return action;
 }
 
