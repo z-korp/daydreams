@@ -159,4 +159,6 @@ const agent = createDreams<Memory, Handler>({
   actions: [...researchDeepActions],
 });
 
+agent.start();
+
 console.log("Starting Daydreams Discord Bot...");
