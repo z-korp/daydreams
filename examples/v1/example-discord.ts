@@ -108,8 +108,8 @@ const agent = createDreams<Memory, Handler>({
               id: message.channelId,
             },
             user: {
-              id: message.member!.id,
-              name: message.member!.displayName,
+              id: message.member!.id || message.author.id,
+              name: message.member!.displayName || message.author.username,
             },
             text: message.content,
           });
@@ -145,7 +145,7 @@ const agent = createDreams<Memory, Handler>({
             .resolve<DiscordClient>("discord")
             .client.channels.fetch(data.channelId);
           if (channel && channel.isSendable()) {
-            await channel.send(data.content);
+            await container.resolve<DiscordClient>("discord").sendMessage(data);
             return true;
           }
         } catch (error) {
