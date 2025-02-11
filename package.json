@@ -29,7 +29,7 @@
     "@ai-sdk/groq": "^1.1.7",
     "@mendable/firecrawl-js": "^1.16.0",
     "@openrouter/ai-sdk-provider": "^0.2.1",
-    "@tavily/core": "^0.0.3",
+    "@tavily/core": "^0.3.1",
     "ai": "^4.1.25",
     "ajv": "^8.17.1",
     "chalk": "^5.4.1",
