@@ -2,6 +2,7 @@ import { type LanguageModelV1 } from "ai";
 import { z } from "zod";
 import type { Container } from "./container";
 import type { ServiceProvider } from "./serviceProvider";
+import type { AnyContext, Context } from "./context";
 
 /** Represents a task with text content and completion status */
 export type Task = {
@@ -51,6 +52,7 @@ export type Action<
   schema: Schema;
   install?: (agent: TAgent) => Promise<void>;
   enabled?: (ctx: Context) => boolean;
+  examples?: z.infer<Schema>[];
   handler: (
     call: ActionCall<z.infer<Schema>>,
     ctx: Context,
@@ -70,6 +72,7 @@ export type Output<
   schema: Schema;
   install?: (agent: TAgent) => Promise<void>;
   enabled?: (ctx: Context) => boolean;
+  examples?: z.infer<Schema>[];
   handler: (
     params: z.infer<Schema>,
     ctx: Context,
@@ -97,7 +100,11 @@ export type Input<
     agent: TAgent
   ) => Promise<boolean> | boolean;
   subscribe?: (
-    send: (conversationId: string, data: z.infer<Schema>) => void,
+    send: <TContext extends AnyContext>(
+      contextHandler: TContext,
+      args: z.infer<TContext["args"]>,
+      data: z.infer<Schema>
+    ) => void,
     agent: TAgent
   ) => () => void;
 };
@@ -241,9 +248,13 @@ export interface Agent<
 
   //
   emit: (...args: any[]) => void;
-  run: (conversationId: string) => Promise<void>;
-  send: (
-    conversationId: string,
+  run: <TContext extends Context<WorkingMemory, any, any, any>>(
+    context: TContext,
+    args: z.infer<TContext["args"]>
+  ) => Promise<void>;
+  send: <TContext extends Context<WorkingMemory, any, any, any>>(
+    context: TContext,
+    args: z.infer<TContext["args"]>,
     input: { type: string; data: any }
   ) => Promise<void>;
   evaluator: (ctx: InferContextFromHandler<T>) => Promise<void>;

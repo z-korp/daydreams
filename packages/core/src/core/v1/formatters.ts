@@ -43,12 +43,14 @@ export function formatOutputInterface(output: Output) {
     tag: "output",
     params: { name: output.type },
     content: [
-      { tag: "instructions", content: output.description },
+      output.description
+        ? { tag: "instructions", content: output.description }
+        : null,
       {
         tag: "schema",
         content: JSON.stringify(zodToJsonSchema(output.schema, "output")),
       },
-    ],
+    ].filter((c) => !!c),
   });
 }
 

@@ -19,6 +19,7 @@ import { formatXml } from "@daydreamsai/core/src/core/v1/xml";
 import { tavily } from "@tavily/core";
 import { Events, Message } from "discord.js";
 import createContainer from "@daydreamsai/core/src/core/v1/container";
+import { context } from "@daydreamsai/core/src/core/v1/context";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -74,6 +75,30 @@ const contextHandler = createContextHandler(
 type Handler = typeof contextHandler;
 type Memory = InferMemoryFromHandler<Handler>;
 
+const discordChannelContext = context({
+  type: "discord:channel",
+  key: ({ channelId }) => channelId,
+  args: z.object({ channelId: z.string() }),
+  async setup(args, agent) {
+    const channel = await container
+      .resolve<DiscordClient>("discord")
+      .client.channels.fetch(args.channelId);
+
+    if (!channel) throw new Error("Invalid channel");
+
+    return { channel };
+  },
+  instructions: ({ key, args }, { channel }) => [""],
+  create({ key, args }, { channel }) {
+    return {
+      ...defaultContext(),
+    };
+  },
+  render(memory, { channel }) {
+    return [...defaultContextRender(memory)];
+  },
+});
+
 const agent = createDreams<Memory, Handler>({
   logger: LogLevel.DEBUG,
   memory,
@@ -103,15 +128,19 @@ const agent = createDreams<Memory, Handler>({
       },
       subscribe(send, agent) {
         function listener(message: Message) {
-          send(`discord:${message.channelId}`, {
-            chat: {
-              id: message.channelId,
-            },
-            user: {
-              id: message.member!.id,
-            },
-            text: message.content,
-          });
+          send(
+            discordChannelContext,
+            { channelId: message.channelId },
+            {
+              chat: {
+                id: message.channelId,
+              },
+              user: {
+                id: message.member!.id,
+              },
+              text: message.content,
+            }
+          );
         }
 
         const discord = agent.container.resolve<DiscordClient>("discord");
