@@ -84,7 +84,7 @@ const agent = createDreams<Memory, Handler>({
     "discord:message": input({
       schema: z.object({
         chat: z.object({ id: z.string() }),
-        user: z.object({ id: z.string() }),
+        user: z.object({ id: z.string(), name: z.string() }),
         text: z.string(),
       }),
       handler: (message, { memory }) => {
@@ -94,11 +94,11 @@ const agent = createDreams<Memory, Handler>({
           params: {
             channelId: message.chat.id,
             user: message.user.id,
+            name: message.user.name,
           },
           data: message.text,
           timestamp: Date.now(),
         });
-
         return true;
       },
       subscribe(send, agent) {
@@ -109,6 +109,7 @@ const agent = createDreams<Memory, Handler>({
             },
             user: {
               id: message.member!.id,
+              name: message.member!.displayName,
             },
             text: message.content,
           });
