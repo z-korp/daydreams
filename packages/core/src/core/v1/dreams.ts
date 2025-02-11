@@ -18,17 +18,17 @@ import {
   defaultContextRender,
 } from "./memory";
 import { Logger } from "./logger";
-import { render } from "./utils";
 import {
   formatAction,
   formatContext,
   formatOutputInterface,
 } from "./formatters";
-import { createTagParser } from "./xml";
 import { generateText } from "ai";
 import { randomUUID } from "crypto";
 import { createParser, createPrompt } from "./prompt";
 import createContainer from "./container";
+import { createServiceManager } from "./serviceProvider";
+import { _ } from "ajv";
 
 const promptTemplate = `
 You are tasked with analyzing messages, formulating responses, and initiating actions based on a given context. 
@@ -55,7 +55,7 @@ Now, analyze the following new context:
 {{updates}}
 </context>
 
-Here's an example of how to structure your response:
+Here's how you structure your response:
 
 <response>
 <reasoning>
@@ -65,7 +65,25 @@ Here's an example of how to structure your response:
 <action name="[Action name]">[action arguments using the schema as JSON]</action>
 [List of outputs, if applicable]
 <output type="[Output type]">
-[output arguments using the schema as JSON]
+[output data using the schema]
+</output>
+</response>
+
+Example for output with schema string:
+<response>
+<reasoning>...</reasoning>
+<output type="message">
+Hello! How can I assist you today?
+</output>
+</response>
+
+Example for output with schema json:
+<response>
+<reasoning>...</reasoning>
+<output type="message">
+{
+  "content": "Hello! How can I assist you today?"
+}
 </output>
 </response>
 `;
@@ -160,11 +178,12 @@ export function createDreams<
   });
 
   const {
-    inputs,
-    outputs,
-    events,
-    actions,
-    experts,
+    inputs = {},
+    outputs = {},
+    events = {},
+    actions = [],
+    experts = {},
+    services = [],
     memory,
     model,
     reasoningModel,
@@ -184,12 +203,20 @@ export function createDreams<
     } catch {}
   };
 
+  let booted = false;
+
+  const serviceManager = createServiceManager(container);
+
+  for (const service of services) {
+    serviceManager.register(service);
+  }
+
   const agent: Agent<Memory, Handler> = {
     inputs,
     outputs,
     events,
     actions,
-    experts: experts ?? {},
+    experts,
     memory,
     container,
     model,
@@ -200,18 +227,59 @@ export function createDreams<
       logger.info("agent:event", event, data);
     },
 
+    async start() {
+      if (booted) return;
+
+      booted = true;
+
+      await serviceManager.bootAll();
+
+      for (const input of Object.values(inputs)) {
+        if (input.install) await input.install(agent);
+      }
+
+      for (const [key, input] of Object.entries(agent.inputs)) {
+        if (input.subscribe) {
+          const subscription = input.subscribe((conversationId, data) => {
+            logger.info("agent", "input", { conversationId, data });
+            agent.send(conversationId, { type: key, data }).catch((err) => {
+              console.error(err);
+              // logger.error("agent", "input", err);
+            });
+          }, agent);
+
+          inputSubscriptions.set(key, subscription);
+        }
+      }
+
+      for (const output of Object.values(outputs)) {
+        if (output.install) await output.install(agent);
+      }
+
+      for (const action of actions) {
+        if (action.install) await action.install(agent);
+      }
+    },
+
+    async stop() {},
+
     run: async (contextId: string) => {
+      if (!booted) await agent.start();
+
       if (contextsRunning.has(contextId)) return;
       contextsRunning.add(contextId);
 
       const context = contextHandler(agent.memory);
-
-      const outputs = Object.entries(agent.outputs).map(([type, output]) => ({
-        type,
-        ...output,
-      }));
-
       const ctx = await context.get(contextId);
+
+      const outputEntries = Object.entries(agent.outputs)
+        .filter(([_, output]) =>
+          output.enabled ? output.enabled(ctx as any) : true
+        )
+        .map(([type, output]) => ({
+          type,
+          ...output,
+        }));
 
       const { memory } = ctx;
 
@@ -227,7 +295,7 @@ export function createDreams<
 
         const system = prompt({
           context: context.render(ctx.memory),
-          outputs: outputs,
+          outputs: outputEntries,
           actions: actions.filter((action) =>
             action.enabled ? action.enabled(ctx as any) : true
           ),
@@ -280,7 +348,7 @@ export function createDreams<
         }
 
         for (const { type, content } of data.outputs) {
-          const output = config.outputs[type];
+          const output = outputs[type];
 
           logger.info("agent:output", type, content);
           try {
@@ -305,7 +373,7 @@ export function createDreams<
 
         await Promise.allSettled(
           data.actions.map(async ({ name, data }) => {
-            const action = config.actions.find((a) => a.name === name);
+            const action = actions.find((a) => a.name === name);
 
             if (!action) {
               logger.error("agent:action", "ACTION_MISMATCH", {
@@ -391,20 +459,6 @@ export function createDreams<
       logger.debug("agent:evaluator", "memory", memory);
     },
   };
-
-  for (const [key, input] of Object.entries(agent.inputs)) {
-    if (input.subscribe) {
-      const subscription = input.subscribe((conversationId, data) => {
-        logger.info("agent", "input", { conversationId, data });
-        agent.send(conversationId, { type: key, data }).catch((err) => {
-          console.error(err);
-          // logger.error("agent", "input", err);
-        });
-      }, agent);
-
-      inputSubscriptions.set(key, subscription);
-    }
-  }
 
   return agent;
 }

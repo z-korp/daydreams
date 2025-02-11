@@ -49,7 +49,9 @@ export function input<
   Schema extends z.AnyZodObject = z.AnyZodObject,
   Context = any,
   TAgent extends Agent<any, any> = Agent<any, any>,
->(config: InputConfig<Schema, Context>): InputConfig<Schema, Context> {
+>(
+  config: InputConfig<Schema, Context, TAgent>
+): InputConfig<Schema, Context, TAgent> {
   return config;
 }
 

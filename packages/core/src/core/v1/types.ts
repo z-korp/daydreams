@@ -1,6 +1,7 @@
 import { type LanguageModelV1 } from "ai";
 import { z } from "zod";
 import type { Container } from "./container";
+import type { ServiceProvider } from "./serviceProvider";
 
 /** Represents a task with text content and completion status */
 export type Task = {
@@ -48,6 +49,7 @@ export type Action<
   name: string;
   description?: string;
   schema: Schema;
+  install?: (agent: TAgent) => Promise<void>;
   enabled?: (ctx: Context) => boolean;
   handler: (
     call: ActionCall<z.infer<Schema>>,
@@ -66,6 +68,8 @@ export type Output<
   type: string;
   description: string;
   schema: Schema;
+  install?: (agent: TAgent) => Promise<void>;
+  enabled?: (ctx: Context) => boolean;
   handler: (
     params: z.infer<Schema>,
     ctx: Context,
@@ -86,6 +90,7 @@ export type Input<
   type: string;
   description?: string;
   schema: Schema;
+  install?: (agent: TAgent) => Promise<void>;
   handler: (
     params: z.infer<Schema>,
     ctx: Context,
@@ -242,6 +247,9 @@ export interface Agent<
     input: { type: string; data: any }
   ) => Promise<void>;
   evaluator: (ctx: InferContextFromHandler<T>) => Promise<void>;
+
+  start(): Promise<void>;
+  stop(): Promise<void>;
 }
 
 export type ContextHandler<T extends WorkingMemory = WorkingMemory> = (
@@ -270,24 +278,24 @@ export type Config<
   container?: Container;
   context?: TContextHandler;
   debugger?: Debugger;
-  inputs: Record<
+  services?: ServiceProvider[];
+  inputs?: Record<
     string,
     InputConfig<any, Context, Agent<TMemory, TContextHandler>>
   >;
-  outputs: Record<
+  outputs?: Record<
     string,
     OutputConfig<any, Context, Agent<TMemory, TContextHandler>>
   >;
 
-  events: Record<string, z.AnyZodObject>;
+  events?: Record<string, z.AnyZodObject>;
 
   experts?: Record<string, ExpertConfig<Context>>;
 
-  actions: Action<any, any, Context, Agent<TMemory, TContextHandler>>[];
+  actions?: Action<any, any, Context, Agent<TMemory, TContextHandler>>[];
 
   model: LanguageModelV1;
   reasoningModel?: LanguageModelV1;
-
   logger?: LogLevel;
 };
 
