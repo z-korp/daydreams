@@ -8,35 +8,42 @@ import {
   createMemoryStore,
   defaultContext,
   defaultContextRender,
-  // getContextMemoryHandler,
 } from "@daydreamsai/core/src/core/v1/memory";
 import { createGroq } from "@ai-sdk/groq";
 import { action, input, output } from "@daydreamsai/core/src/core/v1/utils";
 import { z } from "zod";
-import { Research, researchDeepActions, startDeepResearch } from "./research";
+import { Research, researchDeepActions } from "./research";
 import * as readline from "readline/promises";
 import { tavily } from "@tavily/core";
 import { formatXml } from "@daydreamsai/core/src/core/v1/xml";
-import { researchSchema } from "./schemas";
 import createContainer from "@daydreamsai/core/src/core/v1/container";
-
-const container = createContainer();
-
-container.singleton(tavily, () =>
-  tavily({
-    apiKey: process.env.TAVILY_API_KEY!,
-  })
-);
-
-console.log(container.resolve(tavily));
+import { service } from "@daydreamsai/core/src/core/v1/serviceProvider";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
 });
 
+const model = groq("deepseek-r1-distill-llama-70b");
 const memory = createMemoryStore();
 
-const model = groq("deepseek-r1-distill-llama-70b");
+const container = createContainer()
+  .instance("groq", groq)
+  .instance("model", model)
+  .instance("memory", memory)
+  .singleton("tavily", () =>
+    tavily({
+      apiKey: process.env.TAVILY_API_KEY!,
+    })
+  );
+
+const myProvider = service({
+  register(container) {
+    console.log("registering my service");
+  },
+  async boot(container) {
+    console.log("booting my service");
+  },
+});
 
 const contextHandler = createContextHandler(
   () => ({
@@ -64,6 +71,7 @@ const agent = createDreams<Memory, Handler>({
   logger: LogLevel.INFO,
   memory,
   container,
+  services: [myProvider],
   context: contextHandler,
   debugger: async (contextId, keys, data) => {
     const [type, id] = keys;
@@ -93,9 +101,14 @@ const agent = createDreams<Memory, Handler>({
   outputs: {
     message: output({
       description: "",
-      schema: z.string(),
+      schema: z.object({
+        content: z.string(),
+      }),
+      async install(agent) {
+        console.log("instaling output");
+      },
       handler(params, ctx) {
-        console.log("Agent:" + params);
+        console.log("Agent:" + params.content);
         return true;
       },
     }),
@@ -104,6 +117,8 @@ const agent = createDreams<Memory, Handler>({
   experts: {},
   actions: [...researchDeepActions],
 });
+
+await agent.start();
 
 const rl = readline.createInterface({
   input: process.stdin,
