@@ -44,11 +44,13 @@ export class DiscordClient {
   public client: Client;
   private logger: Logger;
   private messageListener?: (...args: any[]) => void;
+  public credentials: DiscordCredentials;
 
   constructor(
-    private credentials: DiscordCredentials,
+    credentials: DiscordCredentials,
     logLevel: LogLevel = LogLevel.INFO
   ) {
+    this.credentials = credentials;
     this.client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
