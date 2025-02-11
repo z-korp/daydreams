@@ -103,6 +103,17 @@ const agent = createDreams<Memory, Handler>({
       },
       subscribe(send, agent) {
         function listener(message: Message) {
+          if (
+            message.author.displayName ==
+            container.resolve<DiscordClient>("discord").credentials
+              .discord_bot_name
+          ) {
+            console.log(
+              `Skipping message from ${container.resolve<DiscordClient>("discord").credentials.discord_bot_name}`
+            );
+            return;
+          }
+
           send(`discord:${message.channelId}`, {
             chat: {
               id: message.channelId,
