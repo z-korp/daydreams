@@ -29,6 +29,8 @@ import { createParser, createPrompt } from "./prompt";
 import createContainer from "./container";
 import { createServiceManager } from "./serviceProvider";
 import { _ } from "ajv";
+import { context, type AnyContext, type Context } from "./context";
+import type { z } from "zod";
 
 const promptTemplate = `
 You are tasked with analyzing messages, formulating responses, and initiating actions based on a given context. 
@@ -56,7 +58,6 @@ Now, analyze the following new context:
 </context>
 
 Here's how you structure your response:
-
 <response>
 <reasoning>
 [Your reasoning of the context, think, messages, and planned actions]
@@ -69,23 +70,7 @@ Here's how you structure your response:
 </output>
 </response>
 
-Example for output with schema string:
-<response>
-<reasoning>...</reasoning>
-<output type="message">
-Hello! How can I assist you today?
-</output>
-</response>
-
-Example for output with schema json:
-<response>
-<reasoning>...</reasoning>
-<output type="message">
-{
-  "content": "Hello! How can I assist you today?"
-}
-</output>
-</response>
+{{examples}}
 `;
 
 type AnyAction = Action<any, any, any>;
@@ -107,6 +92,7 @@ const prompt = createPrompt(
     outputs: outputs.map(formatOutputInterface),
     actions: actions.map(formatAction),
     updates: updates.map(formatContext),
+    examples: [],
   })
 );
 
@@ -177,6 +163,8 @@ export function createDreams<
     enableColors: true,
   });
 
+  const contexts = new Map<string, { ctx: any }>();
+
   const {
     inputs = {},
     outputs = {},
@@ -211,6 +199,37 @@ export function createDreams<
     serviceManager.register(service);
   }
 
+  async function getContext<
+    TContext extends Context<Memory, any, any, any> = Context<
+      Memory,
+      any,
+      any,
+      any
+    >,
+  >(contextHandler: TContext, args: z.infer<TContext["args"]>) {
+    const key = contextHandler.key(args);
+    const contextId = [contextHandler.type, key].join(":");
+
+    const ctx = contexts.has(contextId)
+      ? contexts.get(contextId)
+      : contextHandler.setup
+        ? await contextHandler.setup(args, agent)
+        : {};
+
+    const memory =
+      (await agent.memory.get<Memory>(contextId)) ??
+      (contextHandler.create
+        ? contextHandler.create({ key, args }, ctx)
+        : (defaultContext() as Memory));
+
+    return {
+      id: contextId,
+      key,
+      ctx,
+      memory,
+    };
+  }
+
   const agent: Agent<Memory, Handler> = {
     inputs,
     outputs,
@@ -240,12 +259,14 @@ export function createDreams<
 
       for (const [key, input] of Object.entries(agent.inputs)) {
         if (input.subscribe) {
-          const subscription = input.subscribe((conversationId, data) => {
-            logger.info("agent", "input", { conversationId, data });
-            agent.send(conversationId, { type: key, data }).catch((err) => {
-              console.error(err);
-              // logger.error("agent", "input", err);
-            });
+          const subscription = input.subscribe((contextHandler, args, data) => {
+            logger.info("agent", "input", { contextHandler, args, data });
+            agent
+              .send(contextHandler, args, { type: key, data })
+              .catch((err) => {
+                console.error(err);
+                // logger.error("agent", "input", err);
+              });
           }, agent);
 
           inputSubscriptions.set(key, subscription);
@@ -263,14 +284,18 @@ export function createDreams<
 
     async stop() {},
 
-    run: async (contextId: string) => {
+    run: async (contextHandler, args) => {
       if (!booted) await agent.start();
+
+      const {
+        key,
+        id: contextId,
+        ctx,
+        memory,
+      } = await getContext(contextHandler, args);
 
       if (contextsRunning.has(contextId)) return;
       contextsRunning.add(contextId);
-
-      const context = contextHandler(agent.memory);
-      const ctx = await context.get(contextId);
 
       const outputEntries = Object.entries(agent.outputs)
         .filter(([_, output]) =>
@@ -281,7 +306,7 @@ export function createDreams<
           ...output,
         }));
 
-      const { memory } = ctx;
+      // const { memory } = ctx;
 
       const maxSteps = 5;
       let step = 1;
@@ -294,7 +319,9 @@ export function createDreams<
         debug(contextId, ["memory", id], JSON.stringify(ctx.memory, null, 2));
 
         const system = prompt({
-          context: context.render(ctx.memory),
+          context: contextHandler.render
+            ? contextHandler.render(memory, ctx)
+            : defaultContextRender(memory),
           outputs: outputEntries,
           actions: actions.filter((action) =>
             action.enabled ? action.enabled(ctx as any) : true
@@ -417,19 +444,20 @@ export function createDreams<
         break;
       }
 
-      await context.save(contextId, memory);
+      await agent.memory.set(contextId, memory);
 
       contextsRunning.delete(contextId);
     },
 
-    send: async (
-      conversationId: string,
-      input: { type: string; data: any }
-    ) => {
+    send: async (contextHandler, args, input: { type: string; data: any }) => {
       if (input.type in agent.inputs === false) return;
-      const context = contextHandler(agent.memory);
 
-      const { memory } = await context.get(conversationId);
+      const {
+        key,
+        id: contextId,
+        ctx,
+        memory,
+      } = await getContext(contextHandler, args);
 
       const processor = agent.inputs[input.type];
 
@@ -438,20 +466,24 @@ export function createDreams<
       const shouldContinue = await processor.handler(
         data,
         {
-          id: conversationId,
+          type: contextHandler.type,
+          key,
           memory,
-        } as InferContextFromHandler<Handler>,
+          ctx,
+        } as any,
         agent
       );
 
       await agent.evaluator({
-        id: conversationId,
+        type: contextHandler.type,
+        key,
         memory,
+        ctx,
       } as any);
 
-      await agent.memory.set(conversationId, memory);
+      await agent.memory.set(contextId, memory);
 
-      if (shouldContinue) await agent.run(conversationId);
+      if (shouldContinue) await agent.run(contextHandler, args);
     },
 
     evaluator: async (ctx) => {
