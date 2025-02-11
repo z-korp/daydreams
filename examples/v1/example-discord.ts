@@ -60,137 +60,131 @@ const model = groq("deepseek-r1-distill-llama-70b");
 type Handler = typeof contextHandler;
 type Memory = InferMemoryFromHandler<Handler>;
 
-async function main() {
-  const agent = createDreams<Memory, Handler>({
-    experts: {},
-    logger: LogLevel.DEBUG,
-    memory: createMemoryStore(),
-    context: contextHandler,
-    model,
-    inputs: {
-      "discord:message": input({
-        schema: z.object({
-          chat: z.object({ id: z.string() }),
-          user: z.object({ id: z.string() }),
-          text: z.string(),
-        }),
-        handler: (message, { memory }) => {
-          memory.inputs.push({
-            ref: "input",
-            type: "discord:message",
-            params: {
-              channelId: message.chat.id,
-              user: message.user.id,
+const agent = createDreams<Memory, Handler>({
+  experts: {},
+  logger: LogLevel.DEBUG,
+  memory: createMemoryStore(),
+  context: contextHandler,
+  model,
+  inputs: {
+    "discord:message": input({
+      schema: z.object({
+        chat: z.object({ id: z.string() }),
+        user: z.object({ id: z.string() }),
+        text: z.string(),
+      }),
+      handler: (message, { memory }) => {
+        memory.inputs.push({
+          ref: "input",
+          type: "discord:message",
+          params: {
+            channelId: message.chat.id,
+            user: message.user.id,
+          },
+          data: message.text,
+          timestamp: Date.now(),
+        });
+
+        return true;
+      },
+      subscribe(send) {
+        function listener(message: Message) {
+          send(`discord:${message.channelId}`, {
+            chat: {
+              id: message.channelId,
             },
-            data: message.text,
-            timestamp: Date.now(),
+            user: {
+              id: message.member!.id,
+            },
+            text: message.content,
           });
+        }
 
-          return true;
-        },
-        subscribe(send) {
-          function listener(message: Message) {
-            send(`discord:${message.channelId}`, {
-              chat: {
-                id: message.channelId,
-              },
-              user: {
-                id: message.member!.id,
-              },
-              text: message.content,
+        discord.client.on(Events.MessageCreate, listener);
+        return () => {
+          discord.client.off(Events.MessageCreate, listener);
+        };
+      },
+    }),
+  },
+
+  events: {
+    "agent:thought": z.object({}),
+    "agent:output": z.object({}),
+  },
+
+  outputs: {
+    "discord:message": output({
+      schema: z.object({
+        channelId: z
+          .string()
+          .describe("The Discord channel ID to send the message to"),
+        content: z.string().describe("The content of the message to send"),
+      }),
+      description: "Send a message to a Discord channel",
+      handler: async (data, ctx) => {
+        try {
+          const channel = await discord.client.channels.fetch(data.channelId);
+          if (channel && channel.isSendable()) {
+            await channel.send(data.content);
+            return true;
+          }
+        } catch (error) {
+          console.error(error);
+        }
+
+        return false;
+      },
+    }),
+  },
+
+  actions: [
+    action({
+      name: "start-deep-research",
+      schema: researchSchema,
+      async handler(call, ctx) {
+        const research: Research = {
+          ...call.data,
+          learnings: [],
+          status: "in_progress",
+        };
+
+        console.log({ research });
+
+        ctx.memory.researches.push(research);
+
+        startDeepResearch({
+          model,
+          research,
+          tavilyClient,
+          maxDepth: 2,
+        })
+          .then((res) => {
+            ctx.memory.results.push({
+              ref: "action_result",
+              callId: call.id,
+              data: res,
+              name: call.name,
+              timestamp: Date.now(),
+              processed: false,
             });
-          }
 
-          discord.client.on(Events.MessageCreate, listener);
-          return () => {
-            discord.client.off(Events.MessageCreate, listener);
-          };
-        },
-      }),
-    },
-
-    events: {
-      "agent:thought": z.object({}),
-      "agent:output": z.object({}),
-    },
-
-    outputs: {
-      "discord:message": output({
-        schema: z.object({
-          channelId: z
-            .string()
-            .describe("The Discord channel ID to send the message to"),
-          content: z.string().describe("The content of the message to send"),
-        }),
-        description: "Send a message to a Discord channel",
-        handler: async (data, ctx) => {
-          try {
-            const channel = await discord.client.channels.fetch(data.channelId);
-            if (channel && channel.isSendable()) {
-              await channel.send(data.content);
-              return true;
-            }
-          } catch (error) {
-            console.error(error);
-          }
-
-          return false;
-        },
-      }),
-    },
-
-    actions: [
-      action({
-        name: "start-deep-research",
-        schema: researchSchema,
-        async handler(call, ctx) {
-          const research: Research = {
-            ...call.data,
-            learnings: [],
-            status: "in_progress",
-          };
-
-          console.log({ research });
-
-          ctx.memory.researches.push(research);
-
-          startDeepResearch({
-            model,
-            research,
-            tavilyClient,
-            maxDepth: 2,
+            return agent.run(ctx.id);
           })
-            .then((res) => {
-              ctx.memory.results.push({
-                ref: "action_result",
-                callId: call.id,
-                data: res,
-                name: call.name,
-                timestamp: Date.now(),
-                processed: false,
-              });
+          .catch((err) => console.error(err));
 
-              return agent.run(ctx.id);
-            })
-            .catch((err) => console.error(err));
-
-          return "Research created!";
-        },
-      }),
-      action({
-        name: "cancel-deep-research",
-        schema: researchSchema,
-        enabled: (ctx) => ctx.memory.researches.length > 0,
-        async handler(params, ctx) {
-          return "Research canceled!";
-        },
-      }),
-    ],
-  });
-
-  console.log("Starting Daydreams Discord Bot...");
-}
-
-main().catch((err) => {
-  console.log(err);
+        return "Research created!";
+      },
+    }),
+    action({
+      name: "cancel-deep-research",
+      schema: researchSchema,
+      enabled: (ctx) => ctx.memory.researches.length > 0,
+      async handler(params, ctx) {
+        return "Research canceled!";
+      },
+    }),
+  ],
 });
+
+console.log("Starting Daydreams Discord Bot...");

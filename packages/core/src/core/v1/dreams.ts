@@ -4,6 +4,7 @@ import type {
   Agent,
   Config,
   ContextHandler,
+  Debugger,
   InferContextFromHandler,
   Log,
   Output,
@@ -60,9 +61,9 @@ Here's an example of how to structure your response:
 </reasoning>
 [List of async actions to be initiated, if applicable]
 <action name="[Action name]">[action arguments using the schema as JSON]</action>
-[output to the user message, if applicable]
-<output type="[Output type]>
-[output content]
+[List of outputs, if applicable]
+<output type="[Output type]">
+[output arguments using the schema as JSON]
 </output>
 </response>
 `;
@@ -163,6 +164,13 @@ export function createDreams<
 
   const contextsRunning = new Set<string>();
 
+  const debug: Debugger = (...args) => {
+    if (!config.debugger) return;
+    try {
+      config.debugger(...args);
+    } catch {}
+  };
+
   const agent: Agent<Memory, Handler> = {
     inputs,
     outputs,
@@ -170,6 +178,7 @@ export function createDreams<
     actions,
     experts,
     memory,
+    debugger: debug,
     context: contextHandler,
     emit: (event: string, data: any) => {
       logger.info("agent:event", event, data);
@@ -196,6 +205,10 @@ export function createDreams<
       const newInputs = memory.inputs.filter((i) => i.processed !== true);
 
       while (true) {
+        const id = Date.now().toString();
+
+        debug(contextId, ["memory", id], JSON.stringify(ctx.memory, null, 2));
+
         const system = prompt({
           context: context.render(ctx.memory),
           outputs: outputs,
@@ -207,6 +220,8 @@ export function createDreams<
             ...memory.results.filter((i) => i.processed !== true),
           ],
         });
+
+        debug(contextId, ["prompt", id], system);
 
         logger.debug("agent:system", system);
 
@@ -223,6 +238,9 @@ export function createDreams<
         });
 
         const text = "<think>" + result.text + "</response>";
+
+        debug(contextId, ["response", id], text);
+
         logger.debug("agent:response", text);
 
         const data = parse(text);
@@ -292,7 +310,8 @@ export function createDreams<
               memory.calls.push(call);
               const result = await action.handler(
                 call,
-                ctx as InferContextFromHandler<Handler>
+                ctx as InferContextFromHandler<Handler>,
+                agent
               );
 
               memory.results.push({

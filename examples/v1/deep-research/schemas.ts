@@ -33,6 +33,11 @@ export const researchSchema = z.object({
   id: z.string().describe("id of the research use memorable ids"),
   name: z.string().describe("The research name/topic"),
   prompt: z.string().describe("the user prompt"),
+  maxDepth: z
+    .number()
+    .default(2)
+    .optional()
+    .describe("Max deepth of the research"),
   queries: z.array(
     z.object({
       query: z.string().describe("The SERP query"),

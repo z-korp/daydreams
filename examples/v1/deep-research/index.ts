@@ -57,6 +57,10 @@ const agent = createDreams<Memory, Handler>({
   logger: LogLevel.INFO,
   memory,
   context: contextHandler,
+  debugger: async (contextId, keys, data) => {
+    const [type, id] = keys;
+    await Bun.write(`./logs/${contextId}/${id}-${type}.md`, data);
+  },
   model,
   inputs: {
     message: input({
@@ -83,7 +87,7 @@ const agent = createDreams<Memory, Handler>({
       description: "",
       schema: z.string(),
       handler(params, ctx) {
-        // console.log("Agent:" + params);
+        console.log("Agent:" + params);
         return true;
       },
     }),
@@ -94,7 +98,7 @@ const agent = createDreams<Memory, Handler>({
     action({
       name: "start-deep-research",
       schema: researchSchema,
-      async handler(call, ctx) {
+      async handler(call, ctx, agent) {
         const research: Research = {
           ...call.data,
           learnings: [],
@@ -106,10 +110,12 @@ const agent = createDreams<Memory, Handler>({
         ctx.memory.researches.push(research);
 
         startDeepResearch({
+          contextId: ctx.id,
           model,
           research,
           tavilyClient,
-          maxDepth: 2,
+          maxDepth: call.data.maxDepth ?? 2,
+          debug: agent.debugger,
         })
           .then((res) => {
             ctx.memory.results.push({
@@ -147,7 +153,7 @@ const rl = readline.createInterface({
 while (true) {
   const input = await rl.question(">");
 
-  const contextId = "my-research";
+  const contextId = "my-research-" + Date.now();
 
   await agent.send(contextId, {
     type: "message",
