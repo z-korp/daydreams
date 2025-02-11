@@ -14,27 +14,43 @@ import {
   defaultContextRender,
 } from "@daydreamsai/core/src/core/v1/memory";
 
-import { Research, startDeepResearch } from "./deep-research/research";
+import { Research, researchDeepActions } from "./deep-research/research";
 import { formatXml } from "@daydreamsai/core/src/core/v1/xml";
 import { tavily } from "@tavily/core";
-import { researchSchema } from "./deep-research/schemas";
 import { Events, Message } from "discord.js";
+import createContainer from "@daydreamsai/core/src/core/v1/container";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
 });
 
-const discord = new DiscordClient(
-  {
-    discord_token: process.env.DISCORD_TOKEN!,
-    discord_bot_name: process.env.DISCORD_BOT_NAME!,
-  },
-  LogLevel.DEBUG
-);
+const model = groq("deepseek-r1-distill-llama-70b");
+const memory = createMemoryStore();
 
-const tavilyClient = tavily({
-  apiKey: process.env.TAVILY_API_KEY!,
-});
+const container = createContainer()
+  .instance("groq", groq)
+  .instance("model", model)
+  .instance("memory", memory)
+  .singleton(tavily, () =>
+    tavily({
+      apiKey: process.env.TAVILY_API_KEY!,
+    })
+  )
+  .alias("tavily", tavily)
+  .singleton(
+    "discord",
+    () =>
+      new DiscordClient(
+        {
+          discord_token: process.env.DISCORD_TOKEN!,
+          discord_bot_name: process.env.DISCORD_BOT_NAME!,
+        },
+        LogLevel.DEBUG
+      )
+  );
+
+console.log(container.resolve("tavily"));
+console.log(container.resolve(tavily));
 
 const contextHandler = createContextHandler(
   () => ({
@@ -55,16 +71,14 @@ const contextHandler = createContextHandler(
   }
 );
 
-const model = groq("deepseek-r1-distill-llama-70b");
-
 type Handler = typeof contextHandler;
 type Memory = InferMemoryFromHandler<Handler>;
 
 const agent = createDreams<Memory, Handler>({
-  experts: {},
   logger: LogLevel.DEBUG,
-  memory: createMemoryStore(),
+  memory,
   context: contextHandler,
+  container,
   model,
   inputs: {
     "discord:message": input({
@@ -87,7 +101,7 @@ const agent = createDreams<Memory, Handler>({
 
         return true;
       },
-      subscribe(send) {
+      subscribe(send, agent) {
         function listener(message: Message) {
           send(`discord:${message.channelId}`, {
             chat: {
@@ -99,6 +113,8 @@ const agent = createDreams<Memory, Handler>({
             text: message.content,
           });
         }
+
+        const discord = agent.container.resolve<DiscordClient>("discord");
 
         discord.client.on(Events.MessageCreate, listener);
         return () => {
@@ -124,7 +140,9 @@ const agent = createDreams<Memory, Handler>({
       description: "Send a message to a Discord channel",
       handler: async (data, ctx) => {
         try {
-          const channel = await discord.client.channels.fetch(data.channelId);
+          const channel = await container
+            .resolve<DiscordClient>("discord")
+            .client.channels.fetch(data.channelId);
           if (channel && channel.isSendable()) {
             await channel.send(data.content);
             return true;
@@ -138,53 +156,7 @@ const agent = createDreams<Memory, Handler>({
     }),
   },
 
-  actions: [
-    action({
-      name: "start-deep-research",
-      schema: researchSchema,
-      async handler(call, ctx) {
-        const research: Research = {
-          ...call.data,
-          learnings: [],
-          status: "in_progress",
-        };
-
-        console.log({ research });
-
-        ctx.memory.researches.push(research);
-
-        startDeepResearch({
-          model,
-          research,
-          tavilyClient,
-          maxDepth: 2,
-        })
-          .then((res) => {
-            ctx.memory.results.push({
-              ref: "action_result",
-              callId: call.id,
-              data: res,
-              name: call.name,
-              timestamp: Date.now(),
-              processed: false,
-            });
-
-            return agent.run(ctx.id);
-          })
-          .catch((err) => console.error(err));
-
-        return "Research created!";
-      },
-    }),
-    action({
-      name: "cancel-deep-research",
-      schema: researchSchema,
-      enabled: (ctx) => ctx.memory.researches.length > 0,
-      async handler(params, ctx) {
-        return "Research canceled!";
-      },
-    }),
-  ],
+  actions: [...researchDeepActions],
 });
 
 console.log("Starting Daydreams Discord Bot...");
