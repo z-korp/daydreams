@@ -96,11 +96,15 @@ const agent = createDreams<Memory, Handler>({
   context: contextHandler,
   container,
   model,
+  debugger: async (contextId, keys, data) => {
+    const [type, id] = keys;
+    await Bun.write(`./logs/${contextId}/${id}-${type}.md`, data);
+  },
   inputs: {
     "discord:message": input({
       schema: z.object({
         chat: z.object({ id: z.string() }),
-        user: z.object({ id: z.string() }),
+        user: z.object({ id: z.string(), name: z.string() }),
         text: z.string(),
       }),
       handler: (message, { memory }) => {
@@ -110,15 +114,25 @@ const agent = createDreams<Memory, Handler>({
           params: {
             channelId: message.chat.id,
             user: message.user.id,
+            name: message.user.name,
           },
           data: message.text,
           timestamp: Date.now(),
         });
-
         return true;
       },
       subscribe(send, agent) {
         function listener(message: Message) {
+          if (
+            message.author.displayName ==
+            container.resolve<DiscordClient>("discord").credentials
+              .discord_bot_name
+          ) {
+            console.log(
+              `Skipping message from ${container.resolve<DiscordClient>("discord").credentials.discord_bot_name}`
+            );
+            return;
+          }
           send(
             discordChannelContext,
             { channelId: message.channelId },
@@ -128,6 +142,7 @@ const agent = createDreams<Memory, Handler>({
               },
               user: {
                 id: message.member!.id,
+                name: message.member!.displayName,
               },
               text: message.content,
             }
@@ -164,7 +179,7 @@ const agent = createDreams<Memory, Handler>({
             .resolve<DiscordClient>("discord")
             .client.channels.fetch(data.channelId);
           if (channel && channel.isSendable()) {
-            await channel.send(data.content);
+            await container.resolve<DiscordClient>("discord").sendMessage(data);
             return true;
           }
         } catch (error) {
@@ -178,5 +193,7 @@ const agent = createDreams<Memory, Handler>({
 
   actions: [...researchDeepActions],
 });
+
+agent.start();
 
 console.log("Starting Daydreams Discord Bot...");

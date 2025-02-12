@@ -18,7 +18,7 @@
     "api": "bun run examples/example-api.ts",
     "ui": "bun --dir clients/example-ui run dev",
     "test": "bun run packages/core",
-    "build": "bun packages/core build",
+    "build:core": "cd packages/core && bun run build",
     "release": "bun build && bun prettier && npx lerna publish --no-private --force-publish",
     "prettier-check": "pnpx prettier --check packages",
     "prettier": "pnpx prettier --write packages",
@@ -29,7 +29,7 @@
     "@ai-sdk/groq": "^1.1.7",
     "@mendable/firecrawl-js": "^1.16.0",
     "@openrouter/ai-sdk-provider": "^0.2.1",
-    "@tavily/core": "^0.0.3",
+    "@tavily/core": "^0.3.1",
     "ai": "^4.1.25",
     "ajv": "^8.17.1",
     "chalk": "^5.4.1",
@@ -50,6 +50,6 @@
   "devDependencies": {
     "@types/bun": "^1.2.2",
     "knip": "^5.43.6",
-    "typescript": "~5.6.3"
+    "typescript": "~5.7.3"
   }
 }

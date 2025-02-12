@@ -44,11 +44,13 @@ export class DiscordClient {
   public client: Client;
   private logger: Logger;
   private messageListener?: (...args: any[]) => void;
+  public credentials: DiscordCredentials;
 
   constructor(
-    private credentials: DiscordCredentials,
+    credentials: DiscordCredentials,
     logLevel: LogLevel = LogLevel.INFO
   ) {
+    this.credentials = credentials;
     this.client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
@@ -189,22 +191,50 @@ export class DiscordClient {
       }
 
       let sentMessage;
+      const MAX_LENGTH = 1500; // Setting a conservative limit to avoid Discord API errors
 
-      // Check if message is over 4000 characters
-      if (data.content.length > 4000) {
-        // Create a Buffer with the content
-        const buffer = Buffer.from(data.content, "utf-8");
+      console.log("Sending message", data.content.length);
 
-        // Send as text file attachment
-        sentMessage = await channel.send({
-          content: "See attached:",
-          files: [
-            {
-              attachment: buffer,
-              name: "message.txt",
-            },
-          ],
-        });
+      // If message is longer than MAX_LENGTH, split and send multiple messages
+      if (data.content.length > MAX_LENGTH) {
+        // Split on newlines if possible to maintain formatting
+        const chunks = [];
+        let currentChunk = "";
+        const lines = data.content.split("\n");
+
+        for (const line of lines) {
+          // If adding this line would exceed max length, push current chunk and start new one
+          if (currentChunk.length + line.length + 1 > MAX_LENGTH) {
+            if (currentChunk) {
+              chunks.push(currentChunk);
+              currentChunk = "";
+            }
+
+            // If single line is longer than MAX_LENGTH, split it
+            if (line.length > MAX_LENGTH) {
+              let remainingLine = line;
+              while (remainingLine.length > 0) {
+                chunks.push(remainingLine.slice(0, MAX_LENGTH));
+                remainingLine = remainingLine.slice(MAX_LENGTH);
+              }
+            } else {
+              currentChunk = line;
+            }
+          } else {
+            // Add line to current chunk
+            currentChunk = currentChunk ? currentChunk + "\n" + line : line;
+          }
+        }
+
+        // Push final chunk if it exists
+        if (currentChunk) {
+          chunks.push(currentChunk);
+        }
+
+        // Send all chunks sequentially
+        for (const chunk of chunks) {
+          sentMessage = await channel.send(chunk);
+        }
       } else {
         // Send normal message
         sentMessage = await channel.send(data.content);
@@ -212,7 +242,7 @@ export class DiscordClient {
 
       return {
         success: true,
-        messageId: sentMessage.id,
+        messageId: sentMessage?.id,
         content: data.content,
         error: undefined,
       };
