@@ -1,24 +1,12 @@
 import { z } from "zod";
 import { createDreams } from "../../packages/core/src/core/v1/dreams";
-import {
-  action,
-  context,
-  input,
-  output,
-} from "../../packages/core/src/core/v1/utils";
+import { context, input, output } from "../../packages/core/src/core/v1/utils";
 import { DiscordClient } from "../../packages/core/src/core/v1/io/discord";
 import { createGroq } from "@ai-sdk/groq";
 import { LogLevel } from "../../packages/core/src/core/v1/types";
-import {
-  createContextHandler,
-  createMemoryStore,
-  defaultContext,
-  defaultContextMemory,
-  defaultContextRender,
-} from "@daydreamsai/core/src/core/v1/memory";
+import { createMemoryStore } from "@daydreamsai/core/src/core/v1/memory";
 
-import { Research, researchDeepActions } from "./deep-research/research";
-import { formatXml } from "@daydreamsai/core/src/core/v1/xml";
+import { researchDeepActions } from "./deep-research/research";
 import { tavily } from "@tavily/core";
 import { Events, Message } from "discord.js";
 import createContainer from "@daydreamsai/core/src/core/v1/container";
