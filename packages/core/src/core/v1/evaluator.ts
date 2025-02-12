@@ -32,5 +32,3 @@ const myEvaluator = createEvaluator({
   },
   save: async (result, data) => {},
 });
-
-console.log({ myEvaluator });

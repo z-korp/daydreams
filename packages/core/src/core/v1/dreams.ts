@@ -434,8 +434,6 @@ export function createDreams<
                 action.memory.create();
             }
 
-            console.log({ actionMemory });
-
             const enabled = action.enabled
               ? action.enabled({
                   ...ctx,
@@ -531,8 +529,6 @@ export function createDreams<
                 actionMemory =
                   (await agent.memory.get(action.memory.key)) ??
                   action.memory.create();
-
-                console.log({ actionMemory });
               }
 
               const result = await runAction({
