@@ -2,17 +2,20 @@
   <img src="./banner.png" alt="Daydreams">
 </p>
 
-# Daydreams - Generative Agent Framework
+> ⚠️ **Warning**: This is alpha software under active development. Expect
+> frequent breaking changes and bugs. The API is not yet stable.
+
+# Generative Agent Framework
 
 Daydreams is a powerful framework for building generative agents that can
-execute tasks across any blockchain or API. It provides a flexible architecture
-for creating autonomous agents with:
+execute tasks across any blockchain or API.
 
-- Chain-agnostic blockchain interactions
-- Deep research capabilities
-- Multi-expert collaboration
-- Memory and context management
-- Goal-oriented behavior
+- 🔗 Chain-agnostic blockchain interactions
+- 👥 Multi-expert collaboration
+- 🧠 Memory and context management made simple
+- 🎯 Long term goal-oriented behavior
+- 💾 Long-term memory made simple
+- 🤔 Multi-step reasoning using Hierarchical Task Networks
 
 ## Quick Start
 
@@ -144,7 +147,6 @@ The v1 architecture consists of:
 - **Memory** - State management
 - **Experts** - Specialized capabilities
 - **Actions** - Discrete operations
-- **I/O Handlers** - Input/output management
 
 ### Chain Support
 
