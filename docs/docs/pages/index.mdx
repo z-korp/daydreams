@@ -105,11 +105,6 @@ const agent = createDreams({
 await agent.run();
 ```
 
-### Chain Support
-
-Daydreams provides a unified interface for interacting with different
-blockchains:
-
 ### Memory System
 
 The memory system stores conversation history and execution state:
@@ -122,16 +117,5 @@ const memory = createMemoryStore();
 const mongoMemory = await createMongoMemoryStore({
   uri: "mongodb://...",
   dbName: "dreams",
-});
-```
-
-### Expert Systems
-
-Experts are specialized modules that handle specific types of tasks:
-
-```typescript
-const researcher = expert({
-  description: "Conducts deep research on topics",
-  actions: [generateQueries, processResults, writeReport],
 });
 ```
