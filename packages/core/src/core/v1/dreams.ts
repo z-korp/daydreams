@@ -3,11 +3,12 @@ import {
   type Action,
   type ActionCall,
   type Agent,
+  type AgentContext,
   type AnyAgent,
+  type AnyContext,
   type Config,
-  type ContextHandler,
   type Debugger,
-  type InferContextFromHandler,
+  type InferMemoryData,
   type Log,
   type Output,
   type Subscription,
@@ -15,6 +16,7 @@ import {
 } from "./types";
 import {
   createContextHandler,
+  defaultContext,
   defaultContextMemory,
   defaultContextRender,
 } from "./memory";
@@ -34,7 +36,7 @@ import {
   type Context,
   type InferContextCtx,
   type InferContextMemory,
-} from "./context";
+} from "./types";
 import type { z } from "zod";
 import { task, type TaskContext } from "./task";
 
@@ -152,11 +154,6 @@ const parse = createParser<
   }
 );
 
-const defaultContextHandler: ContextHandler = createContextHandler(
-  defaultContextMemory,
-  defaultContextRender
-);
-
 const runGenerate = task(
   "agent:run:generate",
   async <TContext extends Context<WorkingMemory, any, any, any>>(
@@ -242,21 +239,23 @@ const runGenerate = task(
 
 const runAction = task(
   "agent:run:action",
-  async ({
+  async <TContext extends AnyContext>({
+    context,
     action,
     call,
-    ctx,
     agent,
     logger,
   }: {
+    context: AgentContext<InferContextMemory<TContext>, TContext> & {
+      data: unknown;
+    };
     action: Action;
     call: ActionCall;
-    ctx: any;
     agent: AnyAgent;
     logger: Logger;
   }) => {
     try {
-      const result = await action.handler(call, ctx, agent);
+      const result = await action.handler(call, context, agent);
       return result;
     } catch (error) {
       logger.error("agent:action", "ACTION_FAILED", { error });
@@ -267,8 +266,8 @@ const runAction = task(
 
 export function createDreams<
   Memory extends WorkingMemory = WorkingMemory,
-  Handler extends ContextHandler<Memory> = ContextHandler<Memory>,
->(config: Config<Memory, Handler>): Agent<Memory, Handler> {
+  TContext extends AnyContext = AnyContext,
+>(config: Config<Memory, TContext>): Agent<Memory, TContext> {
   const inputSubscriptions = new Map<string, Subscription>();
 
   const logger = new Logger({
@@ -290,9 +289,6 @@ export function createDreams<
     model,
     reasoningModel,
   } = config;
-
-  const contextHandler =
-    config.context ?? (defaultContextHandler as unknown as Handler);
 
   const container = config.container ?? createContainer();
 
@@ -339,7 +335,7 @@ export function createDreams<
     };
   }
 
-  const agent: Agent<Memory, Handler> = {
+  const agent: Agent<Memory, TContext> = {
     inputs,
     outputs,
     events,
@@ -350,7 +346,7 @@ export function createDreams<
     model,
     reasoningModel,
     debugger: debug,
-    context: contextHandler,
+    context: config.context ?? (defaultContext as TContext),
     emit: (event: string, data: any) => {
       logger.info("agent:event", event, data);
     },
@@ -368,17 +364,19 @@ export function createDreams<
 
       for (const [key, input] of Object.entries(agent.inputs)) {
         if (input.subscribe) {
-          const subscription = input.subscribe((contextHandler, args, data) => {
-            logger.info("agent", "input", { contextHandler, args, data });
-            agent
-              .send(contextHandler, args, { type: key, data })
-              .catch((err) => {
-                console.error(err);
-                // logger.error("agent", "input", err);
-              });
-          }, agent);
+          const subscription = await Promise.resolve(
+            input.subscribe((contextHandler, args, data) => {
+              logger.info("agent", "input", { contextHandler, args, data });
+              agent
+                .send(contextHandler, args, { type: key, data })
+                .catch((err) => {
+                  console.error(err);
+                  // logger.error("agent", "input", err);
+                });
+            }, agent)
+          );
 
-          inputSubscriptions.set(key, subscription);
+          if (subscription) inputSubscriptions.set(key, subscription);
         }
       }
 
@@ -421,6 +419,29 @@ export function createDreams<
       let step = 1;
 
       while (true) {
+        const _actions = await Promise.all(
+          actions.map(async (action) => {
+            let actionMemory: unknown = {};
+
+            if (action.memory) {
+              actionMemory =
+                (await agent.memory.get(action.memory.key)) ??
+                action.memory.create();
+            }
+
+            console.log({ actionMemory });
+
+            const enabled = action.enabled
+              ? action.enabled({
+                  ...ctx,
+                  data: actionMemory,
+                })
+              : true;
+
+            return enabled ? action : undefined;
+          })
+        ).then((r) => r.filter((a) => !!a));
+
         const data = await runGenerate({
           context: contextHandler,
           args,
@@ -431,9 +452,7 @@ export function createDreams<
           memory,
           model: config.reasoningModel ?? config.model,
           outputs: outputsEntries,
-          actions: actions.filter((action) =>
-            action.enabled ? action.enabled(ctx as any) : true
-          ),
+          actions: _actions,
         });
 
         logger.debug("agent:parsed", "data", data);
@@ -470,7 +489,7 @@ export function createDreams<
 
             await output.handler(
               output.schema.parse(parsedContent),
-              ctx as InferContextFromHandler<Handler>,
+              ctx,
               agent
             );
           } catch (error) {
@@ -501,10 +520,27 @@ export function createDreams<
 
               memory.calls.push(call);
 
+              let actionMemory: unknown = {};
+
+              if (action.memory) {
+                actionMemory =
+                  (await agent.memory.get(action.memory.key)) ??
+                  action.memory.create();
+
+                console.log({ actionMemory });
+              }
+
               const result = await runAction({
                 action,
                 call,
-                ctx,
+                context: {
+                  id: contextId,
+                  context: contextHandler,
+                  ctx,
+                  args,
+                  memory,
+                  data: actionMemory,
+                },
                 agent,
                 logger,
               });

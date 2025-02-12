@@ -2,7 +2,14 @@ import { type LanguageModelV1 } from "ai";
 import { z } from "zod";
 import type { Container } from "./container";
 import type { ServiceProvider } from "./serviceProvider";
-import type { AnyContext, Context } from "./context";
+
+export type Memory<Data = any> = {
+  key: string;
+  create: () => Promise<Data> | Data;
+};
+
+export type InferMemoryData<TMemory extends Memory<any>> =
+  TMemory extends Memory<infer Data> ? Data : never;
 
 /** Represents an execution chain with experts and metadata */
 export type Chain = {
@@ -40,16 +47,18 @@ export type Action<
   Result = any,
   Context = any,
   TAgent extends AnyAgent = AnyAgent,
+  TMemory extends Memory<any> = Memory<any>,
 > = {
   name: string;
   description?: string;
   schema: Schema;
+  memory?: TMemory;
   install?: (agent: TAgent) => Promise<void>;
-  enabled?: (ctx: Context) => boolean;
+  enabled?: (ctx: Context & { data: InferMemoryData<TMemory> }) => boolean;
   examples?: z.infer<Schema>[];
   handler: (
     call: ActionCall<z.infer<Schema>>,
-    ctx: Context,
+    ctx: Context & { data: InferMemoryData<TMemory> },
     agent: TAgent
   ) => Promise<Result>;
 };
@@ -82,7 +91,10 @@ export type Output<
  */
 export type Input<
   Schema extends z.AnyZodObject = z.AnyZodObject,
-  Context = any,
+  Context extends AgentContext<WorkingMemory, AnyContext> = AgentContext<
+    WorkingMemory,
+    AnyContext
+  >,
   TAgent extends AnyAgent = AnyAgent,
 > = {
   type: string;
@@ -101,7 +113,7 @@ export type Input<
       data: z.infer<Schema>
     ) => void,
     agent: TAgent
-  ) => () => void;
+  ) => (() => void) | void | Promise<void>;
 };
 
 /** Reference to an input event in the system */
@@ -205,8 +217,19 @@ export type Expert<Context = any> = {
   actions?: Action<any, any, Context>[];
 };
 
-export interface AgentContext<Memory extends WorkingMemory = WorkingMemory> {
+export interface AgentContext<
+  Memory extends WorkingMemory = WorkingMemory,
+  TContext extends Context<Memory, any, any, any> = Context<
+    Memory,
+    any,
+    any,
+    any
+  >,
+> {
   id: string;
+  context: TContext;
+  args: z.infer<TContext["schema"]>;
+  ctx: InferContextCtx<TContext>;
   memory: Memory;
 }
 
@@ -214,13 +237,16 @@ export type AnyAgent = Agent<any, any>;
 
 export interface Agent<
   Memory extends WorkingMemory = WorkingMemory,
-  T extends ContextHandler<Memory> = ContextHandler<Memory>,
+  TContext extends Context<Memory, any, any, any> = Context<
+    Memory,
+    any,
+    any,
+    any
+  >,
 > {
-  // context: Context;
-
   memory: MemoryStore;
 
-  context: T;
+  context: TContext;
 
   debugger: Debugger;
 
@@ -229,17 +255,23 @@ export interface Agent<
   model: LanguageModelV1;
   reasoningModel?: LanguageModelV1;
 
-  inputs: Record<string, InputConfig<any, InferContextFromHandler<T>>>;
+  inputs: Record<string, InputConfig<any, AgentContext<Memory, TContext>>>;
   outputs: Record<
     string,
-    Omit<Output<any, InferContextFromHandler<T>>, "type">
+    Omit<Output<any, AgentContext<Memory, TContext>>, "type">
   >;
 
   events: Record<string, z.AnyZodObject>;
 
-  experts: Record<string, ExpertConfig<InferContextFromHandler<T>>>;
+  experts: Record<string, ExpertConfig<AgentContext<Memory, TContext>>>;
 
-  actions: Action<any, any, InferContextFromHandler<T>, Agent<Memory, T>>[];
+  actions: Action<
+    any,
+    any,
+    AgentContext<Memory, TContext>,
+    Agent<Memory, TContext>,
+    any
+  >[];
 
   //
   emit: (...args: any[]) => void;
@@ -252,53 +284,58 @@ export interface Agent<
     args: z.infer<TContext["schema"]>,
     input: { type: string; data: any }
   ) => Promise<void>;
-  evaluator: (ctx: InferContextFromHandler<T>) => Promise<void>;
+  evaluator: (ctx: AgentContext<Memory, TContext>) => Promise<void>;
 
   start(): Promise<void>;
   stop(): Promise<void>;
 }
 
-export type ContextHandler<T extends WorkingMemory = WorkingMemory> = (
-  memory: MemoryStore
-) => {
-  get: (id: string) => Promise<{ id: string; memory: T }>;
-  save: (id: string, data: T) => Promise<void>;
-  render: (data: T) => string | string[];
-};
+// export type ContextHandler<T extends WorkingMemory = WorkingMemory> = (
+//   memory: MemoryStore
+// ) => {
+//   get: (id: string) => Promise<{ id: string; memory: T }>;
+//   save: (id: string, data: T) => Promise<void>;
+//   render: (data: T) => string | string[];
+// };
 
-export type InferMemoryFromHandler<THandler extends ContextHandler<any>> =
-  THandler extends ContextHandler<infer Memory> ? Memory : unknown;
+// export type InferMemoryFromHandler<THandler extends ContextHandler<any>> =
+//   THandler extends ContextHandler<infer Memory> ? Memory : unknown;
 
-export type InferContextFromHandler<THandler extends ContextHandler<any>> =
-  AgentContext<InferMemoryFromHandler<THandler>>;
+// export type InferContextFromHandler<THandler extends ContextHandler<any>> =
+//   AgentContext<InferMemoryFromHandler<THandler>>;
 
 export type Debugger = (contextId: string, keys: string[], data: any) => void;
 
 export type Config<
   TMemory extends WorkingMemory = WorkingMemory,
-  TContextHandler extends ContextHandler<TMemory> = ContextHandler<TMemory>,
-  Context = InferContextFromHandler<TContextHandler>,
+  TContext extends AnyContext = AnyContext,
 > = {
   // context: Context;
   memory: MemoryStore;
   container?: Container;
-  context?: TContextHandler;
+  context?: TContext;
   debugger?: Debugger;
   services?: ServiceProvider[];
   inputs?: Record<
     string,
-    InputConfig<any, Context, Agent<TMemory, TContextHandler>>
+    InputConfig<any, AgentContext<TMemory, TContext>, Agent<TMemory, TContext>>
   >;
   outputs?: Record<
     string,
-    OutputConfig<any, Context, Agent<TMemory, TContextHandler>>
+    OutputConfig<any, AgentContext<TMemory, TContext>, Agent<TMemory, TContext>>
   >;
 
   events?: Record<string, z.AnyZodObject>;
 
-  experts?: Record<string, ExpertConfig<Context>>;
+  experts?: Record<string, ExpertConfig<AgentContext<TMemory, TContext>>>;
 
-  actions?: Action<any, any, Context, Agent<TMemory, TContextHandler>>[];
+  actions?: Action<
+    any,
+    any,
+    AgentContext<TMemory, TContext>,
+    Agent<TMemory, TContext>,
+    any
+  >[];
 
   model: LanguageModelV1;
   reasoningModel?: LanguageModelV1;
@@ -308,16 +345,22 @@ export type Config<
 /** Configuration type for inputs without type field */
 export type InputConfig<
   T extends z.AnyZodObject = z.AnyZodObject,
-  Context = any,
+  Context extends AgentContext<WorkingMemory, AnyContext> = AgentContext<
+    WorkingMemory,
+    AnyContext
+  >,
   TAgent extends AnyAgent = AnyAgent,
 > = Omit<Input<T, Context, TAgent>, "type">;
 
 /** Configuration type for outputs without type field */
 export type OutputConfig<
   T extends OutputSchema = OutputSchema,
-  Context = any,
+  Context extends AgentContext<WorkingMemory, AnyContext> = AgentContext<
+    WorkingMemory,
+    AnyContext
+  >,
   TAgent extends AnyAgent = AnyAgent,
-> = Omit<Output<T, Context>, "type">;
+> = Omit<Output<T, Context, TAgent>, "type">;
 
 /** Configuration type for experts without type field */
 export type ExpertConfig<Context = any> = Omit<Expert<Context>, "type">;
@@ -391,3 +434,50 @@ export interface IChain {
    */
   write(call: unknown): Promise<any>;
 }
+
+export type Instruction = string | string[];
+
+export type AnyContext = Context<any, any, any, any>;
+
+export type InferContextMemory<TContext extends AnyContext> =
+  TContext extends Context<infer Memory> ? Memory : never;
+
+export type InferContextCtx<TContext extends AnyContext> =
+  TContext extends Context<any, any, infer Ctx> ? Ctx : never;
+
+export type Context<
+  Memory extends WorkingMemory = WorkingMemory,
+  Args extends z.ZodTypeAny = never,
+  Ctx = any,
+  Exports = any,
+> = {
+  type: string;
+  schema: Args;
+  description?: string;
+  key: (args: z.infer<Args>) => string;
+
+  setup: (args: z.infer<Args>, agent: AnyAgent) => Promise<Ctx> | Ctx;
+
+  instructions?:
+    | Instruction
+    | ((params: { key: string; args: z.infer<Args> }, ctx: Ctx) => Instruction);
+
+  // memory
+  create?: (params: { key: string; args: z.infer<Args> }, ctx: Ctx) => Memory;
+  load?: (
+    params: { key: string; args: z.infer<Args> },
+    ctx: Ctx
+  ) => Promise<Memory>;
+  save?: (
+    params: {
+      key: string;
+      args: z.infer<Args>;
+      memory: Memory;
+    },
+    ctx: Ctx
+  ) => Promise<void>;
+
+  render?: (memory: Memory, ctx: Ctx) => string | string[];
+
+  // exports?: () => Exports;
+};

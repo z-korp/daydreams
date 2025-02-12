@@ -7,7 +7,16 @@ import {
   searchResultsPrompt,
 } from "./prompts";
 import { researchSchema, searchResultsSchema } from "./schemas";
-import { action, Debugger, task } from "@daydreamsai/core/src/core/v1";
+import {
+  action,
+  Debugger,
+  task,
+  WorkingMemory,
+  AgentContext,
+  AnyContext,
+  context,
+  memory,
+} from "@daydreamsai/core/src/core/v1";
 import { randomUUIDv7 } from "bun";
 
 export type Research = {
@@ -248,9 +257,27 @@ export async function startDeepResearch({
   return report;
 }
 
+// const researchContext = context({
+//   ""
+// })
+
+type ResearchMemory = {
+  researches: Research[];
+};
+
+const researchMemory = memory<ResearchMemory>({
+  key: "research",
+  create() {
+    return {
+      researches: [],
+    };
+  },
+});
+
 const startDeepResearchAction = action({
   name: "start-deep-research",
   schema: researchSchema,
+  memory: researchMemory,
   async handler(call, ctx, agent) {
     const research: Research = {
       ...call.data,
@@ -258,7 +285,7 @@ const startDeepResearchAction = action({
       status: "in_progress",
     };
 
-    ctx.memory.researches.push(research);
+    ctx.data.researches.push(research);
 
     startDeepResearch({
       model: agent.reasoningModel ?? agent.model,
@@ -280,7 +307,7 @@ const startDeepResearchAction = action({
 
         research.status = "done";
 
-        return agent.run(ctx.id);
+        return agent.run(ctx.context, ctx.args);
       })
       .catch((err) => console.error(err));
 
@@ -291,7 +318,8 @@ const startDeepResearchAction = action({
 const cancelResearchAction = action({
   name: "cancel-deep-research",
   schema: researchSchema,
-  enabled: (ctx) => ctx.memory.researches.length > 0,
+  memory: researchMemory,
+  enabled: (ctx) => ctx.data.researches.length > 0,
   async handler(params, ctx) {
     return "Research canceled!";
   },

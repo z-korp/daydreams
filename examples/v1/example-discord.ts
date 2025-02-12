@@ -1,15 +1,18 @@
 import { z } from "zod";
 import { createDreams } from "../../packages/core/src/core/v1/dreams";
-import { action, input, output } from "../../packages/core/src/core/v1/utils";
+import {
+  action,
+  context,
+  input,
+  output,
+} from "../../packages/core/src/core/v1/utils";
 import { DiscordClient } from "../../packages/core/src/core/v0/io/discord";
 import { createGroq } from "@ai-sdk/groq";
-import {
-  InferMemoryFromHandler,
-  LogLevel,
-} from "../../packages/core/src/core/v1/types";
+import { LogLevel } from "../../packages/core/src/core/v1/types";
 import {
   createContextHandler,
   createMemoryStore,
+  defaultContext,
   defaultContextMemory,
   defaultContextRender,
 } from "@daydreamsai/core/src/core/v1/memory";
@@ -19,7 +22,6 @@ import { formatXml } from "@daydreamsai/core/src/core/v1/xml";
 import { tavily } from "@tavily/core";
 import { Events, Message } from "discord.js";
 import createContainer from "@daydreamsai/core/src/core/v1/container";
-import { context } from "@daydreamsai/core/src/core/v1/context";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -72,9 +74,6 @@ const contextHandler = createContextHandler(
   }
 );
 
-type Handler = typeof contextHandler;
-type Memory = InferMemoryFromHandler<Handler>;
-
 const discordChannelContext = context({
   type: "discord:channel",
   key: ({ channelId }) => channelId,
@@ -90,10 +89,9 @@ const discordChannelContext = context({
   },
 });
 
-const agent = createDreams<Memory, Handler>({
+const agent = createDreams({
   logger: LogLevel.DEBUG,
   memory,
-  context: contextHandler,
   container,
   model,
   debugger: async (contextId, keys, data) => {
