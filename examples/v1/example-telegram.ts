@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createDreams } from "../../packages/core/src/core/v1/dreams";
 import {
   action,
+  context,
   input,
   output,
   splitTextIntoChunks,
@@ -13,7 +14,6 @@ import { tavily, TavilyClient } from "@tavily/core";
 import { LogLevel, WorkingMemory } from "../../packages/core/src/core/v1/types";
 import createContainer from "@daydreamsai/core/src/core/v1/container";
 import { service } from "@daydreamsai/core/src/core/v1/serviceProvider";
-import { context } from "@daydreamsai/core/src/core/v1/context";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,

@@ -1,6 +1,5 @@
 import {
   AnyAgent,
-  InferMemoryFromHandler,
   LogLevel,
   WorkingMemory,
 } from "@daydreamsai/core/src/core/v1/types";
@@ -42,27 +41,31 @@ const container = createContainer()
 
 container.resolve(tavily);
 
-const contextHandler = createContextHandler(
-  () => ({
-    ...defaultContext(),
-    researches: [] as Research[],
-  }),
-  (memory) => {
-    return [
-      ...defaultContextRender(memory),
-      ...memory.researches.map(formatResearch),
-    ];
-  }
-);
+// const contextHandler = createContextHandler(
+//   () => ({
+//     ...defaultContext(),
+//     researches: [] as Research[],
+//   }),
+//   (memory) => {
+//     return [
+//       ...defaultContextRender(memory),
+//       ...memory.researches.map(formatResearch),
+//     ];
+//   }
+// );
 
-type Handler = typeof contextHandler;
-type Memory = InferMemoryFromHandler<Handler>;
+// type Handler = typeof contextHandler;
+// type Memory = InferMemoryFromHandler<Handler>;
 
-const agent = createDreams<Memory, Handler>({
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+const agent = createDreams({
   logger: LogLevel.INFO,
   memory,
   container,
-  context: contextHandler,
   debugger: async (contextId, keys, data) => {
     const [type, id] = keys;
     await Bun.write(`./logs/${contextId}/${id}-${type}.md`, data);
@@ -86,6 +89,16 @@ const agent = createDreams<Memory, Handler>({
         });
         return true;
       },
+      async subscribe(send, agent) {
+        while (true) {
+          const question = await rl.question(">");
+
+          send(defaultContext, "main", {
+            user: "admin",
+            text: question,
+          });
+        }
+      },
     }),
   },
   outputs: {
@@ -103,3 +116,5 @@ const agent = createDreams<Memory, Handler>({
 });
 
 await agent.start();
+
+while (true) {}

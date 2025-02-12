@@ -2,11 +2,16 @@ import { z } from "zod";
 import type {
   Action,
   Agent,
+  AgentContext,
+  AnyContext,
+  Context,
   ExpertConfig,
   InputConfig,
+  Memory,
   OutputConfig,
   OutputSchema,
   TemplateVariables,
+  WorkingMemory,
 } from "./types";
 
 /**
@@ -47,11 +52,12 @@ export function formatValue(value: any): string {
  */
 export function input<
   Schema extends z.AnyZodObject = z.AnyZodObject,
-  Context = any,
+  Context extends AgentContext<WorkingMemory, AnyContext> = AgentContext<
+    WorkingMemory,
+    AnyContext
+  >,
   TAgent extends Agent<any, any> = Agent<any, any>,
->(
-  config: InputConfig<Schema, Context, TAgent>
-): InputConfig<Schema, Context, TAgent> {
+>(config: InputConfig<Schema, Context, TAgent>) {
   return config;
 }
 
@@ -66,11 +72,13 @@ export function input<
 export function action<
   Schema extends z.AnyZodObject = z.AnyZodObject,
   Result = any,
-  Context = any,
+  Context extends AgentContext<WorkingMemory, AnyContext> = AgentContext<
+    WorkingMemory,
+    AnyContext
+  >,
   TAgent extends Agent<any, any> = Agent<any, any>,
->(
-  action: Action<Schema, Result, Context, TAgent>
-): Action<Schema, Result, Context, TAgent> {
+  TMemory extends Memory<any> = never,
+>(action: Action<Schema, Result, Context, TAgent, TMemory>) {
   return action;
 }
 
@@ -83,8 +91,11 @@ export function action<
  */
 export function output<
   Schema extends OutputSchema = OutputSchema,
-  Context = any,
->(config: OutputConfig<Schema, Context>): OutputConfig<Schema, Context> {
+  Context extends AgentContext<WorkingMemory, AnyContext> = AgentContext<
+    WorkingMemory,
+    AnyContext
+  >,
+>(config: OutputConfig<Schema, Context>) {
   return config;
 }
 
@@ -94,9 +105,7 @@ export function output<
  * @param config - Expert configuration object
  * @returns Typed expert configuration
  */
-export function expert<Context = any>(
-  config: ExpertConfig<Context>
-): ExpertConfig<Context> {
+export function expert<Context = any>(config: ExpertConfig<Context>) {
   return config;
 }
 
@@ -132,4 +141,17 @@ export function splitTextIntoChunks(
   }
 
   return chunks;
+}
+
+export function context<
+  Memory extends WorkingMemory = WorkingMemory,
+  Args extends z.ZodTypeAny = any,
+  Ctx = any,
+  Exports = any,
+>(ctx: Context<Memory, Args, Ctx, Exports>) {
+  return ctx;
+}
+
+export function memory<Data = any>(memory: Memory<Data>) {
+  return memory;
 }
