@@ -170,7 +170,6 @@ const generateResearchReport = task(
     });
 
     console.log("====FINAL REPORT=====");
-    console.log("<think>" + res.text);
     debug(
       contextId,
       ["research-report-response", callId],
@@ -178,7 +177,7 @@ const generateResearchReport = task(
     );
 
     const report = res.text.slice(res.text.lastIndexOf("</think>"));
-
+    console.log(report);
     return report;
   }
 );

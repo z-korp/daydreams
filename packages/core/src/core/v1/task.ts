@@ -30,7 +30,6 @@ export function task<Params, Result>(
       ...callOptions,
     };
 
-    console.log([key, callId], params, options);
     try {
       const res = await Promise.resolve(
         fn(params, {
@@ -38,10 +37,8 @@ export function task<Params, Result>(
           debug: options?.debug ?? (() => {}),
         })
       );
-      console.log([key, callId], res);
       return res;
     } catch (error) {
-      console.log([key, callId], { error });
       throw error;
     }
   }
