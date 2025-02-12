@@ -17,6 +17,19 @@ execute tasks across any blockchain or API.
 - 💾 Long-term memory made simple
 - 🤔 Multi-step reasoning using Hierarchical Task Networks
 
+## Supported Chains
+
+<p> 
+  <a href="#chain-support">
+  <img src="./.github/eth-logo.svg" height="30" alt="Ethereum" style="margin: 0 10px;" />
+  <img src="./.github/arbitrum-logo.svg" height="30" alt="Arbitrum" style="margin: 0 10px;" />
+  <img src="./.github/optimism-logo.svg" height="30" alt="Optimism" style="margin: 0 10px;" />
+  <img src="./.github/solana-logo.svg" height="30" alt="Hyperledger" style="margin: 0 10px;" />
+  <img src="./.github/Starknet.svg" height="30" alt="StarkNet" style="margin: 0 10px;" />
+  <img src="./.github/hl-logo.svg" height="30" alt="Hyperledger" style="margin: 0 10px;" />
+  </a>
+</p>
+
 ## Quick Start
 
 Prerequisites:
@@ -35,27 +48,47 @@ cp .env.example .env
 bun run example:discord
 ```
 
-## Core Concepts
+## Concepts
 
-### Agents
+All dreams agents are a collection of inputs, outputs, actions and memory.
+Simple, and elegant.
 
-Agents are the main building blocks in Daydreams. An agent has:
+```typescript
+createDreams({
+  inputs: {}, // sources of information
+  outputs: {}, // ways to take action
+  memory: createMemoryStore(), // storage for conversation history and state
 
-- **Inputs** - Ways to receive information (Discord, Telegram, API webhooks etc)
-- **Outputs** - Ways to take action (sending messages, making transactions etc)
-- **Actions** - Discrete operations the agent can perform
-- **Memory** - Storage for conversation history and state
-- **Experts** - Specialized modules for specific tasks
+  actions: [], // @optional discrete operations
+  experts: [], // @optional specialized modules for specific tasks
+  container: createContainer(), // @optional dependency injection container
+});
+```
+
+- **Inputs** 📥 - Ways to receive information (Discord, Telegram, API webhooks
+  etc)
+- **Outputs** 📤 - Ways to take action (sending messages, making transactions
+  etc)
+- **Memory** 🧠 - Storage for conversation history and state
+- **Actions** ⚡ - @optional Discrete operations the agent can perform
+- **Experts** 🎓 - @optional Specialized modules for specific tasks
+- **Container** 📦 - @optional dependency injection container
+
+### Basic Usage
+
+Dreams agents are all functional. `createDreams` is a function that returns an
+agent object, which can be run with `await agent.run()`. Inject discord,
+telegram, or any other input/output to the agent and define your own actions.
 
 ```typescript
 const agent = createDreams({
-  // Language model to use
+  // @dev Use any LLM provider. All major providers are supported.
   model: groq("llama-70b"),
 
-  // Memory storage
+  // @dev Define your own memory store.
   memory: createMemoryStore(),
 
-  // Input handlers
+  // @dev Define your own inputs.
   inputs: {
     "discord:message": input({
       schema: messageSchema,
@@ -63,7 +96,7 @@ const agent = createDreams({
     }),
   },
 
-  // Output handlers
+  // @dev Define your own outputs.
   outputs: {
     "discord:reply": output({
       schema: replySchema,
@@ -71,43 +104,12 @@ const agent = createDreams({
     }),
   },
 
-  // Available actions
-  actions: [searchWeb, fetchGitHubRepo],
-
-  // Expert systems
-  experts: {
-    researcher: researchExpert,
-    planner: planningExpert,
-  },
-});
-```
-
-### Chain Support
-
-Daydreams provides a unified interface for interacting with different
-blockchains:
-
-```typescript
-// EVM chains (Ethereum, Polygon etc)
-const eth = new EvmChain({
-  chainName: "ethereum",
-  rpcUrl: "...",
-  privateKey: "...",
+  // @dev Define your own actions.
+  actions: [searchWeb],
 });
 
-// Solana
-const sol = new SolanaChain({
-  chainName: "solana-mainnet",
-  rpcUrl: "...",
-  privateKey: "...",
-});
-
-// Starknet
-const stark = new StarknetChain({
-  rpcUrl: "...",
-  address: "...",
-  privateKey: "...",
-});
+// Run the agent
+await agent.run();
 ```
 
 ### Memory System
@@ -135,24 +137,6 @@ const researcher = expert({
   actions: [generateQueries, processResults, writeReport],
 });
 ```
-
-## Architecture
-
-The v1 architecture consists of:
-
-### Core Components
-
-- **Dreams** - Main agent orchestrator
-- **Chain of Thought** - Reasoning engine
-- **Memory** - State management
-- **Experts** - Specialized capabilities
-- **Actions** - Discrete operations
-
-### Chain Support
-
-- **EVM** - Ethereum, Polygon, BSC etc
-- **Solana** - Solana blockchain
-- **Starknet** - StarkNet L2
 
 ### Integrations
 
