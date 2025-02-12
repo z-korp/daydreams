@@ -5,17 +5,29 @@
 > ⚠️ **Warning**: This is alpha software under active development. Expect
 > frequent breaking changes and bugs. The API is not yet stable.
 
-# Generative Agent Framework
+# Cross-chain Generative Agents
+
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
+[![Status](https://img.shields.io/badge/Status-Alpha-orange.svg)]()
+[![Documentation](https://img.shields.io/badge/Documentation-docs-blue.svg)](https://docs.daydreams.ai)
+[![Twitter Follow](https://img.shields.io/twitter/follow/daydreamsai?style=social)](https://twitter.com/daydreamsagents)
+[![GitHub stars](https://img.shields.io/github/stars/daydreamsai/daydreams?style=social)](https://github.com/daydreamsai/daydreams)
 
 Daydreams is a powerful framework for building generative agents that can
 execute tasks across any blockchain or API.
 
-- 🔗 Chain-agnostic blockchain interactions
-- 👥 Multi-expert collaboration
-- 🧠 Memory and context management made simple
-- 🎯 Long term goal-oriented behavior
-- 💾 Long-term memory made simple
-- 🤔 Multi-step reasoning using Hierarchical Task Networks
+| Feature                | Description                                                          |
+| ---------------------- | -------------------------------------------------------------------- |
+| 🔗 Chain Agnostic      | Execute transactions and interact with any blockchain network        |
+| 👥 Multi-Expert System | Leverage specialized modules working together to solve complex tasks |
+| 🧠 Context Management  | Simple yet powerful memory and context handling system               |
+| 🎯 Goal-Oriented       | Long-term planning and goal-oriented behavior capabilities           |
+| 💾 Persistent Memory   | Built-in support for storing and retrieving long-term information    |
+| 🤔 Advanced Reasoning  | Multi-step reasoning using Hierarchical Task Networks                |
+
+Want to contribute? Check our
+[issues](https://github.com/daydreamsai/daydreams/issues) for tasks labeled
+`good first issue`.
 
 ## Supported Chains
 
@@ -32,10 +44,22 @@ execute tasks across any blockchain or API.
 
 ## Quick Start
 
-Prerequisites:
+### Prerequisites
 
 - Node.js 18+ using [nvm](https://github.com/nvm-sh/nvm)
 - [bun](https://bun.sh/)
+
+### LLM Keys
+
+You'll need an API key for the LLM you want to use. We recommend using
+[Groq](https://groq.com/) for most use cases.
+
+- [OpenAI](https://openai.com/)
+- [Anthropic](https://anthropic.com/)
+- [Groq](https://groq.com/)
+- [Gemini](https://deepmind.google/technologies/gemini/)
+
+### Install
 
 ```bash
 # Install dependencies
@@ -48,110 +72,85 @@ cp .env.example .env
 bun run example:discord
 ```
 
-## Concepts
-
-All dreams agents are a collection of inputs, outputs, actions and memory.
-Simple, and elegant.
-
-```typescript
-createDreams({
-  inputs: {}, // sources of information
-  outputs: {}, // ways to take action
-  memory: createMemoryStore(), // storage for conversation history and state
-
-  actions: [], // @optional discrete operations
-  experts: [], // @optional specialized modules for specific tasks
-  container: createContainer(), // @optional dependency injection container
-});
-```
-
-- **Inputs** 📥 - Ways to receive information (Discord, Telegram, API webhooks
-  etc)
-- **Outputs** 📤 - Ways to take action (sending messages, making transactions
-  etc)
-- **Memory** 🧠 - Storage for conversation history and state
-- **Actions** ⚡ - @optional Discrete operations the agent can perform
-- **Experts** 🎓 - @optional Specialized modules for specific tasks
-- **Container** 📦 - @optional dependency injection container
-
-### Basic Usage
+## Your First Dreams Agent
 
 Dreams agents are all functional. `createDreams` is a function that returns an
 agent object, which can be run with `await agent.run()`. Inject discord,
 telegram, or any other input/output to the agent and define your own actions.
 
 ```typescript
+import { createDreams } from "@daydreamsai/core";
+import { createMemoryStore, defaultContext } from "@daydreamsai/core";
+import { openai } from "@ai-sdk/openai";
+import { input, output } from "@daydreamsai/core";
+import { z } from "zod";
+import * as readline from "readline/promises";
+
+const groq = createGroq({
+  apiKey: process.env.GROQ_API_KEY!,
+});
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
 const agent = createDreams({
-  // @dev Use any LLM provider. All major providers are supported.
-  model: groq("llama-70b"),
-
-  // @dev Define your own memory store.
   memory: createMemoryStore(),
-
-  // @dev Define your own inputs.
+  model: openai("gpt-o1-mini"),
   inputs: {
-    "discord:message": input({
-      schema: messageSchema,
-      handler: handleMessage,
+    message: input({
+      schema: z.object({
+        user: z.string(),
+        text: z.string(),
+      }),
+      handler(params, ctx) {
+        console.log("User:" + params.text);
+        ctx.memory.inputs.push({
+          ref: "input",
+          type: "message",
+          params: { user: params.user },
+          data: params.text,
+          timestamp: Date.now(),
+          processed: false,
+        });
+        return true;
+      },
+      async subscribe(send, agent) {
+        while (true) {
+          const question = await rl.question(">");
+
+          send(defaultContext, "main", {
+            user: "admin",
+            text: question,
+          });
+        }
+      },
     }),
   },
-
-  // @dev Define your own outputs.
   outputs: {
-    "discord:reply": output({
-      schema: replySchema,
-      handler: sendReply,
+    message: output({
+      description: "",
+      schema: z.string(),
+      handler(content, ctx) {
+        console.log("Agent:" + content);
+        return true;
+      },
+      examples: ["Hi!"],
     }),
   },
-
-  // @dev Define your own actions.
-  actions: [searchWeb],
 });
 
-// Run the agent
-await agent.run();
+await agent.start();
 ```
 
-### Memory System
+## Contributing
 
-The memory system stores conversation history and execution state:
+Looking to contribute? We'd love your help!
 
-```typescript
-// In-memory store
-const memory = createMemoryStore();
-
-// MongoDB store
-const mongoMemory = await createMongoMemoryStore({
-  uri: "mongodb://...",
-  dbName: "dreams",
-});
-```
-
-## Example Dreams Agents
-
-```bash
-# Discord bot
-bun run example:discord
-
-# Telegram bot
-bun run example:telegram
-
-# GitHub code assistant
-bun run example:github
-```
-
-## Development
-
-We use [bun](https://bun.sh/) for development.
-
-```bash
-# Build the project
-bun build:core
-
-# Generate docs
-bun docs
-```
+If you are a developer and would like to contribute with code, please open an
+issue to discuss before opening a Pull Request.
 
 ### Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=daydreamsai/daydreams&type=Date)](https://star-history.com/#daydreamsai/daydreams&Date) 
+[![Star History Chart](https://api.star-history.com/svg?repos=daydreamsai/daydreams&type=Date)](https://star-history.com/#daydreamsai/daydreams&Date)
