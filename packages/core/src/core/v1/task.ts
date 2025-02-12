@@ -1,6 +1,5 @@
-import { randomUUIDv7 } from "bun";
 import type { Debugger } from "./types";
-import type { Logger } from "./logger";
+import { randomUUID } from "crypto";
 
 export type TaskOptions = {
   limit?: number;
@@ -23,7 +22,7 @@ export function task<Params, Result>(
   defaultOptions?: TaskOptions
 ): Task<Params, Result> {
   async function call(params: Params, callOptions?: TaskOptions) {
-    const callId = randomUUIDv7();
+    const callId = randomUUID();
 
     const options = {
       ...defaultOptions,
