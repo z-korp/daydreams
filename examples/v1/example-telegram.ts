@@ -1,27 +1,16 @@
 import { z } from "zod";
-import { createAnthropic } from "@ai-sdk/anthropic";
 import { createDreams } from "../../packages/core/src/core/v1/dreams";
 import {
   action,
-  expert,
   input,
   output,
   splitTextIntoChunks,
 } from "../../packages/core/src/core/v1/utils";
 import { Telegraf } from "telegraf";
-import {
-  createMemoryStore,
-  defaultContext,
-  defaultContextRender,
-} from "../../packages/core/src/core/v1/memory";
+import { createMemoryStore } from "../../packages/core/src/core/v1/memory";
 import { createGroq } from "@ai-sdk/groq";
 import { tavily, TavilyClient } from "@tavily/core";
-import {
-  InferContextFromHandler,
-  InferMemoryFromHandler,
-  LogLevel,
-  WorkingMemory,
-} from "../../packages/core/src/core/v1/types";
+import { LogLevel, WorkingMemory } from "../../packages/core/src/core/v1/types";
 import createContainer from "@daydreamsai/core/src/core/v1/container";
 import { service } from "@daydreamsai/core/src/core/v1/serviceProvider";
 import { context } from "@daydreamsai/core/src/core/v1/context";
@@ -33,26 +22,21 @@ const groq = createGroq({
 const model = groq("deepseek-r1-distill-llama-70b");
 const memory = createMemoryStore();
 
-const container = createContainer()
-  .instance("groq", groq)
-  .instance("model", model)
-  .instance("memory", memory)
-  .singleton("tavily", () =>
-    tavily({
-      apiKey: process.env.TAVILY_API_KEY!,
-    })
-  );
+const container = createContainer().singleton("tavily", () =>
+  tavily({
+    apiKey: process.env.TAVILY_API_KEY!,
+  })
+);
 
-const tgChatContext = context({
+const telegramChat = context({
   type: "telegram:chat",
   key: ({ chatId }) => chatId.toString(),
-  args: z.object({ chatId: z.number() }),
-  async setup(args, agent) {
+  schema: z.object({ chatId: z.number() }),
+  async setup(args, { container }) {
     console.log("setup", args);
-    const tg = agent.container.resolve<Telegraf>("telegraf").telegram;
+    const tg = container.resolve<Telegraf>("telegraf").telegram;
     return { tg };
   },
-  instructions: ({ key, args }, { tg }) => [""],
 });
 
 const tgService = service({
@@ -109,14 +93,14 @@ const agent = createDreams<WorkingMemory>({
 
         return true;
       },
-      subscribe(send, agent) {
-        agent.container.resolve<Telegraf>("telegraf").on("message", (ctx) => {
+      subscribe(send, { container }) {
+        container.resolve<Telegraf>("telegraf").on("message", (ctx) => {
           const chat = ctx.chat;
           const user = ctx.msg.from;
 
           if ("text" in ctx.message) {
             send(
-              tgChatContext,
+              telegramChat,
               { chatId: chat.id },
               {
                 user: {

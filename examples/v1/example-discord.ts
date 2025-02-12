@@ -10,7 +10,7 @@ import {
 import {
   createContextHandler,
   createMemoryStore,
-  defaultContext,
+  defaultContextMemory,
   defaultContextRender,
 } from "@daydreamsai/core/src/core/v1/memory";
 
@@ -55,7 +55,7 @@ console.log(container.resolve(tavily));
 
 const contextHandler = createContextHandler(
   () => ({
-    ...defaultContext(),
+    ...defaultContextMemory(),
     researches: [] as Research[],
   }),
   (memory) => {
@@ -78,7 +78,7 @@ type Memory = InferMemoryFromHandler<Handler>;
 const discordChannelContext = context({
   type: "discord:channel",
   key: ({ channelId }) => channelId,
-  args: z.object({ channelId: z.string() }),
+  schema: z.object({ channelId: z.string() }),
   async setup(args, agent) {
     const channel = await container
       .resolve<DiscordClient>("discord")
@@ -87,15 +87,6 @@ const discordChannelContext = context({
     if (!channel) throw new Error("Invalid channel");
 
     return { channel };
-  },
-  instructions: ({ key, args }, { channel }) => [""],
-  create({ key, args }, { channel }) {
-    return {
-      ...defaultContext(),
-    };
-  },
-  render(memory, { channel }) {
-    return [...defaultContextRender(memory)];
   },
 });
 

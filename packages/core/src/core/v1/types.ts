@@ -4,12 +4,6 @@ import type { Container } from "./container";
 import type { ServiceProvider } from "./serviceProvider";
 import type { AnyContext, Context } from "./context";
 
-/** Represents a task with text content and completion status */
-export type Task = {
-  text: string;
-  complete: boolean;
-};
-
 /** Represents an execution chain with experts and metadata */
 export type Chain = {
   id: string;
@@ -68,7 +62,8 @@ export type Output<
   TAgent extends AnyAgent = AnyAgent,
 > = {
   type: string;
-  description: string;
+  description?: string;
+  instructions?: string;
   schema: Schema;
   install?: (agent: TAgent) => Promise<void>;
   enabled?: (ctx: Context) => boolean;
@@ -102,7 +97,7 @@ export type Input<
   subscribe?: (
     send: <TContext extends AnyContext>(
       contextHandler: TContext,
-      args: z.infer<TContext["args"]>,
+      args: z.infer<TContext["schema"]>,
       data: z.infer<Schema>
     ) => void,
     agent: TAgent
@@ -250,11 +245,11 @@ export interface Agent<
   emit: (...args: any[]) => void;
   run: <TContext extends Context<WorkingMemory, any, any, any>>(
     context: TContext,
-    args: z.infer<TContext["args"]>
+    args: z.infer<TContext["schema"]>
   ) => Promise<void>;
   send: <TContext extends Context<WorkingMemory, any, any, any>>(
     context: TContext,
-    args: z.infer<TContext["args"]>,
+    args: z.infer<TContext["schema"]>,
     input: { type: string; data: any }
   ) => Promise<void>;
   evaluator: (ctx: InferContextFromHandler<T>) => Promise<void>;

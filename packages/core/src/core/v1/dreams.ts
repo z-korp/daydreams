@@ -3,6 +3,7 @@ import {
   type Action,
   type ActionCall,
   type Agent,
+  type AnyAgent,
   type Config,
   type ContextHandler,
   type Debugger,
@@ -14,23 +15,28 @@ import {
 } from "./types";
 import {
   createContextHandler,
-  defaultContext,
+  defaultContextMemory,
   defaultContextRender,
 } from "./memory";
 import { Logger } from "./logger";
 import {
   formatAction,
   formatContext,
+  formatContextLog,
   formatOutputInterface,
 } from "./formatters";
-import { generateText } from "ai";
+import { generateText, type LanguageModelV1 } from "ai";
 import { randomUUID } from "crypto";
 import { createParser, createPrompt } from "./prompt";
 import createContainer from "./container";
 import { createServiceManager } from "./serviceProvider";
-import { _ } from "ajv";
-import { context, type AnyContext, type Context } from "./context";
+import {
+  type Context,
+  type InferContextCtx,
+  type InferContextMemory,
+} from "./context";
 import type { z } from "zod";
+import { task, type TaskContext } from "./task";
 
 const promptTemplate = `
 You are tasked with analyzing messages, formulating responses, and initiating actions based on a given context. 
@@ -91,7 +97,7 @@ const prompt = createPrompt(
     context: context,
     outputs: outputs.map(formatOutputInterface),
     actions: actions.map(formatAction),
-    updates: updates.map(formatContext),
+    updates: updates.map(formatContextLog),
     examples: [],
   })
 );
@@ -147,8 +153,116 @@ const parse = createParser<
 );
 
 const defaultContextHandler: ContextHandler = createContextHandler(
-  defaultContext,
+  defaultContextMemory,
   defaultContextRender
+);
+
+const runGenerate = task(
+  "agent:run:generate",
+  async <TContext extends Context<WorkingMemory, any, any, any>>(
+    {
+      context,
+      contextId,
+      key,
+      args,
+      memory,
+      outputs,
+      actions,
+      ctx,
+      logger,
+      model,
+    }: {
+      context: TContext;
+      args: z.infer<TContext["schema"]>;
+      contextId: string;
+      key: string;
+      memory: WorkingMemory;
+      outputs: Output[];
+      actions: Action[];
+      ctx: InferContextCtx<TContext>;
+      logger: Logger;
+      model: LanguageModelV1;
+    },
+    { callId, debug }: TaskContext
+  ) => {
+    const newInputs = memory.inputs.filter((i) => i.processed !== true);
+
+    debug(contextId, ["memory", callId], JSON.stringify(memory, null, 2));
+
+    const system = prompt({
+      context: formatContext({
+        type: context.type ?? "system",
+        key: key,
+        description: context.description,
+        instructions:
+          typeof context.instructions === "function"
+            ? context.instructions({ key, args }, ctx)
+            : context.instructions,
+        content: context.render
+          ? context.render(memory, ctx)
+          : defaultContextRender(memory),
+      }),
+
+      outputs: outputs,
+      actions: actions.filter((action) =>
+        action.enabled ? action.enabled(ctx as any) : true
+      ),
+      updates: [
+        ...newInputs,
+        ...memory.results.filter((i) => i.processed !== true),
+      ],
+    });
+
+    debug(contextId, ["prompt", callId], system);
+
+    logger.debug("agent:system", system);
+
+    const result = await generateText({
+      model,
+      system,
+      messages: [
+        {
+          role: "assistant",
+          content: "<think>",
+        },
+      ],
+      stopSequences: ["</response>"],
+    });
+
+    const text = "<think>" + result.text + "</response>";
+
+    debug(contextId, ["response", callId], text);
+
+    logger.debug("agent:response", text);
+
+    return parse(text);
+  },
+  {}
+);
+
+const runAction = task(
+  "agent:run:action",
+  async ({
+    action,
+    call,
+    ctx,
+    agent,
+    logger,
+  }: {
+    action: Action;
+    call: ActionCall;
+    ctx: any;
+    agent: AnyAgent;
+    logger: Logger;
+  }) => {
+    try {
+      const result = await action.handler(call, ctx, agent);
+      return result;
+    } catch (error) {
+      logger.error("agent:action", "ACTION_FAILED", { error });
+      throw error;
+    }
+  }
 );
 
 export function createDreams<
@@ -200,13 +314,8 @@ export function createDreams<
   }
 
   async function getContext<
-    TContext extends Context<Memory, any, any, any> = Context<
-      Memory,
-      any,
-      any,
-      any
-    >,
-  >(contextHandler: TContext, args: z.infer<TContext["args"]>) {
+    TContext extends Context<WorkingMemory, any, any, any>,
+  >(contextHandler: TContext, args: z.infer<TContext["schema"]>) {
     const key = contextHandler.key(args);
     const contextId = [contextHandler.type, key].join(":");
 
@@ -217,16 +326,16 @@ export function createDreams<
         : {};
 
     const memory =
-      (await agent.memory.get<Memory>(contextId)) ??
+      (await agent.memory.get(contextId)) ??
       (contextHandler.create
         ? contextHandler.create({ key, args }, ctx)
-        : (defaultContext() as Memory));
+        : defaultContextMemory());
 
     return {
       id: contextId,
       key,
       ctx,
-      memory,
+      memory: memory as InferContextMemory<TContext>,
     };
   }
 
@@ -297,7 +406,7 @@ export function createDreams<
       if (contextsRunning.has(contextId)) return;
       contextsRunning.add(contextId);
 
-      const outputEntries = Object.entries(agent.outputs)
+      const outputsEntries = Object.entries(agent.outputs)
         .filter(([_, output]) =>
           output.enabled ? output.enabled(ctx as any) : true
         )
@@ -311,50 +420,21 @@ export function createDreams<
       const maxSteps = 5;
       let step = 1;
 
-      const newInputs = memory.inputs.filter((i) => i.processed !== true);
-
       while (true) {
-        const id = Date.now().toString();
-
-        debug(contextId, ["memory", id], JSON.stringify(ctx.memory, null, 2));
-
-        const system = prompt({
-          context: contextHandler.render
-            ? contextHandler.render(memory, ctx)
-            : defaultContextRender(memory),
-          outputs: outputEntries,
+        const data = await runGenerate({
+          context: contextHandler,
+          args,
+          contextId,
+          ctx,
+          key,
+          logger,
+          memory,
+          model: config.reasoningModel ?? config.model,
+          outputs: outputsEntries,
           actions: actions.filter((action) =>
             action.enabled ? action.enabled(ctx as any) : true
           ),
-          updates: [
-            ...newInputs,
-            ...memory.results.filter((i) => i.processed !== true),
-          ],
         });
-
-        debug(contextId, ["prompt", id], system);
-
-        logger.debug("agent:system", system);
-
-        const result = await generateText({
-          model: config.reasoningModel ?? config.model,
-          system,
-          messages: [
-            {
-              role: "assistant",
-              content: "<think>",
-            },
-          ],
-          stopSequences: ["</response>"],
-        });
-
-        const text = "<think>" + result.text + "</response>";
-
-        debug(contextId, ["response", id], text);
-
-        logger.debug("agent:response", text);
-
-        const data = parse(text);
 
         logger.debug("agent:parsed", "data", data);
 
@@ -420,11 +500,14 @@ export function createDreams<
               };
 
               memory.calls.push(call);
-              const result = await action.handler(
+
+              const result = await runAction({
+                action,
                 call,
-                ctx as InferContextFromHandler<Handler>,
-                agent
-              );
+                ctx,
+                agent,
+                logger,
+              });
 
               memory.results.push({
                 ref: "action_result",
@@ -440,7 +523,6 @@ export function createDreams<
             }
           })
         );
-
         break;
       }
 
@@ -457,7 +539,7 @@ export function createDreams<
         id: contextId,
         ctx,
         memory,
-      } = await getContext(contextHandler, args);
+      } = await getContext(contextHandler, contextHandler.schema.parse(args));
 
       const processor = agent.inputs[input.type];
 
