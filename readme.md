@@ -127,28 +127,7 @@ const mongoMemory = await createMongoMemoryStore({
 });
 ```
 
-### Expert Systems
-
-Experts are specialized modules that handle specific types of tasks:
-
-```typescript
-const researcher = expert({
-  description: "Conducts deep research on topics",
-  actions: [generateQueries, processResults, writeReport],
-});
-```
-
-### Integrations
-
-- Discord
-- Telegram
-- GitHub
-- Web Search
-- Custom APIs
-
-## Examples
-
-The project includes several example implementations:
+## Example Dreams Agents
 
 ```bash
 # Discord bot
@@ -163,6 +142,8 @@ bun run example:github
 
 ## Development
 
+We use [bun](https://bun.sh/) for development.
+
 ```bash
 # Build the project
 bun build:core
@@ -171,14 +152,6 @@ bun build:core
 bun docs
 ```
 
-## Contributing
-
-Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md).
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Star History
+### Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=daydreamsai/daydreams&type=Date)](https://star-history.com/#daydreamsai/daydreams&Date)
