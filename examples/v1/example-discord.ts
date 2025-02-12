@@ -1,11 +1,10 @@
 import { z } from "zod";
-import { createDreams } from "../../packages/core/src/core/v1/dreams";
-import { context, input, output } from "../../packages/core/src/core/v1/utils";
-import { DiscordClient } from "../../packages/core/src/core/v1/io/discord";
+import { createDreams } from "@daydreamsai/core/src/core/v1/dreams";
+import { context, input, output } from "@daydreamsai/core/src/core/v1/utils";
+import { DiscordClient } from "@daydreamsai/core/src/core/v1/io/discord";
 import { createGroq } from "@ai-sdk/groq";
-import { LogLevel } from "../../packages/core/src/core/v1/types";
+import { LogLevel } from "@daydreamsai/core/src/core/v1/types";
 import { createMemoryStore } from "@daydreamsai/core/src/core/v1/memory";
-
 import { researchDeepActions } from "./deep-research/research";
 import { tavily } from "@tavily/core";
 import { Events, Message } from "discord.js";
@@ -16,6 +15,7 @@ const groq = createGroq({
 });
 
 const model = groq("deepseek-r1-distill-llama-70b");
+
 const memory = createMemoryStore();
 
 const container = createContainer()
@@ -156,6 +156,8 @@ const agent = createDreams({
   actions: [...researchDeepActions],
 });
 
+console.log("Starting Daydreams Discord Bot...");
+
 agent.start();
 
-console.log("Starting Daydreams Discord Bot...");
+console.log("Daydreams Discord Bot started");
