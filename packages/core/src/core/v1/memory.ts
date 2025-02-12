@@ -1,5 +1,7 @@
-import { formatContext } from "./formatters";
+import { z } from "zod";
+import { formatContextLog } from "./formatters";
 import type { MemoryStore, WorkingMemory } from "./types";
+import { context } from "./utils";
 
 export function createContextHandler<T>(
   memoryCreator: (contextId: string) => T,
@@ -22,7 +24,7 @@ export function createContextHandler<T>(
   };
 }
 
-export function defaultContext(): WorkingMemory {
+export function defaultContextMemory(): WorkingMemory {
   return {
     inputs: [],
     outputs: [],
@@ -38,11 +40,20 @@ export function defaultContextRender(memory: WorkingMemory) {
     ...memory.outputs,
     ...memory.calls,
     ...memory.results.filter((i) => i.processed === true),
-  ].map((i) => formatContext(i));
+  ].map((i) => formatContextLog(i));
 }
 
+export const defaultContext = context({
+  type: "default",
+  schema: z.string(),
+  key: (key) => key,
+  setup(args, agent) {
+    return {};
+  },
+});
+
 export const getOrCreateConversationMemory = createContextHandler(
-  defaultContext,
+  defaultContextMemory,
   defaultContextRender
 );
 

@@ -1,21 +1,11 @@
 import { z } from "zod";
-import { createDreams } from "../../packages/core/src/core/v1/dreams";
-import { action, input, output } from "../../packages/core/src/core/v1/utils";
-import { DiscordClient } from "../../packages/core/src/core/v0/io/discord";
+import { createDreams } from "@daydreamsai/core/src/core/v1/dreams";
+import { context, input, output } from "@daydreamsai/core/src/core/v1/utils";
+import { DiscordClient } from "@daydreamsai/core/src/core/v1/io/discord";
 import { createGroq } from "@ai-sdk/groq";
-import {
-  InferMemoryFromHandler,
-  LogLevel,
-} from "../../packages/core/src/core/v1/types";
-import {
-  createContextHandler,
-  createMemoryStore,
-  defaultContext,
-  defaultContextRender,
-} from "@daydreamsai/core/src/core/v1/memory";
-
-import { Research, researchDeepActions } from "./deep-research/research";
-import { formatXml } from "@daydreamsai/core/src/core/v1/xml";
+import { LogLevel } from "@daydreamsai/core/src/core/v1/types";
+import { createMemoryStore } from "@daydreamsai/core/src/core/v1/memory";
+import { researchDeepActions } from "./deep-research/research";
 import { tavily } from "@tavily/core";
 import { Events, Message } from "discord.js";
 import createContainer from "@daydreamsai/core/src/core/v1/container";
@@ -25,18 +15,15 @@ const groq = createGroq({
 });
 
 const model = groq("deepseek-r1-distill-llama-70b");
+
 const memory = createMemoryStore();
 
 const container = createContainer()
-  .instance("groq", groq)
-  .instance("model", model)
-  .instance("memory", memory)
   .singleton(tavily, () =>
     tavily({
       apiKey: process.env.TAVILY_API_KEY!,
     })
   )
-  .alias("tavily", tavily)
   .singleton(
     "discord",
     () =>
@@ -49,35 +36,26 @@ const container = createContainer()
       )
   );
 
-console.log(container.resolve("tavily"));
-console.log(container.resolve(tavily));
+container.resolve(tavily);
 
-const contextHandler = createContextHandler(
-  () => ({
-    ...defaultContext(),
-    researches: [] as Research[],
-  }),
-  (memory) => {
-    return [
-      ...defaultContextRender(memory),
-      ...memory.researches.map((r) =>
-        formatXml({
-          tag: "research",
-          params: { id: r.id },
-          content: JSON.stringify(r),
-        })
-      ),
-    ];
-  }
-);
+const discordChannelContext = context({
+  type: "discord:channel",
+  key: ({ channelId }) => channelId,
+  schema: z.object({ channelId: z.string() }),
+  async setup(args, agent) {
+    const channel = await container
+      .resolve<DiscordClient>("discord")
+      .client.channels.fetch(args.channelId);
 
-type Handler = typeof contextHandler;
-type Memory = InferMemoryFromHandler<Handler>;
+    if (!channel) throw new Error("Invalid channel");
 
-const agent = createDreams<Memory, Handler>({
+    return { channel };
+  },
+});
+
+const agent = createDreams({
   logger: LogLevel.DEBUG,
   memory,
-  context: contextHandler,
   container,
   model,
   debugger: async (contextId, keys, data) => {
@@ -117,17 +95,20 @@ const agent = createDreams<Memory, Handler>({
             );
             return;
           }
-
-          send(`discord:${message.channelId}`, {
-            chat: {
-              id: message.channelId,
-            },
-            user: {
-              id: message.member!.id || message.author.id,
-              name: message.member!.displayName || message.author.username,
-            },
-            text: message.content,
-          });
+          send(
+            discordChannelContext,
+            { channelId: message.channelId },
+            {
+              chat: {
+                id: message.channelId,
+              },
+              user: {
+                id: message.member!.id,
+                name: message.member!.displayName,
+              },
+              text: message.content,
+            }
+          );
         }
 
         const discord = agent.container.resolve<DiscordClient>("discord");
@@ -175,6 +156,8 @@ const agent = createDreams<Memory, Handler>({
   actions: [...researchDeepActions],
 });
 
+console.log("Starting Daydreams Discord Bot...");
+
 agent.start();
 
-console.log("Starting Daydreams Discord Bot...");
+console.log("Daydreams Discord Bot started");
