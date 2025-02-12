@@ -31,15 +31,11 @@ const model = groq("deepseek-r1-distill-llama-70b");
 const memory = createMemoryStore();
 
 const container = createContainer()
-  .instance("groq", groq)
-  .instance("model", model)
-  .instance("memory", memory)
-  .singleton(tavily, () =>
+  .singleton("tavily", () =>
     tavily({
       apiKey: process.env.TAVILY_API_KEY!,
     })
   )
-  .alias("tavily", tavily)
   .singleton(
     "discord",
     () =>
@@ -51,28 +47,6 @@ const container = createContainer()
         LogLevel.DEBUG
       )
   );
-
-console.log(container.resolve("tavily"));
-console.log(container.resolve(tavily));
-
-const contextHandler = createContextHandler(
-  () => ({
-    ...defaultContextMemory(),
-    researches: [] as Research[],
-  }),
-  (memory) => {
-    return [
-      ...defaultContextRender(memory),
-      ...memory.researches.map((r) =>
-        formatXml({
-          tag: "research",
-          params: { id: r.id },
-          content: JSON.stringify(r),
-        })
-      ),
-    ];
-  }
-);
 
 const discordChannelContext = context({
   type: "discord:channel",
