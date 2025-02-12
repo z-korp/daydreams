@@ -6,7 +6,7 @@ import {
   input,
   output,
 } from "../../packages/core/src/core/v1/utils";
-import { DiscordClient } from "../../packages/core/src/core/v0/io/discord";
+import { DiscordClient } from "../../packages/core/src/core/v1/io/discord";
 import { createGroq } from "@ai-sdk/groq";
 import { LogLevel } from "../../packages/core/src/core/v1/types";
 import {
@@ -31,7 +31,7 @@ const model = groq("deepseek-r1-distill-llama-70b");
 const memory = createMemoryStore();
 
 const container = createContainer()
-  .singleton("tavily", () =>
+  .singleton(tavily, () =>
     tavily({
       apiKey: process.env.TAVILY_API_KEY!,
     })
@@ -47,6 +47,8 @@ const container = createContainer()
         LogLevel.DEBUG
       )
   );
+
+container.resolve(tavily);
 
 const discordChannelContext = context({
   type: "discord:channel",
