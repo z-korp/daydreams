@@ -385,3 +385,9 @@ export interface IChain {
    */
   write(call: unknown): Promise<any>;
 }
+
+export enum HandlerRole {
+  INPUT = "input",
+  OUTPUT = "output",
+  ACTION = "action",
+}

@@ -57,43 +57,7 @@ export default defineConfig({
       items: [
         {
           text: "API",
-          items: [
-            { text: "Globals", link: "/api-reference/globals" },
-            {
-              text: "Namespaces",
-              items: [
-                {
-                  text: "Chains",
-                  link: "/api-reference/namespaces/Chains",
-                },
-                {
-                  text: "IO",
-                  items: [
-                    {
-                      text: "Twitter",
-                      link: "/api-reference/namespaces/IO/namespaces/Twitter",
-                    },
-                  ],
-                },
-                {
-                  text: "Processors",
-                  link: "/api-reference/namespaces/Processors",
-                },
-                {
-                  text: "Providers",
-                  link: "/api-reference/namespaces/Providers",
-                },
-                {
-                  text: "Types",
-                  link: "/api-reference/namespaces/Types",
-                },
-                {
-                  text: "Utils",
-                  link: "/api-reference/namespaces/Utils",
-                },
-              ],
-            },
-          ],
+          items: [{ text: "Globals", link: "/api-reference/globals" }],
         },
       ],
     },

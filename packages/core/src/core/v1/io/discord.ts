@@ -9,12 +9,7 @@ import {
   type Channel,
 } from "discord.js";
 import { Logger } from "../../v1/logger";
-import {
-  HandlerRole,
-  LogLevel,
-  type IOHandler,
-  type ProcessableContent,
-} from "../types";
+import { HandlerRole, LogLevel } from "../types";
 
 import { z } from "zod";
 import { env } from "process";
@@ -86,9 +81,7 @@ export class DiscordClient {
    *  Optionally start listening to Discord messages.
    *  The onData callback typically feeds data into Orchestrator or similar.
    */
-  public startMessageStream(
-    onData: (data: ProcessableContent | ProcessableContent[]) => void
-  ) {
+  public startMessageStream(onData: (data: any | any[]) => void) {
     this.logger.info("DiscordClient", "Starting message stream...");
 
     // If you want to capture the listener reference for removal:
@@ -134,23 +127,6 @@ export class DiscordClient {
     this.stopMessageStream();
     this.client.destroy();
     this.logger.info("DiscordClient", "Client destroyed");
-  }
-
-  /**
-   *  Create an output for sending messages (useful for Orchestrator OUTPUT handlers).
-   */
-  public createMessageOutput<T>(): IOHandler {
-    return {
-      role: HandlerRole.OUTPUT,
-      name: "discord_message",
-      execute: async (data: T) => {
-        // Cast the result to ProcessableContent to satisfy the IOHandler signature.
-        return (await this.sendMessage(
-          data as MessageData
-        )) as unknown as ProcessableContent;
-      },
-      outputSchema: messageSchema,
-    };
   }
 
   private getIsValidTextChannel(channel?: Channel): channel is TextChannel {
