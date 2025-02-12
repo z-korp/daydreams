@@ -1,8 +1,18 @@
 import { Scraper, SearchMode, type Tweet } from "agent-twitter-client";
 import type { JSONSchemaType } from "ajv";
-import { Logger } from "../../core/logger";
+import { Logger } from "../logger";
 import { LogLevel } from "../types";
-import { env } from "../../core/env";
+import { z } from "zod";
+
+const envSchema = z.object({
+  TWITTER_USERNAME: z.string(),
+  TWITTER_PASSWORD: z.string(),
+  TWITTER_EMAIL: z.string(),
+  DRY_RUN: z
+    .preprocess((val) => val === "1" || val === "true", z.boolean())
+    .default(true),
+});
+export const env = envSchema.parse(process.env);
 
 export interface TwitterCredentials {
   username: string;

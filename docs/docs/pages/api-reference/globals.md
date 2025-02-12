@@ -1,5382 +1,220 @@
 # @daydreamsai/core
 
+## Enumerations
+
+### HandlerRole
+
+Defined in: [types.ts:389](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L389)
+
+#### Enumeration Members
+
+##### ACTION
+
+> **ACTION**: `"action"`
+
+Defined in: [types.ts:392](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L392)
+
+##### INPUT
+
+> **INPUT**: `"input"`
+
+Defined in: [types.ts:390](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L390)
+
+##### OUTPUT
+
+> **OUTPUT**: `"output"`
+
+Defined in: [types.ts:391](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L391)
+
+***
+
+### LogLevel
+
+Defined in: [types.ts:323](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L323)
+
+Enum defining available log levels
+
+#### Enumeration Members
+
+##### DEBUG
+
+> **DEBUG**: `3`
+
+Defined in: [types.ts:327](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L327)
+
+##### ERROR
+
+> **ERROR**: `0`
+
+Defined in: [types.ts:324](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L324)
+
+##### INFO
+
+> **INFO**: `2`
+
+Defined in: [types.ts:326](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L326)
+
+##### TRACE
+
+> **TRACE**: `4`
+
+Defined in: [types.ts:328](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L328)
+
+##### WARN
+
+> **WARN**: `1`
+
+Defined in: [types.ts:325](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L325)
+
 ## Classes
 
-### `abstract` BaseProcessor
+### EvmChain
 
-Defined in:
-[packages/core/src/core/processor.ts:13](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L13)
+Defined in: [chains/evm.ts:44](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/evm.ts#L44)
 
-Base abstract class for content processors that handle different types of input
-and generate appropriate responses using LLM.
+Implementation of the IChain interface for Ethereum Virtual Machine (EVM) compatible chains.
+Provides methods for reading from and writing to EVM-based blockchains.
 
-#### Extended by
+#### Example
 
-- [`MessageProcessor`](namespaces/Processors.md#messageprocessor)
-- [`ResearchQuantProcessor`](namespaces/Processors.md#researchquantprocessor)
-
-#### Constructors
-
-##### new BaseProcessor()
-
-> **new BaseProcessor**(`metadata`, `loggerLevel`, `character`, `llmClient`,
-> `contentLimit`): [`BaseProcessor`](globals.md#baseprocessor)
-
-Defined in:
-[packages/core/src/core/processor.ts:24](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L24)
-
-Creates a new BaseProcessor instance
-
-###### Parameters
-
-###### metadata
-
-Metadata about this processor including name and description
-
-###### description
-
-`string`
-
-###### name
-
-`string`
-
-###### loggerLevel
-
-[`LogLevel`](namespaces/Types.md#loglevel) = `LogLevel.ERROR`
-
-The logging level to use
-
-###### character
-
-[`Character`](namespaces/Types.md#character)
-
-The character personality to use for responses
-
-###### llmClient
-
-[`LLMClient`](globals.md#llmclient-1)
-
-The LLM client instance to use for processing
-
-###### contentLimit
-
-`number` = `1000`
-
-###### Returns
-
-[`BaseProcessor`](globals.md#baseprocessor)
-
-#### Properties
-
-##### character
-
-> `protected` **character**: [`Character`](namespaces/Types.md#character)
-
-Defined in:
-[packages/core/src/core/processor.ts:27](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L27)
-
-The character personality to use for responses
-
-##### contentLimit
-
-> `protected` **contentLimit**: `number` = `1000`
-
-Defined in:
-[packages/core/src/core/processor.ts:29](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L29)
-
-##### llmClient
-
-> `protected` **llmClient**: [`LLMClient`](globals.md#llmclient-1)
-
-Defined in:
-[packages/core/src/core/processor.ts:28](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L28)
-
-The LLM client instance to use for processing
-
-##### logger
-
-> `protected` **logger**: [`Logger`](globals.md#logger-1)
-
-Defined in:
-[packages/core/src/core/processor.ts:15](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L15)
-
-Logger instance for this processor
-
-##### loggerLevel
-
-> `protected` **loggerLevel**: [`LogLevel`](namespaces/Types.md#loglevel) =
-> `LogLevel.ERROR`
-
-Defined in:
-[packages/core/src/core/processor.ts:26](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L26)
-
-The logging level to use
-
-##### metadata
-
-> `protected` **metadata**: `object`
-
-Defined in:
-[packages/core/src/core/processor.ts:25](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L25)
-
-Metadata about this processor including name and description
-
-###### description
-
-> **description**: `string`
-
-###### name
-
-> **name**: `string`
-
-#### Methods
-
-##### canHandle()
-
-> `abstract` **canHandle**(`content`): `boolean`
-
-Defined in:
-[packages/core/src/core/processor.ts:51](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L51)
-
-Determines if this processor can handle the given content.
-
-###### Parameters
-
-###### content
-
-`any`
-
-The content to check
-
-###### Returns
-
-`boolean`
-
-True if this processor can handle the content, false otherwise
-
-##### getName()
-
-> **getName**(): `string`
-
-Defined in:
-[packages/core/src/core/processor.ts:42](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L42)
-
-Gets the name of this processor
-
-###### Returns
-
-`string`
-
-The processor name from metadata
-
-##### process()
-
-> `abstract` **process**(`content`, `otherContext`, `ioContext`?):
-> `Promise`\<[`ProcessedResult`](namespaces/Types.md#processedresult)\>
-
-Defined in:
-[packages/core/src/core/processor.ts:62](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/processor.ts#L62)
-
-Processes the given content and returns a result.
-
-###### Parameters
-
-###### content
-
-`any`
-
-The content to process
-
-###### otherContext
-
-`string`
-
-Additional context string to consider during processing
-
-###### ioContext?
-
-Optional context containing available outputs and actions
-
-###### availableActions
-
-[`IOHandler`](namespaces/Types.md#iohandler)[]
-
-Array of available action handlers
-
-###### availableOutputs
-
-[`IOHandler`](namespaces/Types.md#iohandler)[]
-
-Array of available output handlers
-
-###### Returns
-
-`Promise`\<[`ProcessedResult`](namespaces/Types.md#processedresult)\>
-
-Promise resolving to the processed result
-
----
-
-### ChainOfThought
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:29](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L29)
-
-#### Extends
-
-- `EventEmitter`
-
-#### Constructors
-
-##### new ChainOfThought()
-
-> **new ChainOfThought**(`llmClient`, `memory`, `initialContext`?, `config`?):
-> [`ChainOfThought`](globals.md#chainofthought)
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:39](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L39)
-
-###### Parameters
-
-###### llmClient
-
-[`LLMClient`](globals.md#llmclient-1)
-
-###### memory
-
-[`VectorDB`](namespaces/Types.md#vectordb)
-
-###### initialContext?
-
-[`ChainOfThoughtContext`](namespaces/Types.md#chainofthoughtcontext)
-
-###### config?
-
-###### logLevel
-
-[`LogLevel`](namespaces/Types.md#loglevel)
-
-###### Returns
-
-[`ChainOfThought`](globals.md#chainofthought)
-
-###### Overrides
-
-`EventEmitter.constructor`
-
-#### Properties
-
-##### goalManager
-
-> **goalManager**: [`GoalManager`](globals.md#goalmanager-1)
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:34](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L34)
-
-##### memory
-
-> **memory**: [`VectorDB`](namespaces/Types.md#vectordb)
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:35](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L35)
-
-##### captureRejections
-
-> `static` **captureRejections**: `boolean`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:459
-
-Value:
-[boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Boolean_type)
-
-Change the default `captureRejections` option on all new `EventEmitter` objects.
-
-###### Since
-
-v13.4.0, v12.16.0
-
-###### Inherited from
-
-`EventEmitter.captureRejections`
-
-##### captureRejectionSymbol
-
-> `readonly` `static` **captureRejectionSymbol**: _typeof_ >
-> [`captureRejectionSymbol`](globals.md#capturerejectionsymbol)
-
-Defined in: docs/node_modules/@types/node/events.d.ts:452
-
-Value: `Symbol.for('nodejs.rejection')`
-
-See how to write a custom `rejection handler`.
-
-###### Since
-
-v13.4.0, v12.16.0
-
-###### Inherited from
-
-`EventEmitter.captureRejectionSymbol`
-
-##### defaultMaxListeners
-
-> `static` **defaultMaxListeners**: `number`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:498
-
-By default, a maximum of `10` listeners can be registered for any single event.
-This limit can be changed for individual `EventEmitter` instances using the
-`emitter.setMaxListeners(n)` method. To change the default for
-_all_`EventEmitter` instances, the `events.defaultMaxListeners` property can be
-used. If this value is not a positive number, a `RangeError` is thrown.
-
-Take caution when setting the `events.defaultMaxListeners` because the change
-affects _all_ `EventEmitter` instances, including those created before the
-change is made. However, calling `emitter.setMaxListeners(n)` still has
-precedence over `events.defaultMaxListeners`.
-
-This is not a hard limit. The `EventEmitter` instance will allow more listeners
-to be added but will output a trace warning to stderr indicating that a
-"possible EventEmitter memory leak" has been detected. For any single
-`EventEmitter`, the `emitter.getMaxListeners()` and `emitter.setMaxListeners()`
-methods can be used to temporarily avoid this warning:
-
-```js
-import { EventEmitter } from "node:events";
-const emitter = new EventEmitter();
-emitter.setMaxListeners(emitter.getMaxListeners() + 1);
-emitter.once("event", () => {
-  // do stuff
-  emitter.setMaxListeners(Math.max(emitter.getMaxListeners() - 1, 0));
+```typescript
+const evmChain = new EvmChain({
+  chainName: "ethereum",
+  rpcUrl: process.env.ETH_RPC_URL,
+  privateKey: process.env.ETH_PRIVATE_KEY,
+  chainId: 1
 });
 ```
-
-The `--trace-warnings` command-line flag can be used to display the stack trace
-for such warnings.
-
-The emitted warning can be inspected with `process.on('warning')` and will have
-the additional `emitter`, `type`, and `count` properties, referring to the event
-emitter instance, the event's name and the number of attached listeners,
-respectively. Its `name` property is set to `'MaxListenersExceededWarning'`.
-
-###### Since
-
-v0.11.2
-
-###### Inherited from
-
-`EventEmitter.defaultMaxListeners`
-
-##### errorMonitor
-
-> `readonly` `static` **errorMonitor**: _typeof_ >
-> [`errorMonitor`](globals.md#errormonitor)
-
-Defined in: docs/node_modules/@types/node/events.d.ts:445
-
-This symbol shall be used to install a listener for only monitoring `'error'`
-events. Listeners installed using this symbol are called before the regular
-`'error'` listeners are called.
-
-Installing a listener using this symbol does not change the behavior once an
-`'error'` event is emitted. Therefore, the process will still crash if no
-regular `'error'` listener is installed.
-
-###### Since
-
-v13.6.0, v12.17.0
-
-###### Inherited from
-
-`EventEmitter.errorMonitor`
-
-#### Methods
-
-##### \[captureRejectionSymbol\]()?
-
-> `optional` **\[captureRejectionSymbol\]**\<`K`\>(`error`, `event`, ...`args`):
-> `void`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:136
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### error
-
-`Error`
-
-###### event
-
-`string` | `symbol`
-
-###### args
-
-...`AnyRest`
-
-###### Returns
-
-`void`
-
-###### Inherited from
-
-`EventEmitter.[captureRejectionSymbol]`
-
-##### addListener()
-
-> **addListener**\<`K`\>(`eventName`, `listener`): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:597
-
-Alias for `emitter.on(eventName, listener)`.
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-`string` | `symbol`
-
-###### listener
-
-(...`args`) => `void`
-
-###### Returns
-
-`this`
-
-###### Since
-
-v0.1.26
-
-###### Inherited from
-
-`EventEmitter.addListener`
-
-##### decomposeObjectiveIntoGoals()
-
-> **decomposeObjectiveIntoGoals**(`objective`): `Promise`\<`void`\>
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:78](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L78)
-
-Plans a strategic approach to achieve a given objective by breaking it down into
-hierarchical goals.
-
-This method:
-
-1. Retrieves relevant documents and past experiences from memory
-2. Generates a hierarchical goal structure with long-term, medium-term, and
-   short-term goals
-3. Creates goals in the goal manager and emits goal creation events
-4. Records the planning step
-
-###### Parameters
-
-###### objective
-
-`string`
-
-The high-level objective to plan for
-
-###### Returns
-
-`Promise`\<`void`\>
-
-###### Throws
-
-Will throw an error if strategy planning fails
-
-###### Emits
-
-goal:created - When each new goal is created
-
-##### emit()
-
-> **emit**\<`K`\>(`eventName`, ...`args`): `boolean`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:859
-
-Synchronously calls each of the listeners registered for the event named
-`eventName`, in the order they were registered, passing the supplied arguments
-to each.
-
-Returns `true` if the event had listeners, `false` otherwise.
-
-```js
-import { EventEmitter } from "node:events";
-const myEmitter = new EventEmitter();
-
-// First listener
-myEmitter.on("event", function firstListener() {
-  console.log("Helloooo! first listener");
-});
-// Second listener
-myEmitter.on("event", function secondListener(arg1, arg2) {
-  console.log(`event with parameters ${arg1}, ${arg2} in second listener`);
-});
-// Third listener
-myEmitter.on("event", function thirdListener(...args) {
-  const parameters = args.join(", ");
-  console.log(`event with parameters ${parameters} in third listener`);
-});
-
-console.log(myEmitter.listeners("event"));
-
-myEmitter.emit("event", 1, 2, 3, 4, 5);
-
-// Prints:
-// [
-//   [Function: firstListener],
-//   [Function: secondListener],
-//   [Function: thirdListener]
-// ]
-// Helloooo! first listener
-// event with parameters 1, 2 in second listener
-// event with parameters 1, 2, 3, 4, 5 in third listener
-```
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-`string` | `symbol`
-
-###### args
-
-...`AnyRest`
-
-###### Returns
-
-`boolean`
-
-###### Since
-
-v0.1.26
-
-###### Inherited from
-
-`EventEmitter.emit`
-
-##### eventNames()
-
-> **eventNames**(): (`string` \| `symbol`)[]
-
-Defined in: docs/node_modules/@types/node/events.d.ts:922
-
-Returns an array listing the events for which the emitter has registered
-listeners. The values in the array are strings or `Symbol`s.
-
-```js
-import { EventEmitter } from "node:events";
-
-const myEE = new EventEmitter();
-myEE.on("foo", () => {});
-myEE.on("bar", () => {});
-
-const sym = Symbol("symbol");
-myEE.on(sym, () => {});
-
-console.log(myEE.eventNames());
-// Prints: [ 'foo', 'bar', Symbol(symbol) ]
-```
-
-###### Returns
-
-(`string` \| `symbol`)[]
-
-###### Since
-
-v6.0.0
-
-###### Inherited from
-
-`EventEmitter.eventNames`
-
-##### executeAction()
-
-> **executeAction**(`action`): `Promise`\<`string`\>
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:1072](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L1072)
-
-Executes a Chain of Thought action triggered by the LLM.
-
-###### Parameters
-
-###### action
-
-[`CoTAction`](namespaces/Types.md#cotaction)
-
-The Chain of Thought action to execute
-
-###### Returns
-
-`Promise`\<`string`\>
-
-A string describing the result of the action execution
-
-###### Throws
-
-If the action handler throws an error during execution
-
-###### Remarks
-
-This method handles the execution of actions triggered by the LLM during the
-Chain of Thought process. It validates the action payload against the registered
-output handler's schema and executes the corresponding handler function.
-
-###### Example
-
-```ts
-const result = await chain.executeAction({
-  type: "sendMessage",
-  context: "Sending a message to user"
-  payload: {
-    message: "Hello world"
-  }
-});
-```
-
-##### getBlackboardHistory()
-
-> **getBlackboardHistory**(`type`?, `key`?, `limit`?): `Promise`\<`any`[]\>
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:1690](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L1690)
-
-Retrieves the history of blackboard updates, optionally filtered by type and
-key. Returns updates in reverse chronological order (newest first).
-
-###### Parameters
-
-###### type?
-
-`string`
-
-Optional type to filter updates by (e.g. 'resource', 'state', 'event')
-
-###### key?
-
-`string`
-
-Optional key within the type to filter updates by
-
-###### limit?
-
-`number` = `10`
-
-Maximum number of history entries to return (defaults to 10)
-
-###### Returns
-
-`Promise`\<`any`[]\>
-
-Array of blackboard updates, each containing the update details and metadata
-
-###### Example
-
-```ts
-// Returns something like:
-[
-  {
-    type: "resource",
-    key: "gold",
-    value: 100,
-    timestamp: 1234567890,
-    id: "doc1",
-    lastUpdated: "2023-01-01",
-  },
-  {
-    type: "resource",
-    key: "gold",
-    value: 50,
-    timestamp: 1234567880,
-    id: "doc2",
-    lastUpdated: "2023-01-01",
-  },
-];
-```
-
-##### getBlackboardState()
-
-> **getBlackboardState**(): `Promise`\<`Record`\<`string`, `any`\>\>
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:1634](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L1634)
-
-Retrieves the current state of the blackboard by aggregating all stored updates.
-The blackboard state is built by applying updates in chronological order,
-organized by type and key.
-
-###### Returns
-
-`Promise`\<`Record`\<`string`, `any`\>\>
-
-A nested object containing the current blackboard state, where the first level
-keys are update types and second level keys are the specific keys within each
-type, with their corresponding values.
-
-###### Example
-
-```ts
-// Returns something like:
-{
-  resource: { gold: 100, wood: 50 },
-  state: { isGameStarted: true },
-  event: { lastBattle: "won" }
-}
-```
-
-##### getContextHistory()
-
-> **getContextHistory**():
-> [`ChainOfThoughtContext`](namespaces/Types.md#chainofthoughtcontext)[]
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:1000](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L1000)
-
-Retrieves all context snapshots that have been captured.
-
-###### Returns
-
-[`ChainOfThoughtContext`](namespaces/Types.md#chainofthoughtcontext)[]
-
-An array of [ChainOfThoughtContext](namespaces/Types.md#chainofthoughtcontext)
-objects representing the historical snapshots
-
-###### Remarks
-
-Returns an array containing all historical snapshots of the context state, in
-chronological order. Each snapshot represents the complete context state at the
-time it was captured using
-[saveContextSnapshot](globals.md#savecontextsnapshot).
-
-###### Example
-
-```ts
-const snapshots = chain.getContextHistory();
-console.log(`Number of snapshots: ${snapshots.length}`);
-```
-
-##### getMaxListeners()
-
-> **getMaxListeners**(): `number`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:774
-
-Returns the current max listener value for the `EventEmitter` which is either
-set by `emitter.setMaxListeners(n)` or defaults to
-[defaultMaxListeners](globals.md#defaultmaxlisteners).
-
-###### Returns
-
-`number`
-
-###### Since
-
-v1.0.0
-
-###### Inherited from
-
-`EventEmitter.getMaxListeners`
-
-##### listenerCount()
-
-> **listenerCount**\<`K`\>(`eventName`, `listener`?): `number`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:868
-
-Returns the number of listeners listening for the event named `eventName`. If
-`listener` is provided, it will return how many times the listener is found in
-the list of the listeners of the event.
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-The name of the event being listened for
-
-`string` | `symbol`
-
-###### listener?
-
-`Function`
-
-The event handler function
-
-###### Returns
-
-`number`
-
-###### Since
-
-v3.2.0
-
-###### Inherited from
-
-`EventEmitter.listenerCount`
-
-##### listeners()
-
-> **listeners**\<`K`\>(`eventName`): `Function`[]
-
-Defined in: docs/node_modules/@types/node/events.d.ts:787
-
-Returns a copy of the array of listeners for the event named `eventName`.
-
-```js
-server.on("connection", (stream) => {
-  console.log("someone connected!");
-});
-console.log(util.inspect(server.listeners("connection")));
-// Prints: [ [Function] ]
-```
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-`string` | `symbol`
-
-###### Returns
-
-`Function`[]
-
-###### Since
-
-v0.1.26
-
-###### Inherited from
-
-`EventEmitter.listeners`
-
-##### off()
-
-> **off**\<`K`\>(`eventName`, `listener`): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:747
-
-Alias for `emitter.removeListener()`.
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-`string` | `symbol`
-
-###### listener
-
-(...`args`) => `void`
-
-###### Returns
-
-`this`
-
-###### Since
-
-v10.0.0
-
-###### Inherited from
-
-`EventEmitter.off`
-
-##### on()
-
-> **on**\<`K`\>(`eventName`, `listener`): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:629
-
-Adds the `listener` function to the end of the listeners array for the event
-named `eventName`. No checks are made to see if the `listener` has already been
-added. Multiple calls passing the same combination of `eventName` and `listener`
-will result in the `listener` being added, and called, multiple times.
-
-```js
-server.on("connection", (stream) => {
-  console.log("someone connected!");
-});
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-By default, event listeners are invoked in the order they are added. The
-`emitter.prependListener()` method can be used as an alternative to add the
-event listener to the beginning of the listeners array.
-
-```js
-import { EventEmitter } from "node:events";
-const myEE = new EventEmitter();
-myEE.on("foo", () => console.log("a"));
-myEE.prependListener("foo", () => console.log("b"));
-myEE.emit("foo");
-// Prints:
-//   b
-//   a
-```
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-The name of the event.
-
-`string` | `symbol`
-
-###### listener
-
-(...`args`) => `void`
-
-The callback function
-
-###### Returns
-
-`this`
-
-###### Since
-
-v0.1.101
-
-###### Inherited from
-
-`EventEmitter.on`
-
-##### once()
-
-> **once**\<`K`\>(`eventName`, `listener`): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:659
-
-Adds a **one-time** `listener` function for the event named `eventName`. The
-next time `eventName` is triggered, this listener is removed and then invoked.
-
-```js
-server.once("connection", (stream) => {
-  console.log("Ah, we have our first user!");
-});
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-By default, event listeners are invoked in the order they are added. The
-`emitter.prependOnceListener()` method can be used as an alternative to add the
-event listener to the beginning of the listeners array.
-
-```js
-import { EventEmitter } from "node:events";
-const myEE = new EventEmitter();
-myEE.once("foo", () => console.log("a"));
-myEE.prependOnceListener("foo", () => console.log("b"));
-myEE.emit("foo");
-// Prints:
-//   b
-//   a
-```
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-The name of the event.
-
-`string` | `symbol`
-
-###### listener
-
-(...`args`) => `void`
-
-The callback function
-
-###### Returns
-
-`this`
-
-###### Since
-
-v0.3.0
-
-###### Inherited from
-
-`EventEmitter.once`
-
-##### prependListener()
-
-> **prependListener**\<`K`\>(`eventName`, `listener`): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:886
-
-Adds the `listener` function to the _beginning_ of the listeners array for the
-event named `eventName`. No checks are made to see if the `listener` has already
-been added. Multiple calls passing the same combination of `eventName` and
-`listener` will result in the `listener` being added, and called, multiple
-times.
-
-```js
-server.prependListener("connection", (stream) => {
-  console.log("someone connected!");
-});
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-The name of the event.
-
-`string` | `symbol`
-
-###### listener
-
-(...`args`) => `void`
-
-The callback function
-
-###### Returns
-
-`this`
-
-###### Since
-
-v6.0.0
-
-###### Inherited from
-
-`EventEmitter.prependListener`
-
-##### prependOnceListener()
-
-> **prependOnceListener**\<`K`\>(`eventName`, `listener`): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:902
-
-Adds a **one-time**`listener` function for the event named `eventName` to the
-_beginning_ of the listeners array. The next time `eventName` is triggered, this
-listener is removed, and then invoked.
-
-```js
-server.prependOnceListener("connection", (stream) => {
-  console.log("Ah, we have our first user!");
-});
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-The name of the event.
-
-`string` | `symbol`
-
-###### listener
-
-(...`args`) => `void`
-
-The callback function
-
-###### Returns
-
-`this`
-
-###### Since
-
-v6.0.0
-
-###### Inherited from
-
-`EventEmitter.prependOnceListener`
-
-##### processHighestPriorityGoal()
-
-> **processHighestPriorityGoal**(): `Promise`\<`void`\>
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:556](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L556)
-
-Executes the next highest priority goal that is ready for execution.
-
-This method:
-
-1. Gets prioritized list of ready goals
-2. For each goal, checks if it can be executed
-3. If executable, attempts execution
-4. If not executable:
-   - For short-term goals with incomplete state, attempts anyway
-   - For non-short-term goals with incomplete state, refines the goal
-   - Otherwise blocks the goal hierarchy
-
-###### Returns
-
-`Promise`\<`void`\>
-
-Promise that resolves when execution is complete
-
-###### Emits
-
-goal:started - When goal execution begins
-
-###### Emits
-
-goal:blocked - When a goal cannot be executed
-
-##### rawListeners()
-
-> **rawListeners**\<`K`\>(`eventName`): `Function`[]
-
-Defined in: docs/node_modules/@types/node/events.d.ts:818
-
-Returns a copy of the array of listeners for the event named `eventName`,
-including any wrappers (such as those created by `.once()`).
-
-```js
-import { EventEmitter } from "node:events";
-const emitter = new EventEmitter();
-emitter.once("log", () => console.log("log once"));
-
-// Returns a new Array with a function `onceWrapper` which has a property
-// `listener` which contains the original listener bound above
-const listeners = emitter.rawListeners("log");
-const logFnWrapper = listeners[0];
-
-// Logs "log once" to the console and does not unbind the `once` event
-logFnWrapper.listener();
-
-// Logs "log once" to the console and removes the listener
-logFnWrapper();
-
-emitter.on("log", () => console.log("log persistently"));
-// Will return a new Array with a single function bound by `.on()` above
-const newListeners = emitter.rawListeners("log");
-
-// Logs "log persistently" twice
-newListeners[0]();
-emitter.emit("log");
-```
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-`string` | `symbol`
-
-###### Returns
-
-`Function`[]
-
-###### Since
-
-v9.4.0
-
-###### Inherited from
-
-`EventEmitter.rawListeners`
-
-##### recordReasoningStep()
-
-> **recordReasoningStep**(`content`, `type`, `tags`?, `meta`?):
-> [`Step`](namespaces/Types.md#step-1)
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:912](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L912)
-
-Adds a new step to the chain of thought sequence.
-
-###### Parameters
-
-###### content
-
-`string`
-
-The main content/description of the step
-
-###### type
-
-[`StepType`](namespaces/Types.md#steptype) = `"action"`
-
-The type of step (e.g. "action", "reasoning", "system", etc)
-
-###### tags?
-
-`string`[]
-
-Optional array of string tags to categorize the step
-
-###### meta?
-
-`Record`\<`string`, `any`\>
-
-Optional metadata object to store additional step information
-
-###### Returns
-
-[`Step`](namespaces/Types.md#step-1)
-
-The newly created Step object
-
-###### Remarks
-
-Each step represents a discrete action, reasoning, or decision point in the
-chain. Steps are stored in chronological order and can be tagged for
-categorization.
-
-###### Example
-
-```ts
-chain.recordReasoningStep("Analyzing user request", "reasoning", ["analysis"]);
-```
-
-##### registerOutput()
-
-> **registerOutput**(`output`): `void`
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:1023](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L1023)
-
-Registers an output handler for a specific action type.
-
-###### Parameters
-
-###### output
-
-[`IOHandler`](namespaces/Types.md#iohandler)
-
-The output handler configuration containing the name and schema
-
-###### Returns
-
-`void`
-
-###### Remarks
-
-Output handlers define how different action types should be processed and
-validated. Each output handler is associated with a specific action type and
-includes a schema for validating action payloads.
-
-###### Example
-
-```ts
-chain.registerOutput({
-  name: "sendMessage",
-  schema: z.object({
-    message: z.string(),
-  }),
-});
-```
-
-##### removeAllListeners()
-
-> **removeAllListeners**(`eventName`?): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:758
-
-Removes all listeners, or those of the specified `eventName`.
-
-It is bad practice to remove listeners added elsewhere in the code, particularly
-when the `EventEmitter` instance was created by some other component or module
-(e.g. sockets or file streams).
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-###### Parameters
-
-###### eventName?
-
-`string` | `symbol`
-
-###### Returns
-
-`this`
-
-###### Since
-
-v0.1.26
-
-###### Inherited from
-
-`EventEmitter.removeAllListeners`
-
-##### removeListener()
-
-> **removeListener**\<`K`\>(`eventName`, `listener`): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:742
-
-Removes the specified `listener` from the listener array for the event named
-`eventName`.
-
-```js
-const callback = (stream) => {
-  console.log("someone connected!");
-};
-server.on("connection", callback);
-// ...
-server.removeListener("connection", callback);
-```
-
-`removeListener()` will remove, at most, one instance of a listener from the
-listener array. If any single listener has been added multiple times to the
-listener array for the specified `eventName`, then `removeListener()` must be
-called multiple times to remove each instance.
-
-Once an event is emitted, all listeners attached to it at the time of emitting
-are called in order. This implies that any `removeListener()` or
-`removeAllListeners()` calls _after_ emitting and _before_ the last listener
-finishes execution will not remove them from`emit()` in progress. Subsequent
-events behave as expected.
-
-```js
-import { EventEmitter } from "node:events";
-class MyEmitter extends EventEmitter {}
-const myEmitter = new MyEmitter();
-
-const callbackA = () => {
-  console.log("A");
-  myEmitter.removeListener("event", callbackB);
-};
-
-const callbackB = () => {
-  console.log("B");
-};
-
-myEmitter.on("event", callbackA);
-
-myEmitter.on("event", callbackB);
-
-// callbackA removes listener callbackB but it will still be called.
-// Internal listener array at time of emit [callbackA, callbackB]
-myEmitter.emit("event");
-// Prints:
-//   A
-//   B
-
-// callbackB is now removed.
-// Internal listener array [callbackA]
-myEmitter.emit("event");
-// Prints:
-//   A
-```
-
-Because listeners are managed using an internal array, calling this will change
-the position indices of any listener registered _after_ the listener being
-removed. This will not impact the order in which listeners are called, but it
-means that any copies of the listener array as returned by the
-`emitter.listeners()` method will need to be recreated.
-
-When a single function has been added as a handler multiple times for a single
-event (as in the example below), `removeListener()` will remove the most
-recently added instance. In the example the `once('ping')` listener is removed:
-
-```js
-import { EventEmitter } from "node:events";
-const ee = new EventEmitter();
-
-function pong() {
-  console.log("pong");
-}
-
-ee.on("ping", pong);
-ee.once("ping", pong);
-ee.removeListener("ping", pong);
-
-ee.emit("ping");
-ee.emit("ping");
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-`string` | `symbol`
-
-###### listener
-
-(...`args`) => `void`
-
-###### Returns
-
-`this`
-
-###### Since
-
-v0.1.26
-
-###### Inherited from
-
-`EventEmitter.removeListener`
-
-##### removeOutput()
-
-> **removeOutput**(`name`): `void`
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:1043](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L1043)
-
-Removes a registered output handler.
-
-###### Parameters
-
-###### name
-
-`string`
-
-The name of the output handler to remove
-
-###### Returns
-
-`void`
-
-###### Remarks
-
-This method removes a previously registered output handler from the chain. If no
-handler exists with the given name, this method will do nothing.
-
-###### Example
-
-```ts
-chain.removeOutput("sendMessage");
-```
-
-##### saveContextSnapshot()
-
-> **saveContextSnapshot**(): `void`
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:977](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L977)
-
-Creates and stores a snapshot of the current context state.
-
-###### Returns
-
-`void`
-
-###### Remarks
-
-This method creates a deep copy of the current context and adds it to the
-snapshots array. Snapshots provide a historical record of how the context has
-changed over time. Each snapshot is a complete copy of the context at that point
-in time.
-
-###### Example
-
-```ts
-chain.saveContextSnapshot(); // Creates a snapshot of current context state
-```
-
-##### setMaxListeners()
-
-> **setMaxListeners**(`n`): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:768
-
-By default `EventEmitter`s will print a warning if more than `10` listeners are
-added for a particular event. This is a useful default that helps finding memory
-leaks. The `emitter.setMaxListeners()` method allows the limit to be modified
-for this specific `EventEmitter` instance. The value can be set to `Infinity`
-(or `0`) to indicate an unlimited number of listeners.
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-###### Parameters
-
-###### n
-
-`number`
-
-###### Returns
-
-`this`
-
-###### Since
-
-v0.3.5
-
-###### Inherited from
-
-`EventEmitter.setMaxListeners`
-
-##### think()
-
-> **think**(`userQuery`, `maxIterations`): `Promise`\<`void`\>
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:1230](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L1230)
-
-###### Parameters
-
-###### userQuery
-
-`string`
-
-###### maxIterations
-
-`number` = `10`
-
-###### Returns
-
-`Promise`\<`void`\>
-
-##### updateContextState()
-
-> **updateContextState**(`newContext`): `void`
-
-Defined in:
-[packages/core/src/core/chain-of-thought.ts:951](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/chain-of-thought.ts#L951)
-
-Merges new data into the current chain of thought context.
-
-###### Parameters
-
-###### newContext
-
-`Partial`\<[`ChainOfThoughtContext`](namespaces/Types.md#chainofthoughtcontext)\>
-
-Partial context object containing properties to merge into the existing context
-
-###### Returns
-
-`void`
-
-###### Remarks
-
-This method performs a shallow merge of the provided partial context into the
-existing context. Any properties in the new context will overwrite matching
-properties in the current context. Properties not included in the new context
-will remain unchanged.
-
-###### Throws
-
-Will not throw errors, but invalid context properties will be ignored
-
-###### Example
-
-```ts
-chain.updateContextState({
-  worldState: "Updated world state",
-  newProperty: "New value",
-});
-```
-
-##### addAbortListener()
-
-> `static` **addAbortListener**(`signal`, `resource`): `Disposable`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:437
-
-**`Experimental`**
-
-Listens once to the `abort` event on the provided `signal`.
-
-Listening to the `abort` event on abort signals is unsafe and may lead to
-resource leaks since another third party with the signal can call
-`e.stopImmediatePropagation()`. Unfortunately Node.js cannot change this since
-it would violate the web standard. Additionally, the original API makes it easy
-to forget to remove listeners.
-
-This API allows safely using `AbortSignal`s in Node.js APIs by solving these two
-issues by listening to the event such that `stopImmediatePropagation` does not
-prevent the listener from running.
-
-Returns a disposable so that it may be unsubscribed from more easily.
-
-```js
-import { addAbortListener } from "node:events";
-
-function example(signal) {
-  let disposable;
-  try {
-    signal.addEventListener("abort", (e) => e.stopImmediatePropagation());
-    disposable = addAbortListener(signal, (e) => {
-      // Do something when signal is aborted.
-    });
-  } finally {
-    disposable?.[Symbol.dispose]();
-  }
-}
-```
-
-###### Parameters
-
-###### signal
-
-`AbortSignal`
-
-###### resource
-
-(`event`) => `void`
-
-###### Returns
-
-`Disposable`
-
-Disposable that removes the `abort` listener.
-
-###### Since
-
-v20.5.0
-
-###### Inherited from
-
-`EventEmitter.addAbortListener`
-
-##### getEventListeners()
-
-> `static` **getEventListeners**(`emitter`, `name`): `Function`[]
-
-Defined in: docs/node_modules/@types/node/events.d.ts:358
-
-Returns a copy of the array of listeners for the event named `eventName`.
-
-For `EventEmitter`s this behaves exactly the same as calling `.listeners` on the
-emitter.
-
-For `EventTarget`s this is the only way to get the event listeners for the event
-target. This is useful for debugging and diagnostic purposes.
-
-```js
-import { getEventListeners, EventEmitter } from "node:events";
-
-{
-  const ee = new EventEmitter();
-  const listener = () => console.log("Events are fun");
-  ee.on("foo", listener);
-  console.log(getEventListeners(ee, "foo")); // [ [Function: listener] ]
-}
-{
-  const et = new EventTarget();
-  const listener = () => console.log("Events are fun");
-  et.addEventListener("foo", listener);
-  console.log(getEventListeners(et, "foo")); // [ [Function: listener] ]
-}
-```
-
-###### Parameters
-
-###### emitter
-
-`EventEmitter` | `EventTarget`
-
-###### name
-
-`string` | `symbol`
-
-###### Returns
-
-`Function`[]
-
-###### Since
-
-v15.2.0, v14.17.0
-
-###### Inherited from
-
-`EventEmitter.getEventListeners`
-
-##### getMaxListeners()
-
-> `static` **getMaxListeners**(`emitter`): `number`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:387
-
-Returns the currently set max amount of listeners.
-
-For `EventEmitter`s this behaves exactly the same as calling `.getMaxListeners`
-on the emitter.
-
-For `EventTarget`s this is the only way to get the max event listeners for the
-event target. If the number of event handlers on a single EventTarget exceeds
-the max set, the EventTarget will print a warning.
-
-```js
-import { getMaxListeners, setMaxListeners, EventEmitter } from "node:events";
-
-{
-  const ee = new EventEmitter();
-  console.log(getMaxListeners(ee)); // 10
-  setMaxListeners(11, ee);
-  console.log(getMaxListeners(ee)); // 11
-}
-{
-  const et = new EventTarget();
-  console.log(getMaxListeners(et)); // 10
-  setMaxListeners(11, et);
-  console.log(getMaxListeners(et)); // 11
-}
-```
-
-###### Parameters
-
-###### emitter
-
-`EventEmitter` | `EventTarget`
-
-###### Returns
-
-`number`
-
-###### Since
-
-v19.9.0
-
-###### Inherited from
-
-`EventEmitter.getMaxListeners`
-
-##### ~~listenerCount()~~
-
-> `static` **listenerCount**(`emitter`, `eventName`): `number`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:330
-
-A class method that returns the number of listeners for the given `eventName`
-registered on the given `emitter`.
-
-```js
-import { EventEmitter, listenerCount } from "node:events";
-
-const myEmitter = new EventEmitter();
-myEmitter.on("event", () => {});
-myEmitter.on("event", () => {});
-console.log(listenerCount(myEmitter, "event"));
-// Prints: 2
-```
-
-###### Parameters
-
-###### emitter
-
-`EventEmitter`
-
-The emitter to query
-
-###### eventName
-
-The event name
-
-`string` | `symbol`
-
-###### Returns
-
-`number`
-
-###### Since
-
-v0.9.12
-
-###### Deprecated
-
-Since v3.2.0 - Use `listenerCount` instead.
-
-###### Inherited from
-
-`EventEmitter.listenerCount`
-
-##### on()
-
-###### Call Signature
-
-> `static` **on**(`emitter`, `eventName`, `options`?):
-> `AsyncIterableIterator`\<`any`[]\>
-
-Defined in: docs/node_modules/@types/node/events.d.ts:303
-
-```js
-import { on, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ee = new EventEmitter();
-
-// Emit later on
-process.nextTick(() => {
-  ee.emit("foo", "bar");
-  ee.emit("foo", 42);
-});
-
-for await (const event of on(ee, "foo")) {
-  // The execution of this inner block is synchronous and it
-  // processes one event at a time (even with await). Do not use
-  // if concurrent execution is required.
-  console.log(event); // prints ['bar'] [42]
-}
-// Unreachable here
-```
-
-Returns an `AsyncIterator` that iterates `eventName` events. It will throw if
-the `EventEmitter` emits `'error'`. It removes all listeners when exiting the
-loop. The `value` returned by each iteration is an array composed of the emitted
-event arguments.
-
-An `AbortSignal` can be used to cancel waiting on events:
-
-```js
-import { on, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ac = new AbortController();
-
-(async () => {
-  const ee = new EventEmitter();
-
-  // Emit later on
-  process.nextTick(() => {
-    ee.emit("foo", "bar");
-    ee.emit("foo", 42);
-  });
-
-  for await (const event of on(ee, "foo", { signal: ac.signal })) {
-    // The execution of this inner block is synchronous and it
-    // processes one event at a time (even with await). Do not use
-    // if concurrent execution is required.
-    console.log(event); // prints ['bar'] [42]
-  }
-  // Unreachable here
-})();
-
-process.nextTick(() => ac.abort());
-```
-
-Use the `close` option to specify an array of event names that will end the
-iteration:
-
-```js
-import { on, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ee = new EventEmitter();
-
-// Emit later on
-process.nextTick(() => {
-  ee.emit("foo", "bar");
-  ee.emit("foo", 42);
-  ee.emit("close");
-});
-
-for await (const event of on(ee, "foo", { close: ["close"] })) {
-  console.log(event); // prints ['bar'] [42]
-}
-// the loop will exit after 'close' is emitted
-console.log("done"); // prints 'done'
-```
-
-###### Parameters
-
-###### emitter
-
-`EventEmitter`
-
-###### eventName
-
-`string` | `symbol`
-
-###### options?
-
-`StaticEventEmitterIteratorOptions`
-
-###### Returns
-
-`AsyncIterableIterator`\<`any`[]\>
-
-An `AsyncIterator` that iterates `eventName` events emitted by the `emitter`
-
-###### Since
-
-v13.6.0, v12.16.0
-
-###### Inherited from
-
-`EventEmitter.on`
-
-###### Call Signature
-
-> `static` **on**(`emitter`, `eventName`, `options`?):
-> `AsyncIterableIterator`\<`any`[]\>
-
-Defined in: docs/node_modules/@types/node/events.d.ts:308
-
-```js
-import { on, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ee = new EventEmitter();
-
-// Emit later on
-process.nextTick(() => {
-  ee.emit("foo", "bar");
-  ee.emit("foo", 42);
-});
-
-for await (const event of on(ee, "foo")) {
-  // The execution of this inner block is synchronous and it
-  // processes one event at a time (even with await). Do not use
-  // if concurrent execution is required.
-  console.log(event); // prints ['bar'] [42]
-}
-// Unreachable here
-```
-
-Returns an `AsyncIterator` that iterates `eventName` events. It will throw if
-the `EventEmitter` emits `'error'`. It removes all listeners when exiting the
-loop. The `value` returned by each iteration is an array composed of the emitted
-event arguments.
-
-An `AbortSignal` can be used to cancel waiting on events:
-
-```js
-import { on, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ac = new AbortController();
-
-(async () => {
-  const ee = new EventEmitter();
-
-  // Emit later on
-  process.nextTick(() => {
-    ee.emit("foo", "bar");
-    ee.emit("foo", 42);
-  });
-
-  for await (const event of on(ee, "foo", { signal: ac.signal })) {
-    // The execution of this inner block is synchronous and it
-    // processes one event at a time (even with await). Do not use
-    // if concurrent execution is required.
-    console.log(event); // prints ['bar'] [42]
-  }
-  // Unreachable here
-})();
-
-process.nextTick(() => ac.abort());
-```
-
-Use the `close` option to specify an array of event names that will end the
-iteration:
-
-```js
-import { on, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ee = new EventEmitter();
-
-// Emit later on
-process.nextTick(() => {
-  ee.emit("foo", "bar");
-  ee.emit("foo", 42);
-  ee.emit("close");
-});
-
-for await (const event of on(ee, "foo", { close: ["close"] })) {
-  console.log(event); // prints ['bar'] [42]
-}
-// the loop will exit after 'close' is emitted
-console.log("done"); // prints 'done'
-```
-
-###### Parameters
-
-###### emitter
-
-`EventTarget`
-
-###### eventName
-
-`string`
-
-###### options?
-
-`StaticEventEmitterIteratorOptions`
-
-###### Returns
-
-`AsyncIterableIterator`\<`any`[]\>
-
-An `AsyncIterator` that iterates `eventName` events emitted by the `emitter`
-
-###### Since
-
-v13.6.0, v12.16.0
-
-###### Inherited from
-
-`EventEmitter.on`
-
-##### once()
-
-###### Call Signature
-
-> `static` **once**(`emitter`, `eventName`, `options`?): `Promise`\<`any`[]\>
-
-Defined in: docs/node_modules/@types/node/events.d.ts:217
-
-Creates a `Promise` that is fulfilled when the `EventEmitter` emits the given
-event or that is rejected if the `EventEmitter` emits `'error'` while waiting.
-The `Promise` will resolve with an array of all the arguments emitted to the
-given event.
-
-This method is intentionally generic and works with the web platform
-[EventTarget](https://dom.spec.whatwg.org/#interface-eventtarget) interface,
-which has no special`'error'` event semantics and does not listen to the
-`'error'` event.
-
-```js
-import { once, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ee = new EventEmitter();
-
-process.nextTick(() => {
-  ee.emit("myevent", 42);
-});
-
-const [value] = await once(ee, "myevent");
-console.log(value);
-
-const err = new Error("kaboom");
-process.nextTick(() => {
-  ee.emit("error", err);
-});
-
-try {
-  await once(ee, "myevent");
-} catch (err) {
-  console.error("error happened", err);
-}
-```
-
-The special handling of the `'error'` event is only used when `events.once()` is
-used to wait for another event. If `events.once()` is used to wait for the
-'`error'` event itself, then it is treated as any other kind of event without
-special handling:
-
-```js
-import { EventEmitter, once } from "node:events";
-
-const ee = new EventEmitter();
-
-once(ee, "error")
-  .then(([err]) => console.log("ok", err.message))
-  .catch((err) => console.error("error", err.message));
-
-ee.emit("error", new Error("boom"));
-
-// Prints: ok boom
-```
-
-An `AbortSignal` can be used to cancel waiting for the event:
-
-```js
-import { EventEmitter, once } from "node:events";
-
-const ee = new EventEmitter();
-const ac = new AbortController();
-
-async function foo(emitter, event, signal) {
-  try {
-    await once(emitter, event, { signal });
-    console.log("event emitted!");
-  } catch (error) {
-    if (error.name === "AbortError") {
-      console.error("Waiting for the event was canceled!");
-    } else {
-      console.error("There was an error", error.message);
-    }
-  }
-}
-
-foo(ee, "foo", ac.signal);
-ac.abort(); // Abort waiting for the event
-ee.emit("foo"); // Prints: Waiting for the event was canceled!
-```
-
-###### Parameters
-
-###### emitter
-
-`EventEmitter`
-
-###### eventName
-
-`string` | `symbol`
-
-###### options?
-
-`StaticEventEmitterOptions`
-
-###### Returns
-
-`Promise`\<`any`[]\>
-
-###### Since
-
-v11.13.0, v10.16.0
-
-###### Inherited from
-
-`EventEmitter.once`
-
-###### Call Signature
-
-> `static` **once**(`emitter`, `eventName`, `options`?): `Promise`\<`any`[]\>
-
-Defined in: docs/node_modules/@types/node/events.d.ts:222
-
-Creates a `Promise` that is fulfilled when the `EventEmitter` emits the given
-event or that is rejected if the `EventEmitter` emits `'error'` while waiting.
-The `Promise` will resolve with an array of all the arguments emitted to the
-given event.
-
-This method is intentionally generic and works with the web platform
-[EventTarget](https://dom.spec.whatwg.org/#interface-eventtarget) interface,
-which has no special`'error'` event semantics and does not listen to the
-`'error'` event.
-
-```js
-import { once, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ee = new EventEmitter();
-
-process.nextTick(() => {
-  ee.emit("myevent", 42);
-});
-
-const [value] = await once(ee, "myevent");
-console.log(value);
-
-const err = new Error("kaboom");
-process.nextTick(() => {
-  ee.emit("error", err);
-});
-
-try {
-  await once(ee, "myevent");
-} catch (err) {
-  console.error("error happened", err);
-}
-```
-
-The special handling of the `'error'` event is only used when `events.once()` is
-used to wait for another event. If `events.once()` is used to wait for the
-'`error'` event itself, then it is treated as any other kind of event without
-special handling:
-
-```js
-import { EventEmitter, once } from "node:events";
-
-const ee = new EventEmitter();
-
-once(ee, "error")
-  .then(([err]) => console.log("ok", err.message))
-  .catch((err) => console.error("error", err.message));
-
-ee.emit("error", new Error("boom"));
-
-// Prints: ok boom
-```
-
-An `AbortSignal` can be used to cancel waiting for the event:
-
-```js
-import { EventEmitter, once } from "node:events";
-
-const ee = new EventEmitter();
-const ac = new AbortController();
-
-async function foo(emitter, event, signal) {
-  try {
-    await once(emitter, event, { signal });
-    console.log("event emitted!");
-  } catch (error) {
-    if (error.name === "AbortError") {
-      console.error("Waiting for the event was canceled!");
-    } else {
-      console.error("There was an error", error.message);
-    }
-  }
-}
-
-foo(ee, "foo", ac.signal);
-ac.abort(); // Abort waiting for the event
-ee.emit("foo"); // Prints: Waiting for the event was canceled!
-```
-
-###### Parameters
-
-###### emitter
-
-`EventTarget`
-
-###### eventName
-
-`string`
-
-###### options?
-
-`StaticEventEmitterOptions`
-
-###### Returns
-
-`Promise`\<`any`[]\>
-
-###### Since
-
-v11.13.0, v10.16.0
-
-###### Inherited from
-
-`EventEmitter.once`
-
-##### setMaxListeners()
-
-> `static` **setMaxListeners**(`n`?, ...`eventTargets`?): `void`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:402
-
-```js
-import { setMaxListeners, EventEmitter } from "node:events";
-
-const target = new EventTarget();
-const emitter = new EventEmitter();
-
-setMaxListeners(5, target, emitter);
-```
-
-###### Parameters
-
-###### n?
-
-`number`
-
-A non-negative number. The maximum number of listeners per `EventTarget` event.
-
-###### eventTargets?
-
-...(`EventEmitter` \| `EventTarget`)[]
-
-Zero or more {EventTarget} or {EventEmitter} instances. If none are specified,
-`n` is set as the default max for all newly created {EventTarget} and
-{EventEmitter} objects.
-
-###### Returns
-
-`void`
-
-###### Since
-
-v15.4.0
-
-###### Inherited from
-
-`EventEmitter.setMaxListeners`
-
----
-
-### ChromaVectorDB
-
-Defined in:
-[packages/core/src/core/vector-db.ts:23](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L23)
 
 #### Implements
 
-- [`VectorDB`](namespaces/Types.md#vectordb)
+- [`IChain`](globals.md#ichain)
 
 #### Constructors
 
-##### new ChromaVectorDB()
+##### new EvmChain()
 
-> **new ChromaVectorDB**(`collectionName`, `config`):
-> [`ChromaVectorDB`](globals.md#chromavectordb)
+> **new EvmChain**(`config`): [`EvmChain`](globals.md#evmchain)
 
-Defined in:
-[packages/core/src/core/vector-db.ts:35](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L35)
+Defined in: [chains/evm.ts:66](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/evm.ts#L66)
 
-###### Parameters
-
-###### collectionName
-
-`string` = `"memories"`
-
-###### config
-
-###### chromaUrl
-
-`string`
-
-###### logLevel
-
-[`LogLevel`](namespaces/Types.md#loglevel)
-
-###### Returns
-
-[`ChromaVectorDB`](globals.md#chromavectordb)
-
-#### Properties
-
-##### CLUSTER_COLLECTION
-
-> `readonly` `static` **CLUSTER_COLLECTION**: `"clusters"` = `"clusters"`
-
-Defined in:
-[packages/core/src/core/vector-db.ts:25](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L25)
-
-##### DOCUMENTATION_COLLECTION
-
-> `readonly` `static` **DOCUMENTATION_COLLECTION**: `"documentation"` =
-> `"documentation"`
-
-Defined in:
-[packages/core/src/core/vector-db.ts:28](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L28)
-
-##### EPISODIC_COLLECTION
-
-> `readonly` `static` **EPISODIC_COLLECTION**: `"episodic_memory"` =
-> `"episodic_memory"`
-
-Defined in:
-[packages/core/src/core/vector-db.ts:27](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L27)
-
-##### SYSTEM_COLLECTION
-
-> `readonly` `static` **SYSTEM_COLLECTION**: `"system_metadata"` =
-> `"system_metadata"`
-
-Defined in:
-[packages/core/src/core/vector-db.ts:26](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L26)
-
-#### Methods
-
-##### clear()
-
-> **clear**(): `Promise`\<`void`\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:1479](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L1479)
-
-Clears all items from the main collection.
-
-###### Returns
-
-`Promise`\<`void`\>
-
-##### count()
-
-> **count**(): `Promise`\<`number`\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:1471](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L1471)
-
-Returns the total count of items in the main collection.
-
-###### Returns
-
-`Promise`\<`number`\>
-
-##### delete()
-
-> **delete**(`id`): `Promise`\<`void`\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:223](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L223)
-
-Deletes an item by ID from the main "memories" collection.
-
-###### Parameters
-
-###### id
-
-`string`
-
-###### Returns
-
-`Promise`\<`void`\>
-
-###### Implementation of
-
-[`VectorDB`](namespaces/Types.md#vectordb).[`delete`](namespaces/Types.md#delete)
-
-##### deleteRoom()
-
-> **deleteRoom**(`roomId`): `Promise`\<`void`\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:489](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L489)
-
-Deletes an entire room's collection.
-
-###### Parameters
-
-###### roomId
-
-`string`
-
-###### Returns
-
-`Promise`\<`void`\>
-
-##### findSimilar()
-
-> **findSimilar**(`content`, `limit`, `metadata`?):
-> `Promise`\<[`SearchResult`](namespaces/Types.md#searchresult)[]\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:142](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L142)
-
-Finds similar items in the main "memories" collection.
-
-###### Parameters
-
-###### content
-
-`string`
-
-###### limit
-
-`number` = `5`
-
-###### metadata?
-
-`Record`\<`string`, `any`\>
-
-###### Returns
-
-`Promise`\<[`SearchResult`](namespaces/Types.md#searchresult)[]\>
-
-###### Implementation of
-
-[`VectorDB`](namespaces/Types.md#vectordb).[`findSimilar`](namespaces/Types.md#findsimilar)
-
-##### findSimilarDocuments()
-
-> **findSimilarDocuments**(`query`, `limit`):
-> `Promise`\<[`Documentation`](namespaces/Types.md#documentation)[]\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:1351](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L1351)
-
-Finds similar documentation records by matching the user query text.
-
-###### Parameters
-
-###### query
-
-`string`
-
-###### limit
-
-`number` = `5`
-
-###### Returns
-
-`Promise`\<[`Documentation`](namespaces/Types.md#documentation)[]\>
-
-###### Implementation of
-
-[`VectorDB`](namespaces/Types.md#vectordb).[`findSimilarDocuments`](namespaces/Types.md#findsimilardocuments)
-
-##### findSimilarEpisodes()
-
-> **findSimilarEpisodes**(`action`, `limit`):
-> `Promise`\<[`EpisodicMemory`](namespaces/Types.md#episodicmemory)[]\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:1048](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L1048)
-
-Finds similar episodes by matching the "action" field.
-
-###### Parameters
-
-###### action
-
-`string`
-
-###### limit
-
-`number` = `5`
-
-###### Returns
-
-`Promise`\<[`EpisodicMemory`](namespaces/Types.md#episodicmemory)[]\>
-
-###### Implementation of
-
-[`VectorDB`](namespaces/Types.md#vectordb).[`findSimilarEpisodes`](namespaces/Types.md#findsimilarepisodes)
-
-##### findSimilarInRoom()
-
-> **findSimilarInRoom**(`content`, `roomId`, `limit`, `metadata`?):
-> `Promise`\<[`SearchResult`](namespaces/Types.md#searchresult)[]\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:343](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L343)
-
-Finds similar items in a given room's collection. If no cluster match, falls
-back to "global" search in that room's collection.
-
-###### Parameters
-
-###### content
-
-`string`
-
-###### roomId
-
-`string`
-
-###### limit
-
-`number` = `5`
-
-###### metadata?
-
-`Record`\<`string`, `any`\>
-
-###### Returns
-
-`Promise`\<[`SearchResult`](namespaces/Types.md#searchresult)[]\>
-
-###### Implementation of
-
-[`VectorDB`](namespaces/Types.md#vectordb).[`findSimilarInRoom`](namespaces/Types.md#findsimilarinroom)
-
-##### getCollectionForRoom()
-
-> **getCollectionForRoom**(`roomId`): `Promise`\<`Collection`\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:249](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L249)
-
-Returns (and creates if necessary) a separate collection for a given room. Rooms
-are typically namespaced as `room_<roomId>`.
-
-###### Parameters
-
-###### roomId
-
-`string`
-
-###### Returns
-
-`Promise`\<`Collection`\>
-
-##### getMemoriesFromRoom()
-
-> **getMemoriesFromRoom**(`roomId`, `limit`?): `Promise`\<`object`[]\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:1675](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L1675)
-
-Gets all memories from a specific room's collection, optionally limited to a
-certain number
-
-###### Parameters
-
-###### roomId
-
-`string`
-
-###### limit?
-
-`number`
-
-###### Returns
-
-`Promise`\<`object`[]\>
-
-##### getRecentEpisodes()
-
-> **getRecentEpisodes**(`limit`):
-> `Promise`\<[`EpisodicMemory`](namespaces/Types.md#episodicmemory)[]\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:1079](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L1079)
-
-Retrieves the most recent episodic memories (peeking at the underlying
-collection).
-
-###### Parameters
-
-###### limit
-
-`number` = `10`
-
-###### Returns
-
-`Promise`\<[`EpisodicMemory`](namespaces/Types.md#episodicmemory)[]\>
-
-###### Implementation of
-
-[`VectorDB`](namespaces/Types.md#vectordb).[`getRecentEpisodes`](namespaces/Types.md#getrecentepisodes)
-
-##### getRoomMemoryCount()
-
-> **getRoomMemoryCount**(`roomId`): `Promise`\<`number`\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:481](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L481)
-
-Gets the memory count for a specific room.
-
-###### Parameters
-
-###### roomId
-
-`string`
-
-###### Returns
-
-`Promise`\<`number`\>
-
-##### getSystemMetadata()
-
-> **getSystemMetadata**(`key`): `Promise`\<`null` \| `Record`\<`string`,
-> `any`\>\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:983](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L983)
-
-Retrieves system metadata by key.
-
-###### Parameters
-
-###### key
-
-`string`
-
-###### Returns
-
-`Promise`\<`null` \| `Record`\<`string`, `any`\>\>
-
-###### Implementation of
-
-[`VectorDB`](namespaces/Types.md#vectordb).[`getSystemMetadata`](namespaces/Types.md#getsystemmetadata)
-
-##### hasProcessedContent()
-
-> **hasProcessedContent**(`contentId`, `room`): `Promise`\<`boolean`\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:1594](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L1594)
-
-###### Parameters
-
-###### contentId
-
-`string`
-
-###### room
-
-[`Room`](globals.md#room)
-
-###### Returns
-
-`Promise`\<`boolean`\>
-
-##### listRooms()
-
-> **listRooms**(): `Promise`\<`string`[]\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:467](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L467)
-
-Lists the known "room\_..." collections.
-
-###### Returns
-
-`Promise`\<`string`[]\>
-
-##### markContentAsProcessed()
-
-> **markContentAsProcessed**(`contentId`, `room`): `Promise`\<`void`\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:1628](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L1628)
-
-###### Parameters
-
-###### contentId
-
-`string`
-
-###### room
-
-[`Room`](globals.md#room)
-
-###### Returns
-
-`Promise`\<`void`\>
-
-##### peek()
-
-> **peek**(`limit`):
-> `Promise`\<[`SearchResult`](namespaces/Types.md#searchresult)[]\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:1487](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L1487)
-
-Retrieves the first N items from the main collection (for debugging).
-
-###### Parameters
-
-###### limit
-
-`number` = `5`
-
-###### Returns
-
-`Promise`\<[`SearchResult`](namespaces/Types.md#searchresult)[]\>
-
-##### purge()
-
-> **purge**(): `Promise`\<`void`\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:1554](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L1554)
-
-Purges all collections and data from the database. Use with caution - this is
-irreversible!
-
-###### Returns
-
-`Promise`\<`void`\>
-
-###### Implementation of
-
-[`VectorDB`](namespaces/Types.md#vectordb).[`purge`](namespaces/Types.md#purge)
-
-##### searchDocumentsByTag()
-
-> **searchDocumentsByTag**(`tags`, `limit`):
-> `Promise`\<[`Documentation`](namespaces/Types.md#documentation)[]\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:1385](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L1385)
-
-Searches documents by exact match on tags (joined by commas).
-
-###### Parameters
-
-###### tags
-
-`string`[]
-
-###### limit
-
-`number` = `5`
-
-###### Returns
-
-`Promise`\<[`Documentation`](namespaces/Types.md#documentation)[]\>
-
-###### Implementation of
-
-[`VectorDB`](namespaces/Types.md#vectordb).[`searchDocumentsByTag`](namespaces/Types.md#searchdocumentsbytag)
-
-##### store()
-
-> **store**(`content`, `metadata`?): `Promise`\<`void`\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:187](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L187)
-
-Stores a piece of content in the main "memories" collection.
-
-###### Parameters
-
-###### content
-
-`string`
-
-###### metadata?
-
-`Record`\<`string`, `any`\>
-
-###### Returns
-
-`Promise`\<`void`\>
-
-###### Implementation of
-
-[`VectorDB`](namespaces/Types.md#vectordb).[`store`](namespaces/Types.md#store)
-
-##### storeDocument()
-
-> **storeDocument**(`doc`): `Promise`\<`string`\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:1315](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L1315)
-
-Stores a documentation record (knowledge resource).
-
-###### Parameters
-
-###### doc
-
-`Omit`\<[`Documentation`](namespaces/Types.md#documentation), `"id"`\>
-
-###### Returns
-
-`Promise`\<`string`\>
-
-###### Implementation of
-
-[`VectorDB`](namespaces/Types.md#vectordb).[`storeDocument`](namespaces/Types.md#storedocument)
-
-##### storeEpisode()
-
-> **storeEpisode**(`memory`): `Promise`\<`string`\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:1011](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L1011)
-
-Stores an episodic memory (action + outcome + context).
-
-###### Parameters
-
-###### memory
-
-`Omit`\<[`EpisodicMemory`](namespaces/Types.md#episodicmemory), `"id"`\>
-
-###### Returns
-
-`Promise`\<`string`\>
-
-###### Implementation of
-
-[`VectorDB`](namespaces/Types.md#vectordb).[`storeEpisode`](namespaces/Types.md#storeepisode)
-
-##### storeInRoom()
-
-> **storeInRoom**(`content`, `roomId`, `metadata`): `Promise`\<`void`\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:268](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L268)
-
-Stores content in a specific room's memory, also associating it with a cluster
-ID.
-
-###### Parameters
-
-###### content
-
-`string`
-
-###### roomId
-
-`string`
-
-###### metadata
-
-`Record`\<`string`, `any`\> = `{}`
-
-###### Returns
-
-`Promise`\<`void`\>
-
-###### Implementation of
-
-[`VectorDB`](namespaces/Types.md#vectordb).[`storeInRoom`](namespaces/Types.md#storeinroom)
-
-##### storeSystemMetadata()
-
-> **storeSystemMetadata**(`key`, `value`): `Promise`\<`void`\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:960](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L960)
-
-Stores arbitrary metadata in the "system_metadata" collection.
-
-###### Parameters
-
-###### key
-
-`string`
-
-###### value
-
-`Record`\<`string`, `any`\>
-
-###### Returns
-
-`Promise`\<`void`\>
-
-###### Implementation of
-
-[`VectorDB`](namespaces/Types.md#vectordb).[`storeSystemMetadata`](namespaces/Types.md#storesystemmetadata)
-
-##### updateDocument()
-
-> **updateDocument**(`id`, `updates`): `Promise`\<`void`\>
-
-Defined in:
-[packages/core/src/core/vector-db.ts:1434](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/vector-db.ts#L1434)
-
-Updates an existing documentation record by ID.
-
-###### Parameters
-
-###### id
-
-`string`
-
-###### updates
-
-`Partial`\<[`Documentation`](namespaces/Types.md#documentation)\>
-
-###### Returns
-
-`Promise`\<`void`\>
-
-###### Implementation of
-
-[`VectorDB`](namespaces/Types.md#vectordb).[`updateDocument`](namespaces/Types.md#updatedocument)
-
----
-
-### Consciousness
-
-Defined in:
-[packages/core/src/core/consciousness.ts:9](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/consciousness.ts#L9)
-
-#### Constructors
-
-##### new Consciousness()
-
-> **new Consciousness**(`llmClient`, `roomManager`, `config`):
-> [`Consciousness`](globals.md#consciousness)
-
-Defined in:
-[packages/core/src/core/consciousness.ts:15](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/consciousness.ts#L15)
-
-###### Parameters
-
-###### llmClient
-
-[`LLMClient`](globals.md#llmclient-1)
-
-###### roomManager
-
-[`RoomManager`](globals.md#roommanager)
-
-###### config
-
-###### intervalMs
-
-`number`
-
-###### logLevel
-
-[`LogLevel`](namespaces/Types.md#loglevel)
-
-###### minConfidence
-
-`number`
-
-###### Returns
-
-[`Consciousness`](globals.md#consciousness)
-
-#### Methods
-
-##### start()
-
-> **start**(): `Promise`\<[`Thought`](namespaces/Types.md#thought)\>
-
-Defined in:
-[packages/core/src/core/consciousness.ts:31](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/consciousness.ts#L31)
-
-###### Returns
-
-`Promise`\<[`Thought`](namespaces/Types.md#thought)\>
-
-##### stop()
-
-> **stop**(): `Promise`\<`void`\>
-
-Defined in:
-[packages/core/src/core/consciousness.ts:35](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/consciousness.ts#L35)
-
-###### Returns
-
-`Promise`\<`void`\>
-
----
-
-### GoalManager
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:6](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L6)
-
-Manages a collection of goals, their relationships, and their lifecycle states.
-Provides methods for creating, updating, and querying goals and their
-hierarchies.
-
-#### Constructors
-
-##### new GoalManager()
-
-> **new GoalManager**(): [`GoalManager`](globals.md#goalmanager-1)
-
-###### Returns
-
-[`GoalManager`](globals.md#goalmanager-1)
-
-#### Properties
-
-##### goals
-
-> **goals**: `Map`\<`string`, [`Goal`](namespaces/Types.md#goal)\>
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:8](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L8)
-
-Internal map storing all goals indexed by their IDs
-
-#### Methods
-
-##### addGoal()
-
-> **addGoal**(`goal`): [`Goal`](namespaces/Types.md#goal)
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:16](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L16)
-
-Creates a new goal and adds it to the goal collection. If the goal is a subgoal,
-updates the parent goal's subgoals array.
-
-###### Parameters
-
-###### goal
-
-`Omit`\<[`Goal`](namespaces/Types.md#goal), `"id"`\>
-
-The goal to add (without an ID)
-
-###### Returns
-
-[`Goal`](namespaces/Types.md#goal)
-
-The newly created goal with generated ID
-
-##### arePrerequisitesMet()
-
-> **arePrerequisitesMet**(`goalId`): `boolean`
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:270](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L270)
-
-Checks if all prerequisites for a goal are met.
-
-###### Parameters
-
-###### goalId
-
-`string`
-
-ID of the goal to check
-
-###### Returns
-
-`boolean`
-
-True if all dependencies are completed
-
-##### blockGoalHierarchy()
-
-> **blockGoalHierarchy**(`goalId`, `reason`): `void`
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:332](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L332)
-
-Blocks a goal and all its subgoals recursively.
-
-###### Parameters
-
-###### goalId
-
-`string`
-
-ID of the root goal to block
-
-###### reason
-
-`string`
-
-Reason for blocking
-
-###### Returns
-
-`void`
-
-##### canBeRefined()
-
-> **canBeRefined**(`goalId`): `boolean`
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:316](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L316)
-
-Checks if a goal can be refined into subgoals.
-
-###### Parameters
-
-###### goalId
-
-`string`
-
-ID of the goal to check
-
-###### Returns
-
-`boolean`
-
-True if the goal can be refined
-
-##### estimateCompletionTime()
-
-> **estimateCompletionTime**(`goalId`): `number`
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:371](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L371)
-
-Estimates completion time based on horizon and dependencies.
-
-###### Parameters
-
-###### goalId
-
-`string`
-
-ID of the goal
-
-###### Returns
-
-`number`
-
-Estimated time units to complete
-
-##### getBlockingGoals()
-
-> **getBlockingGoals**(`goalId`): [`Goal`](namespaces/Types.md#goal)[]
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:219](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L219)
-
-Gets all incomplete goals that are blocking a given goal.
-
-###### Parameters
-
-###### goalId
-
-`string`
-
-ID of the goal to check
-
-###### Returns
-
-[`Goal`](namespaces/Types.md#goal)[]
-
-Array of blocking goals
-
-##### getChildGoals()
-
-> **getChildGoals**(`parentId`): [`Goal`](namespaces/Types.md#goal)[]
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:245](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L245)
-
-Gets all direct child goals of a parent goal.
-
-###### Parameters
-
-###### parentId
-
-`string`
-
-ID of the parent goal
-
-###### Returns
-
-[`Goal`](namespaces/Types.md#goal)[]
-
-Array of child goals
-
-##### getDependentGoals()
-
-> **getDependentGoals**(`goalId`): [`Goal`](namespaces/Types.md#goal)[]
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:259](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L259)
-
-Gets all goals that depend on a given goal.
-
-###### Parameters
-
-###### goalId
-
-`string`
-
-ID of the dependency goal
-
-###### Returns
-
-[`Goal`](namespaces/Types.md#goal)[]
-
-Array of dependent goals
-
-##### getGoalById()
-
-> **getGoalById**(`id`): `undefined` \| [`Goal`](namespaces/Types.md#goal)
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:236](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L236)
-
-Retrieves a goal by its ID.
-
-###### Parameters
-
-###### id
-
-`string`
-
-The goal ID
-
-###### Returns
-
-`undefined` \| [`Goal`](namespaces/Types.md#goal)
-
-The goal or undefined if not found
-
-##### getGoalHierarchy()
-
-> **getGoalHierarchy**(`goalId`): [`Goal`](namespaces/Types.md#goal)[]
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:199](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L199)
-
-Gets a goal and all its subgoals as a flattened array.
-
-###### Parameters
-
-###### goalId
-
-`string`
-
-ID of the root goal
-
-###### Returns
-
-[`Goal`](namespaces/Types.md#goal)[]
-
-Array containing the goal and all its subgoals
-
-##### getGoalPath()
-
-> **getGoalPath**(`goalId`): [`Goal`](namespaces/Types.md#goal)[]
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:354](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L354)
-
-Gets the full path from root goal to specified goal.
-
-###### Parameters
-
-###### goalId
-
-`string`
-
-ID of the goal
-
-###### Returns
-
-[`Goal`](namespaces/Types.md#goal)[]
-
-Array of goals representing the path
-
-##### getGoalsByHorizon()
-
-> **getGoalsByHorizon**(`horizon`): [`Goal`](namespaces/Types.md#goal)[]
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:165](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L165)
-
-Retrieves all goals for a specific time horizon, sorted by priority.
-
-###### Parameters
-
-###### horizon
-
-[`HorizonType`](namespaces/Types.md#horizontype)
-
-The time horizon to filter by
-
-###### Returns
-
-[`Goal`](namespaces/Types.md#goal)[]
-
-Array of matching goals
-
-##### getGoalsByScore()
-
-> **getGoalsByScore**(): [`Goal`](namespaces/Types.md#goal)[]
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:461](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L461)
-
-Gets all goals sorted by their outcome scores.
-
-###### Returns
-
-[`Goal`](namespaces/Types.md#goal)[]
-
-Array of goals with outcome scores, sorted highest to lowest
-
-##### getGoalsByStatus()
-
-> **getGoalsByStatus**(`status`): [`Goal`](namespaces/Types.md#goal)[]
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:305](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L305)
-
-Gets all goals with a specific status.
-
-###### Parameters
-
-###### status
-
-[`GoalStatus`](namespaces/Types.md#goalstatus)
-
-Status to filter by
-
-###### Returns
-
-[`Goal`](namespaces/Types.md#goal)[]
-
-Array of matching goals, sorted by priority
-
-##### getReadyGoals()
-
-> **getReadyGoals**(`horizon`?): [`Goal`](namespaces/Types.md#goal)[]
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:177](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L177)
-
-Returns goals that are ready to be worked on. A goal is ready if its status is
-"ready" or all its dependencies are completed.
-
-###### Parameters
-
-###### horizon?
-
-[`HorizonType`](namespaces/Types.md#horizontype)
-
-Optional horizon to filter by
-
-###### Returns
-
-[`Goal`](namespaces/Types.md#goal)[]
-
-Array of ready goals, sorted by priority
-
-##### getReadyGoalsByPriority()
-
-> **getReadyGoalsByPriority**(): [`Goal`](namespaces/Types.md#goal)[]
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:62](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L62)
-
-**`Internal`**
-
-Gets a prioritized list of goals that are ready to be worked on. Goals are
-sorted first by horizon (short-term > medium-term > long-term) and then by their
-individual priority values.
-
-###### Returns
-
-[`Goal`](namespaces/Types.md#goal)[]
-
-An array of Goal objects sorted by priority
-
-##### processGoalFailure()
-
-> **processGoalFailure**(`goal`): `Promise`\<`void`\>
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:45](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L45)
-
-**`Internal`**
-
-Handles the failure of a goal by updating its status and notifying relevant
-systems.
-
-This method:
-
-1. Updates the failed goal's status
-2. If the goal has a parent, marks the parent as blocked
-3. Emits a goal:failed event
-
-###### Parameters
-
-###### goal
-
-[`Goal`](namespaces/Types.md#goal)
-
-The goal that failed
-
-###### Returns
-
-`Promise`\<`void`\>
-
-##### recordGoalFailure()
-
-> **recordGoalFailure**(`goalId`, `reason`, `outcomeScore`): `void`
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:436](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L436)
-
-Records a goal failure with reason and score.
-
-###### Parameters
-
-###### goalId
-
-`string`
-
-ID of the failed goal
-
-###### reason
-
-`string`
-
-Reason for failure
-
-###### outcomeScore
-
-`number` = `0`
-
-Optional failure score (defaults to 0)
-
-###### Returns
-
-`void`
-
-##### recordGoalOutcome()
-
-> **recordGoalOutcome**(`goalId`, `outcomeScore`, `comment`?): `void`
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:409](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L409)
-
-Records an outcome score and optional comment for a completed goal.
-
-###### Parameters
-
-###### goalId
-
-`string`
-
-ID of the goal
-
-###### outcomeScore
-
-`number`
-
-Numeric score indicating success/failure
-
-###### comment?
-
-`string`
-
-Optional comment about the outcome
-
-###### Returns
-
-`void`
-
-##### updateGoalDependencies()
-
-> **updateGoalDependencies**(`goalId`, `dependencies`): `void`
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:86](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L86)
-
-Updates an existing goal with new dependencies. Used to map generated thought
-IDs to goal IDs.
-
-###### Parameters
-
-###### goalId
-
-`string`
-
-The ID of the goal to update
-
-###### dependencies
-
-`string`[]
-
-The new array of dependency IDs
-
-###### Returns
-
-`void`
-
-##### updateGoalProgress()
-
-> **updateGoalProgress**(`id`, `progress`): `void`
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:285](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L285)
-
-Updates the progress percentage of a goal.
-
-###### Parameters
-
-###### id
-
-`string`
-
-ID of the goal
-
-###### progress
-
-`number`
-
-New progress value (0-100)
-
-###### Returns
-
-`void`
-
-##### updateGoalStatus()
-
-> **updateGoalStatus**(`id`, `status`): `void`
-
-Defined in:
-[packages/core/src/core/goal-manager.ts:102](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/goal-manager.ts#L102)
-
-Updates the status of a goal. When marking as "completed", sets completed_at
-timestamp, progress to 100%, and updates related goals.
-
-###### Parameters
-
-###### id
-
-`string`
-
-The ID of the goal to update
-
-###### status
-
-[`GoalStatus`](namespaces/Types.md#goalstatus)
-
-The new status to set
-
-###### Returns
-
-`void`
-
----
-
-### LLMClient
-
-Defined in:
-[packages/core/src/core/llm-client.ts:79](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/llm-client.ts#L79)
-
-Main client class for interacting with LLM providers
-
-#### Extends
-
-- `EventEmitter`
-
-#### Constructors
-
-##### new LLMClient()
-
-> **new LLMClient**(`config`): [`LLMClient`](globals.md#llmclient-1)
-
-Defined in:
-[packages/core/src/core/llm-client.ts:108](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/llm-client.ts#L108)
-
-Creates a new LLM client instance - supports all major LLM providers
+Creates a new EVM chain instance
 
 ###### Parameters
 
 ###### config
 
-[`LLMClientConfig`](namespaces/Types.md#llmclientconfig)
+`EvmChainConfig`
 
-Configuration options for the client
+Configuration options for the chain connection
 
 ###### Returns
 
-[`LLMClient`](globals.md#llmclient-1)
-
-###### Example
-
-```typescript
-const llm = new LLMClient({
-  model: "openai/gpt-4-turbo-preview",
-  temperature: 0.7,
-  maxTokens: 2000,
-  maxRetries: 5,
-});
-
-// Or using OpenRouter:
-const llmOpenRouter = new LLMClient({
-  model: "openrouter:anthropic/claude-2",
-});
-```
-
-###### Overrides
-
-`EventEmitter.constructor`
+[`EvmChain`](globals.md#evmchain)
 
 #### Properties
 
-##### captureRejections
+##### chainId
 
-> `static` **captureRejections**: `boolean`
+> **chainId**: `string`
 
-Defined in: docs/node_modules/@types/node/events.d.ts:459
+Defined in: [chains/evm.ts:50](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/evm.ts#L50)
 
-Value:
-[boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Boolean_type)
+Unique identifier for this chain implementation.
+Matches the IChain interface.
+This could be "ethereum", "polygon", etc.
 
-Change the default `captureRejections` option on all new `EventEmitter` objects.
+###### Implementation of
 
-###### Since
-
-v13.4.0, v12.16.0
-
-###### Inherited from
-
-`EventEmitter.captureRejections`
-
-##### captureRejectionSymbol
-
-> `readonly` `static` **captureRejectionSymbol**: _typeof_ >
-> [`captureRejectionSymbol`](globals.md#capturerejectionsymbol)
-
-Defined in: docs/node_modules/@types/node/events.d.ts:452
-
-Value: `Symbol.for('nodejs.rejection')`
-
-See how to write a custom `rejection handler`.
-
-###### Since
-
-v13.4.0, v12.16.0
-
-###### Inherited from
-
-`EventEmitter.captureRejectionSymbol`
-
-##### defaultMaxListeners
-
-> `static` **defaultMaxListeners**: `number`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:498
-
-By default, a maximum of `10` listeners can be registered for any single event.
-This limit can be changed for individual `EventEmitter` instances using the
-`emitter.setMaxListeners(n)` method. To change the default for
-_all_`EventEmitter` instances, the `events.defaultMaxListeners` property can be
-used. If this value is not a positive number, a `RangeError` is thrown.
-
-Take caution when setting the `events.defaultMaxListeners` because the change
-affects _all_ `EventEmitter` instances, including those created before the
-change is made. However, calling `emitter.setMaxListeners(n)` still has
-precedence over `events.defaultMaxListeners`.
-
-This is not a hard limit. The `EventEmitter` instance will allow more listeners
-to be added but will output a trace warning to stderr indicating that a
-"possible EventEmitter memory leak" has been detected. For any single
-`EventEmitter`, the `emitter.getMaxListeners()` and `emitter.setMaxListeners()`
-methods can be used to temporarily avoid this warning:
-
-```js
-import { EventEmitter } from "node:events";
-const emitter = new EventEmitter();
-emitter.setMaxListeners(emitter.getMaxListeners() + 1);
-emitter.once("event", () => {
-  // do stuff
-  emitter.setMaxListeners(Math.max(emitter.getMaxListeners() - 1, 0));
-});
-```
-
-The `--trace-warnings` command-line flag can be used to display the stack trace
-for such warnings.
-
-The emitted warning can be inspected with `process.on('warning')` and will have
-the additional `emitter`, `type`, and `count` properties, referring to the event
-emitter instance, the event's name and the number of attached listeners,
-respectively. Its `name` property is set to `'MaxListenersExceededWarning'`.
-
-###### Since
-
-v0.11.2
-
-###### Inherited from
-
-`EventEmitter.defaultMaxListeners`
-
-##### errorMonitor
-
-> `readonly` `static` **errorMonitor**: _typeof_ >
-> [`errorMonitor`](globals.md#errormonitor)
-
-Defined in: docs/node_modules/@types/node/events.d.ts:445
-
-This symbol shall be used to install a listener for only monitoring `'error'`
-events. Listeners installed using this symbol are called before the regular
-`'error'` listeners are called.
-
-Installing a listener using this symbol does not change the behavior once an
-`'error'` event is emitted. Therefore, the process will still crash if no
-regular `'error'` listener is installed.
-
-###### Since
-
-v13.6.0, v12.17.0
-
-###### Inherited from
-
-`EventEmitter.errorMonitor`
+[`IChain`](globals.md#ichain).[`chainId`](globals.md#chainid-3)
 
 #### Methods
 
-##### \[captureRejectionSymbol\]()?
+##### read()
 
-> `optional` **\[captureRejectionSymbol\]**\<`K`\>(`error`, `event`, ...`args`):
-> `void`
+> **read**(`call`): `Promise`\<`any`\>
 
-Defined in: docs/node_modules/@types/node/events.d.ts:136
+Defined in: [chains/evm.ts:90](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/evm.ts#L90)
 
-###### Type Parameters
-
-• **K**
+Performs a read operation on the blockchain, typically calling a view/pure contract function
+that doesn't modify state.
 
 ###### Parameters
 
-###### error
+###### call
 
-`Error`
+`unknown`
 
-###### event
-
-`string` | `symbol`
-
-###### args
-
-...`AnyRest`
+The call parameters
 
 ###### Returns
 
-`void`
+`Promise`\<`any`\>
 
-###### Inherited from
+The result of the contract call
 
-`EventEmitter.[captureRejectionSymbol]`
+###### Throws
 
-##### addListener()
+Error if the call fails
 
-> **addListener**\<`K`\>(`eventName`, `listener`): `this`
+###### Implementation of
 
-Defined in: docs/node_modules/@types/node/events.d.ts:597
+[`IChain`](globals.md#ichain).[`read`](globals.md#read-3)
 
-Alias for `emitter.on(eventName, listener)`.
+##### write()
 
-###### Type Parameters
+> **write**(`call`): `Promise`\<`any`\>
 
-• **K**
+Defined in: [chains/evm.ts:130](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/evm.ts#L130)
+
+Performs a write operation on the blockchain by sending a transaction that modifies state.
+Examples include transferring tokens or updating contract storage.
 
 ###### Parameters
 
-###### eventName
+###### call
 
-`string` | `symbol`
+`unknown`
 
-###### listener
-
-(...`args`) => `void`
+The transaction parameters
 
 ###### Returns
 
-`this`
+`Promise`\<`any`\>
 
-###### Since
+The transaction receipt after confirmation
 
-v0.1.26
+###### Throws
 
-###### Inherited from
+Error if the transaction fails
 
-`EventEmitter.addListener`
+###### Implementation of
 
-##### analyze()
+[`IChain`](globals.md#ichain).[`write`](globals.md#write-3)
 
-> **analyze**(`prompt`, `options`): `Promise`\<`string` \| >
-> [`StructuredAnalysis`](namespaces/Types.md#structuredanalysis)\>
-
-Defined in:
-[packages/core/src/core/llm-client.ts:342](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/llm-client.ts#L342)
-
-Analyzes text using the LLM with optional structured output
-
-###### Parameters
-
-###### prompt
-
-`string`
-
-Input text to analyze
-
-###### options
-
-[`AnalysisOptions`](namespaces/Types.md#analysisoptions) = `{}`
-
-Analysis configuration options
-
-###### Returns
-
-`Promise`\<`string` \|
-[`StructuredAnalysis`](namespaces/Types.md#structuredanalysis)\>
-
-Promise resolving to analysis result
-
-##### complete()
-
-> **complete**(`prompt`):
-> `Promise`\<[`LLMResponse`](namespaces/Types.md#llmresponse)\>
-
-Defined in:
-[packages/core/src/core/llm-client.ts:206](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/llm-client.ts#L206)
-
-Completes a prompt using the configured LLM
-
-###### Parameters
-
-###### prompt
-
-`string`
-
-Input prompt text
-
-###### Returns
-
-`Promise`\<[`LLMResponse`](namespaces/Types.md#llmresponse)\>
-
-Promise resolving to the completion response
-
-##### emit()
-
-> **emit**\<`K`\>(`eventName`, ...`args`): `boolean`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:859
-
-Synchronously calls each of the listeners registered for the event named
-`eventName`, in the order they were registered, passing the supplied arguments
-to each.
-
-Returns `true` if the event had listeners, `false` otherwise.
-
-```js
-import { EventEmitter } from "node:events";
-const myEmitter = new EventEmitter();
-
-// First listener
-myEmitter.on("event", function firstListener() {
-  console.log("Helloooo! first listener");
-});
-// Second listener
-myEmitter.on("event", function secondListener(arg1, arg2) {
-  console.log(`event with parameters ${arg1}, ${arg2} in second listener`);
-});
-// Third listener
-myEmitter.on("event", function thirdListener(...args) {
-  const parameters = args.join(", ");
-  console.log(`event with parameters ${parameters} in third listener`);
-});
-
-console.log(myEmitter.listeners("event"));
-
-myEmitter.emit("event", 1, 2, 3, 4, 5);
-
-// Prints:
-// [
-//   [Function: firstListener],
-//   [Function: secondListener],
-//   [Function: thirdListener]
-// ]
-// Helloooo! first listener
-// event with parameters 1, 2 in second listener
-// event with parameters 1, 2, 3, 4, 5 in third listener
-```
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-`string` | `symbol`
-
-###### args
-
-...`AnyRest`
-
-###### Returns
-
-`boolean`
-
-###### Since
-
-v0.1.26
-
-###### Inherited from
-
-`EventEmitter.emit`
-
-##### eventNames()
-
-> **eventNames**(): (`string` \| `symbol`)[]
-
-Defined in: docs/node_modules/@types/node/events.d.ts:922
-
-Returns an array listing the events for which the emitter has registered
-listeners. The values in the array are strings or `Symbol`s.
-
-```js
-import { EventEmitter } from "node:events";
-
-const myEE = new EventEmitter();
-myEE.on("foo", () => {});
-myEE.on("bar", () => {});
-
-const sym = Symbol("symbol");
-myEE.on(sym, () => {});
-
-console.log(myEE.eventNames());
-// Prints: [ 'foo', 'bar', Symbol(symbol) ]
-```
-
-###### Returns
-
-(`string` \| `symbol`)[]
-
-###### Since
-
-v6.0.0
-
-###### Inherited from
-
-`EventEmitter.eventNames`
-
-##### getMaxListeners()
-
-> **getMaxListeners**(): `number`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:774
-
-Returns the current max listener value for the `EventEmitter` which is either
-set by `emitter.setMaxListeners(n)` or defaults to
-[defaultMaxListeners](globals.md#defaultmaxlisteners-1).
-
-###### Returns
-
-`number`
-
-###### Since
-
-v1.0.0
-
-###### Inherited from
-
-`EventEmitter.getMaxListeners`
-
-##### getModelName()
-
-> **getModelName**(): `string`
-
-Defined in:
-[packages/core/src/core/llm-client.ts:231](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/llm-client.ts#L231)
-
-Gets the full model name
-
-###### Returns
-
-`string`
-
-##### getModelVersion()
-
-> **getModelVersion**(): `string`
-
-Defined in:
-[packages/core/src/core/llm-client.ts:238](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/llm-client.ts#L238)
-
-Extracts the version number from the model name
-
-###### Returns
-
-`string`
-
-##### listenerCount()
-
-> **listenerCount**\<`K`\>(`eventName`, `listener`?): `number`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:868
-
-Returns the number of listeners listening for the event named `eventName`. If
-`listener` is provided, it will return how many times the listener is found in
-the list of the listeners of the event.
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-The name of the event being listened for
-
-`string` | `symbol`
-
-###### listener?
-
-`Function`
-
-The event handler function
-
-###### Returns
-
-`number`
-
-###### Since
-
-v3.2.0
-
-###### Inherited from
-
-`EventEmitter.listenerCount`
-
-##### listeners()
-
-> **listeners**\<`K`\>(`eventName`): `Function`[]
-
-Defined in: docs/node_modules/@types/node/events.d.ts:787
-
-Returns a copy of the array of listeners for the event named `eventName`.
-
-```js
-server.on("connection", (stream) => {
-  console.log("someone connected!");
-});
-console.log(util.inspect(server.listeners("connection")));
-// Prints: [ [Function] ]
-```
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-`string` | `symbol`
-
-###### Returns
-
-`Function`[]
-
-###### Since
-
-v0.1.26
-
-###### Inherited from
-
-`EventEmitter.listeners`
-
-##### off()
-
-> **off**\<`K`\>(`eventName`, `listener`): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:747
-
-Alias for `emitter.removeListener()`.
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-`string` | `symbol`
-
-###### listener
-
-(...`args`) => `void`
-
-###### Returns
-
-`this`
-
-###### Since
-
-v10.0.0
-
-###### Inherited from
-
-`EventEmitter.off`
-
-##### on()
-
-> **on**\<`K`\>(`eventName`, `listener`): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:629
-
-Adds the `listener` function to the end of the listeners array for the event
-named `eventName`. No checks are made to see if the `listener` has already been
-added. Multiple calls passing the same combination of `eventName` and `listener`
-will result in the `listener` being added, and called, multiple times.
-
-```js
-server.on("connection", (stream) => {
-  console.log("someone connected!");
-});
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-By default, event listeners are invoked in the order they are added. The
-`emitter.prependListener()` method can be used as an alternative to add the
-event listener to the beginning of the listeners array.
-
-```js
-import { EventEmitter } from "node:events";
-const myEE = new EventEmitter();
-myEE.on("foo", () => console.log("a"));
-myEE.prependListener("foo", () => console.log("b"));
-myEE.emit("foo");
-// Prints:
-//   b
-//   a
-```
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-The name of the event.
-
-`string` | `symbol`
-
-###### listener
-
-(...`args`) => `void`
-
-The callback function
-
-###### Returns
-
-`this`
-
-###### Since
-
-v0.1.101
-
-###### Inherited from
-
-`EventEmitter.on`
-
-##### once()
-
-> **once**\<`K`\>(`eventName`, `listener`): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:659
-
-Adds a **one-time** `listener` function for the event named `eventName`. The
-next time `eventName` is triggered, this listener is removed and then invoked.
-
-```js
-server.once("connection", (stream) => {
-  console.log("Ah, we have our first user!");
-});
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-By default, event listeners are invoked in the order they are added. The
-`emitter.prependOnceListener()` method can be used as an alternative to add the
-event listener to the beginning of the listeners array.
-
-```js
-import { EventEmitter } from "node:events";
-const myEE = new EventEmitter();
-myEE.once("foo", () => console.log("a"));
-myEE.prependOnceListener("foo", () => console.log("b"));
-myEE.emit("foo");
-// Prints:
-//   b
-//   a
-```
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-The name of the event.
-
-`string` | `symbol`
-
-###### listener
-
-(...`args`) => `void`
-
-The callback function
-
-###### Returns
-
-`this`
-
-###### Since
-
-v0.3.0
-
-###### Inherited from
-
-`EventEmitter.once`
-
-##### prependListener()
-
-> **prependListener**\<`K`\>(`eventName`, `listener`): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:886
-
-Adds the `listener` function to the _beginning_ of the listeners array for the
-event named `eventName`. No checks are made to see if the `listener` has already
-been added. Multiple calls passing the same combination of `eventName` and
-`listener` will result in the `listener` being added, and called, multiple
-times.
-
-```js
-server.prependListener("connection", (stream) => {
-  console.log("someone connected!");
-});
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-The name of the event.
-
-`string` | `symbol`
-
-###### listener
-
-(...`args`) => `void`
-
-The callback function
-
-###### Returns
-
-`this`
-
-###### Since
-
-v6.0.0
-
-###### Inherited from
-
-`EventEmitter.prependListener`
-
-##### prependOnceListener()
-
-> **prependOnceListener**\<`K`\>(`eventName`, `listener`): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:902
-
-Adds a **one-time**`listener` function for the event named `eventName` to the
-_beginning_ of the listeners array. The next time `eventName` is triggered, this
-listener is removed, and then invoked.
-
-```js
-server.prependOnceListener("connection", (stream) => {
-  console.log("Ah, we have our first user!");
-});
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-The name of the event.
-
-`string` | `symbol`
-
-###### listener
-
-(...`args`) => `void`
-
-The callback function
-
-###### Returns
-
-`this`
-
-###### Since
-
-v6.0.0
-
-###### Inherited from
-
-`EventEmitter.prependOnceListener`
-
-##### rawListeners()
-
-> **rawListeners**\<`K`\>(`eventName`): `Function`[]
-
-Defined in: docs/node_modules/@types/node/events.d.ts:818
-
-Returns a copy of the array of listeners for the event named `eventName`,
-including any wrappers (such as those created by `.once()`).
-
-```js
-import { EventEmitter } from "node:events";
-const emitter = new EventEmitter();
-emitter.once("log", () => console.log("log once"));
-
-// Returns a new Array with a function `onceWrapper` which has a property
-// `listener` which contains the original listener bound above
-const listeners = emitter.rawListeners("log");
-const logFnWrapper = listeners[0];
-
-// Logs "log once" to the console and does not unbind the `once` event
-logFnWrapper.listener();
-
-// Logs "log once" to the console and removes the listener
-logFnWrapper();
-
-emitter.on("log", () => console.log("log persistently"));
-// Will return a new Array with a single function bound by `.on()` above
-const newListeners = emitter.rawListeners("log");
-
-// Logs "log persistently" twice
-newListeners[0]();
-emitter.emit("log");
-```
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-`string` | `symbol`
-
-###### Returns
-
-`Function`[]
-
-###### Since
-
-v9.4.0
-
-###### Inherited from
-
-`EventEmitter.rawListeners`
-
-##### removeAllListeners()
-
-> **removeAllListeners**(`eventName`?): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:758
-
-Removes all listeners, or those of the specified `eventName`.
-
-It is bad practice to remove listeners added elsewhere in the code, particularly
-when the `EventEmitter` instance was created by some other component or module
-(e.g. sockets or file streams).
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-###### Parameters
-
-###### eventName?
-
-`string` | `symbol`
-
-###### Returns
-
-`this`
-
-###### Since
-
-v0.1.26
-
-###### Inherited from
-
-`EventEmitter.removeAllListeners`
-
-##### removeListener()
-
-> **removeListener**\<`K`\>(`eventName`, `listener`): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:742
-
-Removes the specified `listener` from the listener array for the event named
-`eventName`.
-
-```js
-const callback = (stream) => {
-  console.log("someone connected!");
-};
-server.on("connection", callback);
-// ...
-server.removeListener("connection", callback);
-```
-
-`removeListener()` will remove, at most, one instance of a listener from the
-listener array. If any single listener has been added multiple times to the
-listener array for the specified `eventName`, then `removeListener()` must be
-called multiple times to remove each instance.
-
-Once an event is emitted, all listeners attached to it at the time of emitting
-are called in order. This implies that any `removeListener()` or
-`removeAllListeners()` calls _after_ emitting and _before_ the last listener
-finishes execution will not remove them from`emit()` in progress. Subsequent
-events behave as expected.
-
-```js
-import { EventEmitter } from "node:events";
-class MyEmitter extends EventEmitter {}
-const myEmitter = new MyEmitter();
-
-const callbackA = () => {
-  console.log("A");
-  myEmitter.removeListener("event", callbackB);
-};
-
-const callbackB = () => {
-  console.log("B");
-};
-
-myEmitter.on("event", callbackA);
-
-myEmitter.on("event", callbackB);
-
-// callbackA removes listener callbackB but it will still be called.
-// Internal listener array at time of emit [callbackA, callbackB]
-myEmitter.emit("event");
-// Prints:
-//   A
-//   B
-
-// callbackB is now removed.
-// Internal listener array [callbackA]
-myEmitter.emit("event");
-// Prints:
-//   A
-```
-
-Because listeners are managed using an internal array, calling this will change
-the position indices of any listener registered _after_ the listener being
-removed. This will not impact the order in which listeners are called, but it
-means that any copies of the listener array as returned by the
-`emitter.listeners()` method will need to be recreated.
-
-When a single function has been added as a handler multiple times for a single
-event (as in the example below), `removeListener()` will remove the most
-recently added instance. In the example the `once('ping')` listener is removed:
-
-```js
-import { EventEmitter } from "node:events";
-const ee = new EventEmitter();
-
-function pong() {
-  console.log("pong");
-}
-
-ee.on("ping", pong);
-ee.once("ping", pong);
-ee.removeListener("ping", pong);
-
-ee.emit("ping");
-ee.emit("ping");
-```
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-###### Type Parameters
-
-• **K**
-
-###### Parameters
-
-###### eventName
-
-`string` | `symbol`
-
-###### listener
-
-(...`args`) => `void`
-
-###### Returns
-
-`this`
-
-###### Since
-
-v0.1.26
-
-###### Inherited from
-
-`EventEmitter.removeListener`
-
-##### setMaxListeners()
-
-> **setMaxListeners**(`n`): `this`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:768
-
-By default `EventEmitter`s will print a warning if more than `10` listeners are
-added for a particular event. This is a useful default that helps finding memory
-leaks. The `emitter.setMaxListeners()` method allows the limit to be modified
-for this specific `EventEmitter` instance. The value can be set to `Infinity`
-(or `0`) to indicate an unlimited number of listeners.
-
-Returns a reference to the `EventEmitter`, so that calls can be chained.
-
-###### Parameters
-
-###### n
-
-`number`
-
-###### Returns
-
-`this`
-
-###### Since
-
-v0.3.5
-
-###### Inherited from
-
-`EventEmitter.setMaxListeners`
-
-##### addAbortListener()
-
-> `static` **addAbortListener**(`signal`, `resource`): `Disposable`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:437
-
-**`Experimental`**
-
-Listens once to the `abort` event on the provided `signal`.
-
-Listening to the `abort` event on abort signals is unsafe and may lead to
-resource leaks since another third party with the signal can call
-`e.stopImmediatePropagation()`. Unfortunately Node.js cannot change this since
-it would violate the web standard. Additionally, the original API makes it easy
-to forget to remove listeners.
-
-This API allows safely using `AbortSignal`s in Node.js APIs by solving these two
-issues by listening to the event such that `stopImmediatePropagation` does not
-prevent the listener from running.
-
-Returns a disposable so that it may be unsubscribed from more easily.
-
-```js
-import { addAbortListener } from "node:events";
-
-function example(signal) {
-  let disposable;
-  try {
-    signal.addEventListener("abort", (e) => e.stopImmediatePropagation());
-    disposable = addAbortListener(signal, (e) => {
-      // Do something when signal is aborted.
-    });
-  } finally {
-    disposable?.[Symbol.dispose]();
-  }
-}
-```
-
-###### Parameters
-
-###### signal
-
-`AbortSignal`
-
-###### resource
-
-(`event`) => `void`
-
-###### Returns
-
-`Disposable`
-
-Disposable that removes the `abort` listener.
-
-###### Since
-
-v20.5.0
-
-###### Inherited from
-
-`EventEmitter.addAbortListener`
-
-##### getEventListeners()
-
-> `static` **getEventListeners**(`emitter`, `name`): `Function`[]
-
-Defined in: docs/node_modules/@types/node/events.d.ts:358
-
-Returns a copy of the array of listeners for the event named `eventName`.
-
-For `EventEmitter`s this behaves exactly the same as calling `.listeners` on the
-emitter.
-
-For `EventTarget`s this is the only way to get the event listeners for the event
-target. This is useful for debugging and diagnostic purposes.
-
-```js
-import { getEventListeners, EventEmitter } from "node:events";
-
-{
-  const ee = new EventEmitter();
-  const listener = () => console.log("Events are fun");
-  ee.on("foo", listener);
-  console.log(getEventListeners(ee, "foo")); // [ [Function: listener] ]
-}
-{
-  const et = new EventTarget();
-  const listener = () => console.log("Events are fun");
-  et.addEventListener("foo", listener);
-  console.log(getEventListeners(et, "foo")); // [ [Function: listener] ]
-}
-```
-
-###### Parameters
-
-###### emitter
-
-`EventEmitter` | `EventTarget`
-
-###### name
-
-`string` | `symbol`
-
-###### Returns
-
-`Function`[]
-
-###### Since
-
-v15.2.0, v14.17.0
-
-###### Inherited from
-
-`EventEmitter.getEventListeners`
-
-##### getMaxListeners()
-
-> `static` **getMaxListeners**(`emitter`): `number`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:387
-
-Returns the currently set max amount of listeners.
-
-For `EventEmitter`s this behaves exactly the same as calling `.getMaxListeners`
-on the emitter.
-
-For `EventTarget`s this is the only way to get the max event listeners for the
-event target. If the number of event handlers on a single EventTarget exceeds
-the max set, the EventTarget will print a warning.
-
-```js
-import { getMaxListeners, setMaxListeners, EventEmitter } from "node:events";
-
-{
-  const ee = new EventEmitter();
-  console.log(getMaxListeners(ee)); // 10
-  setMaxListeners(11, ee);
-  console.log(getMaxListeners(ee)); // 11
-}
-{
-  const et = new EventTarget();
-  console.log(getMaxListeners(et)); // 10
-  setMaxListeners(11, et);
-  console.log(getMaxListeners(et)); // 11
-}
-```
-
-###### Parameters
-
-###### emitter
-
-`EventEmitter` | `EventTarget`
-
-###### Returns
-
-`number`
-
-###### Since
-
-v19.9.0
-
-###### Inherited from
-
-`EventEmitter.getMaxListeners`
-
-##### ~~listenerCount()~~
-
-> `static` **listenerCount**(`emitter`, `eventName`): `number`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:330
-
-A class method that returns the number of listeners for the given `eventName`
-registered on the given `emitter`.
-
-```js
-import { EventEmitter, listenerCount } from "node:events";
-
-const myEmitter = new EventEmitter();
-myEmitter.on("event", () => {});
-myEmitter.on("event", () => {});
-console.log(listenerCount(myEmitter, "event"));
-// Prints: 2
-```
-
-###### Parameters
-
-###### emitter
-
-`EventEmitter`
-
-The emitter to query
-
-###### eventName
-
-The event name
-
-`string` | `symbol`
-
-###### Returns
-
-`number`
-
-###### Since
-
-v0.9.12
-
-###### Deprecated
-
-Since v3.2.0 - Use `listenerCount` instead.
-
-###### Inherited from
-
-`EventEmitter.listenerCount`
-
-##### on()
-
-###### Call Signature
-
-> `static` **on**(`emitter`, `eventName`, `options`?):
-> `AsyncIterableIterator`\<`any`[]\>
-
-Defined in: docs/node_modules/@types/node/events.d.ts:303
-
-```js
-import { on, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ee = new EventEmitter();
-
-// Emit later on
-process.nextTick(() => {
-  ee.emit("foo", "bar");
-  ee.emit("foo", 42);
-});
-
-for await (const event of on(ee, "foo")) {
-  // The execution of this inner block is synchronous and it
-  // processes one event at a time (even with await). Do not use
-  // if concurrent execution is required.
-  console.log(event); // prints ['bar'] [42]
-}
-// Unreachable here
-```
-
-Returns an `AsyncIterator` that iterates `eventName` events. It will throw if
-the `EventEmitter` emits `'error'`. It removes all listeners when exiting the
-loop. The `value` returned by each iteration is an array composed of the emitted
-event arguments.
-
-An `AbortSignal` can be used to cancel waiting on events:
-
-```js
-import { on, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ac = new AbortController();
-
-(async () => {
-  const ee = new EventEmitter();
-
-  // Emit later on
-  process.nextTick(() => {
-    ee.emit("foo", "bar");
-    ee.emit("foo", 42);
-  });
-
-  for await (const event of on(ee, "foo", { signal: ac.signal })) {
-    // The execution of this inner block is synchronous and it
-    // processes one event at a time (even with await). Do not use
-    // if concurrent execution is required.
-    console.log(event); // prints ['bar'] [42]
-  }
-  // Unreachable here
-})();
-
-process.nextTick(() => ac.abort());
-```
-
-Use the `close` option to specify an array of event names that will end the
-iteration:
-
-```js
-import { on, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ee = new EventEmitter();
-
-// Emit later on
-process.nextTick(() => {
-  ee.emit("foo", "bar");
-  ee.emit("foo", 42);
-  ee.emit("close");
-});
-
-for await (const event of on(ee, "foo", { close: ["close"] })) {
-  console.log(event); // prints ['bar'] [42]
-}
-// the loop will exit after 'close' is emitted
-console.log("done"); // prints 'done'
-```
-
-###### Parameters
-
-###### emitter
-
-`EventEmitter`
-
-###### eventName
-
-`string` | `symbol`
-
-###### options?
-
-`StaticEventEmitterIteratorOptions`
-
-###### Returns
-
-`AsyncIterableIterator`\<`any`[]\>
-
-An `AsyncIterator` that iterates `eventName` events emitted by the `emitter`
-
-###### Since
-
-v13.6.0, v12.16.0
-
-###### Inherited from
-
-`EventEmitter.on`
-
-###### Call Signature
-
-> `static` **on**(`emitter`, `eventName`, `options`?):
-> `AsyncIterableIterator`\<`any`[]\>
-
-Defined in: docs/node_modules/@types/node/events.d.ts:308
-
-```js
-import { on, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ee = new EventEmitter();
-
-// Emit later on
-process.nextTick(() => {
-  ee.emit("foo", "bar");
-  ee.emit("foo", 42);
-});
-
-for await (const event of on(ee, "foo")) {
-  // The execution of this inner block is synchronous and it
-  // processes one event at a time (even with await). Do not use
-  // if concurrent execution is required.
-  console.log(event); // prints ['bar'] [42]
-}
-// Unreachable here
-```
-
-Returns an `AsyncIterator` that iterates `eventName` events. It will throw if
-the `EventEmitter` emits `'error'`. It removes all listeners when exiting the
-loop. The `value` returned by each iteration is an array composed of the emitted
-event arguments.
-
-An `AbortSignal` can be used to cancel waiting on events:
-
-```js
-import { on, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ac = new AbortController();
-
-(async () => {
-  const ee = new EventEmitter();
-
-  // Emit later on
-  process.nextTick(() => {
-    ee.emit("foo", "bar");
-    ee.emit("foo", 42);
-  });
-
-  for await (const event of on(ee, "foo", { signal: ac.signal })) {
-    // The execution of this inner block is synchronous and it
-    // processes one event at a time (even with await). Do not use
-    // if concurrent execution is required.
-    console.log(event); // prints ['bar'] [42]
-  }
-  // Unreachable here
-})();
-
-process.nextTick(() => ac.abort());
-```
-
-Use the `close` option to specify an array of event names that will end the
-iteration:
-
-```js
-import { on, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ee = new EventEmitter();
-
-// Emit later on
-process.nextTick(() => {
-  ee.emit("foo", "bar");
-  ee.emit("foo", 42);
-  ee.emit("close");
-});
-
-for await (const event of on(ee, "foo", { close: ["close"] })) {
-  console.log(event); // prints ['bar'] [42]
-}
-// the loop will exit after 'close' is emitted
-console.log("done"); // prints 'done'
-```
-
-###### Parameters
-
-###### emitter
-
-`EventTarget`
-
-###### eventName
-
-`string`
-
-###### options?
-
-`StaticEventEmitterIteratorOptions`
-
-###### Returns
-
-`AsyncIterableIterator`\<`any`[]\>
-
-An `AsyncIterator` that iterates `eventName` events emitted by the `emitter`
-
-###### Since
-
-v13.6.0, v12.16.0
-
-###### Inherited from
-
-`EventEmitter.on`
-
-##### once()
-
-###### Call Signature
-
-> `static` **once**(`emitter`, `eventName`, `options`?): `Promise`\<`any`[]\>
-
-Defined in: docs/node_modules/@types/node/events.d.ts:217
-
-Creates a `Promise` that is fulfilled when the `EventEmitter` emits the given
-event or that is rejected if the `EventEmitter` emits `'error'` while waiting.
-The `Promise` will resolve with an array of all the arguments emitted to the
-given event.
-
-This method is intentionally generic and works with the web platform
-[EventTarget](https://dom.spec.whatwg.org/#interface-eventtarget) interface,
-which has no special`'error'` event semantics and does not listen to the
-`'error'` event.
-
-```js
-import { once, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ee = new EventEmitter();
-
-process.nextTick(() => {
-  ee.emit("myevent", 42);
-});
-
-const [value] = await once(ee, "myevent");
-console.log(value);
-
-const err = new Error("kaboom");
-process.nextTick(() => {
-  ee.emit("error", err);
-});
-
-try {
-  await once(ee, "myevent");
-} catch (err) {
-  console.error("error happened", err);
-}
-```
-
-The special handling of the `'error'` event is only used when `events.once()` is
-used to wait for another event. If `events.once()` is used to wait for the
-'`error'` event itself, then it is treated as any other kind of event without
-special handling:
-
-```js
-import { EventEmitter, once } from "node:events";
-
-const ee = new EventEmitter();
-
-once(ee, "error")
-  .then(([err]) => console.log("ok", err.message))
-  .catch((err) => console.error("error", err.message));
-
-ee.emit("error", new Error("boom"));
-
-// Prints: ok boom
-```
-
-An `AbortSignal` can be used to cancel waiting for the event:
-
-```js
-import { EventEmitter, once } from "node:events";
-
-const ee = new EventEmitter();
-const ac = new AbortController();
-
-async function foo(emitter, event, signal) {
-  try {
-    await once(emitter, event, { signal });
-    console.log("event emitted!");
-  } catch (error) {
-    if (error.name === "AbortError") {
-      console.error("Waiting for the event was canceled!");
-    } else {
-      console.error("There was an error", error.message);
-    }
-  }
-}
-
-foo(ee, "foo", ac.signal);
-ac.abort(); // Abort waiting for the event
-ee.emit("foo"); // Prints: Waiting for the event was canceled!
-```
-
-###### Parameters
-
-###### emitter
-
-`EventEmitter`
-
-###### eventName
-
-`string` | `symbol`
-
-###### options?
-
-`StaticEventEmitterOptions`
-
-###### Returns
-
-`Promise`\<`any`[]\>
-
-###### Since
-
-v11.13.0, v10.16.0
-
-###### Inherited from
-
-`EventEmitter.once`
-
-###### Call Signature
-
-> `static` **once**(`emitter`, `eventName`, `options`?): `Promise`\<`any`[]\>
-
-Defined in: docs/node_modules/@types/node/events.d.ts:222
-
-Creates a `Promise` that is fulfilled when the `EventEmitter` emits the given
-event or that is rejected if the `EventEmitter` emits `'error'` while waiting.
-The `Promise` will resolve with an array of all the arguments emitted to the
-given event.
-
-This method is intentionally generic and works with the web platform
-[EventTarget](https://dom.spec.whatwg.org/#interface-eventtarget) interface,
-which has no special`'error'` event semantics and does not listen to the
-`'error'` event.
-
-```js
-import { once, EventEmitter } from "node:events";
-import process from "node:process";
-
-const ee = new EventEmitter();
-
-process.nextTick(() => {
-  ee.emit("myevent", 42);
-});
-
-const [value] = await once(ee, "myevent");
-console.log(value);
-
-const err = new Error("kaboom");
-process.nextTick(() => {
-  ee.emit("error", err);
-});
-
-try {
-  await once(ee, "myevent");
-} catch (err) {
-  console.error("error happened", err);
-}
-```
-
-The special handling of the `'error'` event is only used when `events.once()` is
-used to wait for another event. If `events.once()` is used to wait for the
-'`error'` event itself, then it is treated as any other kind of event without
-special handling:
-
-```js
-import { EventEmitter, once } from "node:events";
-
-const ee = new EventEmitter();
-
-once(ee, "error")
-  .then(([err]) => console.log("ok", err.message))
-  .catch((err) => console.error("error", err.message));
-
-ee.emit("error", new Error("boom"));
-
-// Prints: ok boom
-```
-
-An `AbortSignal` can be used to cancel waiting for the event:
-
-```js
-import { EventEmitter, once } from "node:events";
-
-const ee = new EventEmitter();
-const ac = new AbortController();
-
-async function foo(emitter, event, signal) {
-  try {
-    await once(emitter, event, { signal });
-    console.log("event emitted!");
-  } catch (error) {
-    if (error.name === "AbortError") {
-      console.error("Waiting for the event was canceled!");
-    } else {
-      console.error("There was an error", error.message);
-    }
-  }
-}
-
-foo(ee, "foo", ac.signal);
-ac.abort(); // Abort waiting for the event
-ee.emit("foo"); // Prints: Waiting for the event was canceled!
-```
-
-###### Parameters
-
-###### emitter
-
-`EventTarget`
-
-###### eventName
-
-`string`
-
-###### options?
-
-`StaticEventEmitterOptions`
-
-###### Returns
-
-`Promise`\<`any`[]\>
-
-###### Since
-
-v11.13.0, v10.16.0
-
-###### Inherited from
-
-`EventEmitter.once`
-
-##### setMaxListeners()
-
-> `static` **setMaxListeners**(`n`?, ...`eventTargets`?): `void`
-
-Defined in: docs/node_modules/@types/node/events.d.ts:402
-
-```js
-import { setMaxListeners, EventEmitter } from "node:events";
-
-const target = new EventTarget();
-const emitter = new EventEmitter();
-
-setMaxListeners(5, target, emitter);
-```
-
-###### Parameters
-
-###### n?
-
-`number`
-
-A non-negative number. The maximum number of listeners per `EventTarget` event.
-
-###### eventTargets?
-
-...(`EventEmitter` \| `EventTarget`)[]
-
-Zero or more {EventTarget} or {EventEmitter} instances. If none are specified,
-`n` is set as the default max for all newly created {EventTarget} and
-{EventEmitter} objects.
-
-###### Returns
-
-`void`
-
-###### Since
-
-v15.4.0
-
-###### Inherited from
-
-`EventEmitter.setMaxListeners`
-
----
+***
 
 ### Logger
 
-Defined in:
-[packages/core/src/core/logger.ts:5](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/logger.ts#L5)
+Defined in: [logger.ts:5](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/logger.ts#L5)
 
 #### Constructors
 
 ##### new Logger()
 
-> **new Logger**(`config`): [`Logger`](globals.md#logger-1)
+> **new Logger**(`config`): [`Logger`](globals.md#logger)
 
-Defined in:
-[packages/core/src/core/logger.ts:9](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/logger.ts#L9)
+Defined in: [logger.ts:9](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/logger.ts#L9)
 
 ###### Parameters
 
 ###### config
 
-[`LoggerConfig`](namespaces/Types.md#loggerconfig)
+[`LoggerConfig`](globals.md#loggerconfig)
 
 ###### Returns
 
-[`Logger`](globals.md#logger-1)
+[`Logger`](globals.md#logger)
 
 #### Methods
 
@@ -5384,8 +222,7 @@ Defined in:
 
 > **debug**(`context`, `message`, `data`?): `void`
 
-Defined in:
-[packages/core/src/core/logger.ts:35](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/logger.ts#L35)
+Defined in: [logger.ts:39](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/logger.ts#L39)
 
 ###### Parameters
 
@@ -5409,8 +246,7 @@ Defined in:
 
 > **error**(`context`, `message`, `data`?): `void`
 
-Defined in:
-[packages/core/src/core/logger.ts:23](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/logger.ts#L23)
+Defined in: [logger.ts:27](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/logger.ts#L27)
 
 ###### Parameters
 
@@ -5434,8 +270,7 @@ Defined in:
 
 > **info**(`context`, `message`, `data`?): `void`
 
-Defined in:
-[packages/core/src/core/logger.ts:31](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/logger.ts#L31)
+Defined in: [logger.ts:35](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/logger.ts#L35)
 
 ###### Parameters
 
@@ -5459,8 +294,7 @@ Defined in:
 
 > **trace**(`context`, `message`, `data`?): `void`
 
-Defined in:
-[packages/core/src/core/logger.ts:39](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/logger.ts#L39)
+Defined in: [logger.ts:43](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/logger.ts#L43)
 
 ###### Parameters
 
@@ -5484,8 +318,7 @@ Defined in:
 
 > **warn**(`context`, `message`, `data`?): `void`
 
-Defined in:
-[packages/core/src/core/logger.ts:27](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/logger.ts#L27)
+Defined in: [logger.ts:31](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/logger.ts#L31)
 
 ###### Parameters
 
@@ -5505,730 +338,355 @@ Defined in:
 
 `void`
 
----
+***
 
-### Orchestrator
+### SolanaChain
 
-Defined in:
-[packages/core/src/core/orchestrator.ts:15](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/orchestrator.ts#L15)
+Defined in: [chains/solana.ts:29](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/solana.ts#L29)
 
-Orchestrator system that manages both "input" and "output" handlers in a unified
-manner, along with scheduling recurring inputs.
+#### Implements
+
+- [`IChain`](globals.md#ichain)
 
 #### Constructors
 
-##### new Orchestrator()
+##### new SolanaChain()
 
-> **new Orchestrator**(`roomManager`, `vectorDb`, `processors`, `mongoDb`,
-> `config`?): [`Orchestrator`](globals.md#orchestrator)
+> **new SolanaChain**(`config`): [`SolanaChain`](globals.md#solanachain)
 
-Defined in:
-[packages/core/src/core/orchestrator.ts:43](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/orchestrator.ts#L43)
+Defined in: [chains/solana.ts:34](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/solana.ts#L34)
 
 ###### Parameters
 
-###### roomManager
+###### config
 
-[`RoomManager`](globals.md#roommanager)
-
-###### vectorDb
-
-[`VectorDB`](namespaces/Types.md#vectordb)
-
-###### processors
-
-[`BaseProcessor`](globals.md#baseprocessor)[]
-
-###### mongoDb
-
-`MongoDb`
-
-###### config?
-
-[`LoggerConfig`](namespaces/Types.md#loggerconfig)
+`SolanaChainConfig`
 
 ###### Returns
 
-[`Orchestrator`](globals.md#orchestrator)
+[`SolanaChain`](globals.md#solanachain)
 
 #### Properties
 
-##### userId
+##### chainId
 
-> **userId**: `string`
+> **chainId**: `string`
 
-Defined in:
-[packages/core/src/core/orchestrator.ts:37](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/orchestrator.ts#L37)
+Defined in: [chains/solana.ts:30](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/solana.ts#L30)
 
-##### vectorDb
+A unique identifier for the chain (e.g., "starknet", "ethereum", "solana", etc.)
 
-> `readonly` **vectorDb**: [`VectorDB`](namespaces/Types.md#vectordb)
+###### Implementation of
 
-Defined in:
-[packages/core/src/core/orchestrator.ts:42](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/orchestrator.ts#L42)
-
-Other references in your system. Adjust as needed.
+[`IChain`](globals.md#ichain).[`chainId`](globals.md#chainid-3)
 
 #### Methods
 
-##### dispatchToAction()
+##### read()
 
-> **dispatchToAction**\<`T`\>(`name`, `data`): `Promise`\<`unknown`\>
+> **read**(`call`): `Promise`\<`any`\>
 
-Defined in:
-[packages/core/src/core/orchestrator.ts:222](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/orchestrator.ts#L222)
+Defined in: [chains/solana.ts:58](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/solana.ts#L58)
 
-Dispatches data to a registered action handler and returns its result.
+Example "read" method. Because Solana doesn't have a direct "contract read" by default,
+we might interpret read calls as:
+ - "getAccountInfo" or
+ - "getBalance", or
+ - "getProgramAccounts"
 
-###### Type Parameters
+So let's define a simple structure we can parse to do the relevant read.
 
-• **T**
+read({ type: "getBalance", address: "..." })
+read({ type: "getAccountInfo", address: "..." })
 
 ###### Parameters
 
-###### name
+###### call
 
-`string`
-
-The name of the registered action handler to dispatch to
-
-###### data
-
-`T`
-
-The data to pass to the action handler
+`unknown`
 
 ###### Returns
 
-`Promise`\<`unknown`\>
+`Promise`\<`any`\>
 
-Promise resolving to the action handler's result
+###### Implementation of
 
-###### Throws
+[`IChain`](globals.md#ichain).[`read`](globals.md#read-3)
 
-Error if no handler is found with the given name or if it's not an action
-handler
+##### write()
 
-###### Example
+> **write**(`call`): `Promise`\<`any`\>
+
+Defined in: [chains/solana.ts:105](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/solana.ts#L105)
+
+Example "write" method. We'll treat this as "send a Solana transaction."
+A typical transaction might have multiple instructions.
+
+We'll define a structure for the `call` param:
+{
+  instructions: TransactionInstruction[];
+  signers?: Keypair[];
+}
+where "instructions" is an array of instructions you want to execute.
+
+The agent or caller is responsible for constructing those instructions (e.g. for
+token transfers or program interactions).
+
+###### Parameters
+
+###### call
+
+`unknown`
+
+###### Returns
+
+`Promise`\<`any`\>
+
+###### Implementation of
+
+[`IChain`](globals.md#ichain).[`write`](globals.md#write-3)
+
+***
+
+### StarknetChain
+
+Defined in: [chains/starknet.ts:28](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/starknet.ts#L28)
+
+Implementation of the IChain interface for interacting with the Starknet L2 blockchain
+
+#### Example
 
 ```ts
-// Register an action handler
-orchestrator.registerIOHandler({
-  name: "sendEmail",
-  role: "action",
-  handler: async (data: { to: string; body: string }) => {
-    // Send email logic
-    return { success: true };
-  },
-});
-
-// Dispatch to the action
-const result = await orchestrator.dispatchToAction("sendEmail", {
-  to: "user@example.com",
-  body: "Hello world",
+const starknet = new StarknetChain({
+  rpcUrl: process.env.STARKNET_RPC_URL,
+  address: process.env.STARKNET_ADDRESS,
+  privateKey: process.env.STARKNET_PRIVATE_KEY
 });
 ```
 
-##### dispatchToInput()
+#### Implements
 
-> **dispatchToInput**\<`T`\>(`name`, `data`, `userId`, `orchestratorId`?):
-> `Promise`\<`unknown`\>
-
-Defined in:
-[packages/core/src/core/orchestrator.ts:499](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/orchestrator.ts#L499)
-
-Dispatches data to a registered input handler and processes the result through
-the autonomous flow.
-
-###### Type Parameters
-
-• **T**
-
-###### Parameters
-
-###### name
-
-`string`
-
-The name of the input handler to dispatch to
-
-###### data
-
-`T`
-
-The data to pass to the input handler
-
-###### userId
-
-`string`
-
-###### orchestratorId?
-
-`ObjectId`
-
-###### Returns
-
-`Promise`\<`unknown`\>
-
-An array of output suggestions generated from processing the input
-
-###### Example
-
-```ts
-// Register a chat input handler
-orchestrator.registerIOHandler({
-  name: "user_chat",
-  role: "input",
-  handler: async (message) => {
-    return {
-      type: "chat",
-      content: message.content,
-      metadata: { userId: message.userId },
-    };
-  },
-});
-
-// Dispatch a message to the chat handler
-const outputs = await orchestrator.dispatchToInput("user_chat", {
-  content: "Hello AI!",
-  userId: "user123",
-});
-```
-
-###### Throws
-
-If no handler is found with the given name
-
-###### Throws
-
-If the handler's role is not "input"
-
-##### dispatchToOutput()
-
-> **dispatchToOutput**\<`T`\>(`name`, `data`): `Promise`\<`unknown`\>
-
-Defined in:
-[packages/core/src/core/orchestrator.ts:125](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/orchestrator.ts#L125)
-
-Executes a handler with role="output" by name, passing data to it. This is
-effectively "dispatchToOutput."
-
-###### Type Parameters
-
-• **T**
-
-###### Parameters
-
-###### name
-
-`string`
-
-###### data
-
-`T`
-
-###### Returns
-
-`Promise`\<`unknown`\>
-
-##### initializeOrchestrator()
-
-> **initializeOrchestrator**(`userId`): `void`
-
-Defined in:
-[packages/core/src/core/orchestrator.ts:77](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/orchestrator.ts#L77)
-
-###### Parameters
-
-###### userId
-
-`string`
-
-###### Returns
-
-`void`
-
-##### processContent()
-
-> **processContent**(`content`, `source`, `userId`?):
-> `Promise`\<[`ProcessedResult`](namespaces/Types.md#processedresult)[]\>
-
-Defined in:
-[packages/core/src/core/orchestrator.ts:686](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/orchestrator.ts#L686)
-
-###### Parameters
-
-###### content
-
-`any`
-
-###### source
-
-`string`
-
-###### userId?
-
-`string`
-
-###### Returns
-
-`Promise`\<[`ProcessedResult`](namespaces/Types.md#processedresult)[]\>
-
-##### registerIOHandler()
-
-> **registerIOHandler**(`handler`): `void`
-
-Defined in:
-[packages/core/src/core/orchestrator.ts:86](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/orchestrator.ts#L86)
-
-Primary method to register any IOHandler (input or output).
-
-- If it's an input with an interval, schedule it for recurring runs.
-- Otherwise, just store it in the ioHandlers map.
-
-###### Parameters
-
-###### handler
-
-[`IOHandler`](namespaces/Types.md#iohandler)
-
-###### Returns
-
-`void`
-
-##### removeIOHandler()
-
-> **removeIOHandler**(`name`): `void`
-
-Defined in:
-[packages/core/src/core/orchestrator.ts:110](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/orchestrator.ts#L110)
-
-Removes a handler (input or output) by name, stopping scheduling if needed.
-
-###### Parameters
-
-###### name
-
-`string`
-
-###### Returns
-
-`void`
-
-##### scheduleTaskInDb()
-
-> **scheduleTaskInDb**(`userId`, `handlerName`, `data`, `intervalMs`?):
-> `Promise`\<`ObjectId`\>
-
-Defined in:
-[packages/core/src/core/orchestrator.ts:533](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/orchestrator.ts#L533)
-
-###### Parameters
-
-###### userId
-
-`string`
-
-###### handlerName
-
-`string`
-
-###### data
-
-`Record`\<`string`, `unknown`\> = `{}`
-
-###### intervalMs?
-
-`number`
-
-###### Returns
-
-`Promise`\<`ObjectId`\>
-
-##### startPolling()
-
-> **startPolling**(`everyMs`): `void`
-
-Defined in:
-[packages/core/src/core/orchestrator.ts:563](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/orchestrator.ts#L563)
-
-###### Parameters
-
-###### everyMs
-
-`number` = `10_000`
-
-###### Returns
-
-`void`
-
-##### stop()
-
-> **stop**(): `void`
-
-Defined in:
-[packages/core/src/core/orchestrator.ts:816](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/orchestrator.ts#L816)
-
-Stops all scheduled tasks and shuts down the orchestrator.
-
-###### Returns
-
-`void`
-
----
-
-### Room
-
-Defined in:
-[packages/core/src/core/room.ts:8](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room.ts#L8)
-
-Represents a room/conversation context that can store memories and metadata.
+- [`IChain`](globals.md#ichain)
 
 #### Constructors
 
-##### new Room()
+##### new StarknetChain()
 
-> **new Room**(`platformId`, `platform`, `metadata`?): [`Room`](globals.md#room)
+> **new StarknetChain**(`config`): [`StarknetChain`](globals.md#starknetchain)
 
-Defined in:
-[packages/core/src/core/room.ts:22](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room.ts#L22)
+Defined in: [chains/starknet.ts:40](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/starknet.ts#L40)
 
-Creates a new Room instance
+Creates a new StarknetChain instance
 
 ###### Parameters
 
-###### platformId
+###### config
 
-`string`
+`StarknetChainConfig`
 
-Platform-specific identifier (e.g. tweet thread ID, chat ID)
-
-###### platform
-
-`string`
-
-Platform name where this room exists
-
-###### metadata?
-
-`Partial`\<[`RoomMetadata`](namespaces/Types.md#roommetadata)\>
-
-Optional metadata to initialize the room with
+Configuration options for the Starknet connection
 
 ###### Returns
 
-[`Room`](globals.md#room)
+[`StarknetChain`](globals.md#starknetchain)
 
 #### Properties
 
-##### id
+##### chainId
 
-> `readonly` **id**: `string`
+> **chainId**: `string` = `"starknet"`
 
-Defined in:
-[packages/core/src/core/room.ts:10](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room.ts#L10)
+Defined in: [chains/starknet.ts:30](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/starknet.ts#L30)
 
-Unique identifier for the room
+Unique identifier for this chain implementation
 
-##### platform
+###### Implementation of
 
-> `readonly` **platform**: `string`
-
-Defined in:
-[packages/core/src/core/room.ts:24](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room.ts#L24)
-
-Platform name where this room exists
-
-##### platformId
-
-> `readonly` **platformId**: `string`
-
-Defined in:
-[packages/core/src/core/room.ts:23](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room.ts#L23)
-
-Platform-specific identifier (e.g. tweet thread ID, chat ID)
+[`IChain`](globals.md#ichain).[`chainId`](globals.md#chainid-3)
 
 #### Methods
 
-##### addMemory()
+##### read()
 
-> **addMemory**(`content`, `metadata`?):
-> `Promise`\<[`Memory`](namespaces/Types.md#memory)\>
+> **read**(`call`): `Promise`\<`any`\>
 
-Defined in:
-[packages/core/src/core/room.ts:63](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room.ts#L63)
+Defined in: [chains/starknet.ts:55](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/starknet.ts#L55)
 
-Adds a new memory to the room
+Performs a read-only call to a Starknet contract
 
 ###### Parameters
 
-###### content
+###### call
 
-`string`
+`Call`
 
-Content of the memory
-
-###### metadata?
-
-`Record`\<`string`, `any`\>
-
-Optional metadata for the memory
+The contract call parameters
 
 ###### Returns
 
-`Promise`\<[`Memory`](namespaces/Types.md#memory)\>
+`Promise`\<`any`\>
 
-The created Memory object
+The result of the contract call
 
-##### getMemories()
+###### Throws
 
-> **getMemories**(`limit`?): [`Memory`](namespaces/Types.md#memory)[]
+Error if the call fails
 
-Defined in:
-[packages/core/src/core/room.ts:107](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room.ts#L107)
+###### Implementation of
 
-Retrieves memories from the room
+[`IChain`](globals.md#ichain).[`read`](globals.md#read-3)
+
+##### write()
+
+> **write**(`call`): `Promise`\<`any`\>
+
+Defined in: [chains/starknet.ts:72](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/starknet.ts#L72)
+
+Executes a state-changing transaction on Starknet
 
 ###### Parameters
 
-###### limit?
+###### call
 
-`number`
+`Call`
 
-Optional limit on number of memories to return
-
-###### Returns
-
-[`Memory`](namespaces/Types.md#memory)[]
-
-Array of Memory objects
-
-##### getMetadata()
-
-> **getMetadata**(): [`RoomMetadata`](namespaces/Types.md#roommetadata)
-
-Defined in:
-[packages/core/src/core/room.ts:115](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room.ts#L115)
-
-Gets a copy of the room's metadata
+The transaction parameters
 
 ###### Returns
 
-[`RoomMetadata`](namespaces/Types.md#roommetadata)
+`Promise`\<`any`\>
 
-Copy of room metadata
+The transaction receipt after confirmation
 
-##### toJSON()
+###### Throws
 
-> **toJSON**(): `object`
+Error if the transaction fails
 
-Defined in:
-[packages/core/src/core/room.ts:135](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room.ts#L135)
+###### Implementation of
 
-Converts the room instance to a plain object
+[`IChain`](globals.md#ichain).[`write`](globals.md#write-3)
 
-###### Returns
+## Interfaces
 
-`object`
+### Agent\<Memory, T\>
 
-Plain object representation of the room
+Defined in: [types.ts:213](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L213)
 
-###### id
+#### Type Parameters
 
-> **id**: `string`
+• **Memory** *extends* [`WorkingMemory`](globals.md#workingmemory) = [`WorkingMemory`](globals.md#workingmemory)
 
-###### memories
+• **T** *extends* [`ContextHandler`](globals.md#contexthandlert)\<`Memory`\> = [`ContextHandler`](globals.md#contexthandlert)\<`Memory`\>
 
-> **memories**: [`Memory`](namespaces/Types.md#memory)[]
+#### Properties
 
-###### metadata
+##### actions
 
-> **metadata**: [`RoomMetadata`](namespaces/Types.md#roommetadata)
+> **actions**: [`Action`](globals.md#actionschema-result-context-tagent)\<`any`, `any`, [`InferContextFromHandler`](globals.md#infercontextfromhandlerthandler)\<`T`\>, [`Agent`](globals.md#agentmemory-t)\<`Memory`, `T`\>\>[]
 
-###### platform
+Defined in: [types.ts:240](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L240)
 
-> **platform**: `string`
+##### container
 
-###### platformId
+> **container**: `Container`
 
-> **platformId**: `string`
+Defined in: [types.ts:225](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L225)
 
-##### updateMetadata()
+##### context
 
-> **updateMetadata**(`update`): `void`
+> **context**: `T`
 
-Defined in:
-[packages/core/src/core/room.ts:123](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room.ts#L123)
+Defined in: [types.ts:221](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L221)
 
-Updates the room's metadata
+##### debugger
+
+> **debugger**: [`Debugger`](globals.md#debugger-2)
+
+Defined in: [types.ts:223](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L223)
+
+##### emit()
+
+> **emit**: (...`args`) => `void`
+
+Defined in: [types.ts:243](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L243)
 
 ###### Parameters
 
-###### update
+###### args
 
-`Partial`\<[`RoomMetadata`](namespaces/Types.md#roommetadata)\>
-
-Partial metadata object with fields to update
+...`any`[]
 
 ###### Returns
 
 `void`
 
-##### createDeterministicId()
+##### evaluator()
 
-> `static` **createDeterministicId**(`platform`, `platformId`): `string`
+> **evaluator**: (`ctx`) => `Promise`\<`void`\>
 
-Defined in:
-[packages/core/src/core/room.ts:45](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room.ts#L45)
-
-Creates a deterministic room ID based on platform and platformId
+Defined in: [types.ts:249](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L249)
 
 ###### Parameters
 
-###### platform
+###### ctx
 
-`string`
-
-Platform name
-
-###### platformId
-
-`string`
-
-Platform-specific identifier
+[`InferContextFromHandler`](globals.md#infercontextfromhandlerthandler)\<`T`\>
 
 ###### Returns
 
-`string`
+`Promise`\<`void`\>
 
-A deterministic room ID string
+##### events
 
-##### createDeterministicMemoryId()
+> **events**: `Record`\<`string`, `AnyZodObject`\>
 
-> `static` **createDeterministicMemoryId**(`roomId`, `content`): `string`
+Defined in: [types.ts:236](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L236)
 
-Defined in:
-[packages/core/src/core/room.ts:90](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room.ts#L90)
+##### experts
 
-Creates a deterministic memory ID based on room ID and content
+> **experts**: `Record`\<`string`, [`ExpertConfig`](globals.md#expertconfigcontext)\<[`InferContextFromHandler`](globals.md#infercontextfromhandlerthandler)\<`T`\>\>\>
 
-###### Parameters
+Defined in: [types.ts:238](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L238)
 
-###### roomId
+##### inputs
 
-`string`
+> **inputs**: `Record`\<`string`, [`InputConfig`](globals.md#inputconfigt-context-tagent)\<`any`, [`InferContextFromHandler`](globals.md#infercontextfromhandlerthandler)\<`T`\>, [`AnyAgent`](globals.md#anyagent)\>\>
 
-ID of the room
+Defined in: [types.ts:230](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L230)
 
-###### content
+##### memory
 
-`string`
+> **memory**: [`MemoryStore`](globals.md#memorystore)
 
-Content of the memory
+Defined in: [types.ts:219](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L219)
 
-###### Returns
+##### model
 
-`string`
+> **model**: `LanguageModelV1`
 
-A deterministic memory ID string
+Defined in: [types.ts:227](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L227)
 
----
+##### outputs
 
-### RoomManager
+> **outputs**: `Record`\<`string`, `Omit`\<[`Output`](globals.md#outputschema-context-tagent)\<`any`, [`InferContextFromHandler`](globals.md#infercontextfromhandlerthandler)\<`T`\>, [`AnyAgent`](globals.md#anyagent)\>, `"type"`\>\>
 
-Defined in:
-[packages/core/src/core/room-manager.ts:7](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room-manager.ts#L7)
+Defined in: [types.ts:231](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L231)
 
-#### Constructors
+##### reasoningModel?
 
-##### new RoomManager()
+> `optional` **reasoningModel**: `LanguageModelV1`
 
-> **new RoomManager**(`vectorDb`?, `config`?):
-> [`RoomManager`](globals.md#roommanager)
+Defined in: [types.ts:228](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L228)
 
-Defined in:
-[packages/core/src/core/room-manager.ts:10](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room-manager.ts#L10)
+##### run()
 
-###### Parameters
+> **run**: (`conversationId`) => `Promise`\<`void`\>
 
-###### vectorDb?
-
-[`ChromaVectorDB`](globals.md#chromavectordb)
-
-###### config?
-
-###### logLevel
-
-[`LogLevel`](namespaces/Types.md#loglevel)
-
-###### Returns
-
-[`RoomManager`](globals.md#roommanager)
-
-#### Methods
-
-##### addMemory()
-
-> **addMemory**(`roomId`, `content`, `metadata`?):
-> `Promise`\<[`Memory`](namespaces/Types.md#memory)\>
-
-Defined in:
-[packages/core/src/core/room-manager.ts:141](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room-manager.ts#L141)
+Defined in: [types.ts:244](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L244)
 
 ###### Parameters
 
-###### roomId
-
-`string`
-
-###### content
-
-`string`
-
-###### metadata?
-
-`Record`\<`string`, `any`\>
-
-###### Returns
-
-`Promise`\<[`Memory`](namespaces/Types.md#memory)\>
-
-##### createRoom()
-
-> **createRoom**(`platformId`, `platform`, `metadata`?):
-> `Promise`\<[`Room`](globals.md#room)\>
-
-Defined in:
-[packages/core/src/core/room-manager.ts:83](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room-manager.ts#L83)
-
-###### Parameters
-
-###### platformId
-
-`string`
-
-###### platform
-
-`string`
-
-###### metadata?
-
-`Partial`\<[`RoomMetadata`](namespaces/Types.md#roommetadata) & `object`\>
-
-###### Returns
-
-`Promise`\<[`Room`](globals.md#room)\>
-
-##### deleteRoom()
-
-> **deleteRoom**(`roomId`): `Promise`\<`void`\>
-
-Defined in:
-[packages/core/src/core/room-manager.ts:228](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room-manager.ts#L228)
-
-###### Parameters
-
-###### roomId
+###### conversationId
 
 `string`
 
@@ -6236,422 +694,2525 @@ Defined in:
 
 `Promise`\<`void`\>
 
-##### ensureRoom()
+##### send()
 
-> **ensureRoom**(`name`, `platform`, `userId`?):
-> `Promise`\<[`Room`](globals.md#room)\>
+> **send**: (`conversationId`, `input`) => `Promise`\<`void`\>
 
-Defined in:
-[packages/core/src/core/room-manager.ts:211](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room-manager.ts#L211)
+Defined in: [types.ts:245](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L245)
 
 ###### Parameters
 
-###### name
+###### conversationId
 
 `string`
 
-###### platform
+###### input
 
-`string`
+###### data
 
-###### userId?
+`any`
+
+###### type
 
 `string`
 
 ###### Returns
 
-`Promise`\<[`Room`](globals.md#room)\>
+`Promise`\<`void`\>
 
-##### findSimilarMemoriesInRoom()
+#### Methods
 
-> **findSimilarMemoriesInRoom**(`content`, `roomId`, `limit`):
-> `Promise`\<[`Memory`](namespaces/Types.md#memory)[]\>
+##### start()
 
-Defined in:
-[packages/core/src/core/room-manager.ts:169](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room-manager.ts#L169)
+> **start**(): `Promise`\<`void`\>
+
+Defined in: [types.ts:251](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L251)
+
+###### Returns
+
+`Promise`\<`void`\>
+
+##### stop()
+
+> **stop**(): `Promise`\<`void`\>
+
+Defined in: [types.ts:252](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L252)
+
+###### Returns
+
+`Promise`\<`void`\>
+
+***
+
+### AgentContext\<Memory\>
+
+Defined in: [types.ts:206](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L206)
+
+#### Type Parameters
+
+• **Memory** *extends* [`WorkingMemory`](globals.md#workingmemory) = [`WorkingMemory`](globals.md#workingmemory)
+
+#### Properties
+
+##### id
+
+> **id**: `string`
+
+Defined in: [types.ts:207](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L207)
+
+##### memory
+
+> **memory**: `Memory`
+
+Defined in: [types.ts:208](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L208)
+
+***
+
+### IChain
+
+Defined in: [types.ts:371](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L371)
+
+#### Properties
+
+##### chainId
+
+> **chainId**: `string`
+
+Defined in: [types.ts:375](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L375)
+
+A unique identifier for the chain (e.g., "starknet", "ethereum", "solana", etc.)
+
+#### Methods
+
+##### read()
+
+> **read**(`call`): `Promise`\<`any`\>
+
+Defined in: [types.ts:381](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L381)
+
+Read (call) a contract or perform a query on this chain.
+The `call` parameter can be chain-specific data.
 
 ###### Parameters
+
+###### call
+
+`unknown`
+
+###### Returns
+
+`Promise`\<`any`\>
+
+##### write()
+
+> **write**(`call`): `Promise`\<`any`\>
+
+Defined in: [types.ts:386](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L386)
+
+Write (execute a transaction) on this chain, typically requiring signatures, etc.
+
+###### Parameters
+
+###### call
+
+`unknown`
+
+###### Returns
+
+`Promise`\<`any`\>
+
+***
+
+### LogEntry
+
+Defined in: [types.ts:348](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L348)
+
+Structure of a log entry
+
+#### Properties
+
+##### context
+
+> **context**: `string`
+
+Defined in: [types.ts:351](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L351)
+
+##### data?
+
+> `optional` **data**: `any`
+
+Defined in: [types.ts:353](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L353)
+
+##### level
+
+> **level**: [`LogLevel`](globals.md#loglevel)
+
+Defined in: [types.ts:349](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L349)
+
+##### message
+
+> **message**: `string`
+
+Defined in: [types.ts:352](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L352)
+
+##### timestamp
+
+> **timestamp**: `Date`
+
+Defined in: [types.ts:350](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L350)
+
+***
+
+### LoggerConfig
+
+Defined in: [types.ts:338](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L338)
+
+Configuration options for logging
+
+#### Properties
+
+##### enableColors?
+
+> `optional` **enableColors**: `boolean`
+
+Defined in: [types.ts:341](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L341)
+
+##### enableTimestamp?
+
+> `optional` **enableTimestamp**: `boolean`
+
+Defined in: [types.ts:340](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L340)
+
+##### level
+
+> **level**: [`LogLevel`](globals.md#loglevel)
+
+Defined in: [types.ts:339](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L339)
+
+##### logPath?
+
+> `optional` **logPath**: `string`
+
+Defined in: [types.ts:343](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L343)
+
+##### logToFile?
+
+> `optional` **logToFile**: `boolean`
+
+Defined in: [types.ts:342](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L342)
+
+##### logWriter?
+
+> `optional` **logWriter**: [`LogWriter`](globals.md#logwriter-1)
+
+Defined in: [types.ts:344](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L344)
+
+***
+
+### LogWriter
+
+Defined in: [types.ts:332](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L332)
+
+Interface for custom log writers
+
+#### Methods
+
+##### init()
+
+> **init**(`logPath`): `void`
+
+Defined in: [types.ts:333](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L333)
+
+###### Parameters
+
+###### logPath
+
+`string`
+
+###### Returns
+
+`void`
+
+##### write()
+
+> **write**(`data`): `void`
+
+Defined in: [types.ts:334](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L334)
+
+###### Parameters
+
+###### data
+
+`string`
+
+###### Returns
+
+`void`
+
+***
+
+### MemoryStore
+
+Defined in: [types.ts:21](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L21)
+
+Interface for storing and retrieving memory data
+
+#### Methods
+
+##### clear()
+
+> **clear**(): `Promise`\<`void`\>
+
+Defined in: [types.ts:25](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L25)
+
+###### Returns
+
+`Promise`\<`void`\>
+
+##### delete()
+
+> **delete**(`key`): `Promise`\<`void`\>
+
+Defined in: [types.ts:24](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L24)
+
+###### Parameters
+
+###### key
+
+`string`
+
+###### Returns
+
+`Promise`\<`void`\>
+
+##### get()
+
+> **get**\<`T`\>(`key`): `Promise`\<`null` \| `T`\>
+
+Defined in: [types.ts:22](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L22)
+
+###### Type Parameters
+
+• **T**
+
+###### Parameters
+
+###### key
+
+`string`
+
+###### Returns
+
+`Promise`\<`null` \| `T`\>
+
+##### set()
+
+> **set**\<`T`\>(`key`, `value`): `Promise`\<`void`\>
+
+Defined in: [types.ts:23](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L23)
+
+###### Type Parameters
+
+• **T**
+
+###### Parameters
+
+###### key
+
+`string`
+
+###### value
+
+`T`
+
+###### Returns
+
+`Promise`\<`void`\>
+
+***
+
+### ResearchConfig
+
+Defined in: [types.ts:363](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L363)
+
+Configuration for research operations
+
+#### Properties
+
+##### breadth
+
+> **breadth**: `number`
+
+Defined in: [types.ts:365](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L365)
+
+##### depth
+
+> **depth**: `number`
+
+Defined in: [types.ts:366](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L366)
+
+##### learnings?
+
+> `optional` **learnings**: `string`[]
+
+Defined in: [types.ts:367](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L367)
+
+##### query
+
+> **query**: `string`
+
+Defined in: [types.ts:364](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L364)
+
+##### visitedUrls?
+
+> `optional` **visitedUrls**: `string`[]
+
+Defined in: [types.ts:368](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L368)
+
+***
+
+### ResearchResult
+
+Defined in: [types.ts:357](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L357)
+
+Results from a research operation
+
+#### Properties
+
+##### learnings
+
+> **learnings**: `string`[]
+
+Defined in: [types.ts:358](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L358)
+
+##### visitedUrls
+
+> **visitedUrls**: `string`[]
+
+Defined in: [types.ts:359](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L359)
+
+***
+
+### WorkingMemory
+
+Defined in: [types.ts:28](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L28)
+
+#### Properties
+
+##### calls
+
+> **calls**: [`ActionCall`](globals.md#actioncalldata)\<`any`\>[]
+
+Defined in: [types.ts:32](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L32)
+
+##### inputs
+
+> **inputs**: [`InputRef`](globals.md#inputref)[]
+
+Defined in: [types.ts:29](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L29)
+
+##### outputs
+
+> **outputs**: [`OutputRef`](globals.md#outputref)[]
+
+Defined in: [types.ts:30](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L30)
+
+##### results
+
+> **results**: [`ActionResult`](globals.md#actionresultdata)\<`any`\>[]
+
+Defined in: [types.ts:33](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L33)
+
+##### thoughts
+
+> **thoughts**: [`Thought`](globals.md#thought)[]
+
+Defined in: [types.ts:31](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L31)
+
+## Type Aliases
+
+### Action\<Schema, Result, Context, TAgent\>
+
+> **Action**\<`Schema`, `Result`, `Context`, `TAgent`\>: `object`
+
+Defined in: [types.ts:43](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L43)
+
+Represents an action that can be executed with typed parameters
+
+#### Type Parameters
+
+• **Schema** *extends* `z.AnyZodObject` = `z.AnyZodObject`
+
+Zod schema defining parameter types
+
+• **Result** = `any`
+
+Return type of the action
+
+• **Context** = `any`
+
+Context type for the action execution
+
+• **TAgent** *extends* [`AnyAgent`](globals.md#anyagent) = [`AnyAgent`](globals.md#anyagent)
+
+#### Type declaration
+
+##### description?
+
+> `optional` **description**: `string`
+
+##### enabled()?
+
+> `optional` **enabled**: (`ctx`) => `boolean`
+
+###### Parameters
+
+###### ctx
+
+`Context`
+
+###### Returns
+
+`boolean`
+
+##### handler()
+
+> **handler**: (`call`, `ctx`, `agent`) => `Promise`\<`Result`\>
+
+###### Parameters
+
+###### call
+
+[`ActionCall`](globals.md#actioncalldata)\<`z.infer`\<`Schema`\>\>
+
+###### ctx
+
+`Context`
+
+###### agent
+
+`TAgent`
+
+###### Returns
+
+`Promise`\<`Result`\>
+
+##### install()?
+
+> `optional` **install**: (`agent`) => `Promise`\<`void`\>
+
+###### Parameters
+
+###### agent
+
+`TAgent`
+
+###### Returns
+
+`Promise`\<`void`\>
+
+##### name
+
+> **name**: `string`
+
+##### schema
+
+> **schema**: `Schema`
+
+***
+
+### ActionCall\<Data\>
+
+> **ActionCall**\<`Data`\>: `object`
+
+Defined in: [types.ts:125](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L125)
+
+Represents a call to an action
+
+#### Type Parameters
+
+• **Data** = `any`
+
+#### Type declaration
+
+##### data
+
+> **data**: `Data`
+
+##### id
+
+> **id**: `string`
+
+##### name
+
+> **name**: `string`
+
+##### ref
+
+> **ref**: `"action_call"`
+
+##### timestamp
+
+> **timestamp**: `number`
+
+***
+
+### ActionResult\<Data\>
+
+> **ActionResult**\<`Data`\>: `object`
+
+Defined in: [types.ts:134](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L134)
+
+Represents the result of an action execution
+
+#### Type Parameters
+
+• **Data** = `any`
+
+#### Type declaration
+
+##### callId
+
+> **callId**: `string`
+
+##### data
+
+> **data**: `Data`
+
+##### name
+
+> **name**: `string`
+
+##### processed?
+
+> `optional` **processed**: `boolean`
+
+##### ref
+
+> **ref**: `"action_result"`
+
+##### timestamp
+
+> **timestamp**: `number`
+
+***
+
+### AnyAgent
+
+> **AnyAgent**: [`Agent`](globals.md#agentmemory-t)\<`any`, `any`\>
+
+Defined in: [types.ts:211](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L211)
+
+***
+
+### AnyPrompt
+
+> **AnyPrompt**: [`Prompt`](globals.md#promptdata-variables)\<`any`, `any`\>
+
+Defined in: [prompt.ts:47](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L47)
+
+***
+
+### Chain
+
+> **Chain**: `object`
+
+Defined in: [types.ts:13](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L13)
+
+Represents an execution chain with experts and metadata
+
+#### Type declaration
+
+##### experts
+
+> **experts**: `object`[]
+
+##### id
+
+> **id**: `string`
+
+##### purpose
+
+> **purpose**: `string`
+
+##### thinking
+
+> **thinking**: `string`
+
+***
+
+### Config\<TMemory, TContextHandler, Context\>
+
+> **Config**\<`TMemory`, `TContextHandler`, `Context`\>: `object`
+
+Defined in: [types.ts:271](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L271)
+
+#### Type Parameters
+
+• **TMemory** *extends* [`WorkingMemory`](globals.md#workingmemory) = [`WorkingMemory`](globals.md#workingmemory)
+
+• **TContextHandler** *extends* [`ContextHandler`](globals.md#contexthandlert)\<`TMemory`\> = [`ContextHandler`](globals.md#contexthandlert)\<`TMemory`\>
+
+• **Context** = [`InferContextFromHandler`](globals.md#infercontextfromhandlerthandler)\<`TContextHandler`\>
+
+#### Type declaration
+
+##### actions?
+
+> `optional` **actions**: [`Action`](globals.md#actionschema-result-context-tagent)\<`any`, `any`, `Context`, [`Agent`](globals.md#agentmemory-t)\<`TMemory`, `TContextHandler`\>\>[]
+
+##### container?
+
+> `optional` **container**: `Container`
+
+##### context?
+
+> `optional` **context**: `TContextHandler`
+
+##### debugger?
+
+> `optional` **debugger**: [`Debugger`](globals.md#debugger-2)
+
+##### events?
+
+> `optional` **events**: `Record`\<`string`, `z.AnyZodObject`\>
+
+##### experts?
+
+> `optional` **experts**: `Record`\<`string`, [`ExpertConfig`](globals.md#expertconfigcontext)\<`Context`\>\>
+
+##### inputs?
+
+> `optional` **inputs**: `Record`\<`string`, [`InputConfig`](globals.md#inputconfigt-context-tagent)\<`any`, `Context`, [`Agent`](globals.md#agentmemory-t)\<`TMemory`, `TContextHandler`\>\>\>
+
+##### logger?
+
+> `optional` **logger**: [`LogLevel`](globals.md#loglevel)
+
+##### memory
+
+> **memory**: [`MemoryStore`](globals.md#memorystore)
+
+##### model
+
+> **model**: `LanguageModelV1`
+
+##### outputs?
+
+> `optional` **outputs**: `Record`\<`string`, [`OutputConfig`](globals.md#outputconfigt-context-tagent)\<`any`, `Context`, [`Agent`](globals.md#agentmemory-t)\<`TMemory`, `TContextHandler`\>\>\>
+
+##### reasoningModel?
+
+> `optional` **reasoningModel**: `LanguageModelV1`
+
+##### services?
+
+> `optional` **services**: `ServiceProvider`[]
+
+***
+
+### ContextHandler()\<T\>
+
+> **ContextHandler**\<`T`\>: (`memory`) => `object`
+
+Defined in: [types.ts:255](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L255)
+
+#### Type Parameters
+
+• **T** *extends* [`WorkingMemory`](globals.md#workingmemory) = [`WorkingMemory`](globals.md#workingmemory)
+
+#### Parameters
+
+##### memory
+
+[`MemoryStore`](globals.md#memorystore)
+
+#### Returns
+
+`object`
+
+##### get()
+
+> **get**: (`id`) => `Promise`\<\{ `id`: `string`; `memory`: `T`; \}\>
+
+###### Parameters
+
+###### id
+
+`string`
+
+###### Returns
+
+`Promise`\<\{ `id`: `string`; `memory`: `T`; \}\>
+
+##### render()
+
+> **render**: (`data`) => `string` \| `string`[]
+
+###### Parameters
+
+###### data
+
+`T`
+
+###### Returns
+
+`string` \| `string`[]
+
+##### save()
+
+> **save**: (`id`, `data`) => `Promise`\<`void`\>
+
+###### Parameters
+
+###### id
+
+`string`
+
+###### data
+
+`T`
+
+###### Returns
+
+`Promise`\<`void`\>
+
+***
+
+### COTProps
+
+> **COTProps**: `object`
+
+Defined in: [types.ts:153](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L153)
+
+Properties required for Chain-of-Thought execution
+
+#### Type declaration
+
+##### actions
+
+> **actions**: [`Action`](globals.md#actionschema-result-context-tagent)[]
+
+##### inputs
+
+> **inputs**: [`InputRef`](globals.md#inputref)[]
+
+##### logs
+
+> **logs**: [`Log`](globals.md#log)[]
+
+##### model
+
+> **model**: `LanguageModelV1`
+
+##### outputs
+
+> **outputs**: [`Output`](globals.md#outputschema-context-tagent)[]
+
+##### plan
+
+> **plan**: `string`
+
+***
+
+### COTResponse
+
+> **COTResponse**: `object`
+
+Defined in: [types.ts:163](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L163)
+
+Response structure from Chain-of-Thought execution
+
+#### Type declaration
+
+##### actions
+
+> **actions**: [`ActionCall`](globals.md#actioncalldata)[]
+
+##### outputs
+
+> **outputs**: [`OutputRef`](globals.md#outputref)[]
+
+##### plan
+
+> **plan**: `string`[]
+
+##### thinking
+
+> **thinking**: [`Thought`](globals.md#thought)[]
+
+***
+
+### Debugger()
+
+> **Debugger**: (`contextId`, `keys`, `data`) => `void`
+
+Defined in: [types.ts:269](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L269)
+
+#### Parameters
+
+##### contextId
+
+`string`
+
+##### keys
+
+`string`[]
+
+##### data
+
+`any`
+
+#### Returns
+
+`void`
+
+***
+
+### ElementNode\<Attributes\>
+
+> **ElementNode**\<`Attributes`\>: `object`
+
+Defined in: [xml.ts:67](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L67)
+
+#### Type Parameters
+
+• **Attributes** *extends* `Record`\<`string`, `string`\> = `Record`\<`string`, `any`\>
+
+#### Type declaration
+
+##### attributes
+
+> **attributes**: `Attributes`
+
+##### children?
+
+> `optional` **children**: [`Node`](globals.md#node)[]
+
+##### closed?
+
+> `optional` **closed**: `true`
+
+##### content
+
+> **content**: `string`
+
+##### name
+
+> **name**: `string`
+
+##### parent?
+
+> `optional` **parent**: [`Node`](globals.md#node)
+
+##### type
+
+> **type**: `"element"`
+
+***
+
+### Expert\<Context\>
+
+> **Expert**\<`Context`\>: `object`
+
+Defined in: [types.ts:198](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L198)
+
+Represents an expert system with instructions and actions
+
+#### Type Parameters
+
+• **Context** = `any`
+
+#### Type declaration
+
+##### actions?
+
+> `optional` **actions**: [`Action`](globals.md#actionschema-result-context-tagent)\<`any`, `any`, `Context`\>[]
+
+##### description
+
+> **description**: `string`
+
+##### instructions
+
+> **instructions**: `string`
+
+##### model?
+
+> `optional` **model**: `LanguageModelV1`
+
+##### type
+
+> **type**: `string`
+
+***
+
+### ExpertConfig\<Context\>
+
+> **ExpertConfig**\<`Context`\>: `Omit`\<[`Expert`](globals.md#expertcontext)\<`Context`\>, `"type"`\>
+
+Defined in: [types.ts:317](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L317)
+
+Configuration type for experts without type field
+
+#### Type Parameters
+
+• **Context** = `any`
+
+***
+
+### ExtractTemplateVariables\<T\>
+
+> **ExtractTemplateVariables**\<`T`\>: `T` *extends* `` `${infer Start}{{${infer Var}}}${infer Rest}` `` ? `Var` \| [`ExtractTemplateVariables`](globals.md#extracttemplatevariablest)\<`Rest`\> : `never`
+
+Defined in: [types.ts:184](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L184)
+
+Extracts variable names from a template string
+
+#### Type Parameters
+
+• **T** *extends* `string`
+
+Template string type
+
+***
+
+### Formatter()\<Variables, Data\>
+
+> **Formatter**\<`Variables`, `Data`\>: (`data`) => `Record`\<keyof `Variables`, `any`\>
+
+Defined in: [prompt.ts:8](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L8)
+
+#### Type Parameters
+
+• **Variables** *extends* `Record`\<`string`, `any`\> = `Record`\<`string`, `any`\>
+
+• **Data** = `any`
+
+#### Parameters
+
+##### data
+
+`Data`
+
+#### Returns
+
+`Record`\<keyof `Variables`, `any`\>
+
+***
+
+### GeneratePromptConfig\<TPrompt, Variables, Data, TFormatter\>
+
+> **GeneratePromptConfig**\<`TPrompt`, `Variables`, `Data`, `TFormatter`\>: `object`
+
+Defined in: [prompt.ts:55](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L55)
+
+#### Type Parameters
+
+• **TPrompt** *extends* [`AnyPrompt`](globals.md#anyprompt) \| `string` = `any`
+
+• **Variables** *extends* `Record`\<`string`, `any`\> = `any`
+
+• **Data** = `Record`\<`string`, `any`\>
+
+• **TFormatter** *extends* [`Formatter`](globals.md#formattervariables-data)\<`Variables`, `Data`\> = [`Formatter`](globals.md#formattervariables-data)\<`Variables`, `Data`\>
+
+#### Type declaration
+
+##### data
+
+> **data**: `Data`
+
+##### formatter?
+
+> `optional` **formatter**: `TFormatter`
+
+##### template
+
+> **template**: `TPrompt`
+
+##### variables
+
+> **variables**: `Variables`
+
+***
+
+### GetVisitors\<Output, T\>
+
+> **GetVisitors**\<`Output`, `T`\>: `{ [K in keyof T]?: PromptVisitor<Output, T[K]> }` & `object`
+
+Defined in: [prompt.ts:27](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L27)
+
+#### Type Parameters
+
+• **Output** = `any`
+
+• **T** *extends* `Record`\<`string`, `Record`\<`string`, `any`\>\> = `Record`\<`string`, `Record`\<`string`, `any`\>\>
+
+***
+
+### InferContextFromHandler\<THandler\>
+
+> **InferContextFromHandler**\<`THandler`\>: [`AgentContext`](globals.md#agentcontextmemory)\<[`InferMemoryFromHandler`](globals.md#infermemoryfromhandlerthandler)\<`THandler`\>\>
+
+Defined in: [types.ts:266](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L266)
+
+#### Type Parameters
+
+• **THandler** *extends* [`ContextHandler`](globals.md#contexthandlert)\<`any`\>
+
+***
+
+### InferFormatter\<TPrompt\>
+
+> **InferFormatter**\<`TPrompt`\>: `TPrompt` *extends* [`Prompt`](globals.md#promptdata-variables)\<infer Data, infer Variables\> ? [`Formatter`](globals.md#formattervariables-data)\<`Variables`, `Data`\> : `never`
+
+Defined in: [prompt.ts:13](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L13)
+
+#### Type Parameters
+
+• **TPrompt** *extends* [`AnyPrompt`](globals.md#anyprompt)
+
+***
+
+### InferGeneratePromptConfig\<TPrompt\>
+
+> **InferGeneratePromptConfig**\<`TPrompt`\>: `TPrompt` *extends* [`Prompt`](globals.md#promptdata-variables)\<infer Data, infer Variables\> ? [`GeneratePromptConfig`](globals.md#generatepromptconfigtprompt-variables-data-tformatter)\<`TPrompt`, `Variables`, `Data`\> : `never` \| `TPrompt` *extends* `string` ? [`GeneratePromptConfig`](globals.md#generatepromptconfigtprompt-variables-data-tformatter)\<`TPrompt`, [`TemplateVariables`](globals.md#templatevariablest)\<`TPrompt`\>\> : `never`
+
+Defined in: [prompt.ts:67](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L67)
+
+#### Type Parameters
+
+• **TPrompt** *extends* [`AnyPrompt`](globals.md#anyprompt) \| `string`
+
+***
+
+### InferMemoryFromHandler\<THandler\>
+
+> **InferMemoryFromHandler**\<`THandler`\>: `THandler` *extends* [`ContextHandler`](globals.md#contexthandlert)\<infer Memory\> ? `Memory` : `unknown`
+
+Defined in: [types.ts:263](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L263)
+
+#### Type Parameters
+
+• **THandler** *extends* [`ContextHandler`](globals.md#contexthandlert)\<`any`\>
+
+***
+
+### InferPromptComponents\<TPrompt\>
+
+> **InferPromptComponents**\<`TPrompt`\>: `TPrompt` *extends* [`Prompt`](globals.md#promptdata-variables)\<`any`, infer Components\> ? `Components` : `never`
+
+Defined in: [prompt.ts:75](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L75)
+
+#### Type Parameters
+
+• **TPrompt** *extends* [`AnyPrompt`](globals.md#anyprompt) \| `string`
+
+***
+
+### InferPromptData\<TPrompt\>
+
+> **InferPromptData**\<`TPrompt`\>: `TPrompt` *extends* [`Prompt`](globals.md#promptdata-variables)\<infer Data\> ? `Data` : `never`
+
+Defined in: [prompt.ts:52](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L52)
+
+#### Type Parameters
+
+• **TPrompt** *extends* [`AnyPrompt`](globals.md#anyprompt)
+
+***
+
+### InferPromptVariables\<TPrompt\>
+
+> **InferPromptVariables**\<`TPrompt`\>: `TPrompt` *extends* [`Prompt`](globals.md#promptdata-variables)\<`any`, infer Vars\> ? `Vars` : `never`
+
+Defined in: [prompt.ts:49](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L49)
+
+#### Type Parameters
+
+• **TPrompt** *extends* [`AnyPrompt`](globals.md#anyprompt)
+
+***
+
+### Input\<Schema, Context, TAgent\>
+
+> **Input**\<`Schema`, `Context`, `TAgent`\>: `object`
+
+Defined in: [types.ts:85](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L85)
+
+Represents an input handler with validation and subscription capability
+
+#### Type Parameters
+
+• **Schema** *extends* `z.AnyZodObject` = `z.AnyZodObject`
+
+Zod schema for input parameters
+
+• **Context** = `any`
+
+Context type for input handling
+
+• **TAgent** *extends* [`AnyAgent`](globals.md#anyagent) = [`AnyAgent`](globals.md#anyagent)
+
+#### Type declaration
+
+##### description?
+
+> `optional` **description**: `string`
+
+##### handler()
+
+> **handler**: (`params`, `ctx`, `agent`) => `Promise`\<`boolean`\> \| `boolean`
+
+###### Parameters
+
+###### params
+
+`z.infer`\<`Schema`\>
+
+###### ctx
+
+`Context`
+
+###### agent
+
+`TAgent`
+
+###### Returns
+
+`Promise`\<`boolean`\> \| `boolean`
+
+##### install()?
+
+> `optional` **install**: (`agent`) => `Promise`\<`void`\>
+
+###### Parameters
+
+###### agent
+
+`TAgent`
+
+###### Returns
+
+`Promise`\<`void`\>
+
+##### schema
+
+> **schema**: `Schema`
+
+##### subscribe()?
+
+> `optional` **subscribe**: (`send`, `agent`) => () => `void`
+
+###### Parameters
+
+###### send
+
+(`conversationId`, `data`) => `void`
+
+###### agent
+
+`TAgent`
+
+###### Returns
+
+`Function`
+
+###### Returns
+
+`void`
+
+##### type
+
+> **type**: `string`
+
+***
+
+### InputConfig\<T, Context, TAgent\>
+
+> **InputConfig**\<`T`, `Context`, `TAgent`\>: `Omit`\<[`Input`](globals.md#inputschema-context-tagent)\<`T`, `Context`, `TAgent`\>, `"type"`\>
+
+Defined in: [types.ts:303](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L303)
+
+Configuration type for inputs without type field
+
+#### Type Parameters
+
+• **T** *extends* `z.AnyZodObject` = `z.AnyZodObject`
+
+• **Context** = `any`
+
+• **TAgent** *extends* [`AnyAgent`](globals.md#anyagent) = [`AnyAgent`](globals.md#anyagent)
+
+***
+
+### InputRef
+
+> **InputRef**: `object`
+
+Defined in: [types.ts:106](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L106)
+
+Reference to an input event in the system
+
+#### Type declaration
+
+##### data
+
+> **data**: `any`
+
+##### params?
+
+> `optional` **params**: `Record`\<`string`, `string`\>
+
+##### processed?
+
+> `optional` **processed**: `boolean`
+
+##### ref
+
+> **ref**: `"input"`
+
+##### timestamp
+
+> **timestamp**: `number`
+
+##### type
+
+> **type**: `string`
+
+***
+
+### Log
+
+> **Log**: [`InputRef`](globals.md#inputref) \| [`OutputRef`](globals.md#outputref) \| [`Thought`](globals.md#thought) \| [`ActionCall`](globals.md#actioncalldata) \| [`ActionResult`](globals.md#actionresultdata)
+
+Defined in: [types.ts:150](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L150)
+
+***
+
+### Node
+
+> **Node**: [`TextNode`](globals.md#textnode) \| [`ElementNode`](globals.md#elementnodeattributes)
+
+Defined in: [xml.ts:79](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L79)
+
+***
+
+### NodeVisitor()
+
+> **NodeVisitor**: (`node`, `parse`) => [`Node`](globals.md#node)
+
+Defined in: [xml.ts:81](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L81)
+
+#### Parameters
+
+##### node
+
+[`Node`](globals.md#node)
+
+##### parse
+
+() => [`Node`](globals.md#node)[]
+
+#### Returns
+
+[`Node`](globals.md#node)
+
+***
+
+### Output\<Schema, Context, TAgent\>
+
+> **Output**\<`Schema`, `Context`, `TAgent`\>: `object`
+
+Defined in: [types.ts:63](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L63)
+
+#### Type Parameters
+
+• **Schema** *extends* [`OutputSchema`](globals.md#outputschema) = [`OutputSchema`](globals.md#outputschema)
+
+• **Context** = `any`
+
+• **TAgent** *extends* [`AnyAgent`](globals.md#anyagent) = [`AnyAgent`](globals.md#anyagent)
+
+#### Type declaration
+
+##### description
+
+> **description**: `string`
+
+##### enabled()?
+
+> `optional` **enabled**: (`ctx`) => `boolean`
+
+###### Parameters
+
+###### ctx
+
+`Context`
+
+###### Returns
+
+`boolean`
+
+##### handler()
+
+> **handler**: (`params`, `ctx`, `agent`) => `Promise`\<`boolean`\> \| `boolean`
+
+###### Parameters
+
+###### params
+
+`z.infer`\<`Schema`\>
+
+###### ctx
+
+`Context`
+
+###### agent
+
+`TAgent`
+
+###### Returns
+
+`Promise`\<`boolean`\> \| `boolean`
+
+##### install()?
+
+> `optional` **install**: (`agent`) => `Promise`\<`void`\>
+
+###### Parameters
+
+###### agent
+
+`TAgent`
+
+###### Returns
+
+`Promise`\<`void`\>
+
+##### schema
+
+> **schema**: `Schema`
+
+##### type
+
+> **type**: `string`
+
+***
+
+### OutputConfig\<T, Context, TAgent\>
+
+> **OutputConfig**\<`T`, `Context`, `TAgent`\>: `Omit`\<[`Output`](globals.md#outputschema-context-tagent)\<`T`, `Context`\>, `"type"`\>
+
+Defined in: [types.ts:310](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L310)
+
+Configuration type for outputs without type field
+
+#### Type Parameters
+
+• **T** *extends* [`OutputSchema`](globals.md#outputschema) = [`OutputSchema`](globals.md#outputschema)
+
+• **Context** = `any`
+
+• **TAgent** *extends* [`AnyAgent`](globals.md#anyagent) = [`AnyAgent`](globals.md#anyagent)
+
+***
+
+### OutputRef
+
+> **OutputRef**: `object`
+
+Defined in: [types.ts:116](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L116)
+
+Reference to an output event in the system
+
+#### Type declaration
+
+##### data
+
+> **data**: `any`
+
+##### params?
+
+> `optional` **params**: `Record`\<`string`, `string`\>
+
+##### ref
+
+> **ref**: `"output"`
+
+##### timestamp
+
+> **timestamp**: `number`
+
+##### type
+
+> **type**: `string`
+
+***
+
+### OutputSchema
+
+> **OutputSchema**: `z.AnyZodObject` \| `z.ZodString`
+
+Defined in: [types.ts:61](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L61)
+
+***
+
+### Parser()\<Output\>
+
+> **Parser**\<`Output`\>: (`content`) => `Output`
+
+Defined in: [prompt.ts:102](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L102)
+
+#### Type Parameters
+
+• **Output**
+
+#### Parameters
+
+##### content
+
+`string`
+
+#### Returns
+
+`Output`
+
+***
+
+### Pretty\<type\>
+
+> **Pretty**\<`type`\>: `{ [key in keyof type]: type[key] }` & `unknown`
+
+Defined in: [types.ts:178](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L178)
+
+Utility type to preserve type information
+
+#### Type Parameters
+
+• **type**
+
+***
+
+### Prompt()\<Data, Variables\>
+
+> **Prompt**\<`Data`, `Variables`\>: \<`TData`\>(`data`, `formatter`?) => `string`
+
+Defined in: [prompt.ts:39](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L39)
+
+#### Type Parameters
+
+• **Data** = `any`
+
+• **Variables** *extends* `Record`\<`string`, `any`\> = `Record`\<`string`, `any`\>
+
+#### Type Parameters
+
+• **TData** *extends* `Data`
+
+#### Parameters
+
+##### data
+
+`TData`
+
+##### formatter?
+
+[`Formatter`](globals.md#formattervariables-data)\<`Variables`, `TData`\>
+
+#### Returns
+
+`string`
+
+***
+
+### PromptVisitor()\<Output, Attributes\>
+
+> **PromptVisitor**\<`Output`, `Attributes`\>: (`output`, `node`, `parse`) => `void`
+
+Defined in: [prompt.ts:18](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L18)
+
+#### Type Parameters
+
+• **Output** = `any`
+
+• **Attributes** *extends* `Record`\<`string`, `any`\> = `Record`\<`string`, `any`\>
+
+#### Parameters
+
+##### output
+
+`Output`
+
+##### node
+
+[`ElementNode`](globals.md#elementnodeattributes)\<`Attributes`\>
+
+##### parse
+
+() => [`Node`](globals.md#node)[]
+
+#### Returns
+
+`void`
+
+***
+
+### Subscription()
+
+> **Subscription**: () => `void`
+
+Defined in: [types.ts:320](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L320)
+
+Function type for subscription cleanup
+
+#### Returns
+
+`void`
+
+***
+
+### Task
+
+> **Task**: `object`
+
+Defined in: [types.ts:7](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L7)
+
+Represents a task with text content and completion status
+
+#### Type declaration
+
+##### complete
+
+> **complete**: `boolean`
+
+##### text
+
+> **text**: `string`
+
+***
+
+### TemplateVariables\<T\>
+
+> **TemplateVariables**\<`T`\>: [`Pretty`](globals.md#prettytype)\<\{ \[K in ExtractTemplateVariables\<T\>\]: string \| string\[\] \| object \}\>
+
+Defined in: [types.ts:193](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L193)
+
+Creates a type mapping template variables to string values
+
+#### Type Parameters
+
+• **T** *extends* `string`
+
+Template string type
+
+***
+
+### TextNode
+
+> **TextNode**: `object`
+
+Defined in: [xml.ts:60](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L60)
+
+#### Type declaration
+
+##### children?
+
+> `optional` **children**: `never`
+
+##### content
+
+> **content**: `string`
+
+##### parent?
+
+> `optional` **parent**: [`Node`](globals.md#node)
+
+##### type
+
+> **type**: `"text"`
+
+***
+
+### Thought
+
+> **Thought**: `object`
+
+Defined in: [types.ts:144](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L144)
+
+Represents a thought or reasoning step
+
+#### Type declaration
+
+##### content
+
+> **content**: `string`
+
+##### ref
+
+> **ref**: `"thought"`
+
+##### timestamp
+
+> **timestamp**: `number`
+
+***
+
+### XMLElement
+
+> **XMLElement**: `object`
+
+Defined in: [types.ts:171](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L171)
+
+Represents an XML element structure
+
+#### Type declaration
+
+##### content
+
+> **content**: `string` \| ([`XMLElement`](globals.md#xmlelement) \| `string`)[]
+
+##### params?
+
+> `optional` **params**: `Record`\<`string`, `string`\>
+
+##### tag
+
+> **tag**: `string`
+
+## Functions
+
+### action()
+
+> **action**\<`Schema`, `Result`, `Context`, `TAgent`\>(`action`): [`Action`](globals.md#actionschema-result-context-tagent)\<`Schema`, `Result`, `Context`, `TAgent`\>
+
+Defined in: [utils.ts:66](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/utils.ts#L66)
+
+Creates an action configuration
+
+#### Type Parameters
+
+• **Schema** *extends* `AnyZodObject` = `AnyZodObject`
+
+Zod schema type for action parameters
+
+• **Result** = `any`
+
+Return type of the action
+
+• **Context** = `any`
+
+Context type for action execution
+
+• **TAgent** *extends* [`Agent`](globals.md#agentmemory-t)\<`any`, `any`\> = [`Agent`](globals.md#agentmemory-t)\<`any`, `any`\>
+
+#### Parameters
+
+##### action
+
+[`Action`](globals.md#actionschema-result-context-tagent)\<`Schema`, `Result`, `Context`, `TAgent`\>
+
+Action configuration object
+
+#### Returns
+
+[`Action`](globals.md#actionschema-result-context-tagent)\<`Schema`, `Result`, `Context`, `TAgent`\>
+
+Typed action configuration
+
+***
+
+### chainOfThought()
+
+> **chainOfThought**(`__namedParameters`): `Promise`\<[`COTResponse`](globals.md#cotresponse)\>
+
+Defined in: [cot.ts:81](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/cot.ts#L81)
+
+#### Parameters
+
+##### \_\_namedParameters
+
+[`COTProps`](globals.md#cotprops)
+
+#### Returns
+
+`Promise`\<[`COTResponse`](globals.md#cotresponse)\>
+
+***
+
+### createContextHandler()
+
+> **createContextHandler**\<`T`\>(`memoryCreator`, `renderContext`): (`memory`) => `object`
+
+Defined in: [memory.ts:4](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/memory.ts#L4)
+
+#### Type Parameters
+
+• **T**
+
+#### Parameters
+
+##### memoryCreator
+
+(`contextId`) => `T`
+
+##### renderContext
+
+(`context`) => `string` \| `string`[]
+
+#### Returns
+
+`Function`
+
+##### Parameters
+
+###### memory
+
+[`MemoryStore`](globals.md#memorystore)
+
+##### Returns
+
+`object`
+
+###### get()
+
+> **get**: (`contextId`) => `Promise`\<\{ `id`: `string`; `memory`: `T`; \}\>
+
+###### Parameters
+
+###### contextId
+
+`string`
+
+###### Returns
+
+`Promise`\<\{ `id`: `string`; `memory`: `T`; \}\>
+
+###### render()
+
+> **render**: (`context`) => `string` \| `string`[] = `renderContext`
+
+###### Parameters
+
+###### context
+
+`T`
+
+###### Returns
+
+`string` \| `string`[]
+
+###### save()
+
+> **save**: (`contextId`, `data`) => `Promise`\<`void`\>
+
+###### Parameters
+
+###### contextId
+
+`string`
+
+###### data
+
+`T`
+
+###### Returns
+
+`Promise`\<`void`\>
+
+***
+
+### createDreams()
+
+> **createDreams**\<`Memory`, `Handler`\>(`config`): [`Agent`](globals.md#agentmemory-t)\<`Memory`, `Handler`\>
+
+Defined in: [dreams.ts:168](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/dreams.ts#L168)
+
+#### Type Parameters
+
+• **Memory** *extends* [`WorkingMemory`](globals.md#workingmemory) = [`WorkingMemory`](globals.md#workingmemory)
+
+• **Handler** *extends* [`ContextHandler`](globals.md#contexthandlert)\<`Memory`\> = [`ContextHandler`](globals.md#contexthandlert)\<`Memory`\>
+
+#### Parameters
+
+##### config
+
+[`Config`](globals.md#configtmemory-tcontexthandler-context)\<`Memory`, `Handler`\>
+
+#### Returns
+
+[`Agent`](globals.md#agentmemory-t)\<`Memory`, `Handler`\>
+
+***
+
+### createMemoryStore()
+
+> **createMemoryStore**(): [`MemoryStore`](globals.md#memorystore)
+
+Defined in: [memory.ts:49](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/memory.ts#L49)
+
+#### Returns
+
+[`MemoryStore`](globals.md#memorystore)
+
+***
+
+### createParser()
+
+> **createParser**\<`Output`, `Components`, `Visitors`\>(`getOutput`, `visitors`): [`Parser`](globals.md#parseroutput)\<`Output`\>
+
+Defined in: [prompt.ts:104](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L104)
+
+#### Type Parameters
+
+• **Output** = `any`
+
+• **Components** *extends* `Record`\<`string`, `Record`\<`string`, `any`\>\> = `Record`\<`string`, `Record`\<`string`, `any`\>\>
+
+• **Visitors** *extends* [`GetVisitors`](globals.md#getvisitorsoutput-t)\<`Output`, `Components`\> = [`GetVisitors`](globals.md#getvisitorsoutput-t)\<`Output`, `Components`\>
+
+#### Parameters
+
+##### getOutput
+
+() => `Output`
+
+##### visitors
+
+`Visitors`
+
+#### Returns
+
+[`Parser`](globals.md#parseroutput)\<`Output`\>
+
+***
+
+### createPrompt()
+
+> **createPrompt**\<`Data`, `Template`, `Variables`\>(`prompt`, `formatter`): [`Prompt`](globals.md#promptdata-variables)\<`Data`, `Variables`\>
+
+Defined in: [prompt.ts:82](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L82)
+
+#### Type Parameters
+
+• **Data** *extends* `Record`\<`string`, `any`\> = `Record`\<`string`, `any`\>
+
+• **Template** *extends* `string` = `string`
+
+• **Variables** *extends* \{ \[key in string\]: \{ \[K in string\]: string \| object \| string\[\] \}\[key\] \} = \{ \[key in string\]: \{ \[K in string\]: string \| object \| string\[\] \}\[key\] \}
+
+#### Parameters
+
+##### prompt
+
+`Template`
+
+##### formatter
+
+[`Formatter`](globals.md#formattervariables-data)\<`Variables`, `Data`\>
+
+#### Returns
+
+[`Prompt`](globals.md#promptdata-variables)\<`Data`, `Variables`\>
+
+***
+
+### createTagParser()
+
+> **createTagParser**\<`T`\>(`tagName`, `contentParser`?): (`content`) => `object`[]
+
+Defined in: [xml.ts:36](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L36)
+
+#### Type Parameters
+
+• **T** = `string`
+
+#### Parameters
+
+##### tagName
+
+`string`
+
+##### contentParser?
+
+(`content`) => `T`
+
+#### Returns
+
+`Function`
+
+##### Parameters
 
 ###### content
 
 `string`
 
-###### roomId
+##### Returns
+
+`object`[]
+
+***
+
+### createTagRegex()
+
+> **createTagRegex**(`tagName`): `RegExp`
+
+Defined in: [xml.ts:29](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L29)
+
+Creates a regular expression to match XML tags with a specific name
+
+#### Parameters
+
+##### tagName
 
 `string`
 
-###### limit
+The name of the XML tag to match
 
-`number` = `5`
+#### Returns
 
-###### Returns
+`RegExp`
 
-`Promise`\<[`Memory`](namespaces/Types.md#memory)[]\>
+RegExp that matches the specified XML tag and captures its attributes and content
 
-##### getMemoriesFromRoom()
+***
 
-> **getMemoriesFromRoom**(`roomId`, `limit`?):
-> `Promise`\<[`Memory`](namespaces/Types.md#memory)[]\>
+### defaultContext()
 
-Defined in:
-[packages/core/src/core/room-manager.ts:237](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room-manager.ts#L237)
+> **defaultContext**(): [`WorkingMemory`](globals.md#workingmemory)
 
-###### Parameters
+Defined in: [memory.ts:25](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/memory.ts#L25)
 
-###### roomId
+#### Returns
 
-`string`
+[`WorkingMemory`](globals.md#workingmemory)
 
-###### limit?
+***
 
-`number`
+### defaultContextRender()
 
-###### Returns
+> **defaultContextRender**(`memory`): `string`[]
 
-`Promise`\<[`Memory`](namespaces/Types.md#memory)[]\>
+Defined in: [memory.ts:35](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/memory.ts#L35)
 
-##### getRoom()
+#### Parameters
 
-> **getRoom**(`roomId`): `Promise`\<`undefined` \| [`Room`](globals.md#room)\>
+##### memory
 
-Defined in:
-[packages/core/src/core/room-manager.ts:23](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room-manager.ts#L23)
+[`WorkingMemory`](globals.md#workingmemory)
 
-###### Parameters
+#### Returns
 
-###### roomId
+`string`[]
 
-`string`
+***
 
-###### Returns
+### expert()
 
-`Promise`\<`undefined` \| [`Room`](globals.md#room)\>
+> **expert**\<`Context`\>(`config`): [`ExpertConfig`](globals.md#expertconfigcontext)\<`Context`\>
 
-##### getRoomByPlatformId()
+Defined in: [utils.ts:97](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/utils.ts#L97)
 
-> **getRoomByPlatformId**(`platformId`, `platform`): `Promise`\<`undefined` \| >
-> [`Room`](globals.md#room)\>
-
-Defined in:
-[packages/core/src/core/room-manager.ts:71](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room-manager.ts#L71)
-
-###### Parameters
-
-###### platformId
-
-`string`
-
-###### platform
-
-`string`
-
-###### Returns
-
-`Promise`\<`undefined` \| [`Room`](globals.md#room)\>
-
-##### hasProcessedContentInRoom()
-
-> **hasProcessedContentInRoom**(`contentId`, `roomId`): `Promise`\<`boolean`\>
-
-Defined in:
-[packages/core/src/core/room-manager.ts:261](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room-manager.ts#L261)
-
-###### Parameters
-
-###### contentId
-
-`string`
-
-###### roomId
-
-`string`
-
-###### Returns
-
-`Promise`\<`boolean`\>
-
-##### listRooms()
-
-> **listRooms**(): `Promise`\<[`Room`](globals.md#room)[]\>
-
-Defined in:
-[packages/core/src/core/room-manager.ts:193](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room-manager.ts#L193)
-
-###### Returns
-
-`Promise`\<[`Room`](globals.md#room)[]\>
-
-##### markContentAsProcessed()
-
-> **markContentAsProcessed**(`contentId`, `roomId`): `Promise`\<`boolean`\>
-
-Defined in:
-[packages/core/src/core/room-manager.ts:284](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/room-manager.ts#L284)
-
-###### Parameters
-
-###### contentId
-
-`string`
-
-###### roomId
-
-`string`
-
-###### Returns
-
-`Promise`\<`boolean`\>
-
----
-
-### StepManager
-
-Defined in:
-[packages/core/src/core/step-manager.ts:7](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/step-manager.ts#L7)
-
-Manages a collection of steps with unique IDs. Provides methods to add,
-retrieve, update, and remove steps.
-
-#### Constructors
-
-##### new StepManager()
-
-> **new StepManager**(): [`StepManager`](globals.md#stepmanager)
-
-Defined in:
-[packages/core/src/core/step-manager.ts:16](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/step-manager.ts#L16)
-
-Creates a new StepManager instance with empty steps collection
-
-###### Returns
-
-[`StepManager`](globals.md#stepmanager)
-
-#### Methods
-
-##### addStep()
-
-> **addStep**(`step`): [`Step`](namespaces/Types.md#step-1)
-
-Defined in:
-[packages/core/src/core/step-manager.ts:27](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/step-manager.ts#L27)
-
-Adds a new step to the collection
-
-###### Parameters
-
-###### step
-
-[`Step`](namespaces/Types.md#step-1)
-
-The step to add
-
-###### Returns
-
-[`Step`](namespaces/Types.md#step-1)
-
-The added step
-
-###### Throws
-
-Error if a step with the same ID already exists
-
-##### clear()
-
-> **clear**(): `void`
-
-Defined in:
-[packages/core/src/core/step-manager.ts:95](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/step-manager.ts#L95)
-
-Removes all steps from the collection
-
-###### Returns
-
-`void`
-
-##### getStepById()
-
-> **getStepById**(`id`): `undefined` \| [`Step`](namespaces/Types.md#step-1)
-
-Defined in:
-[packages/core/src/core/step-manager.ts:50](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/step-manager.ts#L50)
-
-Finds a step by its ID
-
-###### Parameters
-
-###### id
-
-`string`
-
-The ID of the step to find
-
-###### Returns
-
-`undefined` \| [`Step`](namespaces/Types.md#step-1)
-
-The matching step or undefined if not found
-
-##### getSteps()
-
-> **getSteps**(): [`Step`](namespaces/Types.md#step-1)[]
-
-Defined in:
-[packages/core/src/core/step-manager.ts:41](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/step-manager.ts#L41)
-
-Gets all steps in the collection
-
-###### Returns
-
-[`Step`](namespaces/Types.md#step-1)[]
-
-Array of all steps
-
-##### removeStep()
-
-> **removeStep**(`id`): `void`
-
-Defined in:
-[packages/core/src/core/step-manager.ts:82](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/step-manager.ts#L82)
-
-Removes a step from the collection
-
-###### Parameters
-
-###### id
-
-`string`
-
-The ID of the step to remove
-
-###### Returns
-
-`void`
-
-###### Throws
-
-Error if step with given ID is not found
-
-##### updateStep()
-
-> **updateStep**(`id`, `updates`): `void`
-
-Defined in:
-[packages/core/src/core/step-manager.ts:60](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/step-manager.ts#L60)
-
-Updates an existing step with new properties
-
-###### Parameters
-
-###### id
-
-`string`
-
-The ID of the step to update
-
-###### updates
-
-`Partial`\<[`Step`](namespaces/Types.md#step-1)\>
-
-Partial step object containing properties to update
-
-###### Returns
-
-`void`
-
-###### Throws
-
-Error if step with given ID is not found
-
----
-
-### TaskScheduler\<T\>
-
-Defined in:
-[packages/core/src/core/task-scheduler.ts:6](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/task-scheduler.ts#L6)
-
-Priority queue implementation for scheduling tasks. Tasks are ordered by their
-nextRun timestamp.
+Creates an expert configuration
 
 #### Type Parameters
 
-• **T** _extends_ `object`
+• **Context** = `any`
 
-Type must include a nextRun timestamp property
+Context type for expert execution
 
-#### Constructors
+#### Parameters
 
-##### new TaskScheduler()
+##### config
 
-> **new TaskScheduler**\<`T`\>(`onTaskDue`):
-> [`TaskScheduler`](globals.md#taskschedulert)\<`T`\>
+[`ExpertConfig`](globals.md#expertconfigcontext)\<`Context`\>
 
-Defined in:
-[packages/core/src/core/task-scheduler.ts:13](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/task-scheduler.ts#L13)
+Expert configuration object
+
+#### Returns
+
+[`ExpertConfig`](globals.md#expertconfigcontext)\<`Context`\>
+
+Typed expert configuration
+
+***
+
+### formatAction()
+
+> **formatAction**(`action`): `string`
+
+Defined in: [formatters.ts:55](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/formatters.ts#L55)
+
+#### Parameters
+
+##### action
+
+[`Action`](globals.md#actionschema-result-context-tagent)\<`any`, `any`, `any`\>
+
+#### Returns
+
+`string`
+
+***
+
+### formatContext()
+
+> **formatContext**(`i`): `string`
+
+Defined in: [formatters.ts:76](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/formatters.ts#L76)
+
+#### Parameters
+
+##### i
+
+[`Log`](globals.md#log)
+
+#### Returns
+
+`string`
+
+***
+
+### formatInput()
+
+> **formatInput**(`input`): `string`
+
+Defined in: [formatters.ts:11](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/formatters.ts#L11)
+
+Formats an input reference into XML format
+
+#### Parameters
+
+##### input
+
+[`InputRef`](globals.md#inputref)
+
+The input reference to format
+
+#### Returns
+
+`string`
+
+XML string representation of the input
+
+***
+
+### formatOutput()
+
+> **formatOutput**(`output`): `string`
+
+Defined in: [formatters.ts:25](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/formatters.ts#L25)
+
+Formats an output reference into XML format
+
+#### Parameters
+
+##### output
+
+[`OutputRef`](globals.md#outputref)
+
+The output reference to format
+
+#### Returns
+
+`string`
+
+XML string representation of the output
+
+***
+
+### formatOutputInterface()
+
+> **formatOutputInterface**(`output`): `string`
+
+Defined in: [formatters.ts:41](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/formatters.ts#L41)
+
+Formats an output interface definition into XML format
+
+#### Parameters
+
+##### output
+
+[`Output`](globals.md#outputschema-context-tagent)
+
+The output interface to format
+
+#### Returns
+
+`string`
+
+XML string representation of the output interface
+
+***
+
+### formatValue()
+
+> **formatValue**(`value`): `string`
+
+Defined in: [utils.ts:35](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/utils.ts#L35)
+
+Formats a value for template rendering
+
+#### Parameters
+
+##### value
+
+`any`
+
+The value to format
+
+#### Returns
+
+`string`
+
+Formatted string representation of the value
+
+***
+
+### formatXml()
+
+> **formatXml**(`__namedParameters`): `string`
+
+Defined in: [xml.ts:10](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L10)
+
+Formats an XML element into a string representation
+
+#### Parameters
+
+##### \_\_namedParameters
+
+[`XMLElement`](globals.md#xmlelement)
+
+#### Returns
+
+`string`
+
+Formatted XML string
+
+***
+
+### getOrCreateConversationMemory()
+
+> **getOrCreateConversationMemory**(`memory`): `object`
+
+Defined in: [memory.ts:44](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/memory.ts#L44)
+
+#### Parameters
+
+##### memory
+
+[`MemoryStore`](globals.md#memorystore)
+
+#### Returns
+
+`object`
+
+##### get()
+
+> **get**: (`contextId`) => `Promise`\<\{ `id`: `string`; `memory`: [`WorkingMemory`](globals.md#workingmemory); \}\>
 
 ###### Parameters
 
-###### onTaskDue
+###### contextId
 
-(`task`) => `Promise`\<`void`\>
-
-Callback executed when a task is due to run
+`string`
 
 ###### Returns
 
-[`TaskScheduler`](globals.md#taskschedulert)\<`T`\>
+`Promise`\<\{ `id`: `string`; `memory`: [`WorkingMemory`](globals.md#workingmemory); \}\>
 
-#### Methods
+##### render()
 
-##### scheduleTask()
-
-> **scheduleTask**(`task`): `void`
-
-Defined in:
-[packages/core/src/core/task-scheduler.ts:20](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/task-scheduler.ts#L20)
-
-Schedules a new task or updates an existing one. Tasks are automatically sorted
-by nextRun timestamp.
+> **render**: (`context`) => `string` \| `string`[] = `renderContext`
 
 ###### Parameters
 
-###### task
+###### context
 
-`T`
-
-The task to schedule
+[`WorkingMemory`](globals.md#workingmemory)
 
 ###### Returns
 
-`void`
+`string` \| `string`[]
 
-##### stop()
+##### save()
 
-> **stop**(): `void`
+> **save**: (`contextId`, `data`) => `Promise`\<`void`\>
 
-Defined in:
-[packages/core/src/core/task-scheduler.ts:58](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/task-scheduler.ts#L58)
+###### Parameters
 
-Stops the scheduler and clears all pending tasks.
+###### contextId
+
+`string`
+
+###### data
+
+[`WorkingMemory`](globals.md#workingmemory)
 
 ###### Returns
 
-`void`
+`Promise`\<`void`\>
 
-## Variables
+***
 
-### defaultCharacter
+### getZodJsonSchema()
 
-> `const` **defaultCharacter**: [`Character`](namespaces/Types.md#character)
+> **getZodJsonSchema**(`schema`): `JsonSchema7Type`
 
-Defined in:
-[packages/core/src/core/character.ts:2](https://github.com/daydreamsai/daydreams/blob/f0e72101c0795a088a55fd072950f44bb2267eb0/packages/core/src/core/character.ts#L2)
+Defined in: [prompt.ts:78](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L78)
 
-## Namespaces
+#### Parameters
 
-- [Chains](namespaces/Chains.md)
-- [IO](namespaces/IO/README.md)
-- [Processors](namespaces/Processors.md)
-- [Providers](namespaces/Providers.md)
-- [Types](namespaces/Types.md)
-- [Utils](namespaces/Utils.md)
+##### schema
+
+`ZodType`\<`any`\>
+
+#### Returns
+
+`JsonSchema7Type`
+
+***
+
+### input()
+
+> **input**\<`Schema`, `Context`, `TAgent`\>(`config`): [`InputConfig`](globals.md#inputconfigt-context-tagent)\<`Schema`, `Context`, `TAgent`\>
+
+Defined in: [utils.ts:48](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/utils.ts#L48)
+
+Creates an input configuration
+
+#### Type Parameters
+
+• **Schema** *extends* `AnyZodObject` = `AnyZodObject`
+
+Zod schema type for input validation
+
+• **Context** = `any`
+
+Context type for input handling
+
+• **TAgent** *extends* [`Agent`](globals.md#agentmemory-t)\<`any`, `any`\> = [`Agent`](globals.md#agentmemory-t)\<`any`, `any`\>
+
+#### Parameters
+
+##### config
+
+[`InputConfig`](globals.md#inputconfigt-context-tagent)\<`Schema`, `Context`, `TAgent`\>
+
+Input configuration object
+
+#### Returns
+
+[`InputConfig`](globals.md#inputconfigt-context-tagent)\<`Schema`, `Context`, `TAgent`\>
+
+Typed input configuration
+
+***
+
+### isElement()
+
+> **isElement**(`node`): `node is ElementNode<Record<string, any>>`
+
+Defined in: [xml.ts:181](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L181)
+
+#### Parameters
+
+##### node
+
+[`Node`](globals.md#node)
+
+#### Returns
+
+`node is ElementNode<Record<string, any>>`
+
+***
+
+### isText()
+
+> **isText**(`node`): `node is TextNode`
+
+Defined in: [xml.ts:185](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L185)
+
+#### Parameters
+
+##### node
+
+[`Node`](globals.md#node)
+
+#### Returns
+
+`node is TextNode`
+
+***
+
+### llm()
+
+> **llm**(`__namedParameters`): `Promise`\<`GenerateTextResult`\<`Record`\<`string`, `CoreTool`\<`any`, `any`\>\>, `never`\>\>
+
+Defined in: [llm.ts:3](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/llm.ts#L3)
+
+#### Parameters
+
+##### \_\_namedParameters
+
+###### model
+
+`LanguageModelV1`
+
+###### prompt?
+
+`string`
+
+###### stopSequences?
+
+`string`[]
+
+###### system?
+
+`string`
+
+#### Returns
+
+`Promise`\<`GenerateTextResult`\<`Record`\<`string`, `CoreTool`\<`any`, `any`\>\>, `never`\>\>
+
+***
+
+### output()
+
+> **output**\<`Schema`, `Context`\>(`config`): [`OutputConfig`](globals.md#outputconfigt-context-tagent)\<`Schema`, `Context`\>
+
+Defined in: [utils.ts:84](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/utils.ts#L84)
+
+Creates an output configuration
+
+#### Type Parameters
+
+• **Schema** *extends* [`OutputSchema`](globals.md#outputschema) = [`OutputSchema`](globals.md#outputschema)
+
+Zod schema type for output validation
+
+• **Context** = `any`
+
+Context type for output handling
+
+#### Parameters
+
+##### config
+
+[`OutputConfig`](globals.md#outputconfigt-context-tagent)\<`Schema`, `Context`\>
+
+Output configuration object
+
+#### Returns
+
+[`OutputConfig`](globals.md#outputconfigt-context-tagent)\<`Schema`, `Context`\>
+
+Typed output configuration
+
+***
+
+### parse()
+
+> **parse**(`text`, `visitor`, `depth`, `parent`): [`Node`](globals.md#node)[]
+
+Defined in: [xml.ts:93](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L93)
+
+#### Parameters
+
+##### text
+
+`string`
+
+##### visitor
+
+[`NodeVisitor`](globals.md#nodevisitor)
+
+##### depth
+
+`number` = `0`
+
+##### parent
+
+`undefined` | [`Node`](globals.md#node)
+
+#### Returns
+
+[`Node`](globals.md#node)[]
+
+***
+
+### parseAttributes()
+
+> **parseAttributes**(`text`): `Record`\<`string`, `string`\>
+
+Defined in: [xml.ts:83](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L83)
+
+#### Parameters
+
+##### text
+
+`string`
+
+#### Returns
+
+`Record`\<`string`, `string`\>
+
+***
+
+### render()
+
+> **render**\<`Template`\>(`str`, `data`): `string`
+
+Defined in: [utils.ts:19](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/utils.ts#L19)
+
+Renders a template string by replacing variables with provided values
+
+#### Type Parameters
+
+• **Template** *extends* `string`
+
+The template string type containing variables in {{var}} format
+
+#### Parameters
+
+##### str
+
+`Template`
+
+The template string to render
+
+##### data
+
+\{ \[key in string\]: \{ \[K in string\]: string \| object \| string\[\] \}\[key\] \}
+
+Object containing values for template variables
+
+#### Returns
+
+`string`
+
+The rendered string with variables replaced
+
+***
+
+### splitTextIntoChunks()
+
+> **splitTextIntoChunks**(`text`, `options`): `string`[]
+
+Defined in: [utils.ts:107](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/utils.ts#L107)
+
+#### Parameters
+
+##### text
+
+`string`
+
+##### options
+
+`ChunkOptions`
+
+#### Returns
+
+`string`[]

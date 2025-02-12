@@ -2,80 +2,24 @@
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Daydreams is a powerful generative agent library for executing anything onchain.
-It is chain agnostic and can be used to perform tasks - by simply injecting
-context with api documentation. Whether you're building on Base, Solana,
-Ethereum, Starknet, or other chains, Daydreams has you covered.
+# Generative Agent Framework
 
-Think of it as an opinionated framework for building next generation agents.
+Daydreams is a powerful framework for building generative agents that can
+execute tasks across any blockchain or API.
 
-## Key Features
+- 🔗 Chain-agnostic blockchain interactions
+- 👥 Multi-expert collaboration
+- 🧠 Memory and context management made simple
+- 🎯 Long term goal-oriented behavior
+- 💾 Long-term memory made simple
+- 🤔 Multi-step reasoning using Hierarchical Task Networks
 
-- 🤖 **Chain Agnostic** - Works with any blockchain through simple context
-  injection
-- 🧠 **Chain of Thought Processing** - Sophisticated reasoning engine for
-  complex decision making
-- 🔄 **Flexible Handler System** - Easy to compose input, action, and output
-  handlers
-- 💾 **Built-in Memory** - Vector database integration for experience storage
-  and retrieval
-- 🎯 **Goal-Oriented** - Hierarchical goal planning and execution
-- 🤝 **Multi-Agent Ready** - Built for swarm intelligence and agent
-  collaboration
+## Prerequisites
 
-## Generative Framework
-
-Unlike traditional frameworks that require explicit integrations, Daydreams uses
-a generative approach where the agent dynamically creates and executes actions
-through Chain of Thought processing. This means:
-
-- **Zero-Shot Integration**: Agents can interact with new protocols without
-  pre-built integrations
-- **Dynamic Function Creation**: Actions are generated on-the-fly based on
-  context and goals
-- **Adaptive Behavior**: Agents learn and evolve strategies through experience
-- **Minimal Setup**: Just provide context and goals - the agent figures out the
-  rest
-
-## LLM Support
-
-Daydreams supports all major LLM providers and open source models:
-
-- **OpenRouter**: Access to the latest open source models (Mistral, Llama,
-  DeepSeek, etc.)
-- **OpenAI**: o1, o1-mini
-- **Anthropic**: Claude 3.5 Sonnet
-- **Google**: Gemini
-- **Custom**: Bring your own LLM implementation
-
-## Architecture
-
-At its core, Daydreams is built around a simple yet powerful concept: everything
-is an IO (Input/Output) operation. The Orchestrator acts as the central nervous
-system, managing a stream of IO handlers that can be composed together for
-maximum speed and flexibility.
-
-```typescript
-// Everything in Daydreams is an IO handler
-type IOHandler = {
-  name: string;
-  role: "input" | "output" | "action";
-  handler: (payload: any) => Promise<any>;
-  schema: z.ZodSchema;
-};
-```
-
-This IO-centric design means you can:
-
-- Easily plug in new capabilities through handlers
-- Process multiple operations in parallel
-- Chain handlers together for complex workflows
-- Hot-swap components without rebuilding
-- Scale horizontally across multiple agents
+- Node.js 18+ using [nvm](https://github.com/nvm-sh/nvm)
+- [bun](https://bun.sh/)
 
 ## Quick Start
-
-Get started with Daydreams in minutes:
 
 :::code-group
 
@@ -97,87 +41,81 @@ bun add @daydreamsai/core
 
 :::
 
-### Basic Usage
+## Concepts
 
-Here's a simple example to get you started:
+All dreams agents are a collection of inputs, outputs, actions and memory.
+Simple, and elegant.
 
 ```typescript
-// Initialize LLM client
-const llmClient = new LLMClient({
-  model: "openrouter:deepseek/deepseek-r1-distill-llama-70b",
-  temperature: 0.3,
-});
+createDreams({
+  inputs: {}, // sources of information
+  outputs: {}, // ways to take action
+  memory: createMemoryStore(), // storage for conversation history and state
 
-// Initialize vector database for memory storage
-const vectorDb = new ChromaVectorDB("twitter_agent", {
-  chromaUrl: "http://localhost:8000",
-  logLevel: loglevel,
-});
-
-// Create a Master Processor
-const masterProcessor = new MasterProcessor(
-  llmClient,
-  defaultCharacter,
-  loglevel
-);
-
-// Add message processor to master processor
-// You can define as many processors as you want and the master will decide which one to use
-masterProcessor.addProcessor([
-  new MessageProcessor(llmClient, defaultCharacter, loglevel),
-]);
-
-// Initialize the orchestrator
-const orchestrator = new Orchestrator(
-  masterProcessor,
-  makeFlowLifecycle(new MongoDb(), new ConversationManager(vectorDb)),
-  {
-    level: loglevel,
-    enableColors: true,
-    enableTimestamp: true,
-  }
-);
-// Register an IO handler
-orchestrator.registerIOHandler({
-  name: "simple_action",
-  role: "action",
-  schema: z.object({
-    message: z.string(),
-  }),
-  handler: async (payload) => {
-    console.log(`Executing action: ${payload.message}`);
-    return { success: true };
-  },
+  actions: [], // @optional discrete operations
+  experts: [], // @optional specialized modules for specific tasks
+  container: createContainer(), // @optional dependency injection container
 });
 ```
 
-## Core Concepts
+- **Inputs** 📥 - Ways to receive information (Discord, Telegram, API webhooks
+  etc)
+- **Outputs** 📤 - Ways to take action (sending messages, making transactions
+  etc)
+- **Memory** 🧠 - Storage for conversation history and state
+- **Actions** ⚡ - @optional Discrete operations the agent can perform
+- **Experts** 🎓 - @optional Specialized modules for specific tasks
+- **Container** 📦 - @optional dependency injection container
 
-Daydreams is built around several key concepts:
+### Basic Usage
 
-### Orchestrator
+Dreams agents are all functional. `createDreams` is a function that returns an
+agent object, which can be run with `await agent.run()`. Inject discord,
+telegram, or any other input/output to the agent and define your own actions.
 
-The central component that manages data flow, registers handlers, and maintains
-autonomous operation.
+```typescript
+const agent = createDreams({
+  // @dev Use any LLM provider. All major providers are supported.
+  model: groq("llama-70b"),
 
-### Handlers
+  // @dev Define your own memory store.
+  memory: createMemoryStore(),
 
-Building blocks that process data and produce outputs:
+  // @dev Define your own inputs.
+  inputs: {
+    "discord:message": input({
+      schema: messageSchema,
+      handler: handleMessage,
+    }),
+  },
 
-- **Input Handlers**: Process incoming data (messages, API webhooks)
-- **Action Handlers**: Execute operations and return results
-- **Output Handlers**: Produce side effects (sending messages, updating UI)
+  // @dev Define your own outputs.
+  outputs: {
+    "discord:reply": output({
+      schema: replySchema,
+      handler: sendReply,
+    }),
+  },
 
-### Chain of Thought
+  // @dev Define your own actions.
+  actions: [searchWeb],
+});
 
-The reasoning engine that:
-
-- Plans strategies for achieving goals
-- Breaks down complex tasks
-- Executes actions
-- Learns from experiences
+// Run the agent
+await agent.run();
+```
 
 ### Memory System
 
-Stores and retrieves experiences using vector databases for contextual decision
-making.
+The memory system stores conversation history and execution state:
+
+```typescript
+// In-memory store
+const memory = createMemoryStore();
+
+// MongoDB store
+const mongoMemory = await createMongoMemoryStore({
+  uri: "mongodb://...",
+  dbName: "dreams",
+});
+```

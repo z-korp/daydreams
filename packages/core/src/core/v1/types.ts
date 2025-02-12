@@ -481,3 +481,8 @@ export type Context<
 
   // exports?: () => Exports;
 };
+export enum HandlerRole {
+  INPUT = "input",
+  OUTPUT = "output",
+  ACTION = "action",
+}

@@ -1,5 +1,5 @@
 {
-  "entryPoints": ["../packages/core/src/core/index.ts"],
+  "entryPoints": ["../packages/core/src/core/v1/index.ts"],
   "out": "docs/pages/api-reference",
   "plugin": ["typedoc-plugin-markdown", "typedoc-plugin-frontmatter"],
   "hidePageHeader": true,
