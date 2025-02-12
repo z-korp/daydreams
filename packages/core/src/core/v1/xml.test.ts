@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { isElement, parse } from "./xml";
+import { isElement, parse, type ElementNode } from "./xml";
 
 describe("XMLParser", () => {
   test("parses simple element", () => {
@@ -166,8 +166,8 @@ describe("XMLParser", () => {
 
     const children = nodes[0].children;
     expect(children).toHaveLength(3);
-    expect(children?.[0].name).toBe("thought");
-    expect(children?.[2].name).toBe("final_answer");
+    expect((children?.[0] as ElementNode).name).toBe("thought");
+    expect((children?.[2] as ElementNode).name).toBe("final_answer");
   });
 
   test("handles mixed content with code blocks", () => {
@@ -221,7 +221,7 @@ describe("XMLParser", () => {
     const function_node = nodes[0].children?.find(
       (c) => c.type === "element" && c.name === "function"
     );
-    expect(function_node?.attributes.name).toBe("analyze");
+    expect((function_node as ElementNode).attributes.name).toBe("analyze");
     expect(function_node?.children).toHaveLength(3);
   });
 

@@ -1,6 +1,19 @@
 import { Hyperliquid } from "hyperliquid";
-import { Logger } from "../../core/logger";
+import { Logger } from "../logger";
 import { LogLevel } from "../types";
+import { z } from "zod";
+
+const envSchema = z.object({
+  HYPERLIQUID_MAIN_ADDRESS: z.string(),
+  HYPERLIQUID_WALLET_ADDRESS: z.string(),
+  HYPERLIQUID_PRIVATE_KEY: z.string(),
+  WEBSOCKET_URL: z.string().default("ws://localhost:8080"),
+  DRY_RUN: z
+    .preprocess((val) => val === "1" || val === "true", z.boolean())
+    .default(true),
+});
+
+export const env = envSchema.parse(process.env);
 
 export interface HyperliquidCredentials {
   mainAddress: string;

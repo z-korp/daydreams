@@ -1,9 +1,20 @@
-import type { JSONSchemaType } from "ajv";
-import { Logger } from "../../core/logger";
+import { z } from "zod";
+import { Logger } from "../logger";
 import { LogLevel } from "../types";
-import { env } from "../../core/env";
 import { Api, TelegramClient as GramJSClient } from "telegram";
 import { StringSession, Session } from "telegram/sessions";
+
+const envSchema = z.object({
+  DRY_RUN: z
+    .preprocess((val) => val === "1" || val === "true", z.boolean())
+    .default(true),
+  TELEGRAM_STARTUP_CHAT_ID: z.string().optional(),
+  TELEGRAM_USER_SESSION: z.string().optional(),
+  TELEGRAM_TOKEN: z.string(),
+  TELEGRAM_API_ID: z.string(),
+  TELEGRAM_API_HASH: z.string(),
+});
+export const env = envSchema.parse(process.env);
 
 export interface User {
   /** Unique identifier for this user or bot. */
