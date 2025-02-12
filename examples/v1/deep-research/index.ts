@@ -1,26 +1,16 @@
-import {
-  AnyAgent,
-  LogLevel,
-  WorkingMemory,
-} from "@daydreamsai/core/src/core/v1/types";
+import { LogLevel } from "@daydreamsai/core/src/core/v1/types";
 import { createDreams } from "@daydreamsai/core/src/core/v1/dreams";
 import {
-  createContextHandler,
   createMemoryStore,
   defaultContext,
-  defaultContextRender,
 } from "@daydreamsai/core/src/core/v1/memory";
 import { createGroq } from "@ai-sdk/groq";
-import { action, input, output } from "@daydreamsai/core/src/core/v1/utils";
+import { input, output } from "@daydreamsai/core/src/core/v1/utils";
 import { z } from "zod";
-import { Research, researchDeepActions } from "./research";
+import { researchDeepActions } from "./research";
 import * as readline from "readline/promises";
 import { tavily } from "@tavily/core";
-import { formatXml } from "@daydreamsai/core/src/core/v1/xml";
 import createContainer from "@daydreamsai/core/src/core/v1/container";
-import { service } from "@daydreamsai/core/src/core/v1/serviceProvider";
-import { formatResearch } from "./prompts";
-import { DiscordClient } from "../../../packages/core/src/core/v0/io/discord";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -40,22 +30,6 @@ const container = createContainer()
   );
 
 container.resolve(tavily);
-
-// const contextHandler = createContextHandler(
-//   () => ({
-//     ...defaultContext(),
-//     researches: [] as Research[],
-//   }),
-//   (memory) => {
-//     return [
-//       ...defaultContextRender(memory),
-//       ...memory.researches.map(formatResearch),
-//     ];
-//   }
-// );
-
-// type Handler = typeof contextHandler;
-// type Memory = InferMemoryFromHandler<Handler>;
 
 const rl = readline.createInterface({
   input: process.stdin,
