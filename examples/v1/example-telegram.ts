@@ -1,17 +1,17 @@
 import { z } from "zod";
-import { createDreams } from "../../packages/core/src/core/v1/dreams";
+import { createDreams } from "@daydreamsai/core/src/core/v1/dreams";
 import {
   action,
   context,
   input,
   output,
   splitTextIntoChunks,
-} from "../../packages/core/src/core/v1/utils";
+} from "@daydreamsai/core/src/core/v1/utils";
 import { Telegraf } from "telegraf";
-import { createMemoryStore } from "../../packages/core/src/core/v1/memory";
+import { createMemoryStore } from "@daydreamsai/core/src/core/v1/memory";
 import { createGroq } from "@ai-sdk/groq";
 import { tavily, TavilyClient } from "@tavily/core";
-import { LogLevel, WorkingMemory } from "../../packages/core/src/core/v1/types";
+import { LogLevel, WorkingMemory } from "@daydreamsai/core/src/core/v1/types";
 import createContainer from "@daydreamsai/core/src/core/v1/container";
 import { service } from "@daydreamsai/core/src/core/v1/serviceProvider";
 

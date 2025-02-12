@@ -1,14 +1,21 @@
 import { z } from "zod";
-import { createDreams } from "../../packages/core/src/core/v1/dreams";
-import { action, input, output } from "../../packages/core/src/core/v1/utils";
-import { DiscordClient } from "../../packages/core/src/core/v0/io/discord";
-import { LogLevel, WorkingMemory } from "../../packages/core/src/core/v1/types";
-import { createMemoryStore } from "../../packages/core/src/core/v1/memory";
+import { createDreams } from "@daydreamsai/core/src/core/v1/dreams";
+import {
+  action,
+  context,
+  input,
+  output,
+} from "@daydreamsai/core/src/core/v1/utils";
+import { DiscordClient } from "@daydreamsai/core/src/core/v1/io/discord";
+import { LogLevel, WorkingMemory } from "@daydreamsai/core/src/core/v1/types";
+import { createMemoryStore } from "@daydreamsai/core/src/core/v1/memory";
 import { Octokit } from "@octokit/rest";
 import { google } from "@ai-sdk/google";
 import { tavily } from "@tavily/core";
 import createContainer from "@daydreamsai/core/src/core/v1/container";
 import { createGroq } from "@ai-sdk/groq";
+import { Events } from "discord.js";
+import { Message } from "discord.js";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -45,6 +52,23 @@ const container = createContainer()
       )
   );
 
+container.resolve(tavily);
+
+const discordChannelContext = context({
+  type: "discord:channel",
+  key: ({ channelId }) => channelId,
+  schema: z.object({ channelId: z.string() }),
+  async setup(args, agent) {
+    const channel = await container
+      .resolve<DiscordClient>("discord")
+      .client.channels.fetch(args.channelId);
+
+    if (!channel) throw new Error("Invalid channel");
+
+    return { channel };
+  },
+});
+
 createDreams<WorkingMemory>({
   logger: LogLevel.DEBUG,
   model: google("gemini-2.0-flash-001"),
@@ -52,8 +76,8 @@ createDreams<WorkingMemory>({
   inputs: {
     "discord:message": input({
       schema: z.object({
-        chat: z.object({ id: z.number() }),
-        user: z.object({ id: z.string() }),
+        chat: z.object({ id: z.string() }),
+        user: z.object({ id: z.string(), name: z.string() }),
         text: z.string(),
       }),
       handler: (message, { memory }) => {
@@ -67,30 +91,39 @@ createDreams<WorkingMemory>({
 
         return true;
       },
-      subscribe(send, app) {
-        const discord = app.container.resolve<DiscordClient>("discord");
-
-        discord.startMessageStream((content) => {
-          if ("data" in content) {
-            send(`discord:${content.threadId}`, {
+      subscribe(send, agent) {
+        function listener(message: Message) {
+          if (
+            message.author.displayName ==
+            container.resolve<DiscordClient>("discord").credentials
+              .discord_bot_name
+          ) {
+            console.log(
+              `Skipping message from ${container.resolve<DiscordClient>("discord").credentials.discord_bot_name}`
+            );
+            return;
+          }
+          send(
+            discordChannelContext,
+            { channelId: message.channelId },
+            {
               chat: {
-                id: parseInt(content.threadId),
+                id: message.channelId,
               },
               user: {
-                id: content.threadId,
+                id: message.member!.id,
+                name: message.member!.displayName,
               },
-              text:
-                content.data &&
-                typeof content.data === "object" &&
-                "content" in content.data
-                  ? (content.data.content as string)
-                  : "",
-            });
-          }
-        });
+              text: message.content,
+            }
+          );
+        }
 
+        const discord = agent.container.resolve<DiscordClient>("discord");
+
+        discord.client.on(Events.MessageCreate, listener);
         return () => {
-          discord.stopMessageStream();
+          discord.client.off(Events.MessageCreate, listener);
         };
       },
     }),
@@ -128,7 +161,6 @@ createDreams<WorkingMemory>({
   },
 
   actions: [
-    // action({ ...tavilySearch }),
     action({
       name: "fetchGitHubRepo",
       description: "Fetch and analyze contents of a GitHub repository",
