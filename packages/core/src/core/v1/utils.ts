@@ -109,10 +109,19 @@ export function expert<Context = any>(config: ExpertConfig<Context>) {
   return config;
 }
 
+/**
+ * Options for text chunking
+ */
 interface ChunkOptions {
   maxChunkSize: number;
 }
 
+/**
+ * Splits text into chunks based on maximum chunk size
+ * @param text - The text to split into chunks
+ * @param options - Chunking options including maximum chunk size
+ * @returns Array of text chunks
+ */
 export function splitTextIntoChunks(
   text: string,
   options: ChunkOptions
@@ -143,6 +152,15 @@ export function splitTextIntoChunks(
   return chunks;
 }
 
+/**
+ * Creates a context configuration
+ * @template Memory - Type of working memory
+ * @template Args - Zod schema type for context arguments
+ * @template Ctx - Type of context data
+ * @template Exports - Type of exported data
+ * @param ctx - Context configuration object
+ * @returns Typed context configuration
+ */
 export function context<
   Memory extends WorkingMemory = WorkingMemory,
   Args extends z.ZodTypeAny = any,
@@ -152,6 +170,12 @@ export function context<
   return ctx;
 }
 
+/**
+ * Creates a memory configuration
+ * @template Data - Type of data stored in memory
+ * @param memory - Memory configuration object
+ * @returns Typed memory configuration
+ */
 export function memory<Data = any>(memory: Memory<Data>) {
   return memory;
 }

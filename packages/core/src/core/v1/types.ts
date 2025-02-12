@@ -3,35 +3,83 @@ import { z } from "zod";
 import type { Container } from "./container";
 import type { ServiceProvider } from "./serviceProvider";
 
+/**
+ * Represents a memory configuration for storing data
+ * @template Data - Type of data stored in memory
+ */
 export type Memory<Data = any> = {
+  /** Unique identifier for this memory */
   key: string;
+  /** Function to initialize memory data */
   create: () => Promise<Data> | Data;
 };
 
+/**
+ * Extracts the data type from a Memory type
+ * @template TMemory - Memory type to extract data from
+ */
 export type InferMemoryData<TMemory extends Memory<any>> =
   TMemory extends Memory<infer Data> ? Data : never;
 
-/** Represents an execution chain with experts and metadata */
+/**
+ * Represents an execution chain with experts and metadata
+ */
 export type Chain = {
+  /** Unique identifier for the chain */
   id: string;
+  /** Current thinking/reasoning state */
   thinking: string;
+  /** Goal or purpose of this chain */
   purpose: string;
+  /** List of experts involved in the chain */
   experts: { name: string; data: string }[];
 };
 
-/** Interface for storing and retrieving memory data */
+/**
+ * Interface for storing and retrieving memory data
+ */
 export interface MemoryStore {
+  /**
+   * Retrieves data from memory
+   * @template T - Type of data to retrieve
+   * @param key - Key to lookup
+   * @returns Promise resolving to data or null if not found
+   */
   get<T>(key: string): Promise<T | null>;
+
+  /**
+   * Stores data in memory
+   * @template T - Type of data to store
+   * @param key - Key to store under
+   * @param value - Data to store
+   */
   set<T>(key: string, value: T): Promise<void>;
+
+  /**
+   * Removes data from memory
+   * @param key - Key to remove
+   */
   delete(key: string): Promise<void>;
+
+  /**
+   * Removes all data from memory
+   */
   clear(): Promise<void>;
 }
 
+/**
+ * Represents the working memory state during execution
+ */
 export interface WorkingMemory {
+  /** List of input references */
   inputs: InputRef[];
+  /** List of output references */
   outputs: OutputRef[];
+  /** List of thought records */
   thoughts: Thought[];
+  /** List of action calls */
   calls: ActionCall[];
+  /** List of action results */
   results: ActionResult[];
   // chains: Chain[];
 }
@@ -434,40 +482,64 @@ export interface IChain {
    */
   write(call: unknown): Promise<any>;
 }
-
+/** Type representing instructions that can be either a single string or array of strings */
 export type Instruction = string | string[];
 
+/** Type representing any Context with generic type parameters */
 export type AnyContext = Context<any, any, any, any>;
 
+/**
+ * Extracts the Memory type from a Context type
+ * @template TContext - The Context type to extract Memory from
+ */
 export type InferContextMemory<TContext extends AnyContext> =
   TContext extends Context<infer Memory> ? Memory : never;
 
+/**
+ * Extracts the Context type from a Context type
+ * @template TContext - The Context type to extract Ctx from
+ */
 export type InferContextCtx<TContext extends AnyContext> =
   TContext extends Context<any, any, infer Ctx> ? Ctx : never;
 
+/**
+ * Configuration for a context that manages state and behavior
+ * @template Memory - Type of working memory for this context
+ * @template Args - Zod schema type for context arguments
+ * @template Ctx - Type of context data
+ * @template Exports - Type of exported data
+ */
 export type Context<
   Memory extends WorkingMemory = WorkingMemory,
   Args extends z.ZodTypeAny = never,
   Ctx = any,
   Exports = any,
 > = {
+  /** Unique type identifier for this context */
   type: string;
+  /** Zod schema for validating context arguments */
   schema: Args;
+  /** Optional description of this context */
   description?: string;
+  /** Function to generate a unique key from context arguments */
   key: (args: z.infer<Args>) => string;
 
+  /** Setup function to initialize context data */
   setup: (args: z.infer<Args>, agent: AnyAgent) => Promise<Ctx> | Ctx;
 
+  /** Optional instructions for this context */
   instructions?:
     | Instruction
     | ((params: { key: string; args: z.infer<Args> }, ctx: Ctx) => Instruction);
 
-  // memory
+  /** Optional function to create new memory for this context */
   create?: (params: { key: string; args: z.infer<Args> }, ctx: Ctx) => Memory;
+  /** Optional function to load existing memory */
   load?: (
     params: { key: string; args: z.infer<Args> },
     ctx: Ctx
   ) => Promise<Memory>;
+  /** Optional function to save memory state */
   save?: (
     params: {
       key: string;
@@ -477,12 +549,16 @@ export type Context<
     ctx: Ctx
   ) => Promise<void>;
 
+  /** Optional function to render memory state as string(s) */
   render?: (memory: Memory, ctx: Ctx) => string | string[];
-
-  // exports?: () => Exports;
 };
+
+/** Enum defining roles for different types of handlers */
 export enum HandlerRole {
+  /** Handler for processing inputs */
   INPUT = "input",
+  /** Handler for processing outputs */
   OUTPUT = "output",
+  /** Handler for executing actions */
   ACTION = "action",
 }
