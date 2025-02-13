@@ -290,13 +290,37 @@ async function main() {
         broadcastMessage(createMessage(errorMsg));
     }
 
-    function broadcastGoalCreated(id: string, description: string) {
+    // Helper to create and broadcast a "thinking_start" message
+    function broadcastThinkingStart(message: string) {
+        const thinkingStartMsg: ThinkingStartMessage = {
+            type: "thinking_start",
+            message,
+            timestamp: new Date().toISOString(),
+            emoji: "🤔",
+        };
+        broadcastMessage(thinkingStartMsg);
+    }
+
+    // Helper to create and broadcast a "thinking_end" message
+    function broadcastThinkingEnd() {
+        const thinkingEndMsg: ThinkingEndMessage = {
+            type: "thinking_end",
+            message: "Agent finished thinking.",
+            timestamp: new Date().toISOString(),
+            emoji: "✅",
+        };
+        broadcastMessage(thinkingEndMsg);
+    }
+
+    function broadcastGoalCreated(id: string, description: string, priority: number, horizon: string) {
         const goalCreatedMsg: Omit<GoalCreatedMessage, "timestamp" | "emoji"> =
         {
             type: "goal_created",
             data: {
                 id,
                 description,
+                priority,
+                horizon,
                 timestamp: new Date().toISOString(),
             },
         };
@@ -318,7 +342,7 @@ async function main() {
         broadcastMessage(createMessage(goalUpdatedMsg));
     }
 
-    function broadcastGoalCompleted(id: string, result: string) {
+    function broadcastGoalCompleted(id: string, result: string, description: string) {
         const goalCompletedMsg: Omit<
             GoalCompletedMessage,
             "timestamp" | "emoji"
@@ -327,6 +351,7 @@ async function main() {
             data: {
                 id,
                 result,
+                description,
                 timestamp: new Date().toISOString(),
             },
         };
@@ -539,6 +564,11 @@ async function main() {
 
             const result = await starknetChain.write(action.payload);
             console.log("result", result);
+            console.log("result.value", result.value);
+            console.log("result", JSON.stringify(result));
+            if (result === undefined) {
+                return `[EXECUTE_TRANSACTION] ${action.context}. FAILED`;
+            }
             return `[EXECUTE_TRANSACTION] ${action.context}. STATUS: ${result.statusReceipt}`;
         },
         outputSchema: z
@@ -669,10 +699,14 @@ async function main() {
     // Thinking process events
     dreams.on("think:start", ({ query }) => {
         console.log("\n🧠 Starting to think about:", query);
+
+        broadcastThinkingStart(query);
     });
 
     dreams.on("think:complete", ({ query }) => {
         console.log("\n🎉 Finished thinking about:", query);
+
+        broadcastThinkingEnd();
     });
 
     dreams.on("think:timeout", ({ query }) => {
@@ -684,13 +718,13 @@ async function main() {
     });
 
     // Goal management events
-    dreams.on("goal:created", ({ id, description }) => {
+    dreams.on("goal:created", ({ id, description, priority, horizon }) => {
         console.log(chalk.cyan("\n🎯 New goal created:"), {
             id,
             description,
         });
 
-        broadcastGoalCreated(id, description);
+        broadcastGoalCreated(id, description, priority, horizon.toString());
     });
 
     dreams.on("goal:updated", ({ id, status }) => {
@@ -702,13 +736,14 @@ async function main() {
         broadcastGoalUpdated(id, printGoalStatus(status));
     });
 
-    dreams.on("goal:completed", ({ id, result }) => {
+    dreams.on("goal:completed", ({ id, result, description }) => {
         console.log(chalk.green("\n✨ Goal completed:"), {
             id,
             result,
+            description
         });
 
-        broadcastGoalCompleted(id, result);
+        broadcastGoalCompleted(id, result, description);
     });
 
     dreams.on("goal:failed", ({ id, error }) => {
@@ -782,7 +817,7 @@ async function main() {
 
     // Main interaction loop
     const main_goal =
-        "Get 50 gold in the NFT wallet";
+        "Achieve the 3 goals as fast as possible";
     while (true) {
         try {
             // Plan and execute goals
@@ -948,12 +983,24 @@ export type MessageType =
     | "action_start"
     | "action_complete"
     | "action_error"
-    | "system";
+    | "system"
+    | "thinking_start"
+    | "thinking_end";
 
 export interface BaseMessage {
     type: MessageType;
     timestamp: string; // ISO string
     emoji?: string;
+}
+
+export interface ThinkingStartMessage extends BaseMessage {
+    type: "thinking_start";
+    message: string;
+}
+
+export interface ThinkingEndMessage extends BaseMessage {
+    type: "thinking_end";
+    message: string;
 }
 
 export interface WelcomeMessage extends BaseMessage {
@@ -977,6 +1024,8 @@ export interface GoalCreatedMessage extends BaseMessage {
         id: string;
         description: string;
         timestamp: string;
+        priority: number;
+        horizon: string;
     };
 }
 
@@ -994,6 +1043,7 @@ export interface GoalCompletedMessage extends BaseMessage {
     data: {
         id: string;
         result: string;
+        description: string;
         timestamp: string;
     };
 }
@@ -1050,7 +1100,9 @@ export type AppMessage =
     | ActionStartMessage
     | ActionCompleteMessage
     | ActionErrorMessage
-    | SystemMessage;
+    | SystemMessage
+    | ThinkingStartMessage
+    | ThinkingEndMessage;
 
 const emojiMap: Record<MessageType, string> = {
     welcome: "👋",
