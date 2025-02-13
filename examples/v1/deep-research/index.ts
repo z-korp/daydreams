@@ -52,18 +52,13 @@ const agent = createDreams({
         user: z.string(),
         text: z.string(),
       }),
-      handler(params, ctx) {
-        console.log("User:" + params.text);
-        ctx.memory.inputs.push({
-          ref: "input",
-          type: "message",
-          params: { user: params.user },
-          data: params.text,
-          timestamp: Date.now(),
-          processed: false,
-        });
-        return true;
-      },
+      format: ({ user, text }) =>
+        formatMsg({
+          role: "user",
+          user: user,
+          content: text,
+        }),
+
       async subscribe(send, agent) {
         while (true) {
           const question = await rl.question(">");
@@ -80,12 +75,6 @@ const agent = createDreams({
     message: output({
       description: "",
       schema: z.string(),
-      format(content) {
-        return formatMsg({
-          role: "assistant",
-          content,
-        });
-      },
       handler(content, ctx) {
         console.log("Agent:" + content);
         return {
@@ -93,11 +82,15 @@ const agent = createDreams({
           timestamp: Date.now(),
         };
       },
+      format({ data }) {
+        return formatMsg({
+          role: "assistant",
+          content: data,
+        });
+      },
     }),
   },
   actions: [...researchDeepActions],
 });
 
 await agent.start();
-
-while (true) {}
