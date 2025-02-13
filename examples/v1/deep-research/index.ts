@@ -94,5 +94,3 @@ const agent = createDreams({
 });
 
 await agent.start();
-
-while (true) {}
