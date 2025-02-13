@@ -118,26 +118,57 @@ export function formatContext({
   });
 }
 
+export type Msg =
+  | {
+      role: "user";
+      user: string;
+      content: string;
+    }
+  | {
+      role: "assistant";
+      content: string;
+    };
+
+export function formatMsg(msg: Msg) {
+  return formatXml({
+    tag: "msg",
+    params:
+      msg.role === "user"
+        ? {
+            role: "user",
+            user: msg.user,
+          }
+        : { role: "assistant" },
+    content: msg.content,
+  });
+}
+
 export function formatContextLog(i: Log) {
   switch (i.ref) {
     case "input":
-      return formatXml({
-        tag: "msg",
-        params: {
-          ...i.params,
-          role: "user",
-        },
-        content: formatValue(i.data),
-      });
+      return (
+        i.formatted ??
+        formatXml({
+          tag: "msg",
+          params: {
+            ...i.params,
+            role: "user",
+          },
+          content: formatValue(i.data),
+        })
+      );
     case "output":
-      return formatXml({
-        tag: "msg",
-        params: {
-          ...i.params,
-          role: "assistant",
-        },
-        content: formatValue(i.data),
-      });
+      return (
+        i.formatted ??
+        formatXml({
+          tag: "msg",
+          params: {
+            ...i.params,
+            role: "assistant",
+          },
+          content: formatValue(i.data),
+        })
+      );
     case "thought":
       return formatXml({
         tag: "reflection",
@@ -151,11 +182,14 @@ export function formatContextLog(i: Log) {
         content: JSON.stringify(i.data),
       });
     case "action_result":
-      return formatXml({
-        tag: "action_result",
-        params: { name: i.name, callId: i.callId },
-        content: JSON.stringify(i.data),
-      });
+      return (
+        i.formatted ??
+        formatXml({
+          tag: "action_result",
+          params: { name: i.name, callId: i.callId },
+          content: JSON.stringify(i.data),
+        })
+      );
     default:
       throw new Error("invalid context");
   }

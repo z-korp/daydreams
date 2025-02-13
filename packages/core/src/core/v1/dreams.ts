@@ -4,6 +4,7 @@ import {
   type ActionCall,
   type Agent,
   type AgentContext,
+  type AnyAction,
   type AnyAgent,
   type AnyContext,
   type Config,
@@ -85,8 +86,6 @@ Here's how you structure your response:
 
 {{examples}}
 `;
-
-type AnyAction = Action<any, any, any>;
 
 const prompt = createPrompt(
   promptTemplate,
@@ -195,7 +194,10 @@ const runGenerate = task(
       context: formatContext({
         type: context.type ?? "system",
         key: key,
-        description: context.description,
+        description:
+          typeof context.description === "function"
+            ? context.description({ key, args }, ctx)
+            : context.description,
         instructions:
           typeof context.instructions === "function"
             ? context.instructions({ key, args }, ctx)
@@ -409,7 +411,7 @@ export function createDreams<
       if (contextsRunning.has(contextId)) return;
       contextsRunning.add(contextId);
 
-      const outputsEntries = Object.entries(agent.outputs)
+      const contextOuputs = Object.entries(agent.outputs)
         .filter(([_, output]) =>
           output.enabled ? output.enabled(ctx as any) : true
         )
@@ -418,44 +420,42 @@ export function createDreams<
           ...output,
         }));
 
-      // const { memory } = ctx;
-
       const maxSteps = 5;
       let step = 1;
 
-      while (true) {
-        const _actions = await Promise.all(
-          actions.map(async (action) => {
-            let actionMemory: unknown = {};
+      const contextActions = await Promise.all(
+        actions.map(async (action) => {
+          let actionMemory: unknown = {};
 
-            if (action.memory) {
-              actionMemory =
-                (await agent.memory.get(action.memory.key)) ??
-                action.memory.create();
-            }
+          if (action.memory) {
+            actionMemory =
+              (await agent.memory.get(action.memory.key)) ??
+              action.memory.create();
+          }
 
-            const enabled = action.enabled
-              ? action.enabled({
-                  ...ctx,
-                  data: actionMemory,
-                })
-              : true;
+          const enabled = action.enabled
+            ? action.enabled({
+                ...ctx,
+                data: actionMemory,
+              })
+            : true;
 
-            return enabled ? action : undefined;
-          })
-        ).then((r) => r.filter((a) => !!a));
+          return enabled ? action : undefined;
+        })
+      ).then((r) => r.filter((a) => !!a));
 
+      while (maxSteps > step) {
         const data = await runGenerate({
+          model: config.reasoningModel ?? config.model,
           context: contextHandler,
-          args,
+          actions: contextActions,
+          outputs: contextOuputs,
           contextId,
+          memory,
+          logger,
+          args,
           ctx,
           key,
-          logger,
-          memory,
-          model: config.reasoningModel ?? config.model,
-          outputs: outputsEntries,
-          actions: _actions,
         });
 
         logger.debug("agent:parsed", "data", data);
@@ -490,11 +490,31 @@ export function createDreams<
               }
             }
 
-            await output.handler(
-              output.schema.parse(parsedContent),
-              ctx,
-              agent
-            );
+            const data = output.schema.parse(parsedContent);
+
+            const response = await output.handler(data, ctx, agent);
+
+            if (Array.isArray(response)) {
+              for (const res of response) {
+                memory.outputs.push({
+                  ref: "output",
+                  type,
+                  formatted:
+                    res.formatted ??
+                    (output.format ? output.format(data) : undefined),
+                  ...res,
+                });
+              }
+            } else if (response) {
+              memory.outputs.push({
+                ref: "output",
+                type,
+                formatted:
+                  response.formatted ??
+                  (output.format ? output.format(data) : undefined),
+                ...response,
+              });
+            }
           } catch (error) {
             logger.error("agent:output", type, error);
           }
@@ -534,6 +554,8 @@ export function createDreams<
               const result = await runAction({
                 action,
                 call,
+                agent,
+                logger,
                 context: {
                   id: contextId,
                   context: contextHandler,
@@ -542,8 +564,6 @@ export function createDreams<
                   memory,
                   data: actionMemory,
                 },
-                agent,
-                logger,
               });
 
               memory.results.push({
@@ -553,6 +573,7 @@ export function createDreams<
                 name: call.name,
                 timestamp: Date.now(),
                 processed: false,
+                formatted: action.format ? action.format(result) : undefined,
               });
             } catch (error) {
               logger.error("agent:action", "ACTION_FAILED", { error });
@@ -560,7 +581,17 @@ export function createDreams<
             }
           })
         );
-        break;
+
+        await agent.memory.set(contextId, memory);
+
+        if (
+          [...memory.results, ...memory.inputs].find(
+            (i) => i.processed === false
+          ) === undefined
+        )
+          break;
+
+        step++;
       }
 
       await agent.memory.set(contextId, memory);
@@ -568,8 +599,8 @@ export function createDreams<
       contextsRunning.delete(contextId);
     },
 
-    send: async (contextHandler, args, input: { type: string; data: any }) => {
-      if (input.type in agent.inputs === false) return;
+    send: async (contextHandler, args, params: { type: string; data: any }) => {
+      if (params.type in agent.inputs === false) return;
 
       const {
         key,
@@ -578,20 +609,30 @@ export function createDreams<
         memory,
       } = await getContext(contextHandler, contextHandler.schema.parse(args));
 
-      const processor = agent.inputs[input.type];
+      const input = agent.inputs[params.type];
 
-      const data = processor.schema.parse(input.data);
+      const data = input.schema.parse(params.data);
 
-      const shouldContinue = await processor.handler(
-        data,
-        {
-          type: contextHandler.type,
-          key,
-          memory,
-          ctx,
-        } as any,
-        agent
-      );
+      if (input.handler) {
+        await input.handler(
+          data,
+          {
+            type: contextHandler.type,
+            key,
+            memory,
+            ctx,
+          } as any,
+          agent
+        );
+      } else {
+        memory.inputs.push({
+          ref: "input",
+          type: params.type,
+          data,
+          timestamp: Date.now(),
+          formatted: input.format ? input.format(data) : undefined,
+        });
+      }
 
       await agent.evaluator({
         type: contextHandler.type,
@@ -602,7 +643,7 @@ export function createDreams<
 
       await agent.memory.set(contextId, memory);
 
-      if (shouldContinue) await agent.run(contextHandler, args);
+      await agent.run(contextHandler, args);
     },
 
     evaluator: async (ctx) => {
