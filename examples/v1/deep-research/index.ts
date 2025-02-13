@@ -11,6 +11,7 @@ import { researchDeepActions } from "./research";
 import * as readline from "readline/promises";
 import { tavily } from "@tavily/core";
 import createContainer from "@daydreamsai/core/src/core/v1/container";
+import { formatMsg } from "@daydreamsai/core/src/core/v1";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -79,11 +80,19 @@ const agent = createDreams({
     message: output({
       description: "",
       schema: z.string(),
+      format(content) {
+        return formatMsg({
+          role: "assistant",
+          content,
+        });
+      },
       handler(content, ctx) {
         console.log("Agent:" + content);
-        return true;
+        return {
+          data: content,
+          timestamp: Date.now(),
+        };
       },
-      examples: ["Hi!"],
     }),
   },
   actions: [...researchDeepActions],

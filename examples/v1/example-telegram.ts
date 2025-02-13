@@ -14,6 +14,7 @@ import { tavily, TavilyClient } from "@tavily/core";
 import { LogLevel, WorkingMemory } from "@daydreamsai/core/src/core/v1/types";
 import createContainer from "@daydreamsai/core/src/core/v1/container";
 import { service } from "@daydreamsai/core/src/core/v1/serviceProvider";
+import { formatMsg } from "@daydreamsai/core/src/core/v1/formatters";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -27,17 +28,6 @@ const container = createContainer().singleton("tavily", () =>
     apiKey: process.env.TAVILY_API_KEY!,
   })
 );
-
-const telegramChat = context({
-  type: "telegram:chat",
-  key: ({ chatId }) => chatId.toString(),
-  schema: z.object({ chatId: z.number() }),
-  async setup(args, { container }) {
-    console.log("setup", args);
-    const tg = container.resolve<Telegraf>("telegraf").telegram;
-    return { tg };
-  },
-});
 
 const tgService = service({
   register(container) {
@@ -55,44 +45,58 @@ const tgService = service({
   },
 });
 
-const agent = createDreams<WorkingMemory>({
+const telegramChat = context({
+  type: "telegram:chat",
+  key: ({ chatId }) => chatId.toString(),
+  schema: z.object({ chatId: z.number() }),
+  async setup(args, agent) {
+    const telegraf = container.resolve<Telegraf>("telegraf");
+    const chat = await telegraf.telegram.getChat(args.chatId);
+    return {
+      chat,
+    };
+  },
+  description(params, { chat }) {
+    if (chat.type === "private") {
+      return `You are in private telegram chat with ${chat.username} id: ${chat.id}`;
+    }
+    return "";
+  },
+});
+
+const agent = createDreams({
   logger: LogLevel.DEBUG,
   container,
   model,
   memory,
   services: [tgService],
+  debugger: async (contextId, keys, data) => {
+    const [type, id] = keys;
+    await Bun.write(`./logs/tg/${contextId}/${id}-${type}.md`, data);
+  },
   inputs: {
     "user:message": input({
       schema: z.object({ user: z.string(), text: z.string() }),
-      handler: (message, { memory }) => {
-        memory.inputs.push({
-          ref: "input",
-          type: "user:message",
-          params: { user: message.user },
-          data: message.text,
-          timestamp: Date.now(),
+      format({ user, text }) {
+        return formatMsg({
+          role: "user",
+          content: text,
+          user: user.toString(),
         });
-
-        return true;
       },
     }),
 
     "telegram:direct": input({
       schema: z.object({
-        user: z.object({ id: z.number() }),
+        user: z.object({ id: z.number(), username: z.string() }),
         text: z.string(),
       }),
-      handler: (message, { memory }) => {
-        memory.inputs.push({
-          ref: "input",
-          type: "telegram:direct",
-          params: { userId: message.user.id.toString() },
-          data: message.text,
-          timestamp: Date.now(),
-        });
-
-        return true;
-      },
+      format: ({ user, text }) =>
+        formatMsg({
+          role: "user",
+          content: text,
+          user: user.username,
+        }),
       subscribe(send, { container }) {
         container.resolve<Telegraf>("telegraf").on("message", (ctx) => {
           const chat = ctx.chat;
@@ -105,6 +109,7 @@ const agent = createDreams<WorkingMemory>({
               {
                 user: {
                   id: user.id,
+                  username: user.username!,
                 },
                 text: ctx.message.text,
               }
@@ -131,18 +136,28 @@ const agent = createDreams<WorkingMemory>({
         content: z.string().describe("the content of the message to send"),
       }),
       description: "use this to send a telegram message to user",
+
       handler: async (data, ctx, agent) => {
+        const tg = agent.container.resolve<Telegraf>("telegraf").telegram;
         const chunks = splitTextIntoChunks(data.content, {
           maxChunkSize: 4096,
         });
 
         for (const chunck of chunks) {
-          await agent.container
-            .resolve<Telegraf>("telegraf")
-            .telegram.sendMessage(data.userId, chunck);
+          await tg.sendMessage(data.userId, chunck);
         }
-        return true;
+
+        return {
+          data,
+          timestamp: Date.now(),
+        };
       },
+
+      format: ({ data }) =>
+        formatMsg({
+          role: "assistant",
+          content: data.content,
+        }),
     }),
 
     // "telegram:group": output({
@@ -185,6 +200,7 @@ const agent = createDreams<WorkingMemory>({
             "The depth of search - basic is faster, deep is more thorough"
           ),
       }),
+
       async handler(call, ctx, agent) {
         const response = await agent.container
           .resolve<TavilyClient>("tavily")

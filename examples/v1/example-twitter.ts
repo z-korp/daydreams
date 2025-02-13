@@ -13,6 +13,7 @@ import { LogLevel, WorkingMemory } from "@daydreamsai/core/src/core/v1/types";
 import createContainer from "@daydreamsai/core/src/core/v1/container";
 import { service } from "@daydreamsai/core/src/core/v1/serviceProvider";
 import { TwitterClient } from "@daydreamsai/core/src/core/v1/io/twitter";
+import { formatMsg, formatXml } from "@daydreamsai/core/src/core/v1";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -28,10 +29,6 @@ const twitterContext = context({
   schema: z.object({
     tweetId: z.string(),
   }),
-  async setup(args, { container }) {
-    const twitter = container.resolve<TwitterClient>("twitter");
-    return { twitter };
-  },
 });
 
 // Twitter service setup
@@ -61,7 +58,6 @@ const agent = createDreams<WorkingMemory>({
   model,
   memory,
   services: [twitterService],
-
   inputs: {
     "twitter:mentions": input({
       schema: z.object({
@@ -116,14 +112,28 @@ const agent = createDreams<WorkingMemory>({
         inReplyTo: z.string(),
       }),
       description: "Use this to reply to a tweet",
+
       handler: async (data, ctx, agent) => {
         const twitter = agent.container.resolve<TwitterClient>("twitter");
-        await twitter.sendTweet({
+        const { tweetId } = await twitter.sendTweet({
           content: data.content,
           inReplyTo: data.inReplyTo,
         });
-        return true;
+
+        return {
+          data: {
+            ...data,
+            tweetId,
+          },
+          timestamp: Date.now(),
+        };
       },
+      format: ({ data }) =>
+        formatXml({
+          tag: "tweet-reply",
+          params: { tweetId: data.tweetId },
+          content: data.content,
+        }),
     }),
 
     "twitter:tweet": output({
@@ -131,13 +141,23 @@ const agent = createDreams<WorkingMemory>({
         content: z.string().max(280),
       }),
       description: "Use this to post a new tweet",
+
       handler: async (data, ctx, agent) => {
         const twitter = agent.container.resolve<TwitterClient>("twitter");
         await twitter.sendTweet({
           content: data.content,
         });
-        return true;
+        return {
+          data,
+          timestamp: Date.now(),
+        };
       },
+
+      format: ({ data }) =>
+        formatXml({
+          tag: "tweet",
+          content: data.content,
+        }),
     }),
   },
 });

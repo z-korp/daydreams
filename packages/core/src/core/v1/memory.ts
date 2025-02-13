@@ -40,7 +40,10 @@ export function defaultContextRender(memory: WorkingMemory) {
     ...memory.outputs,
     ...memory.calls,
     ...memory.results.filter((i) => i.processed === true),
-  ].map((i) => formatContextLog(i));
+  ]
+    .sort((a, b) => (a.timestamp > b.timestamp ? 1 : -1))
+    .map((i) => formatContextLog(i))
+    .flat();
 }
 
 export const defaultContext = context({

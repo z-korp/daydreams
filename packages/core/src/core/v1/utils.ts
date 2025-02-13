@@ -9,6 +9,7 @@ import type {
   InputConfig,
   Memory,
   OutputConfig,
+  OutputResponse,
   OutputSchema,
   TemplateVariables,
   WorkingMemory,
@@ -95,7 +96,8 @@ export function output<
     WorkingMemory,
     AnyContext
   >,
->(config: OutputConfig<Schema, Context>) {
+  TResponse extends OutputResponse = OutputResponse,
+>(config: OutputConfig<Schema, Context, TResponse>) {
   return config;
 }
 

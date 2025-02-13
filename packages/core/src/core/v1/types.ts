@@ -109,13 +109,23 @@ export type Action<
     ctx: Context & { data: InferMemoryData<TMemory> },
     agent: TAgent
   ) => Promise<Result>;
+  format?: (result: Result) => string | string[];
 };
 
 export type OutputSchema = z.AnyZodObject | z.ZodString;
 
+export type OutputRefResponse = Omit<OutputRef, "ref" | "type">;
+
+export type OutputResponse =
+  | OutputRefResponse
+  | OutputRefResponse[]
+  | undefined
+  | void;
+
 export type Output<
   Schema extends OutputSchema = OutputSchema,
   Context = any,
+  Response extends OutputResponse = OutputResponse,
   TAgent extends AnyAgent = AnyAgent,
 > = {
   type: string;
@@ -124,13 +134,16 @@ export type Output<
   schema: Schema;
   install?: (agent: TAgent) => Promise<void>;
   enabled?: (ctx: Context) => boolean;
-  examples?: z.infer<Schema>[];
   handler: (
     params: z.infer<Schema>,
     ctx: Context,
     agent: TAgent
-  ) => Promise<boolean> | boolean;
+  ) => Promise<Response> | Response;
+  format?: (res: Response) => string | string[];
+  examples?: z.infer<Schema>[];
 };
+
+export type AnyAction = Action<any, any, any>;
 
 /**
  * Represents an input handler with validation and subscription capability
@@ -148,8 +161,9 @@ export type Input<
   type: string;
   description?: string;
   schema: Schema;
+  format?: (params: z.infer<Schema>) => string | string[];
   install?: (agent: TAgent) => Promise<void>;
-  handler: (
+  handler?: (
     params: z.infer<Schema>,
     ctx: Context,
     agent: TAgent
@@ -172,6 +186,7 @@ export type InputRef = {
   params?: Record<string, string>;
   timestamp: number;
   processed?: boolean;
+  formatted?: string | string[];
 };
 
 /** Reference to an output event in the system */
@@ -181,6 +196,7 @@ export type OutputRef = {
   data: any;
   params?: Record<string, string>;
   timestamp: number;
+  formatted?: string | string[];
 };
 
 /** Represents a call to an action */
@@ -200,6 +216,7 @@ export type ActionResult<Data = any> = {
   data: Data;
   timestamp: number;
   processed?: boolean;
+  formatted?: string | string[];
 };
 
 /** Represents a thought or reasoning step */
@@ -370,7 +387,12 @@ export type Config<
   >;
   outputs?: Record<
     string,
-    OutputConfig<any, AgentContext<TMemory, TContext>, Agent<TMemory, TContext>>
+    OutputConfig<
+      any,
+      AgentContext<TMemory, TContext>,
+      any,
+      Agent<TMemory, TContext>
+    >
   >;
 
   events?: Record<string, z.AnyZodObject>;
@@ -402,13 +424,14 @@ export type InputConfig<
 
 /** Configuration type for outputs without type field */
 export type OutputConfig<
-  T extends OutputSchema = OutputSchema,
+  Schema extends OutputSchema = OutputSchema,
   Context extends AgentContext<WorkingMemory, AnyContext> = AgentContext<
     WorkingMemory,
     AnyContext
   >,
+  Response extends OutputResponse = OutputResponse,
   TAgent extends AnyAgent = AnyAgent,
-> = Omit<Output<T, Context, TAgent>, "type">;
+> = Omit<Output<Schema, Context, Response, TAgent>, "type">;
 
 /** Configuration type for experts without type field */
 export type ExpertConfig<Context = any> = Omit<Expert<Context>, "type">;
@@ -520,12 +543,14 @@ export type Context<
   /** Zod schema for validating context arguments */
   schema: Args;
   /** Optional description of this context */
-  description?: string;
+  description?:
+    | string
+    | ((params: { key: string; args: z.infer<Args> }, ctx: Ctx) => string);
   /** Function to generate a unique key from context arguments */
   key: (args: z.infer<Args>) => string;
 
   /** Setup function to initialize context data */
-  setup: (args: z.infer<Args>, agent: AnyAgent) => Promise<Ctx> | Ctx;
+  setup?: (args: z.infer<Args>, agent: AnyAgent) => Promise<Ctx> | Ctx;
 
   /** Optional instructions for this context */
   instructions?:

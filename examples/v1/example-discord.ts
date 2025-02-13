@@ -9,6 +9,7 @@ import { researchDeepActions } from "./deep-research/research";
 import { tavily } from "@tavily/core";
 import { Events, Message } from "discord.js";
 import createContainer from "@daydreamsai/core/src/core/v1/container";
+import { formatMsg } from "@daydreamsai/core/src/core/v1";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -69,20 +70,12 @@ const agent = createDreams({
         user: z.object({ id: z.string(), name: z.string() }),
         text: z.string(),
       }),
-      handler: (message, { memory }) => {
-        memory.inputs.push({
-          ref: "input",
-          type: "discord:message",
-          params: {
-            channelId: message.chat.id,
-            user: message.user.id,
-            name: message.user.name,
-          },
-          data: message.text,
-          timestamp: Date.now(),
-        });
-        return true;
-      },
+      format: ({ user, text }) =>
+        formatMsg({
+          role: "user",
+          user: user.name,
+          content: text,
+        }),
       subscribe(send, agent) {
         function listener(message: Message) {
           if (
@@ -135,20 +128,22 @@ const agent = createDreams({
         content: z.string().describe("The content of the message to send"),
       }),
       description: "Send a message to a Discord channel",
+      format: ({ content }) =>
+        formatMsg({
+          role: "assistant",
+          content,
+        }),
       handler: async (data, ctx) => {
-        try {
-          const channel = await container
-            .resolve<DiscordClient>("discord")
-            .client.channels.fetch(data.channelId);
-          if (channel && channel.isSendable()) {
-            await container.resolve<DiscordClient>("discord").sendMessage(data);
-            return true;
-          }
-        } catch (error) {
-          console.error(error);
+        const channel = await container
+          .resolve<DiscordClient>("discord")
+          .client.channels.fetch(data.channelId);
+        if (channel && channel.isSendable()) {
+          await container.resolve<DiscordClient>("discord").sendMessage(data);
+          return {
+            data,
+            timestamp: Date.now(),
+          };
         }
-
-        return false;
       },
     }),
   },
