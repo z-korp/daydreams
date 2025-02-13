@@ -251,6 +251,7 @@ export class ChainOfThought extends EventEmitter {
                     id: newGoal.id,
                     description: newGoal.description,
                     priority: newGoal.priority,
+                    horizon: newGoal.horizon,
                 });
             }
 
@@ -725,6 +726,7 @@ export class ChainOfThought extends EventEmitter {
 
         this.emit("goal:completed", {
             id: goal.id,
+            description: goal.description,
             result: "Goal success criteria met",
         });
     }
@@ -1165,85 +1167,81 @@ export class ChainOfThought extends EventEmitter {
 
         const prompt = `
     <global_context>
-    <OBJECTIVE>
-    
-        <GOAL>
-        {{query}}
-        </GOAL>
+        <OBJECTIVE>
+        
+            <GOAL>
+            {{query}}
+            </GOAL>
 
-        You are a Chain of Thought reasoning system. Think through this problem step by step:
+            You are a Chain of Thought reasoning system. Think through this problem step by step:
 
-        1. Carefully analyze the goal and break it into logical components.
-        2. Identify the **first actionable steps** based on current information and resources.
-        3. Defer planning for steps that depend on unknowns or intermediate results. These will be addressed dynamically as more information becomes available.
-        4. For each component:
-        - Determine the **precise actions and information** required.
-        - Consider **dependencies** and **prerequisites** between steps.
-        - Ensure that every step directly contributes to the goal.
-        5. Validate that the sequence of steps is complete **for the current state** but flexible enough to adapt during execution.
-
-        ## Key Rules:
-        - Each step must be:
-        - **Actionable and concrete**
-        - **Directly contributing** to the goal
-        - Properly **ordered** and **validated**
-        - Avoid redundancy or planning steps that are not immediately relevant.
-
-        ## Output:
-        Provide a sequence of steps that achieves the given goal. Include only what can be executed now and defer future steps until necessary.
-
-        Focus solely on the goal you have been given. Do not add extra steps or deviate from the objective.
-    </OBJECTIVE>
-
-    <LAST_STEPS>
-    ${lastSteps}
-    </LAST_STEPS>
-
-    <CONTEXT_SUMMARY>
-    ${this.context.worldState}
-
-    ${this.context.providerContext}
-    </CONTEXT_SUMMARY>
-
-    ## Step Validation Rules
-    1. Each step must have a clear, measurable outcome
-    2. Maximum 10 steps per sequence
-    3. Steps must be non-redundant unless explicitly required
-    4. All dynamic values (marked with <>) must be replaced with actual values
-    5. Use queries for information gathering, transactions for actions only
-    {{custom_validation_rules}}
+            1. Carefully analyze the goal and break it into logical components
+            2. Identify the **first actionable steps** that can be executed immediately based on current information and available resources
+            3. **DO NOT generate any step that contains unresolved variables in the format $VARIABLE_NAME.** If a required value is unknown, defer that step and note that it will be planned dynamically once the value is available
+            4. For each step:
+            - Determine the **precise actions and queries** required
+            - Consider **dependencies** and **prerequisites** between steps
+            - Ensure that every step directly contributes to the goal and has all necessary data available
+            5. Validate that the sequence of steps is **executable in the current state** but remains flexible so that new steps can be planned after executing the first step
 
 
-    ## Required Validations
-    1. Resource costs must be verified before action execution
-    2. Building requirements must be confirmed before construction
-    3. Entity existence must be validated before interaction
-    4. If the required amounts are not available, end the sequence.
-    {{additional_validations}}
+            ## Key Rules:
+            - Each step must be:
+            - **Actionable and concrete**
+            - **Directly contributing** to the goal
+            - Properly **ordered** and **validated**
+            - Free of redundancy and limited to only those actions that can be executed now
+            - **DO NOT generate actions that still contain placeholders like $WALLET_ADDRESS, or any other $VARIABLE_NAME.** These must be replaced with real values before execution
+            - **If an action requires missing data, do not generate it now—wait until the required information is available**
+            - Future steps that depend on prior results should be **deferred until new data becomes available**
 
+            ## Output:
+            Provide a JSON array of steps that achieves the given goal. **Include only the steps that can be executed now.** If additional steps will be needed later, state this clearly, but do not generate them yet
 
-    ## Output Format
-    Return a JSON array where each step contains:
-    - plan: A short explanation of what you will do
-    - meta: A metadata object with requirements for the step. Find this in the context.
-    - actions: A list of actions to be executed. You can either use ${this.getAvailableOutputs()}
+            Focus solely on the current goal. Do not add extra steps or deviate from the objective.
+        </OBJECTIVE>
 
-    ## Output Format
-    Return a JSON array where each step contains:
-    - plan: A short explanation of what you will do
-    - meta: A metadata object with requirements for the step. Find this in the context.
-    - actions: A list of actions to be executed. You can either use ${this.getAvailableOutputs()}
+        <LAST_STEPS>
+        ${lastSteps}
+        </LAST_STEPS>
 
-    <AVAILABLE_ACTIONS>
-    Below is a list of actions you may use. 
-    The "payload" must follow the indicated structure exactly. Do not include any markdown formatting, slashes or comments.
-    Each action must include:
-    - **payload**: The action data structured as per the available actions.
-    - **context**: A contextual description or metadata related to the action's execution. This can include statuses, results, or any pertinent information that may influence future actions.
+        <CONTEXT_SUMMARY>
+        ${this.context.worldState}
 
-    ${availableOutputsSchema}
+        ${this.context.providerContext}
+        </CONTEXT_SUMMARY>
 
-    </AVAILABLE_ACTIONS>
+        ## Step Validation Rules
+        1. Each step must have a clear, measurable outcome
+        2. Maximum 10 steps per sequence
+        3. Steps must be non-redundant unless explicitly required
+        4. All dynamic values (marked with <>) must be replaced with actual values; do not include steps with unreplaced placeholders
+        5. Use queries solely for information gathering and transactions only for actions
+        {{custom_validation_rules}}
+
+        ## Required Validations
+        1. Resource costs must be verified before action execution
+        2. Building requirements must be confirmed before construction
+        3. Entity existence must be validated before interaction
+        4. If the required amounts are not available, end the sequence
+        {{additional_validations}}
+
+        ## Output Format
+        Return a JSON array where each step contains:
+        - **plan**: A short explanation of what you will do
+        - **meta**: A metadata object with requirements for the step (refer to the context for details)
+        - **actions**: A list of actions to be executed, using only the actions available from ${this.getAvailableOutputs()}
+
+        <AVAILABLE_ACTIONS>
+        Below is a list of actions you may use.
+        The "payload" must follow the indicated structure exactly. Do not include any markdown formatting, slashes, or comments
+        Each action must include:
+        - **payload**: The action data structured as per the available actions
+        - **context**: A contextual description or metadata related to the action's execution. This may include statuses, results, or other pertinent information that may influence future actions
+
+        ${availableOutputsSchema}
+
+        </AVAILABLE_ACTIONS>
 
     </global_context>
 `;
