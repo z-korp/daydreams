@@ -56,7 +56,7 @@ export class TwitterClient {
     });
   }
 
-  private async initialize() {
+  async initialize() {
     if (!this.isInitialized) {
       try {
         await this.scraper.login(
@@ -75,64 +75,7 @@ export class TwitterClient {
     }
   }
 
-  /**
-   * Create an input that monitors mentions
-   */
-  public createMentionsInput(interval: number = 60000) {
-    return {
-      name: "twitter_mentions",
-      handler: async () => {
-        await this.initialize();
-        return this.checkMentions();
-      },
-      response: {
-        type: "string",
-        content: "string",
-        metadata: "object",
-      },
-      interval,
-    };
-  }
-
-  /**
-   * Create an input that monitors a user's timeline
-   */
-  public createTimelineInput(username: string, interval: number = 60000) {
-    return {
-      name: `twitter_timeline_${username}`,
-      handler: async () => {
-        await this.initialize();
-        const tweets = await this.fetchUserTweets(username);
-        return tweets.map(this.formatTweetData);
-      },
-      response: {
-        type: "string",
-        content: "string",
-        metadata: "object",
-      },
-      interval,
-    };
-  }
-
-  /**
-   * Create an output for sending tweets
-   */
-  public createTweetOutput() {
-    return {
-      name: "twitter_tweet",
-      handler: async (data: TweetData) => {
-        await this.initialize();
-        return await this.sendTweet(data);
-      },
-      response: {
-        success: "boolean",
-        tweetId: "string",
-      },
-      schema: tweetSchema,
-    };
-  }
-
-  private async checkMentions() {
+  async checkMentions() {
     try {
       this.logger.debug("TwitterClient.checkMentions", "Checking mentions", {
         username: this.credentials.username,
@@ -177,7 +120,7 @@ export class TwitterClient {
         .map(this.formatTweetData);
 
       // Only return if we have new mentions
-      return newMentions.length > 0 ? newMentions : null;
+      return newMentions.length > 0 ? newMentions : [];
     } catch (error) {
       this.logger.error(
         "TwitterClient.checkMentions",
@@ -188,7 +131,7 @@ export class TwitterClient {
     }
   }
 
-  private async fetchUserTweets(username: string): Promise<Tweet[]> {
+  async fetchUserTweets(username: string): Promise<Tweet[]> {
     const tweets: Tweet[] = [];
     try {
       for await (const tweet of this.scraper.getTweets(username, 10)) {
@@ -205,7 +148,7 @@ export class TwitterClient {
     return tweets;
   }
 
-  private async sendTweet(data: TweetData) {
+  async sendTweet(data: TweetData) {
     try {
       this.logger.info("TwitterClient.sendTweet", "Would send tweet", {
         data,
