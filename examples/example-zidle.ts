@@ -69,8 +69,9 @@ async function main() {
     });
 
     const memory = new ChromaVectorDB("agent_memory");
+    const chat_memory = new ChromaVectorDB("chat_memory");
     await memory.purge(); // Clear previous session data
-
+    await chat_memory.purge(); // Clear previous session data
     const conversationManager = new ConversationManager(memory);
 
     // Load initial context documents
@@ -83,6 +84,22 @@ async function main() {
     });
 
     await memory.storeDocument({
+        title: "Provider Guide",
+        content: ZIDLE_PROVIDER,
+        category: "actions",
+        tags: ["actions", "provider-guide"],
+        lastUpdated: new Date(),
+    });
+
+    await chat_memory.storeDocument({
+        title: "Game Rules",
+        content: ZIDLE_CONTEXT,
+        category: "rules",
+        tags: ["game-mechanics", "rules"],
+        lastUpdated: new Date(),
+    });
+
+    await chat_memory.storeDocument({
         title: "Provider Guide",
         content: ZIDLE_PROVIDER,
         category: "actions",
@@ -115,25 +132,16 @@ async function main() {
             enableTimestamp: true,
         }
     );
-
-    /*orchestrator.registerIOHandler({
+    orchestrator.registerIOHandler({
         role: HandlerRole.ACTION,
         name: "EXECUTE_READ",
-        handler: async (payload: any) => {
-            console.log(
-                "Preparing to execute read action... " + JSON.stringify(payload)
-            );
-            const shouldProceed = await getCliInput(
-                chalk.yellow("\nProceed with the read action? (y/n): ")
-            );
-            if (shouldProceed.toLowerCase() !== "y") {
-                return "Action aborted by the user.";
-            }
+        execute: async (payload: any) => {
+
 
             const result = await starknetChain.read(payload);
             return `Read: ${JSON.stringify(result, null, 2)}`;
         },
-        schema: z
+        outputSchema: z
             .object({
                 contractAddress: z
                     .string()
@@ -153,24 +161,11 @@ async function main() {
     orchestrator.registerIOHandler({
         role: HandlerRole.ACTION,
         name: "EXECUTE_TRANSACTION",
-        handler: async (payload: any) => {
-            console.log(
-                "Preparing to execute transaction action... " +
-                    JSON.stringify(payload)
-            );
-            const shouldProceed = await getCliInput(
-                chalk.yellow(
-                    "\nProceed with the execute transaction action? (y/n): "
-                )
-            );
-            if (shouldProceed.toLowerCase() !== "y") {
-                return "Action aborted by the user.";
-            }
-
+        execute: async (payload: any) => {
             const result = await starknetChain.write(payload);
             return `Transaction: ${JSON.stringify(result, null, 2)}`;
         },
-        schema: z
+        outputSchema: z
             .object({
                 contractAddress: z
                     .string()
@@ -192,10 +187,10 @@ async function main() {
     orchestrator.registerIOHandler({
         role: HandlerRole.ACTION,
         name: "GRAPHQL_FETCH",
-        handler: async (payload: any) => {
+        execute: async (payload: any) => {
             console.log(
                 "Preparing to execute graphql fetch action... " +
-                    JSON.stringify(payload)
+                JSON.stringify(payload)
             );
             const shouldProceed = await getCliInput(
                 chalk.yellow(
@@ -219,7 +214,7 @@ async function main() {
             ].join("\n\n");
             return `GraphQL data fetched successfully: ${resultStr}`;
         },
-        schema: z
+        outputSchema: z
             .object({
                 query: z
                     .string()
@@ -230,7 +225,34 @@ async function main() {
             .describe(
                 "The payload to fetch data from the zIdle GraphQL API, never include slashes or comments"
             ),
-    });*/
+    });
+    // Enregistrer les handlers avec des schémas simples
+    orchestrator.registerIOHandler({
+        name: "user_chat",
+        role: HandlerRole.INPUT,
+        execute: async (payload) => {
+            console.log("USER CHAT", payload);
+            // Utiliser chatDreams.think au lieu de process
+            await chatDreams.think(payload.data.userMessage);
+            return payload;
+        },
+    });
+
+    orchestrator.registerIOHandler({
+        name: "chat_reply",
+        role: HandlerRole.OUTPUT,
+        outputSchema: z.any(),
+        execute: async (payload) => {
+            const { userId, response } = payload as {
+                userId?: string;
+                response: string;
+            };
+            return {
+                userId,
+                message: response
+            };
+        },
+    });
 
     // ------------------------------------------------------
     // 2) WEBSOCKET SERVER
@@ -455,7 +477,7 @@ async function main() {
                         userId,
                         platformId: "console",
                         threadId: "console",
-                        data: {},
+                        data: { userMessage },
                     },
                 );
 
@@ -497,6 +519,230 @@ async function main() {
         });
 
         process.exit(0);
+    });
+
+    // Créer deux ChainOfThought distincts qui partagent la même mémoire
+    const actionDreams = new ChainOfThought(
+        llmClient,
+        memory,
+        {
+            worldState: ZIDLE_CONTEXT,
+            providerContext: ZIDLE_PROVIDER,
+        },
+        { logLevel: LogLevel.DEBUG }
+    );
+
+    const chatDreams = new ChainOfThought(
+        llmClient,
+        chat_memory,
+        {
+            worldState: ZIDLE_CONTEXT,
+            providerContext: ZIDLE_PROVIDER,
+        },
+        { logLevel: LogLevel.DEBUG }
+    );
+
+    // Configurer les événements pour les deux ChainOfThought
+    chatDreams.registerOutput({
+        role: HandlerRole.INPUT,
+        name: "user_chat",
+        execute: async (action: any) => {
+            console.log("user_chat", JSON.stringify(action));
+
+            console.log(chalk.cyan("\n🤔 Planning strategy for goal..."));
+
+            const goal = `As a zIdle game assistant, analyze and respond to this query: "${action.data.userMessage}" using chat_reply output`;
+
+            await chatDreams.decomposeObjectiveIntoGoals(goal);
+
+            // Récupérer tous les objectifs avec leurs détails
+            const allGoals = chatDreams.goalManager.getAllGoals();
+            console.log("allGoals", allGoals);
+            const readyGoals = chatDreams.goalManager.getReadyGoals();
+            console.log("readyGoals", readyGoals);
+            const activeGoals = chatDreams.goalManager
+                .getGoalsByHorizon("short")
+                .filter((g) => g.status === "active");
+            console.log("activeGoals", activeGoals);
+            const pendingGoals = chatDreams.goalManager
+                .getGoalsByHorizon("short")
+                .filter((g) => g.status === "pending");
+            console.log("pendingGoals", pendingGoals);
+
+            // Formater les objectifs pour l'interface
+            const formattedGoals = allGoals.map(goal => ({
+                id: goal.id,
+                description: goal.description,
+                status: goal.status,
+                priority: goal.priority,
+                horizon: goal.horizon,
+                success_criteria: goal.success_criteria,
+                dependencies: goal.dependencies,
+                estimated_difficulty: goal.estimated_difficulty,
+                required_resources: goal.required_resources
+            }));
+
+            // Afficher le statut dans la console
+            console.log(chalk.cyan("\n📊 Current Chat Progress:"));
+            console.log(`Ready goals: ${readyGoals.length}`);
+            console.log(`Active goals: ${activeGoals.length}`);
+            console.log(`Pending goals: ${pendingGoals.length}`);
+
+            // Traiter l'objectif prioritaire si disponible
+            if (readyGoals.length > 0) {
+                try {
+                    await chatDreams.processHighestPriorityGoal();
+                } catch (error) {
+                    console.error(chalk.red("\n❌ Chat goal execution failed:"), error);
+                }
+            }
+
+            // Retourner l'action avec les objectifs détaillés
+            return {
+                ...action,
+                goals: {
+                    items: formattedGoals,
+                    stats: {
+                        ready: readyGoals.length,
+                        active: activeGoals.length,
+                        pending: pendingGoals.length,
+                        completed: formattedGoals.filter(g => g.status === "completed").length,
+                        failed: formattedGoals.filter(g => g.status === "failed").length,
+                        total: formattedGoals.length
+                    }
+                }
+            };
+        },
+    });
+
+    chatDreams.registerOutput({
+        role: HandlerRole.ACTION,
+        name: "EXECUTE_READ",
+        execute: async (action: any) => {
+            console.log(
+                "Preparing to execute read action... " +
+                JSON.stringify(action.payload)
+            );
+
+            const result = await starknetChain.read(action.payload);
+            return `[EXECUTE_READ] ${action.context}: ${JSON.stringify(result, null, 2)}`;
+        },
+        outputSchema: z
+            .object({
+                contractAddress: z
+                    .string()
+                    .describe("The address of the contract to read from"),
+                entrypoint: z
+                    .string()
+                    .describe("The entrypoint to call on the contract"),
+                calldata: z
+                    .array(z.union([z.number(), z.string()]))
+                    .describe("The calldata to pass to the entrypoint"),
+            })
+            .describe(
+                "The payload to use to call, never include slashes or comments"
+            ),
+    });
+
+    chatDreams.registerOutput({
+        role: HandlerRole.ACTION,
+        name: "EXECUTE_TRANSACTION",
+        execute: async (action: any) => {
+            console.log(
+                "Preparing to execute transaction action... " +
+                JSON.stringify(action.payload)
+            );
+
+
+            const result = await starknetChain.write(action.payload);
+            console.log("result", result);
+            console.log("result.value", result.value);
+            console.log("result", JSON.stringify(result));
+            if (result === undefined) {
+                return `[EXECUTE_TRANSACTION] ${action.context}. FAILED`;
+            }
+            return `[EXECUTE_TRANSACTION] ${action.context}. STATUS: ${result.statusReceipt}`;
+        },
+        outputSchema: z
+            .object({
+                contractAddress: z
+                    .string()
+                    .describe(
+                        "The address of the contract to execute the transaction on"
+                    ),
+                entrypoint: z
+                    .string()
+                    .describe("The entrypoint to call on the contract"),
+                calldata: z
+                    .array(z.union([z.number(), z.string()]))
+                    .describe("The calldata to pass to the entrypoint"),
+            })
+            .describe(
+                "The payload to execute the transaction, never include slashes or comments"
+            ),
+    });
+
+    chatDreams.registerOutput({
+        role: HandlerRole.ACTION,
+        name: "GRAPHQL_FETCH",
+        execute: async (action: any) => {
+            console.log(
+                "Preparing to execute graphql fetch action... " +
+                JSON.stringify(action.payload)
+            );
+
+
+            console.log("[GRAPHQL_FETCH handler] action", action);
+            const { query, variables } = action.payload ?? {};
+            const result = await fetchGraphQL(
+                env.GRAPHQL_URL + "/graphql",
+                query,
+                variables
+            );
+            const resultStr = [
+                `query: ${query}`,
+                `result: ${JSON.stringify(result, null, 2)}`,
+            ].join("\n\n");
+            return `[GRAPHQL_FETCH] ${action.context}: ${resultStr}`;
+        },
+        outputSchema: z
+            .object({
+                query: z
+                    .string()
+                    .describe(
+                        `query ZidleMinerModels { zidleMinerModels(where: { token_id: "0x10" }) {totalCount edges { node { resource_type xp } } } }`
+                    ),
+            })
+            .describe(
+                "The payload to fetch data from the zIdle GraphQL API, never include slashes or comments"
+            ),
+    });
+
+    chatDreams.registerOutput({
+        role: HandlerRole.OUTPUT,
+        name: "chat_reply",
+        outputSchema: z.any(),
+        execute: async (payload) => {
+            const { userId, response } = payload as {
+                userId?: string;
+                response: string;
+            };
+            return {
+                userId,
+                message: response
+            };
+        },
+    });
+
+    actionDreams.on("step", (step) => {
+        if (step.type === "system") {
+            console.log("\n💭 Action System:", step.content);
+        } else {
+            console.log("\n🤔 Action Thought:", {
+                content: step.content,
+                tags: step.tags,
+            });
+        }
     });
 
     // Initialize the main reasoning engine
@@ -643,11 +889,10 @@ async function main() {
         },
         context: "Start mining Mineral (Coal) to increase lowest XP resource",
     });
-
+    
     return;*/
 
     // Set up event logging
-
     // Thought process events
     dreams.on("step", (step) => {
         if (step.type === "system") {
@@ -819,6 +1064,11 @@ async function main() {
     const main_goal =
         "Achieve the 3 goals as fast as possible";
     while (true) {
+        // Add a 2 minute delay
+        console.log(chalk.yellow("\n⏳ Waiting for 2 minutes..."));
+        await new Promise(resolve => setTimeout(resolve, 2 * 60 * 1000));
+        console.log(chalk.green("✅ Wait complete"));
+        continue;
         try {
             // Plan and execute goals
             console.log(chalk.cyan("\n🤔 Planning strategy for goal..."));
@@ -834,6 +1084,7 @@ async function main() {
 
             // Execute goals until completion
             while (true) {
+                console.log("getAllGoals ", dreams.goalManager.getAllGoals());
                 console.log("getAllGoals ", dreams.goalManager.getAllGoals());
                 const readyGoals = dreams.goalManager.getReadyGoals();
                 const activeGoals = dreams.goalManager
