@@ -24,8 +24,8 @@
     "prettier-check": "pnpx prettier --check packages",
     "prettier": "pnpx prettier --write packages",
     "knip": "knip",
-    "dev": "next",
-    "build": "next build",
+    "docs:dev": "next",
+    "docs:build": "next build",
     "docs:start": "next start"
   },
   "dependencies": {
