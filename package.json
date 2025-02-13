@@ -20,7 +20,7 @@
     "ui": "bun --dir clients/example-ui run dev",
     "test": "bun run packages/core",
     "build:core": "cd packages/core && bun run build",
-    "release": "bun build && bun prettier && npx lerna publish --no-private --force-publish",
+    "release": "cd packages/core && bun run build && cd ../.. && npx lerna publish --no-private --force-publish",
     "prettier-check": "pnpx prettier --check packages",
     "prettier": "pnpx prettier --write packages",
     "knip": "knip"
