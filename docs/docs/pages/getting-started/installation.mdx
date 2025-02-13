@@ -1,0 +1,96 @@
+# Installation
+
+## Prerequisites
+
+- Node.js 18+ using [nvm](https://github.com/nvm-sh/nvm)
+- [bun](https://bun.sh/)
+
+:::code-group
+
+```bash [npm]
+npm install @daydreamsai/core
+```
+
+```bash [pnpm]
+pnpm add @daydreamsai/core
+```
+
+```bash [yarn]
+yarn add @daydreamsai/core
+```
+
+```bash [bun]
+bun add @daydreamsai/core
+```
+
+:::
+
+### Basic Usage
+
+Dreams agents are all functional. `createDreams` is a function that returns an
+agent object, which can be run with `await agent.run()`. Inject discord,
+telegram, or any other input/output to the agent and define your own actions.
+
+```typescript
+const agent = createDreams<WorkingMemory>({
+  logger: LogLevel.DEBUG,
+  memory: createMemoryStore(),
+  model: groq("deepseek-r1-distill-llama-70b"),
+
+  inputs: {
+    // Handle incoming messages
+    message: input({
+      schema: z.object({
+        user: z.string(),
+        text: z.string(),
+      }),
+      handler(params, ctx) {
+        // Store message in memory
+        ctx.memory.inputs.push({
+          ref: "input",
+          type: "message",
+          params: { user: params.user, text: params.text },
+          data: params.text,
+          timestamp: Date.now(),
+          processed: false,
+        });
+        return true;
+      },
+      // Subscribe to CLI input
+      async subscribe(send) {
+        while (true) {
+          const question = await rl.question("> ");
+          console.log("Sending message:", question);
+
+          send(
+            chatContext,
+            { user: "admin" },
+            {
+              user: "admin",
+              text: question,
+            }
+          );
+        }
+      },
+    }),
+  },
+
+  outputs: {
+    // Handle outgoing messages
+    message: output({
+      description: "Send messages to the user",
+      schema: z.object({
+        message: z.string().describe("The message to send"),
+      }),
+      handler(content) {
+        console.log("Agent:", content.message);
+        return true;
+      },
+      examples: ["Hi!"],
+    }),
+  },
+});
+
+// Start the agent
+await agent.start();
+```

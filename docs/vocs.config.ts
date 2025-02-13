@@ -36,7 +36,7 @@ export default defineConfig({
     variables: {
       color: {
         textAccent: "#bda5ff",
-        background: "#161714",
+        background: "#1c1c1c",
         backgroundDark: "#1c1c1c",
         noteBackground: "#1a1a1a",
       },
@@ -44,16 +44,36 @@ export default defineConfig({
   },
   sidebar: [
     {
+      text: "Introduction",
+      link: "/",
+    },
+    {
       text: "Getting Started",
       items: [
         {
-          text: "Introduction",
-          link: "/",
+          text: "Installation",
+          link: "/getting-started/installation",
         },
       ],
     },
+    // {
+    //   text: "Agents",
+    //   items: [
+    //     { text: "Overview", link: "/agents/overview" },
+    //     { text: "Creation", link: "/agents/creation" },
+    //     { text: "Context", link: "/agents/context" },
+    //     { text: "Actions", link: "/agents/actions" },
+    //   ],
+    // },
     {
-      text: "Overview",
+      text: "Guides",
+      items: [
+        { text: "Deep Research", link: "/guides/deep-research" },
+        { text: "Twitter", link: "/guides/twitter" },
+      ],
+    },
+    {
+      text: "Types",
       items: [
         {
           text: "API",

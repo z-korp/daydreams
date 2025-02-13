@@ -7,7 +7,10 @@
 
 # Cross-chain Generative Agents
 
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
+[![npm version](https://badge.fury.io/js/%40ai-sdk%2Fcore.svg)](https://badge.fury.io/js/%40ai-sdk%2Fcore)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js CI](https://github.com/ai-sdk/core/actions/workflows/node.js.yml/badge.svg)](https://github.com/ai-sdk/core/actions/workflows/node.js.yml)
 [![Status](https://img.shields.io/badge/Status-Alpha-orange.svg)]()
 [![Documentation](https://img.shields.io/badge/Documentation-docs-blue.svg)](https://docs.daydreams.ai)
 [![Twitter Follow](https://img.shields.io/twitter/follow/daydreamsai?style=social)](https://twitter.com/daydreamsagents)

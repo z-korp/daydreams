@@ -4,7 +4,9 @@
 
 ### HandlerRole
 
-Defined in: [types.ts:389](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L389)
+Defined in: [types.ts:557](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L557)
+
+Enum defining roles for different types of handlers
 
 #### Enumeration Members
 
@@ -12,25 +14,31 @@ Defined in: [types.ts:389](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **ACTION**: `"action"`
 
-Defined in: [types.ts:392](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L392)
+Defined in: [types.ts:563](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L563)
+
+Handler for executing actions
 
 ##### INPUT
 
 > **INPUT**: `"input"`
 
-Defined in: [types.ts:390](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L390)
+Defined in: [types.ts:559](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L559)
+
+Handler for processing inputs
 
 ##### OUTPUT
 
 > **OUTPUT**: `"output"`
 
-Defined in: [types.ts:391](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L391)
+Defined in: [types.ts:561](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L561)
+
+Handler for processing outputs
 
 ***
 
 ### LogLevel
 
-Defined in: [types.ts:323](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L323)
+Defined in: [types.ts:420](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L420)
 
 Enum defining available log levels
 
@@ -40,37 +48,37 @@ Enum defining available log levels
 
 > **DEBUG**: `3`
 
-Defined in: [types.ts:327](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L327)
+Defined in: [types.ts:424](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L424)
 
 ##### ERROR
 
 > **ERROR**: `0`
 
-Defined in: [types.ts:324](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L324)
+Defined in: [types.ts:421](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L421)
 
 ##### INFO
 
 > **INFO**: `2`
 
-Defined in: [types.ts:326](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L326)
+Defined in: [types.ts:423](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L423)
 
 ##### TRACE
 
 > **TRACE**: `4`
 
-Defined in: [types.ts:328](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L328)
+Defined in: [types.ts:425](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L425)
 
 ##### WARN
 
 > **WARN**: `1`
 
-Defined in: [types.ts:325](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L325)
+Defined in: [types.ts:422](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L422)
 
 ## Classes
 
 ### EvmChain
 
-Defined in: [chains/evm.ts:44](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/evm.ts#L44)
+Defined in: [chains/evm.ts:44](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/chains/evm.ts#L44)
 
 Implementation of the IChain interface for Ethereum Virtual Machine (EVM) compatible chains.
 Provides methods for reading from and writing to EVM-based blockchains.
@@ -96,7 +104,7 @@ const evmChain = new EvmChain({
 
 > **new EvmChain**(`config`): [`EvmChain`](globals.md#evmchain)
 
-Defined in: [chains/evm.ts:66](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/evm.ts#L66)
+Defined in: [chains/evm.ts:66](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/chains/evm.ts#L66)
 
 Creates a new EVM chain instance
 
@@ -118,7 +126,7 @@ Configuration options for the chain connection
 
 > **chainId**: `string`
 
-Defined in: [chains/evm.ts:50](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/evm.ts#L50)
+Defined in: [chains/evm.ts:50](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/chains/evm.ts#L50)
 
 Unique identifier for this chain implementation.
 Matches the IChain interface.
@@ -134,7 +142,7 @@ This could be "ethereum", "polygon", etc.
 
 > **read**(`call`): `Promise`\<`any`\>
 
-Defined in: [chains/evm.ts:90](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/evm.ts#L90)
+Defined in: [chains/evm.ts:90](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/chains/evm.ts#L90)
 
 Performs a read operation on the blockchain, typically calling a view/pure contract function
 that doesn't modify state.
@@ -165,7 +173,7 @@ Error if the call fails
 
 > **write**(`call`): `Promise`\<`any`\>
 
-Defined in: [chains/evm.ts:130](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/evm.ts#L130)
+Defined in: [chains/evm.ts:130](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/chains/evm.ts#L130)
 
 Performs a write operation on the blockchain by sending a transaction that modifies state.
 Examples include transferring tokens or updating contract storage.
@@ -196,7 +204,7 @@ Error if the transaction fails
 
 ### Logger
 
-Defined in: [logger.ts:5](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/logger.ts#L5)
+Defined in: [logger.ts:5](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/logger.ts#L5)
 
 #### Constructors
 
@@ -204,7 +212,7 @@ Defined in: [logger.ts:5](https://github.com/dojoengine/daydreams/blob/ea09015bd
 
 > **new Logger**(`config`): [`Logger`](globals.md#logger)
 
-Defined in: [logger.ts:9](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/logger.ts#L9)
+Defined in: [logger.ts:9](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/logger.ts#L9)
 
 ###### Parameters
 
@@ -222,7 +230,7 @@ Defined in: [logger.ts:9](https://github.com/dojoengine/daydreams/blob/ea09015bd
 
 > **debug**(`context`, `message`, `data`?): `void`
 
-Defined in: [logger.ts:39](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/logger.ts#L39)
+Defined in: [logger.ts:39](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/logger.ts#L39)
 
 ###### Parameters
 
@@ -246,7 +254,7 @@ Defined in: [logger.ts:39](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **error**(`context`, `message`, `data`?): `void`
 
-Defined in: [logger.ts:27](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/logger.ts#L27)
+Defined in: [logger.ts:27](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/logger.ts#L27)
 
 ###### Parameters
 
@@ -270,7 +278,7 @@ Defined in: [logger.ts:27](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **info**(`context`, `message`, `data`?): `void`
 
-Defined in: [logger.ts:35](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/logger.ts#L35)
+Defined in: [logger.ts:35](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/logger.ts#L35)
 
 ###### Parameters
 
@@ -294,7 +302,7 @@ Defined in: [logger.ts:35](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **trace**(`context`, `message`, `data`?): `void`
 
-Defined in: [logger.ts:43](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/logger.ts#L43)
+Defined in: [logger.ts:43](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/logger.ts#L43)
 
 ###### Parameters
 
@@ -318,7 +326,7 @@ Defined in: [logger.ts:43](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **warn**(`context`, `message`, `data`?): `void`
 
-Defined in: [logger.ts:31](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/logger.ts#L31)
+Defined in: [logger.ts:31](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/logger.ts#L31)
 
 ###### Parameters
 
@@ -342,7 +350,7 @@ Defined in: [logger.ts:31](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 ### SolanaChain
 
-Defined in: [chains/solana.ts:29](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/solana.ts#L29)
+Defined in: [chains/solana.ts:29](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/chains/solana.ts#L29)
 
 #### Implements
 
@@ -354,7 +362,7 @@ Defined in: [chains/solana.ts:29](https://github.com/dojoengine/daydreams/blob/e
 
 > **new SolanaChain**(`config`): [`SolanaChain`](globals.md#solanachain)
 
-Defined in: [chains/solana.ts:34](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/solana.ts#L34)
+Defined in: [chains/solana.ts:34](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/chains/solana.ts#L34)
 
 ###### Parameters
 
@@ -372,7 +380,7 @@ Defined in: [chains/solana.ts:34](https://github.com/dojoengine/daydreams/blob/e
 
 > **chainId**: `string`
 
-Defined in: [chains/solana.ts:30](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/solana.ts#L30)
+Defined in: [chains/solana.ts:30](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/chains/solana.ts#L30)
 
 A unique identifier for the chain (e.g., "starknet", "ethereum", "solana", etc.)
 
@@ -386,7 +394,7 @@ A unique identifier for the chain (e.g., "starknet", "ethereum", "solana", etc.)
 
 > **read**(`call`): `Promise`\<`any`\>
 
-Defined in: [chains/solana.ts:58](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/solana.ts#L58)
+Defined in: [chains/solana.ts:58](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/chains/solana.ts#L58)
 
 Example "read" method. Because Solana doesn't have a direct "contract read" by default,
 we might interpret read calls as:
@@ -417,7 +425,7 @@ read({ type: "getAccountInfo", address: "..." })
 
 > **write**(`call`): `Promise`\<`any`\>
 
-Defined in: [chains/solana.ts:105](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/solana.ts#L105)
+Defined in: [chains/solana.ts:105](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/chains/solana.ts#L105)
 
 Example "write" method. We'll treat this as "send a Solana transaction."
 A typical transaction might have multiple instructions.
@@ -450,7 +458,7 @@ token transfers or program interactions).
 
 ### StarknetChain
 
-Defined in: [chains/starknet.ts:28](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/starknet.ts#L28)
+Defined in: [chains/starknet.ts:28](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/chains/starknet.ts#L28)
 
 Implementation of the IChain interface for interacting with the Starknet L2 blockchain
 
@@ -474,7 +482,7 @@ const starknet = new StarknetChain({
 
 > **new StarknetChain**(`config`): [`StarknetChain`](globals.md#starknetchain)
 
-Defined in: [chains/starknet.ts:40](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/starknet.ts#L40)
+Defined in: [chains/starknet.ts:40](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/chains/starknet.ts#L40)
 
 Creates a new StarknetChain instance
 
@@ -496,7 +504,7 @@ Configuration options for the Starknet connection
 
 > **chainId**: `string` = `"starknet"`
 
-Defined in: [chains/starknet.ts:30](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/starknet.ts#L30)
+Defined in: [chains/starknet.ts:30](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/chains/starknet.ts#L30)
 
 Unique identifier for this chain implementation
 
@@ -510,7 +518,7 @@ Unique identifier for this chain implementation
 
 > **read**(`call`): `Promise`\<`any`\>
 
-Defined in: [chains/starknet.ts:55](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/starknet.ts#L55)
+Defined in: [chains/starknet.ts:55](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/chains/starknet.ts#L55)
 
 Performs a read-only call to a Starknet contract
 
@@ -540,7 +548,7 @@ Error if the call fails
 
 > **write**(`call`): `Promise`\<`any`\>
 
-Defined in: [chains/starknet.ts:72](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/chains/starknet.ts#L72)
+Defined in: [chains/starknet.ts:72](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/chains/starknet.ts#L72)
 
 Executes a state-changing transaction on Starknet
 
@@ -568,47 +576,47 @@ Error if the transaction fails
 
 ## Interfaces
 
-### Agent\<Memory, T\>
+### Agent\<Memory, TContext\>
 
-Defined in: [types.ts:213](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L213)
+Defined in: [types.ts:286](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L286)
 
 #### Type Parameters
 
 • **Memory** *extends* [`WorkingMemory`](globals.md#workingmemory) = [`WorkingMemory`](globals.md#workingmemory)
 
-• **T** *extends* [`ContextHandler`](globals.md#contexthandlert)\<`Memory`\> = [`ContextHandler`](globals.md#contexthandlert)\<`Memory`\>
+• **TContext** *extends* [`Context`](globals.md#contextmemory-args-ctx-exports)\<`Memory`, `any`, `any`, `any`\> = [`Context`](globals.md#contextmemory-args-ctx-exports)\<`Memory`, `any`, `any`, `any`\>
 
 #### Properties
 
 ##### actions
 
-> **actions**: [`Action`](globals.md#actionschema-result-context-tagent)\<`any`, `any`, [`InferContextFromHandler`](globals.md#infercontextfromhandlerthandler)\<`T`\>, [`Agent`](globals.md#agentmemory-t)\<`Memory`, `T`\>\>[]
+> **actions**: [`Action`](globals.md#actionschema-result-context-tagent-tmemory)\<`any`, `any`, [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<`Memory`, `TContext`\>, [`Agent`](globals.md#agentmemory-tcontext)\<`Memory`, `TContext`\>, `any`\>[]
 
-Defined in: [types.ts:240](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L240)
+Defined in: [types.ts:316](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L316)
 
 ##### container
 
 > **container**: `Container`
 
-Defined in: [types.ts:225](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L225)
+Defined in: [types.ts:301](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L301)
 
 ##### context
 
-> **context**: `T`
+> **context**: `TContext`
 
-Defined in: [types.ts:221](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L221)
+Defined in: [types.ts:297](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L297)
 
 ##### debugger
 
 > **debugger**: [`Debugger`](globals.md#debugger-2)
 
-Defined in: [types.ts:223](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L223)
+Defined in: [types.ts:299](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L299)
 
 ##### emit()
 
 > **emit**: (...`args`) => `void`
 
-Defined in: [types.ts:243](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L243)
+Defined in: [types.ts:325](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L325)
 
 ###### Parameters
 
@@ -624,13 +632,13 @@ Defined in: [types.ts:243](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **evaluator**: (`ctx`) => `Promise`\<`void`\>
 
-Defined in: [types.ts:249](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L249)
+Defined in: [types.ts:335](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L335)
 
 ###### Parameters
 
 ###### ctx
 
-[`InferContextFromHandler`](globals.md#infercontextfromhandlerthandler)\<`T`\>
+[`AgentContext`](globals.md#agentcontextmemory-tcontext)\<`Memory`, `TContext`\>
 
 ###### Returns
 
@@ -640,55 +648,63 @@ Defined in: [types.ts:249](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **events**: `Record`\<`string`, `AnyZodObject`\>
 
-Defined in: [types.ts:236](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L236)
+Defined in: [types.ts:312](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L312)
 
 ##### experts
 
-> **experts**: `Record`\<`string`, [`ExpertConfig`](globals.md#expertconfigcontext)\<[`InferContextFromHandler`](globals.md#infercontextfromhandlerthandler)\<`T`\>\>\>
+> **experts**: `Record`\<`string`, [`ExpertConfig`](globals.md#expertconfigcontext)\<[`AgentContext`](globals.md#agentcontextmemory-tcontext)\<`Memory`, `TContext`\>\>\>
 
-Defined in: [types.ts:238](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L238)
+Defined in: [types.ts:314](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L314)
 
 ##### inputs
 
-> **inputs**: `Record`\<`string`, [`InputConfig`](globals.md#inputconfigt-context-tagent)\<`any`, [`InferContextFromHandler`](globals.md#infercontextfromhandlerthandler)\<`T`\>, [`AnyAgent`](globals.md#anyagent)\>\>
+> **inputs**: `Record`\<`string`, [`InputConfig`](globals.md#inputconfigt-context-tagent)\<`any`, [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<`Memory`, `TContext`\>, [`AnyAgent`](globals.md#anyagent)\>\>
 
-Defined in: [types.ts:230](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L230)
+Defined in: [types.ts:306](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L306)
 
 ##### memory
 
 > **memory**: [`MemoryStore`](globals.md#memorystore)
 
-Defined in: [types.ts:219](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L219)
+Defined in: [types.ts:295](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L295)
 
 ##### model
 
 > **model**: `LanguageModelV1`
 
-Defined in: [types.ts:227](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L227)
+Defined in: [types.ts:303](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L303)
 
 ##### outputs
 
-> **outputs**: `Record`\<`string`, `Omit`\<[`Output`](globals.md#outputschema-context-tagent)\<`any`, [`InferContextFromHandler`](globals.md#infercontextfromhandlerthandler)\<`T`\>, [`AnyAgent`](globals.md#anyagent)\>, `"type"`\>\>
+> **outputs**: `Record`\<`string`, `Omit`\<[`Output`](globals.md#outputschema-context-tagent)\<`any`, [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<`Memory`, `TContext`\>, [`AnyAgent`](globals.md#anyagent)\>, `"type"`\>\>
 
-Defined in: [types.ts:231](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L231)
+Defined in: [types.ts:307](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L307)
 
 ##### reasoningModel?
 
 > `optional` **reasoningModel**: `LanguageModelV1`
 
-Defined in: [types.ts:228](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L228)
+Defined in: [types.ts:304](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L304)
 
 ##### run()
 
-> **run**: (`conversationId`) => `Promise`\<`void`\>
+> **run**: \<`TContext`\>(`context`, `args`) => `Promise`\<`void`\>
 
-Defined in: [types.ts:244](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L244)
+Defined in: [types.ts:326](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L326)
+
+###### Type Parameters
+
+• **TContext** *extends* [`Context`](globals.md#contextmemory-args-ctx-exports)\<[`WorkingMemory`](globals.md#workingmemory), `any`, `any`, `any`\>
 
 ###### Parameters
 
-###### conversationId
+###### context
 
-`string`
+`TContext`
+
+###### args
+
+`TypeOf`\<`TContext`\[`"schema"`\]\>
 
 ###### Returns
 
@@ -696,15 +712,23 @@ Defined in: [types.ts:244](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 ##### send()
 
-> **send**: (`conversationId`, `input`) => `Promise`\<`void`\>
+> **send**: \<`TContext`\>(`context`, `args`, `input`) => `Promise`\<`void`\>
 
-Defined in: [types.ts:245](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L245)
+Defined in: [types.ts:330](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L330)
+
+###### Type Parameters
+
+• **TContext** *extends* [`Context`](globals.md#contextmemory-args-ctx-exports)\<[`WorkingMemory`](globals.md#workingmemory), `any`, `any`, `any`\>
 
 ###### Parameters
 
-###### conversationId
+###### context
 
-`string`
+`TContext`
+
+###### args
+
+`TypeOf`\<`TContext`\[`"schema"`\]\>
 
 ###### input
 
@@ -726,7 +750,7 @@ Defined in: [types.ts:245](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **start**(): `Promise`\<`void`\>
 
-Defined in: [types.ts:251](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L251)
+Defined in: [types.ts:337](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L337)
 
 ###### Returns
 
@@ -736,7 +760,7 @@ Defined in: [types.ts:251](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **stop**(): `Promise`\<`void`\>
 
-Defined in: [types.ts:252](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L252)
+Defined in: [types.ts:338](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L338)
 
 ###### Returns
 
@@ -744,33 +768,53 @@ Defined in: [types.ts:252](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 ***
 
-### AgentContext\<Memory\>
+### AgentContext\<Memory, TContext\>
 
-Defined in: [types.ts:206](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L206)
+Defined in: [types.ts:268](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L268)
 
 #### Type Parameters
 
 • **Memory** *extends* [`WorkingMemory`](globals.md#workingmemory) = [`WorkingMemory`](globals.md#workingmemory)
 
+• **TContext** *extends* [`Context`](globals.md#contextmemory-args-ctx-exports)\<`Memory`, `any`, `any`, `any`\> = [`Context`](globals.md#contextmemory-args-ctx-exports)\<`Memory`, `any`, `any`, `any`\>
+
 #### Properties
+
+##### args
+
+> **args**: `TypeOf`\<`TContext`\[`"schema"`\]\>
+
+Defined in: [types.ts:279](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L279)
+
+##### context
+
+> **context**: `TContext`
+
+Defined in: [types.ts:278](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L278)
+
+##### ctx
+
+> **ctx**: [`InferContextCtx`](globals.md#infercontextctxtcontext)\<`TContext`\>
+
+Defined in: [types.ts:280](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L280)
 
 ##### id
 
 > **id**: `string`
 
-Defined in: [types.ts:207](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L207)
+Defined in: [types.ts:277](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L277)
 
 ##### memory
 
 > **memory**: `Memory`
 
-Defined in: [types.ts:208](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L208)
+Defined in: [types.ts:281](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L281)
 
 ***
 
 ### IChain
 
-Defined in: [types.ts:371](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L371)
+Defined in: [types.ts:468](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L468)
 
 #### Properties
 
@@ -778,7 +822,7 @@ Defined in: [types.ts:371](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **chainId**: `string`
 
-Defined in: [types.ts:375](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L375)
+Defined in: [types.ts:472](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L472)
 
 A unique identifier for the chain (e.g., "starknet", "ethereum", "solana", etc.)
 
@@ -788,7 +832,7 @@ A unique identifier for the chain (e.g., "starknet", "ethereum", "solana", etc.)
 
 > **read**(`call`): `Promise`\<`any`\>
 
-Defined in: [types.ts:381](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L381)
+Defined in: [types.ts:478](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L478)
 
 Read (call) a contract or perform a query on this chain.
 The `call` parameter can be chain-specific data.
@@ -807,7 +851,7 @@ The `call` parameter can be chain-specific data.
 
 > **write**(`call`): `Promise`\<`any`\>
 
-Defined in: [types.ts:386](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L386)
+Defined in: [types.ts:483](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L483)
 
 Write (execute a transaction) on this chain, typically requiring signatures, etc.
 
@@ -825,7 +869,7 @@ Write (execute a transaction) on this chain, typically requiring signatures, etc
 
 ### LogEntry
 
-Defined in: [types.ts:348](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L348)
+Defined in: [types.ts:445](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L445)
 
 Structure of a log entry
 
@@ -835,37 +879,37 @@ Structure of a log entry
 
 > **context**: `string`
 
-Defined in: [types.ts:351](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L351)
+Defined in: [types.ts:448](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L448)
 
 ##### data?
 
 > `optional` **data**: `any`
 
-Defined in: [types.ts:353](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L353)
+Defined in: [types.ts:450](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L450)
 
 ##### level
 
 > **level**: [`LogLevel`](globals.md#loglevel)
 
-Defined in: [types.ts:349](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L349)
+Defined in: [types.ts:446](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L446)
 
 ##### message
 
 > **message**: `string`
 
-Defined in: [types.ts:352](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L352)
+Defined in: [types.ts:449](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L449)
 
 ##### timestamp
 
 > **timestamp**: `Date`
 
-Defined in: [types.ts:350](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L350)
+Defined in: [types.ts:447](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L447)
 
 ***
 
 ### LoggerConfig
 
-Defined in: [types.ts:338](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L338)
+Defined in: [types.ts:435](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L435)
 
 Configuration options for logging
 
@@ -875,43 +919,43 @@ Configuration options for logging
 
 > `optional` **enableColors**: `boolean`
 
-Defined in: [types.ts:341](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L341)
+Defined in: [types.ts:438](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L438)
 
 ##### enableTimestamp?
 
 > `optional` **enableTimestamp**: `boolean`
 
-Defined in: [types.ts:340](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L340)
+Defined in: [types.ts:437](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L437)
 
 ##### level
 
 > **level**: [`LogLevel`](globals.md#loglevel)
 
-Defined in: [types.ts:339](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L339)
+Defined in: [types.ts:436](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L436)
 
 ##### logPath?
 
 > `optional` **logPath**: `string`
 
-Defined in: [types.ts:343](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L343)
+Defined in: [types.ts:440](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L440)
 
 ##### logToFile?
 
 > `optional` **logToFile**: `boolean`
 
-Defined in: [types.ts:342](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L342)
+Defined in: [types.ts:439](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L439)
 
 ##### logWriter?
 
 > `optional` **logWriter**: [`LogWriter`](globals.md#logwriter-1)
 
-Defined in: [types.ts:344](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L344)
+Defined in: [types.ts:441](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L441)
 
 ***
 
 ### LogWriter
 
-Defined in: [types.ts:332](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L332)
+Defined in: [types.ts:429](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L429)
 
 Interface for custom log writers
 
@@ -921,7 +965,7 @@ Interface for custom log writers
 
 > **init**(`logPath`): `void`
 
-Defined in: [types.ts:333](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L333)
+Defined in: [types.ts:430](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L430)
 
 ###### Parameters
 
@@ -937,7 +981,7 @@ Defined in: [types.ts:333](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **write**(`data`): `void`
 
-Defined in: [types.ts:334](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L334)
+Defined in: [types.ts:431](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L431)
 
 ###### Parameters
 
@@ -953,7 +997,7 @@ Defined in: [types.ts:334](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 ### MemoryStore
 
-Defined in: [types.ts:21](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L21)
+Defined in: [types.ts:41](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L41)
 
 Interface for storing and retrieving memory data
 
@@ -963,7 +1007,9 @@ Interface for storing and retrieving memory data
 
 > **clear**(): `Promise`\<`void`\>
 
-Defined in: [types.ts:25](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L25)
+Defined in: [types.ts:67](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L67)
+
+Removes all data from memory
 
 ###### Returns
 
@@ -973,13 +1019,17 @@ Defined in: [types.ts:25](https://github.com/dojoengine/daydreams/blob/ea09015bd
 
 > **delete**(`key`): `Promise`\<`void`\>
 
-Defined in: [types.ts:24](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L24)
+Defined in: [types.ts:62](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L62)
+
+Removes data from memory
 
 ###### Parameters
 
 ###### key
 
 `string`
+
+Key to remove
 
 ###### Returns
 
@@ -989,31 +1039,43 @@ Defined in: [types.ts:24](https://github.com/dojoengine/daydreams/blob/ea09015bd
 
 > **get**\<`T`\>(`key`): `Promise`\<`null` \| `T`\>
 
-Defined in: [types.ts:22](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L22)
+Defined in: [types.ts:48](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L48)
+
+Retrieves data from memory
 
 ###### Type Parameters
 
 • **T**
+
+Type of data to retrieve
 
 ###### Parameters
 
 ###### key
 
 `string`
+
+Key to lookup
 
 ###### Returns
 
 `Promise`\<`null` \| `T`\>
 
+Promise resolving to data or null if not found
+
 ##### set()
 
 > **set**\<`T`\>(`key`, `value`): `Promise`\<`void`\>
 
-Defined in: [types.ts:23](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L23)
+Defined in: [types.ts:56](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L56)
+
+Stores data in memory
 
 ###### Type Parameters
 
 • **T**
+
+Type of data to store
 
 ###### Parameters
 
@@ -1021,9 +1083,13 @@ Defined in: [types.ts:23](https://github.com/dojoengine/daydreams/blob/ea09015bd
 
 `string`
 
+Key to store under
+
 ###### value
 
 `T`
+
+Data to store
 
 ###### Returns
 
@@ -1033,7 +1099,7 @@ Defined in: [types.ts:23](https://github.com/dojoengine/daydreams/blob/ea09015bd
 
 ### ResearchConfig
 
-Defined in: [types.ts:363](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L363)
+Defined in: [types.ts:460](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L460)
 
 Configuration for research operations
 
@@ -1043,37 +1109,37 @@ Configuration for research operations
 
 > **breadth**: `number`
 
-Defined in: [types.ts:365](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L365)
+Defined in: [types.ts:462](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L462)
 
 ##### depth
 
 > **depth**: `number`
 
-Defined in: [types.ts:366](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L366)
+Defined in: [types.ts:463](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L463)
 
 ##### learnings?
 
 > `optional` **learnings**: `string`[]
 
-Defined in: [types.ts:367](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L367)
+Defined in: [types.ts:464](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L464)
 
 ##### query
 
 > **query**: `string`
 
-Defined in: [types.ts:364](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L364)
+Defined in: [types.ts:461](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L461)
 
 ##### visitedUrls?
 
 > `optional` **visitedUrls**: `string`[]
 
-Defined in: [types.ts:368](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L368)
+Defined in: [types.ts:465](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L465)
 
 ***
 
 ### ResearchResult
 
-Defined in: [types.ts:357](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L357)
+Defined in: [types.ts:454](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L454)
 
 Results from a research operation
 
@@ -1083,19 +1149,21 @@ Results from a research operation
 
 > **learnings**: `string`[]
 
-Defined in: [types.ts:358](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L358)
+Defined in: [types.ts:455](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L455)
 
 ##### visitedUrls
 
 > **visitedUrls**: `string`[]
 
-Defined in: [types.ts:359](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L359)
+Defined in: [types.ts:456](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L456)
 
 ***
 
 ### WorkingMemory
 
-Defined in: [types.ts:28](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L28)
+Defined in: [types.ts:73](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L73)
+
+Represents the working memory state during execution
 
 #### Properties
 
@@ -1103,39 +1171,49 @@ Defined in: [types.ts:28](https://github.com/dojoengine/daydreams/blob/ea09015bd
 
 > **calls**: [`ActionCall`](globals.md#actioncalldata)\<`any`\>[]
 
-Defined in: [types.ts:32](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L32)
+Defined in: [types.ts:81](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L81)
+
+List of action calls
 
 ##### inputs
 
 > **inputs**: [`InputRef`](globals.md#inputref)[]
 
-Defined in: [types.ts:29](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L29)
+Defined in: [types.ts:75](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L75)
+
+List of input references
 
 ##### outputs
 
 > **outputs**: [`OutputRef`](globals.md#outputref)[]
 
-Defined in: [types.ts:30](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L30)
+Defined in: [types.ts:77](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L77)
+
+List of output references
 
 ##### results
 
 > **results**: [`ActionResult`](globals.md#actionresultdata)\<`any`\>[]
 
-Defined in: [types.ts:33](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L33)
+Defined in: [types.ts:83](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L83)
+
+List of action results
 
 ##### thoughts
 
 > **thoughts**: [`Thought`](globals.md#thought)[]
 
-Defined in: [types.ts:31](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L31)
+Defined in: [types.ts:79](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L79)
+
+List of thought records
 
 ## Type Aliases
 
-### Action\<Schema, Result, Context, TAgent\>
+### Action\<Schema, Result, Context, TAgent, TMemory\>
 
-> **Action**\<`Schema`, `Result`, `Context`, `TAgent`\>: `object`
+> **Action**\<`Schema`, `Result`, `Context`, `TAgent`, `TMemory`\>: `object`
 
-Defined in: [types.ts:43](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L43)
+Defined in: [types.ts:93](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L93)
 
 Represents an action that can be executed with typed parameters
 
@@ -1155,6 +1233,8 @@ Context type for the action execution
 
 • **TAgent** *extends* [`AnyAgent`](globals.md#anyagent) = [`AnyAgent`](globals.md#anyagent)
 
+• **TMemory** *extends* [`Memory`](globals.md#memorydata)\<`any`\> = [`Memory`](globals.md#memorydata)\<`any`\>
+
 #### Type declaration
 
 ##### description?
@@ -1169,11 +1249,15 @@ Context type for the action execution
 
 ###### ctx
 
-`Context`
+`Context` & `object`
 
 ###### Returns
 
 `boolean`
+
+##### examples?
+
+> `optional` **examples**: `z.infer`\<`Schema`\>[]
 
 ##### handler()
 
@@ -1187,7 +1271,7 @@ Context type for the action execution
 
 ###### ctx
 
-`Context`
+`Context` & `object`
 
 ###### agent
 
@@ -1211,6 +1295,10 @@ Context type for the action execution
 
 `Promise`\<`void`\>
 
+##### memory?
+
+> `optional` **memory**: `TMemory`
+
 ##### name
 
 > **name**: `string`
@@ -1225,7 +1313,7 @@ Context type for the action execution
 
 > **ActionCall**\<`Data`\>: `object`
 
-Defined in: [types.ts:125](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L125)
+Defined in: [types.ts:187](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L187)
 
 Represents a call to an action
 
@@ -1261,7 +1349,7 @@ Represents a call to an action
 
 > **ActionResult**\<`Data`\>: `object`
 
-Defined in: [types.ts:134](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L134)
+Defined in: [types.ts:196](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L196)
 
 Represents the result of an action execution
 
@@ -1299,9 +1387,19 @@ Represents the result of an action execution
 
 ### AnyAgent
 
-> **AnyAgent**: [`Agent`](globals.md#agentmemory-t)\<`any`, `any`\>
+> **AnyAgent**: [`Agent`](globals.md#agentmemory-tcontext)\<`any`, `any`\>
 
-Defined in: [types.ts:211](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L211)
+Defined in: [types.ts:284](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L284)
+
+***
+
+### AnyContext
+
+> **AnyContext**: [`Context`](globals.md#contextmemory-args-ctx-exports)\<`any`, `any`, `any`, `any`\>
+
+Defined in: [types.ts:489](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L489)
+
+Type representing any Context with generic type parameters
 
 ***
 
@@ -1309,7 +1407,7 @@ Defined in: [types.ts:211](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **AnyPrompt**: [`Prompt`](globals.md#promptdata-variables)\<`any`, `any`\>
 
-Defined in: [prompt.ts:47](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L47)
+Defined in: [prompt.ts:47](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/prompt.ts#L47)
 
 ***
 
@@ -1317,7 +1415,7 @@ Defined in: [prompt.ts:47](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **Chain**: `object`
 
-Defined in: [types.ts:13](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L13)
+Defined in: [types.ts:27](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L27)
 
 Represents an execution chain with experts and metadata
 
@@ -1327,39 +1425,45 @@ Represents an execution chain with experts and metadata
 
 > **experts**: `object`[]
 
+List of experts involved in the chain
+
 ##### id
 
 > **id**: `string`
+
+Unique identifier for the chain
 
 ##### purpose
 
 > **purpose**: `string`
 
+Goal or purpose of this chain
+
 ##### thinking
 
 > **thinking**: `string`
 
+Current thinking/reasoning state
+
 ***
 
-### Config\<TMemory, TContextHandler, Context\>
+### Config\<TMemory, TContext\>
 
-> **Config**\<`TMemory`, `TContextHandler`, `Context`\>: `object`
+> **Config**\<`TMemory`, `TContext`\>: `object`
 
-Defined in: [types.ts:271](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L271)
+Defined in: [types.ts:357](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L357)
 
 #### Type Parameters
 
 • **TMemory** *extends* [`WorkingMemory`](globals.md#workingmemory) = [`WorkingMemory`](globals.md#workingmemory)
 
-• **TContextHandler** *extends* [`ContextHandler`](globals.md#contexthandlert)\<`TMemory`\> = [`ContextHandler`](globals.md#contexthandlert)\<`TMemory`\>
-
-• **Context** = [`InferContextFromHandler`](globals.md#infercontextfromhandlerthandler)\<`TContextHandler`\>
+• **TContext** *extends* [`AnyContext`](globals.md#anycontext) = [`AnyContext`](globals.md#anycontext)
 
 #### Type declaration
 
 ##### actions?
 
-> `optional` **actions**: [`Action`](globals.md#actionschema-result-context-tagent)\<`any`, `any`, `Context`, [`Agent`](globals.md#agentmemory-t)\<`TMemory`, `TContextHandler`\>\>[]
+> `optional` **actions**: [`Action`](globals.md#actionschema-result-context-tagent-tmemory)\<`any`, `any`, [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<`TMemory`, `TContext`\>, [`Agent`](globals.md#agentmemory-tcontext)\<`TMemory`, `TContext`\>, `any`\>[]
 
 ##### container?
 
@@ -1367,7 +1471,7 @@ Defined in: [types.ts:271](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 ##### context?
 
-> `optional` **context**: `TContextHandler`
+> `optional` **context**: `TContext`
 
 ##### debugger?
 
@@ -1379,11 +1483,11 @@ Defined in: [types.ts:271](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 ##### experts?
 
-> `optional` **experts**: `Record`\<`string`, [`ExpertConfig`](globals.md#expertconfigcontext)\<`Context`\>\>
+> `optional` **experts**: `Record`\<`string`, [`ExpertConfig`](globals.md#expertconfigcontext)\<[`AgentContext`](globals.md#agentcontextmemory-tcontext)\<`TMemory`, `TContext`\>\>\>
 
 ##### inputs?
 
-> `optional` **inputs**: `Record`\<`string`, [`InputConfig`](globals.md#inputconfigt-context-tagent)\<`any`, `Context`, [`Agent`](globals.md#agentmemory-t)\<`TMemory`, `TContextHandler`\>\>\>
+> `optional` **inputs**: `Record`\<`string`, [`InputConfig`](globals.md#inputconfigt-context-tagent)\<`any`, [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<`TMemory`, `TContext`\>, [`Agent`](globals.md#agentmemory-tcontext)\<`TMemory`, `TContext`\>\>\>
 
 ##### logger?
 
@@ -1399,7 +1503,7 @@ Defined in: [types.ts:271](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 ##### outputs?
 
-> `optional` **outputs**: `Record`\<`string`, [`OutputConfig`](globals.md#outputconfigt-context-tagent)\<`any`, `Context`, [`Agent`](globals.md#agentmemory-t)\<`TMemory`, `TContextHandler`\>\>\>
+> `optional` **outputs**: `Record`\<`string`, [`OutputConfig`](globals.md#outputconfigt-context-tagent)\<`any`, [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<`TMemory`, `TContext`\>, [`Agent`](globals.md#agentmemory-tcontext)\<`TMemory`, `TContext`\>\>\>
 
 ##### reasoningModel?
 
@@ -1411,71 +1515,195 @@ Defined in: [types.ts:271](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 ***
 
-### ContextHandler()\<T\>
+### Context\<Memory, Args, Ctx, Exports\>
 
-> **ContextHandler**\<`T`\>: (`memory`) => `object`
+> **Context**\<`Memory`, `Args`, `Ctx`, `Exports`\>: `object`
 
-Defined in: [types.ts:255](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L255)
+Defined in: [types.ts:512](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L512)
+
+Configuration for a context that manages state and behavior
 
 #### Type Parameters
 
-• **T** *extends* [`WorkingMemory`](globals.md#workingmemory) = [`WorkingMemory`](globals.md#workingmemory)
+• **Memory** *extends* [`WorkingMemory`](globals.md#workingmemory) = [`WorkingMemory`](globals.md#workingmemory)
 
-#### Parameters
+Type of working memory for this context
 
-##### memory
+• **Args** *extends* `z.ZodTypeAny` = `never`
 
-[`MemoryStore`](globals.md#memorystore)
+Zod schema type for context arguments
 
-#### Returns
+• **Ctx** = `any`
 
-`object`
+Type of context data
 
-##### get()
+• **Exports** = `any`
 
-> **get**: (`id`) => `Promise`\<\{ `id`: `string`; `memory`: `T`; \}\>
+Type of exported data
+
+#### Type declaration
+
+##### create()?
+
+> `optional` **create**: (`params`, `ctx`) => `Memory`
+
+Optional function to create new memory for this context
 
 ###### Parameters
 
-###### id
+###### params
+
+###### args
+
+`z.infer`\<`Args`\>
+
+###### key
 
 `string`
 
+###### ctx
+
+`Ctx`
+
 ###### Returns
 
-`Promise`\<\{ `id`: `string`; `memory`: `T`; \}\>
+`Memory`
 
-##### render()
+##### description?
 
-> **render**: (`data`) => `string` \| `string`[]
+> `optional` **description**: `string`
+
+Optional description of this context
+
+##### instructions?
+
+> `optional` **instructions**: [`Instruction`](globals.md#instruction) \| (`params`, `ctx`) => [`Instruction`](globals.md#instruction)
+
+Optional instructions for this context
+
+##### key()
+
+> **key**: (`args`) => `string`
+
+Function to generate a unique key from context arguments
 
 ###### Parameters
 
-###### data
+###### args
 
-`T`
+`z.infer`\<`Args`\>
+
+###### Returns
+
+`string`
+
+##### load()?
+
+> `optional` **load**: (`params`, `ctx`) => `Promise`\<`Memory`\>
+
+Optional function to load existing memory
+
+###### Parameters
+
+###### params
+
+###### args
+
+`z.infer`\<`Args`\>
+
+###### key
+
+`string`
+
+###### ctx
+
+`Ctx`
+
+###### Returns
+
+`Promise`\<`Memory`\>
+
+##### render()?
+
+> `optional` **render**: (`memory`, `ctx`) => `string` \| `string`[]
+
+Optional function to render memory state as string(s)
+
+###### Parameters
+
+###### memory
+
+`Memory`
+
+###### ctx
+
+`Ctx`
 
 ###### Returns
 
 `string` \| `string`[]
 
-##### save()
+##### save()?
 
-> **save**: (`id`, `data`) => `Promise`\<`void`\>
+> `optional` **save**: (`params`, `ctx`) => `Promise`\<`void`\>
+
+Optional function to save memory state
 
 ###### Parameters
 
-###### id
+###### params
+
+###### args
+
+`z.infer`\<`Args`\>
+
+###### key
 
 `string`
 
-###### data
+###### memory
 
-`T`
+`Memory`
+
+###### ctx
+
+`Ctx`
 
 ###### Returns
 
 `Promise`\<`void`\>
+
+##### schema
+
+> **schema**: `Args`
+
+Zod schema for validating context arguments
+
+##### setup()
+
+> **setup**: (`args`, `agent`) => `Promise`\<`Ctx`\> \| `Ctx`
+
+Setup function to initialize context data
+
+###### Parameters
+
+###### args
+
+`z.infer`\<`Args`\>
+
+###### agent
+
+[`AnyAgent`](globals.md#anyagent)
+
+###### Returns
+
+`Promise`\<`Ctx`\> \| `Ctx`
+
+##### type
+
+> **type**: `string`
+
+Unique type identifier for this context
 
 ***
 
@@ -1483,7 +1711,7 @@ Defined in: [types.ts:255](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **COTProps**: `object`
 
-Defined in: [types.ts:153](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L153)
+Defined in: [types.ts:215](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L215)
 
 Properties required for Chain-of-Thought execution
 
@@ -1491,7 +1719,7 @@ Properties required for Chain-of-Thought execution
 
 ##### actions
 
-> **actions**: [`Action`](globals.md#actionschema-result-context-tagent)[]
+> **actions**: [`Action`](globals.md#actionschema-result-context-tagent-tmemory)[]
 
 ##### inputs
 
@@ -1519,7 +1747,7 @@ Properties required for Chain-of-Thought execution
 
 > **COTResponse**: `object`
 
-Defined in: [types.ts:163](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L163)
+Defined in: [types.ts:225](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L225)
 
 Response structure from Chain-of-Thought execution
 
@@ -1547,7 +1775,7 @@ Response structure from Chain-of-Thought execution
 
 > **Debugger**: (`contextId`, `keys`, `data`) => `void`
 
-Defined in: [types.ts:269](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L269)
+Defined in: [types.ts:355](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L355)
 
 #### Parameters
 
@@ -1573,7 +1801,7 @@ Defined in: [types.ts:269](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **ElementNode**\<`Attributes`\>: `object`
 
-Defined in: [xml.ts:67](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L67)
+Defined in: [xml.ts:67](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/xml.ts#L67)
 
 #### Type Parameters
 
@@ -1615,7 +1843,7 @@ Defined in: [xml.ts:67](https://github.com/dojoengine/daydreams/blob/ea09015bda5
 
 > **Expert**\<`Context`\>: `object`
 
-Defined in: [types.ts:198](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L198)
+Defined in: [types.ts:260](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L260)
 
 Represents an expert system with instructions and actions
 
@@ -1627,7 +1855,7 @@ Represents an expert system with instructions and actions
 
 ##### actions?
 
-> `optional` **actions**: [`Action`](globals.md#actionschema-result-context-tagent)\<`any`, `any`, `Context`\>[]
+> `optional` **actions**: [`Action`](globals.md#actionschema-result-context-tagent-tmemory)\<`any`, `any`, `Context`\>[]
 
 ##### description
 
@@ -1651,7 +1879,7 @@ Represents an expert system with instructions and actions
 
 > **ExpertConfig**\<`Context`\>: `Omit`\<[`Expert`](globals.md#expertcontext)\<`Context`\>, `"type"`\>
 
-Defined in: [types.ts:317](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L317)
+Defined in: [types.ts:414](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L414)
 
 Configuration type for experts without type field
 
@@ -1665,7 +1893,7 @@ Configuration type for experts without type field
 
 > **ExtractTemplateVariables**\<`T`\>: `T` *extends* `` `${infer Start}{{${infer Var}}}${infer Rest}` `` ? `Var` \| [`ExtractTemplateVariables`](globals.md#extracttemplatevariablest)\<`Rest`\> : `never`
 
-Defined in: [types.ts:184](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L184)
+Defined in: [types.ts:246](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L246)
 
 Extracts variable names from a template string
 
@@ -1681,7 +1909,7 @@ Template string type
 
 > **Formatter**\<`Variables`, `Data`\>: (`data`) => `Record`\<keyof `Variables`, `any`\>
 
-Defined in: [prompt.ts:8](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L8)
+Defined in: [prompt.ts:8](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/prompt.ts#L8)
 
 #### Type Parameters
 
@@ -1705,7 +1933,7 @@ Defined in: [prompt.ts:8](https://github.com/dojoengine/daydreams/blob/ea09015bd
 
 > **GeneratePromptConfig**\<`TPrompt`, `Variables`, `Data`, `TFormatter`\>: `object`
 
-Defined in: [prompt.ts:55](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L55)
+Defined in: [prompt.ts:55](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/prompt.ts#L55)
 
 #### Type Parameters
 
@@ -1741,7 +1969,7 @@ Defined in: [prompt.ts:55](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **GetVisitors**\<`Output`, `T`\>: `{ [K in keyof T]?: PromptVisitor<Output, T[K]> }` & `object`
 
-Defined in: [prompt.ts:27](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L27)
+Defined in: [prompt.ts:27](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/prompt.ts#L27)
 
 #### Type Parameters
 
@@ -1751,15 +1979,35 @@ Defined in: [prompt.ts:27](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 ***
 
-### InferContextFromHandler\<THandler\>
+### InferContextCtx\<TContext\>
 
-> **InferContextFromHandler**\<`THandler`\>: [`AgentContext`](globals.md#agentcontextmemory)\<[`InferMemoryFromHandler`](globals.md#infermemoryfromhandlerthandler)\<`THandler`\>\>
+> **InferContextCtx**\<`TContext`\>: `TContext` *extends* [`Context`](globals.md#contextmemory-args-ctx-exports)\<`any`, `any`, infer Ctx\> ? `Ctx` : `never`
 
-Defined in: [types.ts:266](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L266)
+Defined in: [types.ts:502](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L502)
+
+Extracts the Context type from a Context type
 
 #### Type Parameters
 
-• **THandler** *extends* [`ContextHandler`](globals.md#contexthandlert)\<`any`\>
+• **TContext** *extends* [`AnyContext`](globals.md#anycontext)
+
+The Context type to extract Ctx from
+
+***
+
+### InferContextMemory\<TContext\>
+
+> **InferContextMemory**\<`TContext`\>: `TContext` *extends* [`Context`](globals.md#contextmemory-args-ctx-exports)\<infer Memory\> ? `Memory` : `never`
+
+Defined in: [types.ts:495](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L495)
+
+Extracts the Memory type from a Context type
+
+#### Type Parameters
+
+• **TContext** *extends* [`AnyContext`](globals.md#anycontext)
+
+The Context type to extract Memory from
 
 ***
 
@@ -1767,7 +2015,7 @@ Defined in: [types.ts:266](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **InferFormatter**\<`TPrompt`\>: `TPrompt` *extends* [`Prompt`](globals.md#promptdata-variables)\<infer Data, infer Variables\> ? [`Formatter`](globals.md#formattervariables-data)\<`Variables`, `Data`\> : `never`
 
-Defined in: [prompt.ts:13](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L13)
+Defined in: [prompt.ts:13](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/prompt.ts#L13)
 
 #### Type Parameters
 
@@ -1779,7 +2027,7 @@ Defined in: [prompt.ts:13](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **InferGeneratePromptConfig**\<`TPrompt`\>: `TPrompt` *extends* [`Prompt`](globals.md#promptdata-variables)\<infer Data, infer Variables\> ? [`GeneratePromptConfig`](globals.md#generatepromptconfigtprompt-variables-data-tformatter)\<`TPrompt`, `Variables`, `Data`\> : `never` \| `TPrompt` *extends* `string` ? [`GeneratePromptConfig`](globals.md#generatepromptconfigtprompt-variables-data-tformatter)\<`TPrompt`, [`TemplateVariables`](globals.md#templatevariablest)\<`TPrompt`\>\> : `never`
 
-Defined in: [prompt.ts:67](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L67)
+Defined in: [prompt.ts:67](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/prompt.ts#L67)
 
 #### Type Parameters
 
@@ -1787,15 +2035,19 @@ Defined in: [prompt.ts:67](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 ***
 
-### InferMemoryFromHandler\<THandler\>
+### InferMemoryData\<TMemory\>
 
-> **InferMemoryFromHandler**\<`THandler`\>: `THandler` *extends* [`ContextHandler`](globals.md#contexthandlert)\<infer Memory\> ? `Memory` : `unknown`
+> **InferMemoryData**\<`TMemory`\>: `TMemory` *extends* [`Memory`](globals.md#memorydata)\<infer Data\> ? `Data` : `never`
 
-Defined in: [types.ts:263](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L263)
+Defined in: [types.ts:21](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L21)
+
+Extracts the data type from a Memory type
 
 #### Type Parameters
 
-• **THandler** *extends* [`ContextHandler`](globals.md#contexthandlert)\<`any`\>
+• **TMemory** *extends* [`Memory`](globals.md#memorydata)\<`any`\>
+
+Memory type to extract data from
 
 ***
 
@@ -1803,7 +2055,7 @@ Defined in: [types.ts:263](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **InferPromptComponents**\<`TPrompt`\>: `TPrompt` *extends* [`Prompt`](globals.md#promptdata-variables)\<`any`, infer Components\> ? `Components` : `never`
 
-Defined in: [prompt.ts:75](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L75)
+Defined in: [prompt.ts:75](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/prompt.ts#L75)
 
 #### Type Parameters
 
@@ -1815,7 +2067,7 @@ Defined in: [prompt.ts:75](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **InferPromptData**\<`TPrompt`\>: `TPrompt` *extends* [`Prompt`](globals.md#promptdata-variables)\<infer Data\> ? `Data` : `never`
 
-Defined in: [prompt.ts:52](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L52)
+Defined in: [prompt.ts:52](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/prompt.ts#L52)
 
 #### Type Parameters
 
@@ -1827,7 +2079,7 @@ Defined in: [prompt.ts:52](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **InferPromptVariables**\<`TPrompt`\>: `TPrompt` *extends* [`Prompt`](globals.md#promptdata-variables)\<`any`, infer Vars\> ? `Vars` : `never`
 
-Defined in: [prompt.ts:49](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L49)
+Defined in: [prompt.ts:49](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/prompt.ts#L49)
 
 #### Type Parameters
 
@@ -1839,7 +2091,7 @@ Defined in: [prompt.ts:49](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **Input**\<`Schema`, `Context`, `TAgent`\>: `object`
 
-Defined in: [types.ts:85](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L85)
+Defined in: [types.ts:140](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L140)
 
 Represents an input handler with validation and subscription capability
 
@@ -1849,7 +2101,7 @@ Represents an input handler with validation and subscription capability
 
 Zod schema for input parameters
 
-• **Context** = `any`
+• **Context** *extends* [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<[`WorkingMemory`](globals.md#workingmemory), [`AnyContext`](globals.md#anycontext)\> = [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<[`WorkingMemory`](globals.md#workingmemory), [`AnyContext`](globals.md#anycontext)\>
 
 Context type for input handling
 
@@ -1903,13 +2155,13 @@ Context type for input handling
 
 ##### subscribe()?
 
-> `optional` **subscribe**: (`send`, `agent`) => () => `void`
+> `optional` **subscribe**: (`send`, `agent`) => () => `void` \| `void` \| `Promise`\<`void`\>
 
 ###### Parameters
 
 ###### send
 
-(`conversationId`, `data`) => `void`
+\<`TContext`\>(`contextHandler`, `args`, `data`) => `void`
 
 ###### agent
 
@@ -1917,11 +2169,7 @@ Context type for input handling
 
 ###### Returns
 
-`Function`
-
-###### Returns
-
-`void`
+() => `void` \| `void` \| `Promise`\<`void`\>
 
 ##### type
 
@@ -1933,7 +2181,7 @@ Context type for input handling
 
 > **InputConfig**\<`T`, `Context`, `TAgent`\>: `Omit`\<[`Input`](globals.md#inputschema-context-tagent)\<`T`, `Context`, `TAgent`\>, `"type"`\>
 
-Defined in: [types.ts:303](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L303)
+Defined in: [types.ts:394](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L394)
 
 Configuration type for inputs without type field
 
@@ -1941,7 +2189,7 @@ Configuration type for inputs without type field
 
 • **T** *extends* `z.AnyZodObject` = `z.AnyZodObject`
 
-• **Context** = `any`
+• **Context** *extends* [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<[`WorkingMemory`](globals.md#workingmemory), [`AnyContext`](globals.md#anycontext)\> = [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<[`WorkingMemory`](globals.md#workingmemory), [`AnyContext`](globals.md#anycontext)\>
 
 • **TAgent** *extends* [`AnyAgent`](globals.md#anyagent) = [`AnyAgent`](globals.md#anyagent)
 
@@ -1951,7 +2199,7 @@ Configuration type for inputs without type field
 
 > **InputRef**: `object`
 
-Defined in: [types.ts:106](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L106)
+Defined in: [types.ts:168](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L168)
 
 Reference to an input event in the system
 
@@ -1983,11 +2231,55 @@ Reference to an input event in the system
 
 ***
 
+### Instruction
+
+> **Instruction**: `string` \| `string`[]
+
+Defined in: [types.ts:486](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L486)
+
+Type representing instructions that can be either a single string or array of strings
+
+***
+
 ### Log
 
 > **Log**: [`InputRef`](globals.md#inputref) \| [`OutputRef`](globals.md#outputref) \| [`Thought`](globals.md#thought) \| [`ActionCall`](globals.md#actioncalldata) \| [`ActionResult`](globals.md#actionresultdata)
 
-Defined in: [types.ts:150](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L150)
+Defined in: [types.ts:212](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L212)
+
+***
+
+### Memory\<Data\>
+
+> **Memory**\<`Data`\>: `object`
+
+Defined in: [types.ts:10](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L10)
+
+Represents a memory configuration for storing data
+
+#### Type Parameters
+
+• **Data** = `any`
+
+Type of data stored in memory
+
+#### Type declaration
+
+##### create()
+
+> **create**: () => `Promise`\<`Data`\> \| `Data`
+
+Function to initialize memory data
+
+###### Returns
+
+`Promise`\<`Data`\> \| `Data`
+
+##### key
+
+> **key**: `string`
+
+Unique identifier for this memory
 
 ***
 
@@ -1995,7 +2287,7 @@ Defined in: [types.ts:150](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **Node**: [`TextNode`](globals.md#textnode) \| [`ElementNode`](globals.md#elementnodeattributes)
 
-Defined in: [xml.ts:79](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L79)
+Defined in: [xml.ts:79](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/xml.ts#L79)
 
 ***
 
@@ -2003,7 +2295,7 @@ Defined in: [xml.ts:79](https://github.com/dojoengine/daydreams/blob/ea09015bda5
 
 > **NodeVisitor**: (`node`, `parse`) => [`Node`](globals.md#node)
 
-Defined in: [xml.ts:81](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L81)
+Defined in: [xml.ts:81](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/xml.ts#L81)
 
 #### Parameters
 
@@ -2025,7 +2317,7 @@ Defined in: [xml.ts:81](https://github.com/dojoengine/daydreams/blob/ea09015bda5
 
 > **Output**\<`Schema`, `Context`, `TAgent`\>: `object`
 
-Defined in: [types.ts:63](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L63)
+Defined in: [types.ts:116](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L116)
 
 #### Type Parameters
 
@@ -2037,9 +2329,9 @@ Defined in: [types.ts:63](https://github.com/dojoengine/daydreams/blob/ea09015bd
 
 #### Type declaration
 
-##### description
+##### description?
 
-> **description**: `string`
+> `optional` **description**: `string`
 
 ##### enabled()?
 
@@ -2054,6 +2346,10 @@ Defined in: [types.ts:63](https://github.com/dojoengine/daydreams/blob/ea09015bd
 ###### Returns
 
 `boolean`
+
+##### examples?
+
+> `optional` **examples**: `z.infer`\<`Schema`\>[]
 
 ##### handler()
 
@@ -2091,6 +2387,10 @@ Defined in: [types.ts:63](https://github.com/dojoengine/daydreams/blob/ea09015bd
 
 `Promise`\<`void`\>
 
+##### instructions?
+
+> `optional` **instructions**: `string`
+
 ##### schema
 
 > **schema**: `Schema`
@@ -2103,9 +2403,9 @@ Defined in: [types.ts:63](https://github.com/dojoengine/daydreams/blob/ea09015bd
 
 ### OutputConfig\<T, Context, TAgent\>
 
-> **OutputConfig**\<`T`, `Context`, `TAgent`\>: `Omit`\<[`Output`](globals.md#outputschema-context-tagent)\<`T`, `Context`\>, `"type"`\>
+> **OutputConfig**\<`T`, `Context`, `TAgent`\>: `Omit`\<[`Output`](globals.md#outputschema-context-tagent)\<`T`, `Context`, `TAgent`\>, `"type"`\>
 
-Defined in: [types.ts:310](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L310)
+Defined in: [types.ts:404](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L404)
 
 Configuration type for outputs without type field
 
@@ -2113,7 +2413,7 @@ Configuration type for outputs without type field
 
 • **T** *extends* [`OutputSchema`](globals.md#outputschema) = [`OutputSchema`](globals.md#outputschema)
 
-• **Context** = `any`
+• **Context** *extends* [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<[`WorkingMemory`](globals.md#workingmemory), [`AnyContext`](globals.md#anycontext)\> = [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<[`WorkingMemory`](globals.md#workingmemory), [`AnyContext`](globals.md#anycontext)\>
 
 • **TAgent** *extends* [`AnyAgent`](globals.md#anyagent) = [`AnyAgent`](globals.md#anyagent)
 
@@ -2123,7 +2423,7 @@ Configuration type for outputs without type field
 
 > **OutputRef**: `object`
 
-Defined in: [types.ts:116](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L116)
+Defined in: [types.ts:178](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L178)
 
 Reference to an output event in the system
 
@@ -2155,7 +2455,7 @@ Reference to an output event in the system
 
 > **OutputSchema**: `z.AnyZodObject` \| `z.ZodString`
 
-Defined in: [types.ts:61](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L61)
+Defined in: [types.ts:114](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L114)
 
 ***
 
@@ -2163,7 +2463,7 @@ Defined in: [types.ts:61](https://github.com/dojoengine/daydreams/blob/ea09015bd
 
 > **Parser**\<`Output`\>: (`content`) => `Output`
 
-Defined in: [prompt.ts:102](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L102)
+Defined in: [prompt.ts:102](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/prompt.ts#L102)
 
 #### Type Parameters
 
@@ -2185,7 +2485,7 @@ Defined in: [prompt.ts:102](https://github.com/dojoengine/daydreams/blob/ea09015
 
 > **Pretty**\<`type`\>: `{ [key in keyof type]: type[key] }` & `unknown`
 
-Defined in: [types.ts:178](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L178)
+Defined in: [types.ts:240](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L240)
 
 Utility type to preserve type information
 
@@ -2199,7 +2499,7 @@ Utility type to preserve type information
 
 > **Prompt**\<`Data`, `Variables`\>: \<`TData`\>(`data`, `formatter`?) => `string`
 
-Defined in: [prompt.ts:39](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L39)
+Defined in: [prompt.ts:39](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/prompt.ts#L39)
 
 #### Type Parameters
 
@@ -2231,7 +2531,7 @@ Defined in: [prompt.ts:39](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **PromptVisitor**\<`Output`, `Attributes`\>: (`output`, `node`, `parse`) => `void`
 
-Defined in: [prompt.ts:18](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L18)
+Defined in: [prompt.ts:18](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/prompt.ts#L18)
 
 #### Type Parameters
 
@@ -2263,7 +2563,7 @@ Defined in: [prompt.ts:18](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **Subscription**: () => `void`
 
-Defined in: [types.ts:320](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L320)
+Defined in: [types.ts:417](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L417)
 
 Function type for subscription cleanup
 
@@ -2273,23 +2573,71 @@ Function type for subscription cleanup
 
 ***
 
-### Task
+### Task()\<Params, Result\>
 
-> **Task**: `object`
+> **Task**\<`Params`, `Result`\>: (`params`, `options`?) => `Promise`\<`Result`\>
 
-Defined in: [types.ts:7](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L7)
+Defined in: [task.ts:15](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/task.ts#L15)
 
-Represents a task with text content and completion status
+#### Type Parameters
+
+• **Params**
+
+• **Result**
+
+#### Parameters
+
+##### params
+
+`Params`
+
+##### options?
+
+[`TaskOptions`](globals.md#taskoptions)
+
+#### Returns
+
+`Promise`\<`Result`\>
+
+***
+
+### TaskContext
+
+> **TaskContext**: `object`
+
+Defined in: [task.ts:10](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/task.ts#L10)
 
 #### Type declaration
 
-##### complete
+##### callId
 
-> **complete**: `boolean`
+> **callId**: `string`
 
-##### text
+##### debug
 
-> **text**: `string`
+> **debug**: [`Debugger`](globals.md#debugger-2)
+
+***
+
+### TaskOptions
+
+> **TaskOptions**: `object`
+
+Defined in: [task.ts:4](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/task.ts#L4)
+
+#### Type declaration
+
+##### debug?
+
+> `optional` **debug**: [`Debugger`](globals.md#debugger-2)
+
+##### limit?
+
+> `optional` **limit**: `number`
+
+##### retry?
+
+> `optional` **retry**: `number`
 
 ***
 
@@ -2297,7 +2645,7 @@ Represents a task with text content and completion status
 
 > **TemplateVariables**\<`T`\>: [`Pretty`](globals.md#prettytype)\<\{ \[K in ExtractTemplateVariables\<T\>\]: string \| string\[\] \| object \}\>
 
-Defined in: [types.ts:193](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L193)
+Defined in: [types.ts:255](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L255)
 
 Creates a type mapping template variables to string values
 
@@ -2313,7 +2661,7 @@ Template string type
 
 > **TextNode**: `object`
 
-Defined in: [xml.ts:60](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L60)
+Defined in: [xml.ts:60](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/xml.ts#L60)
 
 #### Type declaration
 
@@ -2339,7 +2687,7 @@ Defined in: [xml.ts:60](https://github.com/dojoengine/daydreams/blob/ea09015bda5
 
 > **Thought**: `object`
 
-Defined in: [types.ts:144](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L144)
+Defined in: [types.ts:206](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L206)
 
 Represents a thought or reasoning step
 
@@ -2363,7 +2711,7 @@ Represents a thought or reasoning step
 
 > **XMLElement**: `object`
 
-Defined in: [types.ts:171](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/types.ts#L171)
+Defined in: [types.ts:233](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/types.ts#L233)
 
 Represents an XML element structure
 
@@ -2381,13 +2729,21 @@ Represents an XML element structure
 
 > **tag**: `string`
 
+## Variables
+
+### defaultContext
+
+> `const` **defaultContext**: [`Context`](globals.md#contextmemory-args-ctx-exports)\<[`WorkingMemory`](globals.md#workingmemory), `ZodString`, \{\}, `any`\>
+
+Defined in: [memory.ts:46](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/memory.ts#L46)
+
 ## Functions
 
 ### action()
 
-> **action**\<`Schema`, `Result`, `Context`, `TAgent`\>(`action`): [`Action`](globals.md#actionschema-result-context-tagent)\<`Schema`, `Result`, `Context`, `TAgent`\>
+> **action**\<`Schema`, `Result`, `Context`, `TAgent`, `TMemory`\>(`action`): [`Action`](globals.md#actionschema-result-context-tagent-tmemory)\<`Schema`, `Result`, `Context`, `TAgent`, `TMemory`\>
 
-Defined in: [utils.ts:66](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/utils.ts#L66)
+Defined in: [utils.ts:72](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/utils.ts#L72)
 
 Creates an action configuration
 
@@ -2401,43 +2757,69 @@ Zod schema type for action parameters
 
 Return type of the action
 
-• **Context** = `any`
+• **Context** *extends* [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<[`WorkingMemory`](globals.md#workingmemory), [`AnyContext`](globals.md#anycontext)\> = [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<[`WorkingMemory`](globals.md#workingmemory), [`AnyContext`](globals.md#anycontext)\>
 
 Context type for action execution
 
-• **TAgent** *extends* [`Agent`](globals.md#agentmemory-t)\<`any`, `any`\> = [`Agent`](globals.md#agentmemory-t)\<`any`, `any`\>
+• **TAgent** *extends* [`Agent`](globals.md#agentmemory-tcontext)\<`any`, `any`\> = [`Agent`](globals.md#agentmemory-tcontext)\<`any`, `any`\>
+
+• **TMemory** *extends* [`Memory`](globals.md#memorydata)\<`any`\> = `never`
 
 #### Parameters
 
 ##### action
 
-[`Action`](globals.md#actionschema-result-context-tagent)\<`Schema`, `Result`, `Context`, `TAgent`\>
+[`Action`](globals.md#actionschema-result-context-tagent-tmemory)\<`Schema`, `Result`, `Context`, `TAgent`, `TMemory`\>
 
 Action configuration object
 
 #### Returns
 
-[`Action`](globals.md#actionschema-result-context-tagent)\<`Schema`, `Result`, `Context`, `TAgent`\>
+[`Action`](globals.md#actionschema-result-context-tagent-tmemory)\<`Schema`, `Result`, `Context`, `TAgent`, `TMemory`\>
 
 Typed action configuration
 
 ***
 
-### chainOfThought()
+### context()
 
-> **chainOfThought**(`__namedParameters`): `Promise`\<[`COTResponse`](globals.md#cotresponse)\>
+> **context**\<`Memory`, `Args`, `Ctx`, `Exports`\>(`ctx`): [`Context`](globals.md#contextmemory-args-ctx-exports)\<`Memory`, `Args`, `Ctx`, `Exports`\>
 
-Defined in: [cot.ts:81](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/cot.ts#L81)
+Defined in: [utils.ts:164](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/utils.ts#L164)
+
+Creates a context configuration
+
+#### Type Parameters
+
+• **Memory** *extends* [`WorkingMemory`](globals.md#workingmemory) = [`WorkingMemory`](globals.md#workingmemory)
+
+Type of working memory
+
+• **Args** *extends* `ZodTypeAny` = `any`
+
+Zod schema type for context arguments
+
+• **Ctx** = `any`
+
+Type of context data
+
+• **Exports** = `any`
+
+Type of exported data
 
 #### Parameters
 
-##### \_\_namedParameters
+##### ctx
 
-[`COTProps`](globals.md#cotprops)
+[`Context`](globals.md#contextmemory-args-ctx-exports)\<`Memory`, `Args`, `Ctx`, `Exports`\>
+
+Context configuration object
 
 #### Returns
 
-`Promise`\<[`COTResponse`](globals.md#cotresponse)\>
+[`Context`](globals.md#contextmemory-args-ctx-exports)\<`Memory`, `Args`, `Ctx`, `Exports`\>
+
+Typed context configuration
 
 ***
 
@@ -2445,7 +2827,7 @@ Defined in: [cot.ts:81](https://github.com/dojoengine/daydreams/blob/ea09015bda5
 
 > **createContextHandler**\<`T`\>(`memoryCreator`, `renderContext`): (`memory`) => `object`
 
-Defined in: [memory.ts:4](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/memory.ts#L4)
+Defined in: [memory.ts:6](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/memory.ts#L6)
 
 #### Type Parameters
 
@@ -2525,25 +2907,25 @@ Defined in: [memory.ts:4](https://github.com/dojoengine/daydreams/blob/ea09015bd
 
 ### createDreams()
 
-> **createDreams**\<`Memory`, `Handler`\>(`config`): [`Agent`](globals.md#agentmemory-t)\<`Memory`, `Handler`\>
+> **createDreams**\<`Memory`, `TContext`\>(`config`): [`Agent`](globals.md#agentmemory-tcontext)\<`Memory`, `TContext`\>
 
-Defined in: [dreams.ts:168](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/dreams.ts#L168)
+Defined in: [dreams.ts:272](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/dreams.ts#L272)
 
 #### Type Parameters
 
 • **Memory** *extends* [`WorkingMemory`](globals.md#workingmemory) = [`WorkingMemory`](globals.md#workingmemory)
 
-• **Handler** *extends* [`ContextHandler`](globals.md#contexthandlert)\<`Memory`\> = [`ContextHandler`](globals.md#contexthandlert)\<`Memory`\>
+• **TContext** *extends* [`AnyContext`](globals.md#anycontext) = [`AnyContext`](globals.md#anycontext)
 
 #### Parameters
 
 ##### config
 
-[`Config`](globals.md#configtmemory-tcontexthandler-context)\<`Memory`, `Handler`\>
+[`Config`](globals.md#configtmemory-tcontext)\<`Memory`, `TContext`\>
 
 #### Returns
 
-[`Agent`](globals.md#agentmemory-t)\<`Memory`, `Handler`\>
+[`Agent`](globals.md#agentmemory-tcontext)\<`Memory`, `TContext`\>
 
 ***
 
@@ -2551,7 +2933,7 @@ Defined in: [dreams.ts:168](https://github.com/dojoengine/daydreams/blob/ea09015
 
 > **createMemoryStore**(): [`MemoryStore`](globals.md#memorystore)
 
-Defined in: [memory.ts:49](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/memory.ts#L49)
+Defined in: [memory.ts:60](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/memory.ts#L60)
 
 #### Returns
 
@@ -2563,7 +2945,7 @@ Defined in: [memory.ts:49](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **createParser**\<`Output`, `Components`, `Visitors`\>(`getOutput`, `visitors`): [`Parser`](globals.md#parseroutput)\<`Output`\>
 
-Defined in: [prompt.ts:104](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L104)
+Defined in: [prompt.ts:104](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/prompt.ts#L104)
 
 #### Type Parameters
 
@@ -2593,7 +2975,7 @@ Defined in: [prompt.ts:104](https://github.com/dojoengine/daydreams/blob/ea09015
 
 > **createPrompt**\<`Data`, `Template`, `Variables`\>(`prompt`, `formatter`): [`Prompt`](globals.md#promptdata-variables)\<`Data`, `Variables`\>
 
-Defined in: [prompt.ts:82](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L82)
+Defined in: [prompt.ts:82](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/prompt.ts#L82)
 
 #### Type Parameters
 
@@ -2623,7 +3005,7 @@ Defined in: [prompt.ts:82](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **createTagParser**\<`T`\>(`tagName`, `contentParser`?): (`content`) => `object`[]
 
-Defined in: [xml.ts:36](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L36)
+Defined in: [xml.ts:36](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/xml.ts#L36)
 
 #### Type Parameters
 
@@ -2659,7 +3041,7 @@ Defined in: [xml.ts:36](https://github.com/dojoengine/daydreams/blob/ea09015bda5
 
 > **createTagRegex**(`tagName`): `RegExp`
 
-Defined in: [xml.ts:29](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L29)
+Defined in: [xml.ts:29](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/xml.ts#L29)
 
 Creates a regular expression to match XML tags with a specific name
 
@@ -2679,11 +3061,11 @@ RegExp that matches the specified XML tag and captures its attributes and conten
 
 ***
 
-### defaultContext()
+### defaultContextMemory()
 
-> **defaultContext**(): [`WorkingMemory`](globals.md#workingmemory)
+> **defaultContextMemory**(): [`WorkingMemory`](globals.md#workingmemory)
 
-Defined in: [memory.ts:25](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/memory.ts#L25)
+Defined in: [memory.ts:27](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/memory.ts#L27)
 
 #### Returns
 
@@ -2695,7 +3077,7 @@ Defined in: [memory.ts:25](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **defaultContextRender**(`memory`): `string`[]
 
-Defined in: [memory.ts:35](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/memory.ts#L35)
+Defined in: [memory.ts:37](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/memory.ts#L37)
 
 #### Parameters
 
@@ -2713,7 +3095,7 @@ Defined in: [memory.ts:35](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **expert**\<`Context`\>(`config`): [`ExpertConfig`](globals.md#expertconfigcontext)\<`Context`\>
 
-Defined in: [utils.ts:97](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/utils.ts#L97)
+Defined in: [utils.ts:108](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/utils.ts#L108)
 
 Creates an expert configuration
 
@@ -2743,13 +3125,13 @@ Typed expert configuration
 
 > **formatAction**(`action`): `string`
 
-Defined in: [formatters.ts:55](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/formatters.ts#L55)
+Defined in: [formatters.ts:67](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/formatters.ts#L67)
 
 #### Parameters
 
 ##### action
 
-[`Action`](globals.md#actionschema-result-context-tagent)\<`any`, `any`, `any`\>
+[`Action`](globals.md#actionschema-result-context-tagent-tmemory)\<`any`, `any`, `any`\>
 
 #### Returns
 
@@ -2759,9 +3141,45 @@ Defined in: [formatters.ts:55](https://github.com/dojoengine/daydreams/blob/ea09
 
 ### formatContext()
 
-> **formatContext**(`i`): `string`
+> **formatContext**(`__namedParameters`): `string`
 
-Defined in: [formatters.ts:76](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/formatters.ts#L76)
+Defined in: [formatters.ts:88](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/formatters.ts#L88)
+
+#### Parameters
+
+##### \_\_namedParameters
+
+###### content
+
+`string` \| (`string` \| [`XMLElement`](globals.md#xmlelement))[]
+
+###### description?
+
+`string`
+
+###### instructions?
+
+`string` \| `string`[]
+
+###### key
+
+`string`
+
+###### type
+
+`string`
+
+#### Returns
+
+`string`
+
+***
+
+### formatContextLog()
+
+> **formatContextLog**(`i`): `string`
+
+Defined in: [formatters.ts:121](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/formatters.ts#L121)
 
 #### Parameters
 
@@ -2779,7 +3197,7 @@ Defined in: [formatters.ts:76](https://github.com/dojoengine/daydreams/blob/ea09
 
 > **formatInput**(`input`): `string`
 
-Defined in: [formatters.ts:11](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/formatters.ts#L11)
+Defined in: [formatters.ts:18](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/formatters.ts#L18)
 
 Formats an input reference into XML format
 
@@ -2803,7 +3221,7 @@ XML string representation of the input
 
 > **formatOutput**(`output`): `string`
 
-Defined in: [formatters.ts:25](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/formatters.ts#L25)
+Defined in: [formatters.ts:32](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/formatters.ts#L32)
 
 Formats an output reference into XML format
 
@@ -2827,7 +3245,7 @@ XML string representation of the output
 
 > **formatOutputInterface**(`output`): `string`
 
-Defined in: [formatters.ts:41](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/formatters.ts#L41)
+Defined in: [formatters.ts:48](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/formatters.ts#L48)
 
 Formats an output interface definition into XML format
 
@@ -2851,7 +3269,7 @@ XML string representation of the output interface
 
 > **formatValue**(`value`): `string`
 
-Defined in: [utils.ts:35](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/utils.ts#L35)
+Defined in: [utils.ts:40](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/utils.ts#L40)
 
 Formats a value for template rendering
 
@@ -2875,7 +3293,7 @@ Formatted string representation of the value
 
 > **formatXml**(`__namedParameters`): `string`
 
-Defined in: [xml.ts:10](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L10)
+Defined in: [xml.ts:10](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/xml.ts#L10)
 
 Formats an XML element into a string representation
 
@@ -2897,7 +3315,7 @@ Formatted XML string
 
 > **getOrCreateConversationMemory**(`memory`): `object`
 
-Defined in: [memory.ts:44](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/memory.ts#L44)
+Defined in: [memory.ts:55](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/memory.ts#L55)
 
 #### Parameters
 
@@ -2961,7 +3379,7 @@ Defined in: [memory.ts:44](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **getZodJsonSchema**(`schema`): `JsonSchema7Type`
 
-Defined in: [prompt.ts:78](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/prompt.ts#L78)
+Defined in: [prompt.ts:78](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/prompt.ts#L78)
 
 #### Parameters
 
@@ -2979,7 +3397,7 @@ Defined in: [prompt.ts:78](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 > **input**\<`Schema`, `Context`, `TAgent`\>(`config`): [`InputConfig`](globals.md#inputconfigt-context-tagent)\<`Schema`, `Context`, `TAgent`\>
 
-Defined in: [utils.ts:48](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/utils.ts#L48)
+Defined in: [utils.ts:53](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/utils.ts#L53)
 
 Creates an input configuration
 
@@ -2989,11 +3407,11 @@ Creates an input configuration
 
 Zod schema type for input validation
 
-• **Context** = `any`
+• **Context** *extends* [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<[`WorkingMemory`](globals.md#workingmemory), [`AnyContext`](globals.md#anycontext)\> = [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<[`WorkingMemory`](globals.md#workingmemory), [`AnyContext`](globals.md#anycontext)\>
 
 Context type for input handling
 
-• **TAgent** *extends* [`Agent`](globals.md#agentmemory-t)\<`any`, `any`\> = [`Agent`](globals.md#agentmemory-t)\<`any`, `any`\>
+• **TAgent** *extends* [`Agent`](globals.md#agentmemory-tcontext)\<`any`, `any`\> = [`Agent`](globals.md#agentmemory-tcontext)\<`any`, `any`\>
 
 #### Parameters
 
@@ -3015,7 +3433,7 @@ Typed input configuration
 
 > **isElement**(`node`): `node is ElementNode<Record<string, any>>`
 
-Defined in: [xml.ts:181](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L181)
+Defined in: [xml.ts:181](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/xml.ts#L181)
 
 #### Parameters
 
@@ -3033,7 +3451,7 @@ Defined in: [xml.ts:181](https://github.com/dojoengine/daydreams/blob/ea09015bda
 
 > **isText**(`node`): `node is TextNode`
 
-Defined in: [xml.ts:185](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L185)
+Defined in: [xml.ts:185](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/xml.ts#L185)
 
 #### Parameters
 
@@ -3051,7 +3469,7 @@ Defined in: [xml.ts:185](https://github.com/dojoengine/daydreams/blob/ea09015bda
 
 > **llm**(`__namedParameters`): `Promise`\<`GenerateTextResult`\<`Record`\<`string`, `CoreTool`\<`any`, `any`\>\>, `never`\>\>
 
-Defined in: [llm.ts:3](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/llm.ts#L3)
+Defined in: [llm.ts:3](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/llm.ts#L3)
 
 #### Parameters
 
@@ -3079,11 +3497,41 @@ Defined in: [llm.ts:3](https://github.com/dojoengine/daydreams/blob/ea09015bda51
 
 ***
 
+### memory()
+
+> **memory**\<`Data`\>(`memory`): [`Memory`](globals.md#memorydata)\<`Data`\>
+
+Defined in: [utils.ts:179](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/utils.ts#L179)
+
+Creates a memory configuration
+
+#### Type Parameters
+
+• **Data** = `any`
+
+Type of data stored in memory
+
+#### Parameters
+
+##### memory
+
+[`Memory`](globals.md#memorydata)\<`Data`\>
+
+Memory configuration object
+
+#### Returns
+
+[`Memory`](globals.md#memorydata)\<`Data`\>
+
+Typed memory configuration
+
+***
+
 ### output()
 
 > **output**\<`Schema`, `Context`\>(`config`): [`OutputConfig`](globals.md#outputconfigt-context-tagent)\<`Schema`, `Context`\>
 
-Defined in: [utils.ts:84](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/utils.ts#L84)
+Defined in: [utils.ts:92](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/utils.ts#L92)
 
 Creates an output configuration
 
@@ -3093,7 +3541,7 @@ Creates an output configuration
 
 Zod schema type for output validation
 
-• **Context** = `any`
+• **Context** *extends* [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<[`WorkingMemory`](globals.md#workingmemory), [`AnyContext`](globals.md#anycontext)\> = [`AgentContext`](globals.md#agentcontextmemory-tcontext)\<[`WorkingMemory`](globals.md#workingmemory), [`AnyContext`](globals.md#anycontext)\>
 
 Context type for output handling
 
@@ -3117,7 +3565,7 @@ Typed output configuration
 
 > **parse**(`text`, `visitor`, `depth`, `parent`): [`Node`](globals.md#node)[]
 
-Defined in: [xml.ts:93](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L93)
+Defined in: [xml.ts:93](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/xml.ts#L93)
 
 #### Parameters
 
@@ -3147,7 +3595,7 @@ Defined in: [xml.ts:93](https://github.com/dojoengine/daydreams/blob/ea09015bda5
 
 > **parseAttributes**(`text`): `Record`\<`string`, `string`\>
 
-Defined in: [xml.ts:83](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/xml.ts#L83)
+Defined in: [xml.ts:83](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/xml.ts#L83)
 
 #### Parameters
 
@@ -3165,7 +3613,7 @@ Defined in: [xml.ts:83](https://github.com/dojoengine/daydreams/blob/ea09015bda5
 
 > **render**\<`Template`\>(`str`, `data`): `string`
 
-Defined in: [utils.ts:19](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/utils.ts#L19)
+Defined in: [utils.ts:24](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/utils.ts#L24)
 
 Renders a template string by replacing variables with provided values
 
@@ -3201,7 +3649,9 @@ The rendered string with variables replaced
 
 > **splitTextIntoChunks**(`text`, `options`): `string`[]
 
-Defined in: [utils.ts:107](https://github.com/dojoengine/daydreams/blob/ea09015bda51c0b0b7124c3f15c2d09c669fc4f9/packages/core/src/core/v1/utils.ts#L107)
+Defined in: [utils.ts:125](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/utils.ts#L125)
+
+Splits text into chunks based on maximum chunk size
 
 #### Parameters
 
@@ -3209,10 +3659,48 @@ Defined in: [utils.ts:107](https://github.com/dojoengine/daydreams/blob/ea09015b
 
 `string`
 
+The text to split into chunks
+
 ##### options
 
 `ChunkOptions`
 
+Chunking options including maximum chunk size
+
 #### Returns
 
 `string`[]
+
+Array of text chunks
+
+***
+
+### task()
+
+> **task**\<`Params`, `Result`\>(`key`, `fn`, `defaultOptions`?): [`Task`](globals.md#taskparams-result)\<`Params`, `Result`\>
+
+Defined in: [task.ts:19](https://github.com/dojoengine/daydreams/blob/eb3bea941563a3e64aeaff9e7839c907c71e8359/packages/core/src/core/v1/task.ts#L19)
+
+#### Type Parameters
+
+• **Params**
+
+• **Result**
+
+#### Parameters
+
+##### key
+
+`string`
+
+##### fn
+
+(`params`, `ctx`) => `Promise`\<`Result`\>
+
+##### defaultOptions?
+
+[`TaskOptions`](globals.md#taskoptions)
+
+#### Returns
+
+[`Task`](globals.md#taskparams-result)\<`Params`, `Result`\>
