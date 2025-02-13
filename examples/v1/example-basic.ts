@@ -2,15 +2,18 @@
  * Basic example demonstrating a simple chat interface using Dreams
  * with a command line interface and Groq's LLM.
  */
-
-import { createDreams } from "@daydreamsai/core/src/core/v1/dreams";
-import { context, input, output } from "@daydreamsai/core/src/core/v1/utils";
-import { createMemoryStore } from "@daydreamsai/core/src/core/v1/memory";
 import { createGroq } from "@ai-sdk/groq";
-import { LogLevel, WorkingMemory } from "@daydreamsai/core/src/core/v1/types";
 import { z } from "zod";
 import * as readline from "readline/promises";
-import { formatMsg } from "@daydreamsai/core/src/core/v1";
+import {
+  createDreams,
+  createMemoryStore,
+  input,
+  output,
+  context,
+  formatMsg,
+  LogLevel,
+} from "@daydreamsai/core/v1";
 
 // Initialize Groq client
 const groq = createGroq({
@@ -37,7 +40,7 @@ const chatContext = context({
 });
 
 // Create Dreams agent instance
-const agent = createDreams<WorkingMemory>({
+const agent = createDreams({
   logger: LogLevel.DEBUG,
   memory: createMemoryStore(),
   model: groq("deepseek-r1-distill-llama-70b"),

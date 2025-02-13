@@ -3,9 +3,6 @@ type Factory<T> = (container: Container) => T;
 type FunctionType = (...args: any[]) => any;
 type Token = string | symbol | Constructor<any> | FunctionType;
 
-// Type utility to extract the return type of a function
-type ReturnTypeOf<T> = T extends (...args: any[]) => infer R ? R : never;
-
 export interface Container {
   register: <T>(token: Token, factory: Factory<T>) => Container;
   singleton: <T>(token: Token, factory: Factory<T>) => Container;

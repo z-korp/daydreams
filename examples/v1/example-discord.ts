@@ -1,15 +1,19 @@
 import { z } from "zod";
-import { createDreams } from "@daydreamsai/core/src/core/v1/dreams";
-import { context, input, output } from "@daydreamsai/core/src/core/v1/utils";
-import { DiscordClient } from "@daydreamsai/core/src/core/v1/io/discord";
+import {
+  context,
+  createContainer,
+  createDreams,
+  createMemoryStore,
+  formatMsg,
+  input,
+  LogLevel,
+  output,
+} from "@daydreamsai/core/v1";
+import { DiscordClient } from "@daydreamsai/core/io/discord";
 import { createGroq } from "@ai-sdk/groq";
-import { LogLevel } from "@daydreamsai/core/src/core/v1/types";
-import { createMemoryStore } from "@daydreamsai/core/src/core/v1/memory";
 import { researchDeepActions } from "./deep-research/research";
 import { tavily } from "@tavily/core";
 import { Events, Message } from "discord.js";
-import createContainer from "@daydreamsai/core/src/core/v1/container";
-import { formatMsg } from "@daydreamsai/core/src/core/v1";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,

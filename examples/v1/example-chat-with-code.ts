@@ -1,22 +1,21 @@
 import { z } from "zod";
-import { createDreams } from "@daydreamsai/core/src/core/v1/dreams";
 import {
-  action,
-  context,
+  createDreams,
+  createMemoryStore,
+  createContainer,
   input,
   output,
-} from "@daydreamsai/core/src/core/v1/utils";
-import { DiscordClient } from "@daydreamsai/core/src/core/v1/io/discord";
-import { LogLevel, WorkingMemory } from "@daydreamsai/core/src/core/v1/types";
-import { createMemoryStore } from "@daydreamsai/core/src/core/v1/memory";
+  context,
+  LogLevel,
+  action,
+  formatMsg,
+} from "@daydreamsai/core/v1";
+import { DiscordClient } from "@daydreamsai/core/io/discord";
 import { Octokit } from "@octokit/rest";
 import { google } from "@ai-sdk/google";
 import { tavily } from "@tavily/core";
-import createContainer from "@daydreamsai/core/src/core/v1/container";
 import { createGroq } from "@ai-sdk/groq";
-import { Events } from "discord.js";
-import { Message } from "discord.js";
-import { formatMsg } from "@daydreamsai/core/src/core/v1";
+import { Events, Message } from "discord.js";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -70,7 +69,7 @@ const discordChannelContext = context({
   },
 });
 
-createDreams<WorkingMemory>({
+createDreams({
   logger: LogLevel.DEBUG,
   model: google("gemini-2.0-flash-001"),
   memory: createMemoryStore(),

@@ -4,33 +4,18 @@ import {
   type ActionCall,
   type Agent,
   type AgentContext,
-  type AnyAction,
   type AnyAgent,
   type AnyContext,
   type Config,
   type Debugger,
-  type InferMemoryData,
-  type Log,
   type Output,
   type Subscription,
   type WorkingMemory,
 } from "./types";
-import {
-  createContextHandler,
-  defaultContext,
-  defaultContextMemory,
-  defaultContextRender,
-} from "./memory";
 import { Logger } from "./logger";
-import {
-  formatAction,
-  formatContext,
-  formatContextLog,
-  formatOutputInterface,
-} from "./formatters";
+import { formatContext } from "./formatters";
 import { generateText, type LanguageModelV1 } from "ai";
 import { randomUUID } from "crypto";
-import { createParser, createPrompt } from "./prompt";
 import createContainer from "./container";
 import { createServiceManager } from "./serviceProvider";
 import {
@@ -38,238 +23,14 @@ import {
   type InferContextCtx,
   type InferContextMemory,
 } from "./types";
-import type { z } from "zod";
+import { z } from "zod";
 import { task, type TaskContext } from "./task";
-
-const promptTemplate = `
-You are tasked with analyzing messages, formulating responses, and initiating actions based on a given context. 
-You will be provided with a set of available actions, outputs, and a current context. 
-Your instructions is to analyze the situation and respond appropriately.
-
-## Instructions
-- If asked for something - never do a summary unless you are asked to do a summary. Always respond with the exact information requested.
-- You must use the available actions and outputs to respond to the context.
-- You must reason about the context, think, and planned actions.
-
-Here are the available actions you can initiate:
-<available_actions>
-{{actions}}
-</available_actions>
-
-Here are the available outputs you can use:
-<outputs>
-{{outputs}}
-</outputs>
-
-Here is the current context:
-<context>
-{{context}}
-</context>
-
-Now, analyze the following new context:
-<context>
-{{updates}}
-</context>
-
-Here's how you structure your response:
-<response>
-<reasoning>
-[Your reasoning of the context, think, messages, and planned actions]
-</reasoning>
-[List of async actions to be initiated, if applicable]
-<action name="[Action name]">[action arguments using the schema as JSON]</action>
-[List of outputs, if applicable]
-<output type="[Output type]">
-[output data using the schema]
-</output>
-</response>
-
-{{examples}}
-`;
-
-const prompt = createPrompt(
-  promptTemplate,
-  ({
-    outputs,
-    actions,
-    updates,
-    context,
-  }: {
-    context: string | string[];
-    outputs: Output[];
-    updates: Log[];
-    actions: AnyAction[];
-  }) => ({
-    context: context,
-    outputs: outputs.map(formatOutputInterface),
-    actions: actions.map(formatAction),
-    updates: updates.map(formatContextLog),
-    examples: [],
-  })
-);
-
-const parse = createParser<
-  {
-    think: string[];
-    response: string | undefined;
-    reasonings: string[];
-    actions: { name: string; data: any }[];
-    outputs: { type: string; content: string }[];
-  },
-  {
-    action: { name: string };
-    output: { type: string };
-  }
->(
-  () => ({
-    think: [],
-    reasonings: [],
-    actions: [],
-    outputs: [],
-    response: undefined,
-  }),
-  {
-    response: (state, element, parse) => {
-      state.response = element.content;
-      return parse();
-    },
-
-    action: (state, element) => {
-      state.actions.push({
-        name: element.attributes.name,
-        data: JSON.parse(element.content),
-      });
-    },
-
-    think: (state, element) => {
-      state.think.push(element.content);
-    },
-
-    reasoning: (state, element) => {
-      state.reasonings.push(element.content);
-    },
-
-    output: (state, element) => {
-      state.outputs.push({
-        type: element.attributes.type,
-        content: element.content,
-      });
-    },
-  }
-);
-
-const runGenerate = task(
-  "agent:run:generate",
-  async <TContext extends Context<WorkingMemory, any, any, any>>(
-    {
-      context,
-      contextId,
-      key,
-      args,
-      memory,
-      outputs,
-      actions,
-      ctx,
-      logger,
-      model,
-    }: {
-      context: TContext;
-      args: z.infer<TContext["schema"]>;
-      contextId: string;
-      key: string;
-      memory: WorkingMemory;
-      outputs: Output[];
-      actions: Action[];
-      ctx: InferContextCtx<TContext>;
-      logger: Logger;
-      model: LanguageModelV1;
-    },
-    { callId, debug }: TaskContext
-  ) => {
-    const newInputs = memory.inputs.filter((i) => i.processed !== true);
-
-    debug(contextId, ["memory", callId], JSON.stringify(memory, null, 2));
-
-    const system = prompt({
-      context: formatContext({
-        type: context.type ?? "system",
-        key: key,
-        description:
-          typeof context.description === "function"
-            ? context.description({ key, args }, ctx)
-            : context.description,
-        instructions:
-          typeof context.instructions === "function"
-            ? context.instructions({ key, args }, ctx)
-            : context.instructions,
-        content: context.render
-          ? context.render(memory, ctx)
-          : defaultContextRender(memory),
-      }),
-
-      outputs: outputs,
-      actions: actions.filter((action) =>
-        action.enabled ? action.enabled(ctx as any) : true
-      ),
-      updates: [
-        ...newInputs,
-        ...memory.results.filter((i) => i.processed !== true),
-      ],
-    });
-
-    debug(contextId, ["prompt", callId], system);
-
-    logger.debug("agent:system", system);
-
-    const result = await generateText({
-      model,
-      system,
-      messages: [
-        {
-          role: "assistant",
-          content: "<think>",
-        },
-      ],
-      stopSequences: ["</response>"],
-    });
-
-    const text = "<think>" + result.text + "</response>";
-
-    debug(contextId, ["response", callId], text);
-
-    logger.debug("agent:response", text);
-
-    return parse(text);
-  },
-  {}
-);
-
-const runAction = task(
-  "agent:run:action",
-  async <TContext extends AnyContext>({
-    context,
-    action,
-    call,
-    agent,
-    logger,
-  }: {
-    context: AgentContext<InferContextMemory<TContext>, TContext> & {
-      data: unknown;
-    };
-    action: Action;
-    call: ActionCall;
-    agent: AnyAgent;
-    logger: Logger;
-  }) => {
-    try {
-      const result = await action.handler(call, context, agent);
-      return result;
-    } catch (error) {
-      logger.error("agent:action", "ACTION_FAILED", { error });
-      throw error;
-    }
-  }
-);
+import { parse, prompt } from "./prompts/main";
+import {
+  defaultContext,
+  defaultContextMemory,
+  defaultContextRender,
+} from "./context";
 
 export function createDreams<
   Memory extends WorkingMemory = WorkingMemory,
@@ -332,7 +93,7 @@ export function createDreams<
       (await agent.memory.get(contextId)) ??
       (contextHandler.create
         ? contextHandler.create({ key, args }, ctx)
-        : defaultContextMemory());
+        : defaultContextMemory.create());
 
     return {
       id: contextId,
@@ -365,11 +126,9 @@ export function createDreams<
 
       await serviceManager.bootAll();
 
-      for (const input of Object.values(inputs)) {
-        if (input.install) await input.install(agent);
-      }
-
       for (const [key, input] of Object.entries(agent.inputs)) {
+        if (input.install) await input.install(agent);
+
         if (input.subscribe) {
           const subscription = await Promise.resolve(
             input.subscribe((contextHandler, args, data) => {
@@ -654,3 +413,115 @@ export function createDreams<
 
   return agent;
 }
+
+export const runGenerate = task(
+  "agent:run:generate",
+  async <TContext extends Context<WorkingMemory, any, any, any>>(
+    {
+      context,
+      contextId,
+      key,
+      args,
+      memory,
+      outputs,
+      actions,
+      ctx,
+      logger,
+      model,
+    }: {
+      context: TContext;
+      args: z.infer<TContext["schema"]>;
+      contextId: string;
+      key: string;
+      memory: WorkingMemory;
+      outputs: Output[];
+      actions: Action[];
+      ctx: InferContextCtx<TContext>;
+      logger: Logger;
+      model: LanguageModelV1;
+    },
+    { callId, debug }: TaskContext
+  ) => {
+    const newInputs = memory.inputs.filter((i) => i.processed !== true);
+
+    debug(contextId, ["memory", callId], JSON.stringify(memory, null, 2));
+
+    const system = prompt({
+      context: formatContext({
+        type: context.type ?? "system",
+        key: key,
+        description:
+          typeof context.description === "function"
+            ? context.description({ key, args }, ctx)
+            : context.description,
+        instructions:
+          typeof context.instructions === "function"
+            ? context.instructions({ key, args }, ctx)
+            : context.instructions,
+        content: context.render
+          ? context.render(memory, ctx)
+          : defaultContextRender(memory),
+      }),
+
+      outputs: outputs,
+      actions: actions.filter((action) =>
+        action.enabled ? action.enabled(ctx as any) : true
+      ),
+      updates: [
+        ...newInputs,
+        ...memory.results.filter((i) => i.processed !== true),
+      ],
+    });
+
+    debug(contextId, ["prompt", callId], system);
+
+    logger.debug("agent:system", system);
+
+    const result = await generateText({
+      model,
+      system,
+      messages: [
+        {
+          role: "assistant",
+          content: "<think>",
+        },
+      ],
+      stopSequences: ["</response>"],
+    });
+
+    const text = "<think>" + result.text + "</response>";
+
+    debug(contextId, ["response", callId], text);
+
+    logger.debug("agent:response", text);
+
+    return parse(text);
+  }
+);
+
+export const runAction = task(
+  "agent:run:action",
+  async <TContext extends AnyContext>({
+    context,
+    action,
+    call,
+    agent,
+    logger,
+  }: {
+    context: AgentContext<InferContextMemory<TContext>, TContext> & {
+      data: unknown;
+    };
+    action: Action;
+    call: ActionCall;
+    agent: AnyAgent;
+    logger: Logger;
+  }) => {
+    try {
+      const result = await action.handler(call, context, agent);
+      return result;
+    } catch (error) {
+      logger.error("agent:action", "ACTION_FAILED", { error });
+      throw error;
+    }
+  }
+);
