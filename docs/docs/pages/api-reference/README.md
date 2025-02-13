@@ -2,24 +2,67 @@
   <img src="_media/banner.png" alt="Daydreams">
 </p>
 
-# Daydreams - Generative Agent Framework
+> ⚠️ **Warning**: This is alpha software under active development. Expect
+> frequent breaking changes and bugs. The API is not yet stable.
+
+# Cross-chain Generative Agents
+
+[![npm version](https://badge.fury.io/js/%40ai-sdk%2Fcore.svg)](https://badge.fury.io/js/%40ai-sdk%2Fcore)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js CI](https://github.com/ai-sdk/core/actions/workflows/node.js.yml/badge.svg)](https://github.com/ai-sdk/core/actions/workflows/node.js.yml)
+[![Status](https://img.shields.io/badge/Status-Alpha-orange.svg)]()
+[![Documentation](https://img.shields.io/badge/Documentation-docs-blue.svg)](https://docs.daydreams.ai)
+[![Twitter Follow](https://img.shields.io/twitter/follow/daydreamsai?style=social)](https://twitter.com/daydreamsagents)
+[![GitHub stars](https://img.shields.io/github/stars/daydreamsai/daydreams?style=social)](https://github.com/daydreamsai/daydreams)
 
 Daydreams is a powerful framework for building generative agents that can
-execute tasks across any blockchain or API. It provides a flexible architecture
-for creating autonomous agents with:
+execute tasks across any blockchain or API.
 
-- Chain-agnostic blockchain interactions
-- Deep research capabilities
-- Multi-expert collaboration
-- Memory and context management
-- Goal-oriented behavior
+| Feature                | Description                                                          |
+| ---------------------- | -------------------------------------------------------------------- |
+| 🔗 Chain Agnostic      | Execute transactions and interact with any blockchain network        |
+| 👥 Multi-Expert System | Leverage specialized modules working together to solve complex tasks |
+| 🧠 Context Management  | Simple yet powerful memory and context handling system               |
+| 🎯 Goal-Oriented       | Long-term planning and goal-oriented behavior capabilities           |
+| 💾 Persistent Memory   | Built-in support for storing and retrieving long-term information    |
+| 🤔 Advanced Reasoning  | Multi-step reasoning using Hierarchical Task Networks                |
+
+Want to contribute? Check our
+[issues](https://github.com/daydreamsai/daydreams/issues) for tasks labeled
+`good first issue`.
+
+## Supported Chains
+
+<p> 
+  <a href="#chain-support">
+  <img src="_media/eth-logo.svg" height="30" alt="Ethereum" style="margin: 0 10px;" />
+  <img src="_media/arbitrum-logo.svg" height="30" alt="Arbitrum" style="margin: 0 10px;" />
+  <img src="_media/optimism-logo.svg" height="30" alt="Optimism" style="margin: 0 10px;" />
+  <img src="_media/solana-logo.svg" height="30" alt="Hyperledger" style="margin: 0 10px;" />
+  <img src="_media/Starknet.svg" height="30" alt="StarkNet" style="margin: 0 10px;" />
+  <img src="_media/hl-logo.svg" height="30" alt="Hyperledger" style="margin: 0 10px;" />
+  </a>
+</p>
 
 ## Quick Start
 
-Prerequisites:
+### Prerequisites
 
 - Node.js 18+ using [nvm](https://github.com/nvm-sh/nvm)
 - [bun](https://bun.sh/)
+
+### LLM Keys
+
+You'll need an API key for the LLM you want to use. We recommend using
+[Groq](https://groq.com/) for most use cases.
+
+- [OpenAI](https://openai.com/)
+- [Anthropic](https://anthropic.com/)
+- [Groq](https://groq.com/)
+- [Gemini](https://deepmind.google/technologies/gemini/)
+
+### Install
 
 ```bash
 # Install dependencies
@@ -32,167 +75,85 @@ cp .env.example .env
 bun run example:discord
 ```
 
-## Core Concepts
+## Your First Dreams Agent
 
-### Agents
-
-Agents are the main building blocks in Daydreams. An agent has:
-
-- **Inputs** - Ways to receive information (Discord, Telegram, API webhooks etc)
-- **Outputs** - Ways to take action (sending messages, making transactions etc)
-- **Actions** - Discrete operations the agent can perform
-- **Memory** - Storage for conversation history and state
-- **Experts** - Specialized modules for specific tasks
+Dreams agents are all functional. `createDreams` is a function that returns an
+agent object, which can be run with `await agent.run()`. Inject discord,
+telegram, or any other input/output to the agent and define your own actions.
 
 ```typescript
+import { createDreams } from "@daydreamsai/core";
+import { createMemoryStore, defaultContext } from "@daydreamsai/core";
+import { openai } from "@ai-sdk/openai";
+import { input, output } from "@daydreamsai/core";
+import { z } from "zod";
+import * as readline from "readline/promises";
+
+const groq = createGroq({
+  apiKey: process.env.GROQ_API_KEY!,
+});
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
 const agent = createDreams({
-  // Language model to use
-  model: groq("llama-70b"),
-
-  // Memory storage
   memory: createMemoryStore(),
-
-  // Input handlers
+  model: openai("gpt-o1-mini"),
   inputs: {
-    "discord:message": input({
-      schema: messageSchema,
-      handler: handleMessage,
+    message: input({
+      schema: z.object({
+        user: z.string(),
+        text: z.string(),
+      }),
+      handler(params, ctx) {
+        console.log("User:" + params.text);
+        ctx.memory.inputs.push({
+          ref: "input",
+          type: "message",
+          params: { user: params.user },
+          data: params.text,
+          timestamp: Date.now(),
+          processed: false,
+        });
+        return true;
+      },
+      async subscribe(send, agent) {
+        while (true) {
+          const question = await rl.question(">");
+
+          send(defaultContext, "main", {
+            user: "admin",
+            text: question,
+          });
+        }
+      },
     }),
   },
-
-  // Output handlers
   outputs: {
-    "discord:reply": output({
-      schema: replySchema,
-      handler: sendReply,
+    message: output({
+      description: "",
+      schema: z.string(),
+      handler(content, ctx) {
+        console.log("Agent:" + content);
+        return true;
+      },
+      examples: ["Hi!"],
     }),
   },
-
-  // Available actions
-  actions: [searchWeb, fetchGitHubRepo],
-
-  // Expert systems
-  experts: {
-    researcher: researchExpert,
-    planner: planningExpert,
-  },
-});
-```
-
-### Chain Support
-
-Daydreams provides a unified interface for interacting with different
-blockchains:
-
-```typescript
-// EVM chains (Ethereum, Polygon etc)
-const eth = new EvmChain({
-  chainName: "ethereum",
-  rpcUrl: "...",
-  privateKey: "...",
 });
 
-// Solana
-const sol = new SolanaChain({
-  chainName: "solana-mainnet",
-  rpcUrl: "...",
-  privateKey: "...",
-});
-
-// Starknet
-const stark = new StarknetChain({
-  rpcUrl: "...",
-  address: "...",
-  privateKey: "...",
-});
-```
-
-### Memory System
-
-The memory system stores conversation history and execution state:
-
-```typescript
-// In-memory store
-const memory = createMemoryStore();
-
-// MongoDB store
-const mongoMemory = await createMongoMemoryStore({
-  uri: "mongodb://...",
-  dbName: "dreams",
-});
-```
-
-### Expert Systems
-
-Experts are specialized modules that handle specific types of tasks:
-
-```typescript
-const researcher = expert({
-  description: "Conducts deep research on topics",
-  actions: [generateQueries, processResults, writeReport],
-});
-```
-
-## Architecture
-
-The v1 architecture consists of:
-
-### Core Components
-
-- **Dreams** - Main agent orchestrator
-- **Chain of Thought** - Reasoning engine
-- **Memory** - State management
-- **Experts** - Specialized capabilities
-- **Actions** - Discrete operations
-- **I/O Handlers** - Input/output management
-
-### Chain Support
-
-- **EVM** - Ethereum, Polygon, BSC etc
-- **Solana** - Solana blockchain
-- **Starknet** - StarkNet L2
-
-### Integrations
-
-- Discord
-- Telegram
-- GitHub
-- Web Search
-- Custom APIs
-
-## Examples
-
-The project includes several example implementations:
-
-```bash
-# Discord bot
-bun run example:discord
-
-# Telegram bot
-bun run example:telegram
-
-# GitHub code assistant
-bun run example:github
-```
-
-## Development
-
-```bash
-# Build the project
-bun build:core
-
-# Generate docs
-bun docs
+await agent.start();
 ```
 
 ## Contributing
 
-Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md).
+Looking to contribute? We'd love your help!
 
-## License
+If you are a developer and would like to contribute with code, please open an
+issue to discuss before opening a Pull Request.
 
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Star History
+### Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=daydreamsai/daydreams&type=Date)](https://star-history.com/#daydreamsai/daydreams&Date)

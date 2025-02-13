@@ -1,121 +1,20 @@
 <img src="/Daydreams.png" alt="Daydreams Logo" width="300" />
 
-[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-
-# Generative Agent Framework
+> ⚠️ **Warning**: This is alpha software under active development. Expect
+> frequent breaking changes and bugs. The API is not yet stable.
 
 Daydreams is a powerful framework for building generative agents that can
 execute tasks across any blockchain or API.
 
-- 🔗 Chain-agnostic blockchain interactions
-- 👥 Multi-expert collaboration
-- 🧠 Memory and context management made simple
-- 🎯 Long term goal-oriented behavior
-- 💾 Long-term memory made simple
-- 🤔 Multi-step reasoning using Hierarchical Task Networks
+| Feature                | Description                                                          |
+| ---------------------- | -------------------------------------------------------------------- |
+| 🔗 Chain Agnostic      | Execute transactions and interact with any blockchain network        |
+| 👥 Multi-Expert System | Leverage specialized modules working together to solve complex tasks |
+| 🧠 Context Management  | Simple yet powerful memory and context handling system               |
+| 🎯 Goal-Oriented       | Long-term planning and goal-oriented behavior capabilities           |
+| 💾 Persistent Memory   | Built-in support for storing and retrieving long-term information    |
+| 🤔 Advanced Reasoning  | Multi-step reasoning using Hierarchical Task Networks                |
 
-## Prerequisites
-
-- Node.js 18+ using [nvm](https://github.com/nvm-sh/nvm)
-- [bun](https://bun.sh/)
-
-## Quick Start
-
-:::code-group
-
-```bash [npm]
-npm install @daydreamsai/core
-```
-
-```bash [pnpm]
-pnpm add @daydreamsai/core
-```
-
-```bash [yarn]
-yarn add @daydreamsai/core
-```
-
-```bash [bun]
-bun add @daydreamsai/core
-```
-
-:::
-
-## Concepts
-
-All dreams agents are a collection of inputs, outputs, actions and memory.
-Simple, and elegant.
-
-```typescript
-createDreams({
-  inputs: {}, // sources of information
-  outputs: {}, // ways to take action
-  memory: createMemoryStore(), // storage for conversation history and state
-
-  actions: [], // @optional discrete operations
-  experts: [], // @optional specialized modules for specific tasks
-  container: createContainer(), // @optional dependency injection container
-});
-```
-
-- **Inputs** 📥 - Ways to receive information (Discord, Telegram, API webhooks
-  etc)
-- **Outputs** 📤 - Ways to take action (sending messages, making transactions
-  etc)
-- **Memory** 🧠 - Storage for conversation history and state
-- **Actions** ⚡ - @optional Discrete operations the agent can perform
-- **Experts** 🎓 - @optional Specialized modules for specific tasks
-- **Container** 📦 - @optional dependency injection container
-
-### Basic Usage
-
-Dreams agents are all functional. `createDreams` is a function that returns an
-agent object, which can be run with `await agent.run()`. Inject discord,
-telegram, or any other input/output to the agent and define your own actions.
-
-```typescript
-const agent = createDreams({
-  // @dev Use any LLM provider. All major providers are supported.
-  model: groq("llama-70b"),
-
-  // @dev Define your own memory store.
-  memory: createMemoryStore(),
-
-  // @dev Define your own inputs.
-  inputs: {
-    "discord:message": input({
-      schema: messageSchema,
-      handler: handleMessage,
-    }),
-  },
-
-  // @dev Define your own outputs.
-  outputs: {
-    "discord:reply": output({
-      schema: replySchema,
-      handler: sendReply,
-    }),
-  },
-
-  // @dev Define your own actions.
-  actions: [searchWeb],
-});
-
-// Run the agent
-await agent.run();
-```
-
-### Memory System
-
-The memory system stores conversation history and execution state:
-
-```typescript
-// In-memory store
-const memory = createMemoryStore();
-
-// MongoDB store
-const mongoMemory = await createMongoMemoryStore({
-  uri: "mongodb://...",
-  dbName: "dreams",
-});
-```
+Want to contribute? Check our
+[issues](https://github.com/daydreamsai/daydreams/issues) for tasks labeled
+`good first issue`.
