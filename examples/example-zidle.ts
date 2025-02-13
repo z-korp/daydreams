@@ -2,6 +2,7 @@ import { LLMClient } from "../packages/core/src/core/llm-client";
 import { ChainOfThought } from "../packages/core/src/core/chain-of-thought";
 import { ZIDLE_CONTEXT } from "./zidle/new-prompt-json/zidle-context";
 import { ZIDLE_PROVIDER } from "./zidle/new-prompt-json/zidle-provider";
+import { ZIDLE_CONTEXT_CHAT } from "./zidle/new-prompt-json/zidle-context-chat";
 import chalk from "chalk";
 import { ChromaVectorDB } from "../packages/core/src/core/vector-db";
 import { z } from "zod";
@@ -14,11 +15,9 @@ import {
     HandlerRole,
     LogLevel,
 } from "../packages/core/src/core/types";
-import { Orchestrator } from "../packages/core/src/core/orchestrator";
 import { WebSocketServer, WebSocket } from "ws";
 import { MongoDb } from "../packages/core/src/core/db/mongo-db";
 import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
-import { makeFlowLifecycle } from "../packages/core/src/core/life-cycle";
 import { ConversationManager } from "../packages/core/src/core/conversation-manager";
 import { defaultCharacter } from "../packages/core/src/core/characters/character";
 
@@ -75,7 +74,7 @@ async function main() {
     const conversationManager = new ConversationManager(memory);
 
     // Load initial context documents
-    await memory.storeDocument({
+    /*await memory.storeDocument({
         title: "Game Rules",
         content: ZIDLE_CONTEXT,
         category: "rules",
@@ -89,11 +88,11 @@ async function main() {
         category: "actions",
         tags: ["actions", "provider-guide"],
         lastUpdated: new Date(),
-    });
+    });*/
 
     await chat_memory.storeDocument({
         title: "Game Rules",
-        content: ZIDLE_CONTEXT,
+        content: ZIDLE_CONTEXT_CHAT,
         category: "rules",
         tags: ["game-mechanics", "rules"],
         lastUpdated: new Date(),
@@ -123,7 +122,7 @@ async function main() {
     console.log(chalk.green("✅ Scheduled task database connected"));
     await scheduledTaskDb.deleteAll();
 
-    const orchestrator = new Orchestrator(
+    /*const orchestrator = new Orchestrator(
         processor,
         makeFlowLifecycle(scheduledTaskDb, conversationManager),
         {
@@ -252,7 +251,7 @@ async function main() {
                 message: response
             };
         },
-    });
+    });*/
 
     // ------------------------------------------------------
     // 2) WEBSOCKET SERVER
@@ -276,6 +275,16 @@ async function main() {
                 client.send(messageString);
             }
         });
+    }
+
+    function broadcastUserChat(message: string) {
+        const welcomeMsg: UserChatMessage = {
+            type: "user_chat",
+            message,
+            timestamp: "", // Will be filled by createMessage
+            emoji: "", // Will be filled by createMessage
+        };
+        broadcastMessage(createMessage(welcomeMsg));
     }
 
     /**
@@ -454,53 +463,88 @@ async function main() {
         ws.on("message", async (rawData) => {
             try {
                 const dataString = rawData.toString();
-                console.log(
-                    chalk.magenta("[WS] Received message:"),
-                    dataString
-                );
+                console.log(chalk.magenta("[WS] Received message:"), dataString);
 
                 const parsed = JSON.parse(dataString);
                 const userMessage = parsed.goal;
 
-                if (!userMessage || typeof userMessage !== "string") {
-                    throw new Error(
-                        "Invalid message format. Expected { goal: string }"
-                    );
-                }
+                console.log("userMessage ", dataString);
+                console.log("userMessage ", userMessage);
+                console.log("user_chat", JSON.stringify(userMessage));
 
-                // Process the message using the orchestrator
-                const userId = "console-user";
-                const outputs = await orchestrator.dispatchToInput(
-                    "user_chat",
-                    {
-                        contentId: userMessage,
-                        userId,
-                        platformId: "console",
-                        threadId: "console",
-                        data: { userMessage },
-                    },
-                );
+                console.log(chalk.cyan("\n🤔 Planning strategy for answering message..."));
 
-                // Send responses back through WebSocket
-                if (outputs && (outputs as any).length > 0) {
-                    for (const out of outputs as any[]) {
-                        if (out.name === "chat_reply") {
-                            sendJSON(ws, {
-                                type: "response",
-                                message: out.data.message,
-                            });
-                        }
+                // Create an objective based on the user message
+                const goalText = `Your objective is to answer this user query: "${userMessage}"`;
+                await chatDreams.decomposeObjectiveIntoGoals(goalText);
+
+                console.log("getAllGoals", chatDreams.goalManager.getAllGoals());
+
+                // Now loop through all goals until there are none left to process.
+                const stats = { completed: 0, failed: 0, total: 0 };
+                while (true) {
+                    // Retrieve current goals from the goal manager.
+                    const readyGoals = chatDreams.goalManager.getReadyGoals();
+                    const activeGoals = chatDreams.goalManager
+                        .getGoalsByHorizon("short")
+                        .filter((g) => g.status === "active");
+                    const pendingGoals = chatDreams.goalManager
+                        .getGoalsByHorizon("short")
+                        .filter((g) => g.status === "pending");
+
+                    console.log(chalk.cyan("\n📊 Current Chat Progress:"));
+                    console.log(`Ready goals: ${readyGoals.length}`);
+                    console.log(`Active goals: ${activeGoals.length}`);
+                    console.log(`Pending goals: ${pendingGoals.length}`);
+                    console.log(`Completed: ${stats.completed}`);
+                    console.log(`Failed: ${stats.failed}`);
+
+                    // If no goals remain (all are completed) then break.
+                    if (
+                        readyGoals.length === 0 &&
+                        activeGoals.length === 0 &&
+                        pendingGoals.length === 0
+                    ) {
+                        console.log(chalk.green("\n✨ All chat goals completed!"));
+                        break;
                     }
+
+                    // If there are pending goals but none ready or active, show details and break.
+                    if (readyGoals.length === 0 && activeGoals.length === 0) {
+                        console.log(
+                            chalk.yellow(
+                                "\n⚠️ No ready or active chat goals, but some goals are pending:"
+                            )
+                        );
+                        pendingGoals.forEach((goal) => {
+                            const blockingGoals = chatDreams.goalManager.getBlockingGoals(goal.id);
+                            console.log(chalk.yellow(`\n📌 Pending Chat Goal: ${goal.description}`));
+                            console.log(chalk.yellow(`   Blocked by: ${blockingGoals.length} goals`));
+                            blockingGoals.forEach((blocking) => {
+                                console.log(
+                                    chalk.yellow(`   - ${blocking.description} (${blocking.status})`)
+                                );
+                            });
+                        });
+                        break;
+                    }
+
+                    // Process the highest priority goal.
+                    try {
+                        await chatDreams.processHighestPriorityGoal();
+                        stats.completed++;
+                    } catch (error) {
+                        console.error(chalk.red("\n❌ Chat goal execution failed:"), error);
+                        stats.failed++;
+                    }
+                    stats.total++;
                 }
             } catch (error) {
-                console.error(
-                    chalk.red("[WS] Error processing message:"),
-                    error
-                );
-                sendJSON(ws, {
+                console.error(chalk.red("[WS] Error processing message:"), error);
+                ws.send(JSON.stringify({
                     type: "error",
                     error: (error as Error).message || String(error),
-                });
+                }));
             }
         });
 
@@ -541,79 +585,6 @@ async function main() {
         },
         { logLevel: LogLevel.DEBUG }
     );
-
-    // Configurer les événements pour les deux ChainOfThought
-    chatDreams.registerOutput({
-        role: HandlerRole.INPUT,
-        name: "user_chat",
-        execute: async (action: any) => {
-            console.log("user_chat", JSON.stringify(action));
-
-            console.log(chalk.cyan("\n🤔 Planning strategy for goal..."));
-
-            const goal = `As a zIdle game assistant, analyze and respond to this query: "${action.data.userMessage}" using chat_reply output`;
-
-            await chatDreams.decomposeObjectiveIntoGoals(goal);
-
-            // Récupérer tous les objectifs avec leurs détails
-            const allGoals = chatDreams.goalManager.getAllGoals();
-            console.log("allGoals", allGoals);
-            const readyGoals = chatDreams.goalManager.getReadyGoals();
-            console.log("readyGoals", readyGoals);
-            const activeGoals = chatDreams.goalManager
-                .getGoalsByHorizon("short")
-                .filter((g) => g.status === "active");
-            console.log("activeGoals", activeGoals);
-            const pendingGoals = chatDreams.goalManager
-                .getGoalsByHorizon("short")
-                .filter((g) => g.status === "pending");
-            console.log("pendingGoals", pendingGoals);
-
-            // Formater les objectifs pour l'interface
-            const formattedGoals = allGoals.map(goal => ({
-                id: goal.id,
-                description: goal.description,
-                status: goal.status,
-                priority: goal.priority,
-                horizon: goal.horizon,
-                success_criteria: goal.success_criteria,
-                dependencies: goal.dependencies,
-                estimated_difficulty: goal.estimated_difficulty,
-                required_resources: goal.required_resources
-            }));
-
-            // Afficher le statut dans la console
-            console.log(chalk.cyan("\n📊 Current Chat Progress:"));
-            console.log(`Ready goals: ${readyGoals.length}`);
-            console.log(`Active goals: ${activeGoals.length}`);
-            console.log(`Pending goals: ${pendingGoals.length}`);
-
-            // Traiter l'objectif prioritaire si disponible
-            if (readyGoals.length > 0) {
-                try {
-                    await chatDreams.processHighestPriorityGoal();
-                } catch (error) {
-                    console.error(chalk.red("\n❌ Chat goal execution failed:"), error);
-                }
-            }
-
-            // Retourner l'action avec les objectifs détaillés
-            return {
-                ...action,
-                goals: {
-                    items: formattedGoals,
-                    stats: {
-                        ready: readyGoals.length,
-                        active: activeGoals.length,
-                        pending: pendingGoals.length,
-                        completed: formattedGoals.filter(g => g.status === "completed").length,
-                        failed: formattedGoals.filter(g => g.status === "failed").length,
-                        total: formattedGoals.length
-                    }
-                }
-            };
-        },
-    });
 
     chatDreams.registerOutput({
         role: HandlerRole.ACTION,
@@ -720,16 +691,27 @@ async function main() {
 
     chatDreams.registerOutput({
         role: HandlerRole.OUTPUT,
-        name: "chat_reply",
-        outputSchema: z.any(),
-        execute: async (payload) => {
-            const { userId, response } = payload as {
-                userId?: string;
-                response: string;
+        name: "CHAT_REPLY",
+        outputSchema: z
+            .object({
+                answer: z
+                    .string()
+                    .describe(
+                        `Answer to the user`
+                    ),
+            })
+            .describe(
+                "The answer to the user"
+            ),
+        execute: async (ret) => {
+            console.log("ret: ", ret)
+            const { payload } = ret as {
+                payload: { answer: string };
             };
+            broadcastUserChat(payload.answer);
+
             return {
-                userId,
-                message: response
+                message: payload.answer
             };
         },
     });
@@ -879,22 +861,9 @@ async function main() {
             ),
     });
 
-    /*dreams.executeAction({
-        type: "EXECUTE_TRANSACTION",
-        payload: {
-            contractAddress:
-                "0x40f638e57740f4e0c2e64e60e2cee00df77aff3c96b5ba4de1c909761774cc8",
-            entrypoint: "mine",
-            calldata: ["7", "3", "1"],
-        },
-        context: "Start mining Mineral (Coal) to increase lowest XP resource",
-    });
-    
-    return;*/
-
     // Set up event logging
     // Thought process events
-    dreams.on("step", (step) => {
+    chatDreams.on("step", (step) => {
         if (step.type === "system") {
             console.log("\n💭 System prompt:", step.content);
             broadcastSystemMessage(step.content);
@@ -914,7 +883,7 @@ async function main() {
     // });
 
     // Action execution events
-    dreams.on("action:start", (action) => {
+    chatDreams.on("action:start", (action) => {
         console.log("\n🎬 Starting action:", {
             type: action.type,
             payload: action.payload,
@@ -922,7 +891,7 @@ async function main() {
         broadcastActionStart(action.type, action.payload);
     });
 
-    dreams.on("action:complete", ({ action, result }) => {
+    chatDreams.on("action:complete", ({ action, result }) => {
         console.log("\n✅ Action complete:", {
             type: action.type,
             result,
@@ -930,7 +899,7 @@ async function main() {
         broadcastActionComplete(action.type, result);
     });
 
-    dreams.on("action:error", ({ action, error }) => {
+    chatDreams.on("action:error", ({ action, error }) => {
         console.log("\n❌ Action failed:", {
             type: action.type,
             error,
@@ -942,28 +911,28 @@ async function main() {
     });
 
     // Thinking process events
-    dreams.on("think:start", ({ query }) => {
+    chatDreams.on("think:start", ({ query }) => {
         console.log("\n🧠 Starting to think about:", query);
 
         broadcastThinkingStart(query);
     });
 
-    dreams.on("think:complete", ({ query }) => {
+    chatDreams.on("think:complete", ({ query }) => {
         console.log("\n🎉 Finished thinking about:", query);
 
         broadcastThinkingEnd();
     });
 
-    dreams.on("think:timeout", ({ query }) => {
+    chatDreams.on("think:timeout", ({ query }) => {
         console.log("\n⏰ Thinking timed out for:", query);
     });
 
-    dreams.on("think:error", ({ query, error }) => {
+    chatDreams.on("think:error", ({ query, error }) => {
         console.log("\n💥 Error while thinking about:", query, error);
     });
 
     // Goal management events
-    dreams.on("goal:created", ({ id, description, priority, horizon }) => {
+    chatDreams.on("goal:created", ({ id, description, priority, horizon }) => {
         console.log(chalk.cyan("\n🎯 New goal created:"), {
             id,
             description,
@@ -972,7 +941,7 @@ async function main() {
         broadcastGoalCreated(id, description, priority, horizon.toString());
     });
 
-    dreams.on("goal:updated", ({ id, status }) => {
+    chatDreams.on("goal:updated", ({ id, status }) => {
         console.log(chalk.yellow("\n📝 Goal status updated:"), {
             id,
             status: printGoalStatus(status),
@@ -981,7 +950,7 @@ async function main() {
         broadcastGoalUpdated(id, printGoalStatus(status));
     });
 
-    dreams.on("goal:completed", ({ id, result, description }) => {
+    chatDreams.on("goal:completed", ({ id, result, description }) => {
         console.log(chalk.green("\n✨ Goal completed:"), {
             id,
             result,
@@ -991,7 +960,7 @@ async function main() {
         broadcastGoalCompleted(id, result, description);
     });
 
-    dreams.on("goal:failed", ({ id, error }) => {
+    chatDreams.on("goal:failed", ({ id, error }) => {
         console.log(chalk.red("\n💥 Goal failed:"), {
             id,
             error: error instanceof Error ? error.message : String(error),
@@ -1004,7 +973,7 @@ async function main() {
     });
 
     // Memory management events
-    dreams.on("memory:experience_stored", ({ experience }) => {
+    chatDreams.on("memory:experience_stored", ({ experience }) => {
         console.log(chalk.blue("\n💾 New experience stored:"), {
             action: experience.action,
             outcome: experience.outcome,
@@ -1020,7 +989,7 @@ async function main() {
         }
     });
 
-    dreams.on("memory:knowledge_stored", ({ document }) => {
+    chatDreams.on("memory:knowledge_stored", ({ document }) => {
         console.log(chalk.magenta("\n📚 New knowledge documented:"), {
             title: document.title,
             category: document.category,
@@ -1030,7 +999,7 @@ async function main() {
         console.log(chalk.magenta("📝 Content:"), document.content);
     });
 
-    dreams.on("memory:experience_retrieved", ({ experiences }) => {
+    chatDreams.on("memory:experience_retrieved", ({ experiences }) => {
         console.log(chalk.yellow("\n🔍 Relevant past experiences found:"));
         experiences.forEach((exp, index) => {
             console.log(chalk.yellow(`\n${index + 1}. Previous Experience:`));
@@ -1043,7 +1012,7 @@ async function main() {
         });
     });
 
-    dreams.on("memory:knowledge_retrieved", ({ documents }) => {
+    chatDreams.on("memory:knowledge_retrieved", ({ documents }) => {
         console.log(chalk.green("\n📖 Relevant knowledge retrieved:"));
         documents.forEach((doc, index) => {
             console.log(chalk.green(`\n${index + 1}. Knowledge Entry:`));
@@ -1236,12 +1205,18 @@ export type MessageType =
     | "action_error"
     | "system"
     | "thinking_start"
-    | "thinking_end";
+    | "thinking_end"
+    | "user_chat";
 
 export interface BaseMessage {
     type: MessageType;
     timestamp: string; // ISO string
     emoji?: string;
+}
+
+export interface UserChatMessage extends BaseMessage {
+    type: "user_chat";
+    message: string;
 }
 
 export interface ThinkingStartMessage extends BaseMessage {
@@ -1353,7 +1328,8 @@ export type AppMessage =
     | ActionErrorMessage
     | SystemMessage
     | ThinkingStartMessage
-    | ThinkingEndMessage;
+    | ThinkingEndMessage
+    | UserChatMessage;
 
 const emojiMap: Record<MessageType, string> = {
     welcome: "👋",
@@ -1367,6 +1343,9 @@ const emojiMap: Record<MessageType, string> = {
     action_complete: "✅",
     action_error: "❌",
     system: "🛠️",
+    user_chat: "",
+    thinking_end: "✅",
+    thinking_start: "💬",
 };
 
 export function createMessage<M extends BaseMessage>(
