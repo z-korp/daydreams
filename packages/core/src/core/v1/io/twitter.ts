@@ -132,7 +132,7 @@ export class TwitterClient {
     };
   }
 
-  private async checkMentions() {
+  async checkMentions() {
     try {
       this.logger.debug("TwitterClient.checkMentions", "Checking mentions", {
         username: this.credentials.username,
@@ -177,7 +177,7 @@ export class TwitterClient {
         .map(this.formatTweetData);
 
       // Only return if we have new mentions
-      return newMentions.length > 0 ? newMentions : null;
+      return newMentions.length > 0 ? newMentions : [];
     } catch (error) {
       this.logger.error(
         "TwitterClient.checkMentions",
@@ -188,7 +188,7 @@ export class TwitterClient {
     }
   }
 
-  private async fetchUserTweets(username: string): Promise<Tweet[]> {
+  async fetchUserTweets(username: string): Promise<Tweet[]> {
     const tweets: Tweet[] = [];
     try {
       for await (const tweet of this.scraper.getTweets(username, 10)) {
@@ -205,7 +205,7 @@ export class TwitterClient {
     return tweets;
   }
 
-  private async sendTweet(data: TweetData) {
+  async sendTweet(data: TweetData) {
     try {
       this.logger.info("TwitterClient.sendTweet", "Would send tweet", {
         data,
