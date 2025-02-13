@@ -127,46 +127,48 @@ export class ChainOfThought extends EventEmitter {
             .join("\n\n");
 
         const prompt = `
-      <objective>
-      "${objective}"
-      </objective>
-
-      <context>
-      ${gameStateContext}
-      
-      <past_experiences>
-      ${experienceContext}
-      </past_experiences>
-
-      </context>
-
-      <goal_planning_rules>
-      1. Break down the objective into hierarchical goals
-      2. Each goal must have clear success criteria
-      3. Identify dependencies between goals
-      4. Prioritize goals (1-10) based on urgency and impact
-      5. short term goals should be given a priority of 10
-      6. Ensure goals are achievable given the current context
-      7. Consider past experiences when setting goals
-      8. Use available game state information to inform strategy
-      9. Ensure that goals requiring specific variables are only planned after those variables are obtained
-      10. Break down goals further if they depend on the results of previous actions
-      
-      # Return a JSON structure with three arrays:
-      - long_term: Strategic goals that might take multiple sessions
-      - medium_term: Tactical goals achievable in one session
-      - short_term: Immediate actionable goals
-      
-      # Each goal must include:
-      - id: Unique temporary ID used in dependencies
-      - description: Clear goal statement
-      - success_criteria: Array of specific conditions for completion
-      - dependencies: Array of prerequisite goal IDs (empty for initial goals)
-      - priority: Number 1-10 (10 being highest)
-      - required_resources: Array of resources needed (based on game state)
-      - estimated_difficulty: Number 1-10 based on past experiences
-      </goal_planning_rules>
-    `;
+            <objective>
+            "${objective}"
+            </objective>
+            
+            <context>
+            ${gameStateContext}
+            
+            <past_experiences>
+            ${experienceContext}
+            </past_experiences>
+            
+            </context>
+            
+            <goal_planning_rules>
+            1. Always respond with goals, never direct answers.
+            2. Only create goals when strictly necessary.
+            3. Prioritize **minimal** and **efficient** goal structures.
+            4. Each goal must have **clear success criteria**.
+            5. Identify **dependencies** but avoid unnecessary breakdowns.
+            6. Prioritize (1-10) based on **urgency & impact**, avoiding low-impact goals.
+            7. Ensure **goals are achievable** given the context.
+            8. Use past experiences to refine goals, **not multiply them**.
+            9. Leverage available game state data for **informed** strategy.
+            10. Only create sub-goals **when absolutely required** to achieve the main goal.
+            11. If a goal is self-contained, **do not break it down further**.
+            12. If an answer is possible without goals, reframe it into **goal format**.
+            
+            IMPORTANT: Always return a JSON with 3 arrays:
+            - long_term: Multi-session goals (only if needed).
+            - medium_term: Goals for a single session (only when meaningful).
+            - short_term: **Immediate actions (keep minimal).**
+            
+            Each goal must include:
+            - id: Unique ID.
+            - description: Concise statement.
+            - success_criteria: Minimal conditions for completion.
+            - dependencies: Only if necessary.
+            - priority: 1-10 (10 = highest).
+            - required_resources: Only **if relevant**.
+            - estimated_difficulty: 1-10 (based on experience).
+            </goal_planning_rules>
+            `;
 
         const goalSchema = z.object({
             id: z.string(),
