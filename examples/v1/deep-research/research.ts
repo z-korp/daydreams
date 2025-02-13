@@ -7,7 +7,7 @@ import {
   searchResultsPrompt,
 } from "./prompts";
 import { researchSchema, searchResultsSchema } from "./schemas";
-import { action, Debugger, task, memory } from "@daydreamsai/core/src/core/v1";
+import { action, Debugger, task, memory } from "@daydreamsai/core/v1";
 
 export type Research = {
   id: string;
