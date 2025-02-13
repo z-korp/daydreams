@@ -10,6 +10,7 @@ import { createGroq } from "@ai-sdk/groq";
 import { LogLevel, WorkingMemory } from "@daydreamsai/core/src/core/v1/types";
 import { z } from "zod";
 import * as readline from "readline/promises";
+import { formatMsg } from "@daydreamsai/core/src/core/v1";
 
 // Initialize Groq client
 const groq = createGroq({
@@ -40,7 +41,6 @@ const agent = createDreams<WorkingMemory>({
   logger: LogLevel.DEBUG,
   memory: createMemoryStore(),
   model: groq("deepseek-r1-distill-llama-70b"),
-
   inputs: {
     // Handle incoming messages
     message: input({
@@ -48,18 +48,12 @@ const agent = createDreams<WorkingMemory>({
         user: z.string(),
         text: z.string(),
       }),
-      handler(params, ctx) {
-        // Store message in memory
-        ctx.memory.inputs.push({
-          ref: "input",
-          type: "message",
-          params: { user: params.user, text: params.text },
-          data: params.text,
-          timestamp: Date.now(),
-          processed: false,
-        });
-        return true;
-      },
+      format: ({ user, text }) =>
+        formatMsg({
+          role: "user",
+          content: text,
+          user,
+        }),
       // Subscribe to CLI input
       async subscribe(send) {
         while (true) {
@@ -88,9 +82,16 @@ const agent = createDreams<WorkingMemory>({
       }),
       handler(content) {
         console.log("Agent:", content.message);
-        return true;
+        return {
+          data: content,
+          timestamp: Date.now(),
+        };
       },
-      examples: ["Hi!"],
+      format: ({ data }) =>
+        formatMsg({
+          role: "assistant",
+          content: data.message,
+        }),
     }),
   },
 });
