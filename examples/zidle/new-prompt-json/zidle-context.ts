@@ -7,14 +7,18 @@ export const ZIDLE_CONTEXT = `{
       "Prioritize actions that contribute directly to achieving key goals.",
       "Adapt decision-making based on current inventory, XP, and ongoing activities.",
       "IMPORTANT: Before executing any provider action or query, ENSURE that all variable placeholders (e.g., \"$TOKEN_ID_LOW\", \"$WALLET_ADDRESS\", etc.) are replaced with actual values from memory. ALWAYS use TOKEN_ID_LOW from the CHECK_NFT result and ignore TOKEN_ID_HIGH."
-    ],
+    ]
+  },
+  
+
+  "arena" : {
+    "objective: "Validate the three main goals as quickly as possible",
     "goals": [
-      "Primary: Validate the three main goals as quickly as possible:",
       " 1. Harvest 50 gold",
       " 2. Harvest 50 pine",
       " 3. Harvest 50 berries"
     ]
-  },
+  }
 
   "wallet": {
     "accountAddress": "0x6daf2a924fab727ae5409f0743de4869850f988b6f8545268016ad1107fd2cd"

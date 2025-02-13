@@ -326,7 +326,7 @@ async function main() {
         const thinkingStartMsg: ThinkingStartMessage = {
             type: "thinking_start",
             message,
-            timestamp: new Date().toISOString(),
+            timestamp: Math.floor(Date.now() / 1000).toString(),
             emoji: "🤔",
         };
         broadcastMessage(thinkingStartMsg);
@@ -337,7 +337,7 @@ async function main() {
         const thinkingEndMsg: ThinkingEndMessage = {
             type: "thinking_end",
             message: "Agent finished thinking.",
-            timestamp: new Date().toISOString(),
+            timestamp: Math.floor(Date.now() / 1000).toString(),
             emoji: "✅",
         };
         broadcastMessage(thinkingEndMsg);
@@ -352,7 +352,7 @@ async function main() {
                 description,
                 priority,
                 horizon,
-                timestamp: new Date().toISOString(),
+                timestamp: Math.floor(Date.now() / 1000).toString(),
             },
         };
 
@@ -366,7 +366,7 @@ async function main() {
             data: {
                 id,
                 status,
-                timestamp: new Date().toISOString(),
+                timestamp: Math.floor(Date.now() / 1000).toString(),
             },
         };
 
@@ -383,7 +383,7 @@ async function main() {
                 id,
                 result,
                 description,
-                timestamp: new Date().toISOString(),
+                timestamp: Math.floor(Date.now() / 1000).toString(),
             },
         };
 
@@ -396,7 +396,7 @@ async function main() {
             data: {
                 id,
                 error,
-                timestamp: new Date().toISOString(),
+                timestamp: Math.floor(Date.now() / 1000).toString(),
             },
         };
 
@@ -425,7 +425,7 @@ async function main() {
             data: {
                 actionType,
                 result,
-                timestamp: new Date().toISOString(),
+                timestamp: Math.floor(Date.now() / 1000).toString(),
             },
         };
 
@@ -439,7 +439,7 @@ async function main() {
             data: {
                 actionType,
                 error,
-                timestamp: new Date().toISOString(),
+                timestamp: Math.floor(Date.now() / 1000).toString(),
             },
         };
 
@@ -475,7 +475,7 @@ async function main() {
                 console.log(chalk.cyan("\n🤔 Planning strategy for answering message..."));
 
                 // Create an objective based on the user message
-                const goalText = `Your objective is to answer this user query: "${userMessage}"`;
+                const goalText = `Your objective is to answer this user query: "${userMessage} while keeping THE USER INFORMED:  Your number one priority is to provide immediate, clear, and detailed CHAT_REPLY updates at every step of any process."`;
                 await chatDreams.decomposeObjectiveIntoGoals(goalText);
 
                 console.log("getAllGoals", chatDreams.goalManager.getAllGoals());
@@ -1351,7 +1351,7 @@ const emojiMap: Record<MessageType, string> = {
 export function createMessage<M extends BaseMessage>(
     message: Omit<M, "timestamp" | "emoji">
 ): M {
-    const timestamp = new Date().toISOString();
+    const timestamp = Math.floor(Date.now() / 1000).toString();
     const emoji = emojiMap[message.type];
 
     return {
