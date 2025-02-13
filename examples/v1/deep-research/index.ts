@@ -1,17 +1,18 @@
-import { LogLevel } from "@daydreamsai/core/src/core/v1/types";
-import { createDreams } from "@daydreamsai/core/src/core/v1/dreams";
-import {
-  createMemoryStore,
-  defaultContext,
-} from "@daydreamsai/core/src/core/v1/memory";
 import { createGroq } from "@ai-sdk/groq";
-import { input, output } from "@daydreamsai/core/src/core/v1/utils";
 import { z } from "zod";
 import { researchDeepActions } from "./research";
 import * as readline from "readline/promises";
 import { tavily } from "@tavily/core";
-import createContainer from "@daydreamsai/core/src/core/v1/container";
-import { formatMsg } from "@daydreamsai/core/src/core/v1";
+import {
+  createContainer,
+  createDreams,
+  createMemoryStore,
+  defaultContext,
+  formatMsg,
+  input,
+  LogLevel,
+  output,
+} from "@daydreamsai/core/v1";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,

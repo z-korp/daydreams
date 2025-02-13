@@ -1,20 +1,20 @@
 import { z } from "zod";
-import { createDreams } from "@daydreamsai/core/src/core/v1/dreams";
+import { Telegraf } from "telegraf";
+import { createGroq } from "@ai-sdk/groq";
+import { tavily, TavilyClient } from "@tavily/core";
 import {
   action,
   context,
+  createContainer,
+  createDreams,
+  createMemoryStore,
+  formatMsg,
   input,
+  LogLevel,
   output,
+  service,
   splitTextIntoChunks,
-} from "@daydreamsai/core/src/core/v1/utils";
-import { Telegraf } from "telegraf";
-import { createMemoryStore } from "@daydreamsai/core/src/core/v1/memory";
-import { createGroq } from "@ai-sdk/groq";
-import { tavily, TavilyClient } from "@tavily/core";
-import { LogLevel, WorkingMemory } from "@daydreamsai/core/src/core/v1/types";
-import createContainer from "@daydreamsai/core/src/core/v1/container";
-import { service } from "@daydreamsai/core/src/core/v1/serviceProvider";
-import { formatMsg } from "@daydreamsai/core/src/core/v1/formatters";
+} from "@daydreamsai/core/v1";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -159,21 +159,6 @@ const agent = createDreams({
           content: data.content,
         }),
     }),
-
-    // "telegram:group": output({
-    //     params: z.object({
-    //         groupId: z.string(),
-    //         content: z.string(),
-    //     }),
-    //     description: "use this to send a telegram message to a group",
-    //     handler: async (data, ctx) => {
-    //         await telegraf.telegram.sendMessage(
-    //             data.groupId,
-    //             data.content
-    //         );
-    //         return true;
-    //     },
-    // }),
   },
 
   actions: [

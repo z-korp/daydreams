@@ -1,7 +1,7 @@
 import { type LanguageModelV1 } from "ai";
-import { llm } from "./llm";
-import { render } from "./utils";
-import { formatXml } from "./xml";
+import { llm } from "../llm";
+import { render } from "../utils";
+import { formatXml } from "../xml";
 
 export const chainExpertManagerPrompt = `
 You are a Chain Expert Manager.

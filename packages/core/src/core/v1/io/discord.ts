@@ -8,7 +8,7 @@ import {
   Message,
   type Channel,
 } from "discord.js";
-import { Logger } from "../../v1/logger";
+import { Logger } from "../logger";
 import { HandlerRole, LogLevel } from "../types";
 
 import { z } from "zod";

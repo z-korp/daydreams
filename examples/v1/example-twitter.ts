@@ -1,19 +1,20 @@
 import { z } from "zod";
-import { createDreams } from "@daydreamsai/core/src/core/v1/dreams";
+import { createGroq } from "@ai-sdk/groq";
+import { TwitterClient } from "@daydreamsai/core/io/twitter";
 import {
   action,
   context,
+  createContainer,
+  createDreams,
+  createMemoryStore,
+  formatMsg,
+  formatXml,
   input,
+  LogLevel,
   output,
+  service,
   splitTextIntoChunks,
-} from "@daydreamsai/core/src/core/v1/utils";
-import { createMemoryStore } from "@daydreamsai/core/src/core/v1/memory";
-import { createGroq } from "@ai-sdk/groq";
-import { LogLevel, WorkingMemory } from "@daydreamsai/core/src/core/v1/types";
-import createContainer from "@daydreamsai/core/src/core/v1/container";
-import { service } from "@daydreamsai/core/src/core/v1/serviceProvider";
-import { TwitterClient } from "@daydreamsai/core/src/core/v1/io/twitter";
-import { formatMsg, formatXml } from "@daydreamsai/core/src/core/v1";
+} from "@daydreamsai/core/v1";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -52,7 +53,7 @@ const twitterService = service({
   },
 });
 
-const agent = createDreams<WorkingMemory>({
+const agent = createDreams({
   logger: LogLevel.DEBUG,
   container: createContainer(),
   model,

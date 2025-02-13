@@ -168,7 +168,7 @@ export class TwitterClient {
 
       return {
         success: true,
-        tweetId: sendTweetResults,
+        tweetId: await sendTweetResults.json(),
       };
     } catch (error) {
       this.logger.error("TwitterClient.sendTweet", "Error sending tweet", {
