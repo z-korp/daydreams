@@ -16,6 +16,7 @@ import createContainer from "@daydreamsai/core/src/core/v1/container";
 import { createGroq } from "@ai-sdk/groq";
 import { Events } from "discord.js";
 import { Message } from "discord.js";
+import { formatMsg } from "@daydreamsai/core/src/core/v1";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -143,19 +144,22 @@ createDreams<WorkingMemory>({
         content: z.string().describe("The content of the message to send"),
       }),
       description: "Send a message to a Discord channel",
-      handler: async (data, ctx, app) => {
-        const messageOutput = app.container
+      format: ({ content }) =>
+        formatMsg({
+          role: "assistant",
+          content,
+        }),
+      handler: async (data, ctx) => {
+        const channel = await container
           .resolve<DiscordClient>("discord")
-          .createMessageOutput();
-
-        if (!messageOutput || !messageOutput.execute) {
-          throw new Error("Failed to create Discord message output");
+          .client.channels.fetch(data.channelId);
+        if (channel && channel.isSendable()) {
+          await container.resolve<DiscordClient>("discord").sendMessage(data);
+          return {
+            data,
+            timestamp: Date.now(),
+          };
         }
-        const result = await messageOutput?.execute({
-          channelId: data.channelId,
-          content: data.content,
-        });
-        return !!result;
       },
     }),
   },
