@@ -501,7 +501,7 @@ export function createDreams<
                   type,
                   formatted:
                     res.formatted ??
-                    (output.format ? output.format(data) : undefined),
+                    (output.format ? output.format(response) : undefined),
                   ...res,
                 });
               }
@@ -511,7 +511,7 @@ export function createDreams<
                 type,
                 formatted:
                   response.formatted ??
-                  (output.format ? output.format(data) : undefined),
+                  (output.format ? output.format(response) : undefined),
                 ...response,
               });
             }
