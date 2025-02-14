@@ -1,29 +1,10 @@
-import { generateText, type LanguageModelV1 } from "ai";
 import {
   formatAction,
-  formatContext,
   formatContextLog,
   formatOutputInterface,
 } from "../formatters";
-import type { Logger } from "../logger";
 import { createParser, createPrompt } from "../prompt";
-import { task, type TaskContext } from "../task";
-import type {
-  Action,
-  ActionCall,
-  AgentContext,
-  AnyAction,
-  AnyAgent,
-  AnyContext,
-  Context,
-  InferContextCtx,
-  InferContextMemory,
-  Log,
-  Output,
-  WorkingMemory,
-} from "../types";
-import { defaultContextRender } from "../memory";
-import type { z } from "zod";
+import type { AnyAction, Log, Output } from "../types";
 
 const promptTemplate = `
 You are tasked with analyzing messages, formulating responses, and initiating actions based on a given context. 

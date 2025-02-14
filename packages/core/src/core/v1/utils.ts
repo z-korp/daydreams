@@ -3,9 +3,12 @@ import type {
   Action,
   Agent,
   AgentContext,
+  AnyAgent,
   AnyContext,
+  Config,
   Context,
   ExpertConfig,
+  Extension,
   InputConfig,
   Memory,
   OutputConfig,
@@ -162,4 +165,8 @@ export function splitTextIntoChunks(
  */
 export function memory<Data = any>(memory: Memory<Data>) {
   return memory;
+}
+
+export function extension(config: Extension) {
+  return config;
 }

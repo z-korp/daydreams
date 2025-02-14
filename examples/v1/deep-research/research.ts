@@ -7,7 +7,13 @@ import {
   searchResultsPrompt,
 } from "./prompts";
 import { researchSchema, searchResultsSchema } from "./schemas";
-import { action, Debugger, task, memory } from "@daydreamsai/core/v1";
+import {
+  action,
+  Debugger,
+  task,
+  memory,
+  extension,
+} from "@daydreamsai/core/v1";
 
 export type Research = {
   id: string;
@@ -314,7 +320,12 @@ const cancelResearchAction = action({
   },
 });
 
-export const researchDeepActions = [
+export const deepResearch = extension({
+  name: "depp-research",
+  actions: [startDeepResearchAction, cancelResearchAction],
+});
+
+export const deepResearchActions = [
   startDeepResearchAction,
   cancelResearchAction,
 ];

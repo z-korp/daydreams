@@ -1,5 +1,4 @@
-import { type LanguageModelV1 } from "ai";
-import { llm } from "../llm";
+import { generateText, type LanguageModelV1 } from "ai";
 import { render } from "../utils";
 import { formatXml } from "../xml";
 
@@ -81,7 +80,7 @@ export async function chainOfExperts({
 
   console.log({ context });
 
-  const response = await llm({
+  const response = await generateText({
     model,
     system: context,
     prompt: "<response>",
