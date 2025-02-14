@@ -6,6 +6,7 @@ This project is a fork of the Daydreams framework, featuring an AI agent that ca
 1. Environment Setup
 - Copy .env.example.zidle to .env.
 - Add your LLM API key (Anthropic is preferred).
+- Start the Database: Run Docker in the root folder of the project: `docker compose up -d`
 
 2.	Install Dependencies
 Run the following command in the project root:
