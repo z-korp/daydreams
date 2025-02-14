@@ -104,11 +104,9 @@ export const discord = extension({
         content: z.string().describe("The content of the message to send"),
       }),
       description: "Send a message to a Discord channel",
-      format: ({ content }) =>
-        formatMsg({
-          role: "assistant",
-          content,
-        }),
+      enabled({ context }) {
+        return context.type === discordChannelContext.type;
+      },
       handler: async (data, ctx, { container }) => {
         const channel = await container
           .resolve<DiscordClient>("discord")
@@ -120,7 +118,13 @@ export const discord = extension({
             timestamp: Date.now(),
           };
         }
+        throw new Error("Invalid channel id");
       },
+      format: ({ data }) =>
+        formatMsg({
+          role: "assistant",
+          content: data.content,
+        }),
     }),
   },
 });

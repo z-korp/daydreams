@@ -12,7 +12,6 @@ const envSchema = z.object({
     .preprocess((val) => val === "1" || val === "true", z.boolean())
     .default(true),
 });
-export const env = envSchema.parse(process.env);
 
 export interface TwitterCredentials {
   username: string;
@@ -44,6 +43,7 @@ export class TwitterClient {
   private lastCheckedTweetId: bigint | null = null;
   private logger: Logger;
 
+  private env: z.infer<typeof envSchema>;
   constructor(
     private credentials: TwitterCredentials,
     logLevel: LogLevel = LogLevel.INFO
@@ -54,6 +54,8 @@ export class TwitterClient {
       enableColors: true,
       enableTimestamp: true,
     });
+
+    this.env = envSchema.parse(process.env);
   }
 
   async initialize() {
@@ -154,7 +156,7 @@ export class TwitterClient {
         data,
       });
 
-      if (env.DRY_RUN) {
+      if (this.env.DRY_RUN) {
         return {
           success: true,
           tweetId: "DRY RUN TWEET ID",
