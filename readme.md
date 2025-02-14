@@ -50,7 +50,6 @@ Want to contribute? Check our
 ### Prerequisites
 
 - Node.js 18+ using [nvm](https://github.com/nvm-sh/nvm)
-- [bun](https://bun.sh/)
 
 ### LLM Keys
 
@@ -62,89 +61,43 @@ You'll need an API key for the LLM you want to use. We recommend using
 - [Groq](https://groq.com/)
 - [Gemini](https://deepmind.google/technologies/gemini/)
 
-### Install
+## Your First Dreams Agent
 
 ```bash
-# Install dependencies
-bun install
-
-# Copy environment variables
-cp .env.example .env
-
-# Run an example
-bun run example:discord
+npm i @daydreamsai/core
 ```
-
-## Your First Dreams Agent
 
 Dreams agents are all functional. `createDreams` is a function that returns an
 agent object, which can be run with `await agent.run()`. Inject discord,
 telegram, or any other input/output to the agent and define your own actions.
 
 ```typescript
-import { createDreams } from "@daydreamsai/core";
-import { createMemoryStore, defaultContext } from "@daydreamsai/core";
-import { openai } from "@ai-sdk/openai";
-import { input, output } from "@daydreamsai/core";
-import { z } from "zod";
-import * as readline from "readline/promises";
+import { createGroq } from "@ai-sdk/groq";
+import { createDreams, cli } from "@daydreamsai/core/v1";
 
+// Initialize Groq client
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
 });
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
-
+// Create Dreams agent instance
 const agent = createDreams({
-  memory: createMemoryStore(),
-  model: openai("gpt-o1-mini"),
-  inputs: {
-    message: input({
-      schema: z.object({
-        user: z.string(),
-        text: z.string(),
-      }),
-      handler(params, ctx) {
-        console.log("User:" + params.text);
-        ctx.memory.inputs.push({
-          ref: "input",
-          type: "message",
-          params: { user: params.user },
-          data: params.text,
-          timestamp: Date.now(),
-          processed: false,
-        });
-        return true;
-      },
-      async subscribe(send, agent) {
-        while (true) {
-          const question = await rl.question(">");
+  model: groq("deepseek-r1-distill-llama-70b"),
+  extensions: [cli],
+}).start();
+```
 
-          send(defaultContext, "main", {
-            user: "admin",
-            text: question,
-          });
-        }
-      },
-    }),
-  },
-  outputs: {
-    message: output({
-      description: "",
-      schema: z.string(),
-      handler(content, ctx) {
-        console.log("Agent:" + content);
-        return true;
-      },
-      examples: ["Hi!"],
-    }),
-  },
-});
+Now chat via the CLI with the agent.
 
-await agent.start();
+Read the [docs](https://docs.dreams.fun) for more information on how to use the
+agent.
+
+### Development
+
+We use [bun](https://bun.sh/) for development.
+
+```bash
+bun install
 ```
 
 ## Contributing
