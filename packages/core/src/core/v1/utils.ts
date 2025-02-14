@@ -169,7 +169,8 @@ export function memory<Data = any>(memory: Memory<Data>) {
 
 export function extension<
   TMemory extends WorkingMemory = WorkingMemory,
-  Contexts extends Record<string, AnyContext> = Record<string, AnyContext>,
->(config: Extension<TMemory, Contexts>) {
+  TContext extends AnyContext = AnyContext,
+  Contexts extends Record<string, TContext> = Record<string, TContext>,
+>(config: Extension<TMemory, TContext, Contexts>) {
   return config;
 }

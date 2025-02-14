@@ -1,9 +1,9 @@
 import { createParser, createPrompt, formatXml } from "@daydreamsai/core/v1";
 import { z } from "zod";
 import zodToJsonSchema from "zod-to-json-schema";
-import { Research } from "./research";
-import { TavilySearchResponse } from "@tavily/core";
-import { SearchResultSchema, searchResultsSchema } from "./schemas";
+import { type Research } from "./research";
+import { type TavilySearchResponse } from "@tavily/core";
+import { type SearchResultSchema, searchResultsSchema } from "./schemas";
 
 export function formatResearch(research: Research) {
   return formatXml({
