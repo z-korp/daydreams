@@ -4,6 +4,9 @@ import { getPageMap } from "nextra/page-map";
 import type { Metadata } from "next";
 import "nextra-theme-docs/style.css";
 import "./globals.css";
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   description:
@@ -55,6 +58,7 @@ export default async function RootLayout({ children }) {
       dir="ltr"
       // Suggested by `next-themes` package https://github.com/pacocoursey/next-themes#with-app
       suppressHydrationWarning
+      className={inter.className}
     >
       <Head>
         <link rel="icon" href="/Daydreams.png" type="image/png" />
@@ -71,7 +75,6 @@ export default async function RootLayout({ children }) {
           pageMap={await getPageMap()}
           docsRepositoryBase="https://github.com/daydreamsai/daydreams/tree/main/docs"
           footer={footer}
-          // ... Your additional layout options
         >
           {children}
         </Layout>
