@@ -407,7 +407,7 @@ export type Config<
     any
   >[];
 
-  extensions?: Extension<TMemory, TContext>[];
+  extensions?: Extension<TMemory>[];
 
   model: LanguageModelV1;
   reasoningModel?: LanguageModelV1;
@@ -592,12 +592,12 @@ export enum HandlerRole {
 
 export type Extension<
   TMemory extends WorkingMemory = WorkingMemory,
-  TContext extends AnyContext = AnyContext,
+  Contexts extends Record<string, AnyContext> = Record<string, AnyContext>,
 > = Pick<
-  Config<TMemory, TContext>,
+  Config<TMemory, AnyContext>,
   "inputs" | "outputs" | "actions" | "services" | "events"
 > & {
   name: string;
   install?: (agent: AnyAgent) => Promise<void> | void;
-  contexts?: Record<string, AnyContext>;
+  contexts?: Contexts;
 };
