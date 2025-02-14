@@ -91,7 +91,9 @@ export const telegram = extension({
         content: z.string().describe("the content of the message to send"),
       }),
       description: "use this to send a telegram message to user",
-
+      enabled({ context }) {
+        return context.type === telegramChat.type;
+      },
       handler: async (data, ctx, { container }) => {
         const tg = container.resolve<Telegraf>("telegraf").telegram;
         const chunks = splitTextIntoChunks(data.content, {

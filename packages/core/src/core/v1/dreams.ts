@@ -187,9 +187,7 @@ export function createDreams<
       contextsRunning.add(contextId);
 
       const contextOuputs = Object.entries(agent.outputs)
-        .filter(([_, output]) =>
-          output.enabled ? output.enabled(ctx as any) : true
-        )
+        .filter(([_, output]) => (output.enabled ? output.enabled(ctx) : true))
         .map(([type, output]) => ({
           type,
           ...output,
