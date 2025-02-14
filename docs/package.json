@@ -13,8 +13,10 @@
     "nextra-theme-docs": "^4.2.10",
     "postcss": "^8.5.2",
     "prettier": "^3.4.2",
+    "prism-react-renderer": "^2.4.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-syntax-highlighter": "^15.6.1"
   },
   "devDependencies": {
     "@types/bun": "^1.2.2",
