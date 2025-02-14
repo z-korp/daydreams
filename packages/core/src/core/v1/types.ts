@@ -101,7 +101,7 @@ export type Action<
   description?: string;
   schema: Schema;
   memory?: TMemory;
-  install?: (agent: TAgent) => Promise<void>;
+  install?: (agent: TAgent) => Promise<void> | void;
   enabled?: (ctx: Context & { data: InferMemoryData<TMemory> }) => boolean;
   examples?: z.infer<Schema>[];
   handler: (
@@ -376,7 +376,7 @@ export type Config<
   TContext extends AnyContext = AnyContext,
 > = {
   // context: Context;
-  memory: MemoryStore;
+  memory?: MemoryStore;
   container?: Container;
   context?: TContext;
   debugger?: Debugger;
@@ -406,6 +406,8 @@ export type Config<
     Agent<TMemory, TContext>,
     any
   >[];
+
+  extensions?: Extension<TMemory, TContext>[];
 
   model: LanguageModelV1;
   reasoningModel?: LanguageModelV1;
@@ -587,3 +589,15 @@ export enum HandlerRole {
   /** Handler for executing actions */
   ACTION = "action",
 }
+
+export type Extension<
+  TMemory extends WorkingMemory = WorkingMemory,
+  TContext extends AnyContext = AnyContext,
+> = Pick<
+  Config<TMemory, TContext>,
+  "inputs" | "outputs" | "actions" | "services" | "events"
+> & {
+  name: string;
+  install?: (agent: AnyAgent) => Promise<void> | void;
+  contexts?: Record<string, AnyContext>;
+};
