@@ -4,9 +4,11 @@ import { getPageMap } from "nextra/page-map";
 import type { Metadata } from "next";
 import "nextra-theme-docs/style.css";
 import "./globals.css";
-import { Inter } from "next/font/google";
+import { Inter, Open_Sans } from "next/font/google";
 
 const inter = Inter({ subsets: ["latin"] });
+
+const openSans = Open_Sans({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   description:
@@ -58,12 +60,20 @@ export default async function RootLayout({ children }) {
       dir="ltr"
       // Suggested by `next-themes` package https://github.com/pacocoursey/next-themes#with-app
       suppressHydrationWarning
-      className={inter.className}
+      className={openSans.className}
     >
-      <Head>
+      <Head
+        color={{
+          hue: 270, // Purple hue
+          saturation: 100,
+          lightness: {
+            light: 50,
+            dark: 50,
+          },
+        }}
+      >
         <link rel="icon" href="/Daydreams.png" type="image/png" />
         <link rel="apple-touch-icon" href="/Daydreams.png" />
-        <link rel="manifest" href="/site.webmanifest" />
         {/* favicon */}
         <link rel="icon" href="/favicon-32x32.png" sizes="any" />
         {/* Your additional tags should be passed as `children` of `<Head>` element */}

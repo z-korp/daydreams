@@ -1,8 +1,7 @@
 # Building a Twitter Agent
 
 This guide will walk you through creating an AI agent that can interact with
-Twitter. The agent will be able to monitor mentions, reply to tweets, and post
-new tweets.
+Twitter using DreamsAI.
 
 ## Prerequisites
 
@@ -11,396 +10,60 @@ Before starting, make sure you have:
 1. A Twitter developer account
 2. The following environment variables set up:
    - `GROQ_API_KEY`: Your Groq API key
-   - `TWITTER_USERNAME`: Your Twitter username
-   - `TWITTER_PASSWORD`: Your Twitter password
-   - `TWITTER_EMAIL`: Your Twitter email
 
-## Step 1: Setting Up Dependencies
+## Creating the Agent
 
-First, let's import all the necessary dependencies:
+First, let's create a basic Twitter agent:
 
 ```ts
-import { z } from "zod";
+import { createGroq } from "@ai-sdk/groq";
 import {
-  createDreams,
-  action,
-  context,
-  input,
-  output,
-  splitTextIntoChunks,
-  createMemoryStore,
-  LogLevel,
-  WorkingMemory,
   createContainer,
-  service,
-  TwitterClient,
-} from "@daydreamsai/core";
-import { createGroq } from "@ai-sdk/groq";
-```
+  createDreams,
+  LogLevel,
+  twitter,
+} from "@daydreamsai/core/v1";
 
-## Step 2: Initialize Core Components
-
-Set up the Groq model and memory store:
-
-```ts
+// Initialize Groq client
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
 });
 
-const model = groq("deepseek-r1-distill-llama-70b");
-const memory = createMemoryStore();
-```
-
-## Step 3: Define Twitter Context
-
-The Twitter context helps manage the state and setup for Twitter-related
-operations:
-
-```ts
-const twitterContext = context({
-  type: "twitter:thread",
-  key: ({ tweetId }) => tweetId.toString(),
-  schema: z.object({
-    tweetId: z.string(),
-  }),
-  async setup(args, { container }) {
-    const twitter = container.resolve<TwitterClient>("twitter");
-    return { twitter };
-  },
-});
-```
-
-This context:
-
-- Has a type of `twitter:thread`
-- Uses the tweet ID as a unique key
-- Validates the schema using Zod
-- Sets up the Twitter client for use
-
-## Step 4: Configure Twitter Service
-
-Create a service to handle Twitter client initialization:
-
-```ts
-const twitterService = service({
-  register(container) {
-    container.singleton(
-      "twitter",
-      () =>
-        new TwitterClient({
-          username: process.env.TWITTER_USERNAME!,
-          password: process.env.TWITTER_PASSWORD!,
-          email: process.env.TWITTER_EMAIL!,
-        })
-    );
-  },
-  async boot(container) {
-    const twitter = container.resolve<TwitterClient>("twitter");
-    twitter.initialize();
-    console.log("Twitter client initialized");
-  },
-});
-```
-
-This service:
-
-- Registers a singleton Twitter client instance
-- Initializes the client during boot
-- Uses environment variables for authentication
-
-## Step 5: Create the Agent
-
-Now let's create the agent with inputs and outputs:
-
-### 5.1 Agent Setup
-
-```ts
-const agent = createDreams<WorkingMemory>({
+// Create the agent
+const agent = createDreams({
   logger: LogLevel.DEBUG,
   container: createContainer(),
-  model,
-  memory,
-  services: [twitterService],
-  // ... inputs and outputs will be defined next
-});
-```
-
-### 5.2 Define Inputs
-
-Configure how the agent receives Twitter mentions:
-
-```ts
-inputs: {
-  "twitter:mentions": input({
-    schema: z.object({
-      userId: z.string(),
-      tweetId: z.string(),
-      text: z.string(),
-    }),
-    handler: (mention, { memory }) => {
-      memory.inputs.push({
-        ref: "input",
-        type: "twitter:mentions",
-        params: {
-          userId: mention.userId,
-          tweetId: mention.tweetId,
-          text: mention.text,
-        },
-        data: mention,
-        timestamp: Date.now(),
-      });
-      return true;
-    },
-    subscribe(send, { container }) {
-      const twitter = container.resolve<TwitterClient>("twitter");
-
-      // Check mentions every 10 seconds
-      const interval = setInterval(async () => {
-        const mentions = await twitter.checkMentions();
-
-        for (const mention of mentions) {
-          console.log("Mention", mention);
-          send(
-            twitterContext,
-            { tweetId: mention.metadata.tweetId || "" },
-            {
-              tweetId: mention.metadata.tweetId || "",
-              userId: mention.metadata.userId || "",
-              text: mention.content,
-            }
-          );
-        }
-      }, 10000);
-
-      return () => clearInterval(interval);
-    },
-  }),
-}
-```
-
-The input handler:
-
-- Monitors Twitter mentions
-- Validates mention data using a schema
-- Stores mentions in memory
-- Checks for new mentions every 10 seconds
-
-### 5.3 Define Outputs
-
-Configure how the agent can interact with Twitter:
-
-```ts
-outputs: {
-  "twitter:reply": output({
-    schema: z.object({
-      content: z.string().max(280),
-      inReplyTo: z.string(),
-    }),
-    description: "Use this to reply to a tweet",
-    handler: async (data, ctx, agent) => {
-      const twitter = agent.container.resolve<TwitterClient>("twitter");
-      await twitter.sendTweet({
-        content: data.content,
-        inReplyTo: data.inReplyTo,
-      });
-      return true;
-    },
-  }),
-
-  "twitter:tweet": output({
-    schema: z.object({
-      content: z.string().max(280),
-    }),
-    description: "Use this to post a new tweet",
-    handler: async (data, ctx, agent) => {
-      const twitter = agent.container.resolve<TwitterClient>("twitter");
-      await twitter.sendTweet({
-        content: data.content,
-      });
-      return true;
-    },
-  }),
-}
-```
-
-The outputs provide two main actions:
-
-1. `twitter:reply`: Reply to existing tweets
-2. `twitter:tweet`: Post new tweets
-
-Both outputs:
-
-- Validate content length (Twitter's 280 character limit)
-- Use the Twitter client to send tweets
-- Return true on successful posting
-
-## Step 6: Start the Agent
-
-Finally, start the agent:
-
-```ts
-await agent.start();
-```
-
-## How It Works
-
-This Twitter agent:
-
-1. Continuously monitors for mentions of your Twitter account
-2. Stores mentions in memory for processing
-3. Can respond to mentions or post new tweets
-4. Uses Groq's language model for processing
-5. Maintains context for tweet threads
-6. Handles Twitter authentication and API interactions
-
-The agent can be extended with additional actions and custom logic to create
-more complex Twitter interactions and automated responses.
-
-```ts
-import { z } from "zod";
-import { createDreams } from "@daydreamsai/core";
-import {
-  action,
-  context,
-  input,
-  output,
-  splitTextIntoChunks,
-} from "@daydreamsai/core";
-import { createMemoryStore } from "@daydreamsai/core";
-import { createGroq } from "@ai-sdk/groq";
-import { LogLevel, WorkingMemory } from "@daydreamsai/core";
-import createContainer from "@daydreamsai/core";
-import { service } from "@daydreamsai/core";
-import { TwitterClient } from "@daydreamsai/core";
-
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY!,
-});
-
-const model = groq("deepseek-r1-distill-llama-70b");
-const memory = createMemoryStore();
-
-// Define Twitter context
-const twitterContext = context({
-  type: "twitter:thread",
-  key: ({ tweetId }) => tweetId.toString(),
-  schema: z.object({
-    tweetId: z.string(),
-  }),
-  async setup(args, { container }) {
-    const twitter = container.resolve<TwitterClient>("twitter");
-    return { twitter };
-  },
-});
-
-// Twitter service setup
-const twitterService = service({
-  register(container) {
-    container.singleton(
-      "twitter",
-      () =>
-        new TwitterClient({
-          username: process.env.TWITTER_USERNAME!,
-          password: process.env.TWITTER_PASSWORD!,
-          email: process.env.TWITTER_EMAIL!,
-        })
-    );
-  },
-  async boot(container) {
-    const twitter = container.resolve<TwitterClient>("twitter");
-
-    twitter.initialize();
-    console.log("Twitter client initialized");
-  },
-});
-
-const agent = createDreams<WorkingMemory>({
-  logger: LogLevel.DEBUG,
-  container: createContainer(),
-  model,
-  memory,
-  services: [twitterService],
-
-  inputs: {
-    "twitter:mentions": input({
-      schema: z.object({
-        userId: z.string(),
-        tweetId: z.string(),
-        text: z.string(),
-      }),
-      handler: (mention, { memory }) => {
-        memory.inputs.push({
-          ref: "input",
-          type: "twitter:mentions",
-          params: {
-            userId: mention.userId,
-            tweetId: mention.tweetId,
-            text: mention.text,
-          },
-          data: mention,
-          timestamp: Date.now(),
-        });
-        return true;
-      },
-      subscribe(send, { container }) {
-        const twitter = container.resolve<TwitterClient>("twitter");
-
-        // Check mentions every minute
-        const interval = setInterval(async () => {
-          const mentions = await twitter.checkMentions();
-
-          for (const mention of mentions) {
-            console.log("Mention", mention);
-            send(
-              twitterContext,
-              { tweetId: mention.metadata.tweetId || "" },
-              {
-                tweetId: mention.metadata.tweetId || "",
-                userId: mention.metadata.userId || "",
-                text: mention.content,
-              }
-            );
-          }
-        }, 10000);
-
-        return () => clearInterval(interval);
-      },
-    }),
-  },
-
-  outputs: {
-    "twitter:reply": output({
-      schema: z.object({
-        content: z.string().max(280),
-        inReplyTo: z.string(),
-      }),
-      description: "Use this to reply to a tweet",
-      handler: async (data, ctx, agent) => {
-        const twitter = agent.container.resolve<TwitterClient>("twitter");
-        await twitter.sendTweet({
-          content: data.content,
-          inReplyTo: data.inReplyTo,
-        });
-        return true;
-      },
-    }),
-
-    "twitter:tweet": output({
-      schema: z.object({
-        content: z.string().max(280),
-      }),
-      description: "Use this to post a new tweet",
-      handler: async (data, ctx, agent) => {
-        const twitter = agent.container.resolve<TwitterClient>("twitter");
-        await twitter.sendTweet({
-          content: data.content,
-        });
-        return true;
-      },
-    }),
-  },
+  model: groq("deepseek-r1-distill-llama-70b"),
+  extensions: [twitter],
 });
 
 // Start the agent
 await agent.start();
 ```
+
+## How It Works
+
+The Twitter agent is created using a few key components:
+
+1. **Groq Integration**: We use Groq's language model for processing and
+   understanding Twitter interactions.
+
+2. **Logger**: Set to DEBUG level for detailed logging during development.
+
+3. **Container**: Manages dependencies and services.
+
+4. **Twitter Extension**: The `twitter` extension provides built-in capabilities
+   for:
+   - Monitoring mentions
+   - Replying to tweets
+   - Posting new tweets
+   - Managing Twitter authentication
+
+## Next Steps
+
+- Set up Twitter authentication in your environment variables
+- Customize the agent's behavior by adding your own extensions
+- Implement specific use cases like auto-replies or content monitoring
+
+For more examples and detailed API documentation, check out our
+[API Reference](/api-reference).
