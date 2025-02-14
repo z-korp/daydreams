@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { extension, input, output } from "../utils";
 import { formatMsg } from "../formatters";
-import { Events, type Message } from "discord.js";
+import { ChannelType, Events, type Message } from "discord.js";
 import { DiscordClient } from "../io/discord";
 import { context } from "../context";
 import { service } from "../serviceProvider";
@@ -27,6 +27,7 @@ const discordChannelContext = context({
   type: "discord:channel",
   key: ({ channelId }) => channelId,
   schema: z.object({ channelId: z.string() }),
+
   async setup(args, { container }) {
     const channel = await container
       .resolve<DiscordClient>("discord")
@@ -35,6 +36,10 @@ const discordChannelContext = context({
     if (!channel) throw new Error("Invalid channel");
 
     return { channel };
+  },
+
+  description(params, { channel }) {
+    return `Channel ID: ${channel.id}`;
   },
 });
 
@@ -70,7 +75,7 @@ export const discord = extension({
             return;
           }
           send(
-            discordChannelContext,
+            discord.contexts!.discordChannel,
             { channelId: message.channelId },
             {
               chat: {
@@ -85,11 +90,11 @@ export const discord = extension({
           );
         }
 
-        const discord = container.resolve<DiscordClient>("discord");
+        const { client } = container.resolve<DiscordClient>("discord");
 
-        discord.client.on(Events.MessageCreate, listener);
+        client.on(Events.MessageCreate, listener);
         return () => {
-          discord.client.off(Events.MessageCreate, listener);
+          client.off(Events.MessageCreate, listener);
         };
       },
     }),
