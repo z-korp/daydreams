@@ -31,6 +31,7 @@ import {
   defaultContextMemory,
   defaultContextRender,
 } from "./context";
+import { createMemoryStore } from "./memory";
 
 export function createDreams<
   Memory extends WorkingMemory = WorkingMemory,
@@ -53,6 +54,7 @@ export function createDreams<
     actions = [],
     experts = {},
     services = [],
+    extensions = [],
     memory,
     model,
     reasoningModel,
@@ -72,6 +74,14 @@ export function createDreams<
   let booted = false;
 
   const serviceManager = createServiceManager(container);
+
+  for (const extension of extensions) {
+    if (extension.inputs) Object.assign(inputs, extension.inputs);
+    if (extension.outputs) Object.assign(outputs, extension.outputs);
+    if (extension.events) Object.assign(events, extension.events);
+    if (extension.actions) actions.push(...extension.actions);
+    if (extension.services) services.push(...extension.services);
+  }
 
   for (const service of services) {
     serviceManager.register(service);
@@ -109,7 +119,7 @@ export function createDreams<
     events,
     actions,
     experts,
-    memory,
+    memory: memory ?? createMemoryStore(),
     container,
     model,
     reasoningModel,
@@ -120,14 +130,18 @@ export function createDreams<
     },
 
     async start() {
-      if (booted) return;
+      if (booted) return agent;
 
       booted = true;
 
       await serviceManager.bootAll();
 
+      for (const extension of extensions) {
+        if (extension.install) await extension.install(agent);
+      }
+
       for (const [key, input] of Object.entries(agent.inputs)) {
-        if (input.install) await input.install(agent);
+        if (input.install) await Promise.resolve(input.install(agent));
 
         if (input.subscribe) {
           const subscription = await Promise.resolve(
@@ -147,12 +161,14 @@ export function createDreams<
       }
 
       for (const output of Object.values(outputs)) {
-        if (output.install) await output.install(agent);
+        if (output.install) await Promise.resolve(output.install(agent));
       }
 
       for (const action of actions) {
-        if (action.install) await action.install(agent);
+        if (action.install) await Promise.resolve(action.install(agent));
       }
+
+      return agent;
     },
 
     async stop() {},
