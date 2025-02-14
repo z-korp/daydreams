@@ -1,5 +1,5 @@
-import { tavily, TavilyClient } from "@tavily/core";
-import { generateText, LanguageModelV1 } from "ai";
+import { tavily, type TavilyClient } from "@tavily/core";
+import { generateText, type LanguageModelV1 } from "ai";
 import pLimit from "p-limit";
 import {
   finalReportPrompt,
@@ -9,11 +9,13 @@ import {
 import { researchSchema, searchResultsSchema } from "./schemas";
 import {
   action,
-  Debugger,
   task,
   memory,
   extension,
+  context,
+  type Debugger,
 } from "@daydreamsai/core/v1";
+import { z } from "zod";
 
 export type Research = {
   id: string;
@@ -320,8 +322,14 @@ const cancelResearchAction = action({
   },
 });
 
+const deepResearchContext = context({
+  type: "deep-research",
+  schema: z.string(),
+  key: (id) => id,
+});
+
 export const deepResearch = extension({
-  name: "depp-research",
+  name: "deep-research",
   actions: [startDeepResearchAction, cancelResearchAction],
 });
 
