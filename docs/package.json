@@ -1,10 +1,11 @@
 {
   "name": "docs",
   "version": "0.0.0",
+  "type": "module",
   "scripts": {
     "dev": "next",
-    "build": "next build",
-    "start": "next start"
+    "docs:build": "next build",
+    "docs:start": "next start"
   },
   "dependencies": {
     "next": "^15.1.7",

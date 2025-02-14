@@ -38,36 +38,30 @@ export default function Home() {
       <div className="mx-auto max-w-7xl px-6 lg:px-8 pb-24">
         <Cards className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <Cards.Card
+            title="Installation"
             href="/introduction/"
             className="group p-6 text-white hover:bg-white/10 rounded-lg transition-colors"
           >
-            <h3 className="text-lg font-semibold leading-8 tracking-tight">
-              Installation
-            </h3>
             <p className="mt-2 text-sm text-white/80">
               Learn the basics and get up and running in minutes
             </p>
           </Cards.Card>
 
           <Cards.Card
+            title="Guides"
             href="/guides/deep-research/"
             className="group p-6 text-white hover:bg-white/10 rounded-lg transition-colors"
           >
-            <h3 className="text-lg font-semibold leading-8 tracking-tight">
-              Guides
-            </h3>
             <p className="mt-2 text-sm text-white/80">
               Explore our library of pre-built components
             </p>
           </Cards.Card>
 
           <Cards.Card
+            title="API Reference"
             href="/api-reference/"
             className="group p-6 text-white hover:bg-white/10 rounded-lg transition-colors"
           >
-            <h3 className="text-lg font-semibold leading-8 tracking-tight">
-              API Reference
-            </h3>
             <p className="mt-2 text-sm text-white/80">
               Follow our detailed tutorials and examples
             </p>
