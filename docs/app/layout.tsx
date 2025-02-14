@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     title: "Daydreams",
   },
   title: {
-    default: "Daydreams",
+    default: "Daydreams | Generative Agents",
     template: "%s | Daydreams",
   },
   openGraph: {
@@ -55,9 +55,12 @@ export default async function RootLayout({ children }) {
       // Suggested by `next-themes` package https://github.com/pacocoursey/next-themes#with-app
       suppressHydrationWarning
     >
-      <Head
-      // ... Your additional head options
-      >
+      <Head>
+        <link rel="icon" href="/Daydreams.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/Daydreams.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+        {/* favicon */}
+        <link rel="icon" href="/favicon-32x32.png" sizes="any" />
         {/* Your additional tags should be passed as `children` of `<Head>` element */}
       </Head>
       <body>
