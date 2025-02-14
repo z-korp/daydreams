@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./public/Daydreams.png" alt="Daydreams">
+  <img src="/public/Daydreams.png" alt="Daydreams">
 </p>
 
 > ⚠️ **Warning**: This is alpha software under active development. Expect
