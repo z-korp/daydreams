@@ -351,7 +351,7 @@ export interface Agent<
   ) => Promise<void>;
   evaluator: (ctx: AgentContext<Memory, TContext>) => Promise<void>;
 
-  start(): Promise<void>;
+  start(): Promise<this>;
   stop(): Promise<void>;
 }
 

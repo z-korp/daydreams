@@ -130,7 +130,7 @@ export function createDreams<
     },
 
     async start() {
-      if (booted) return;
+      if (booted) return agent;
 
       booted = true;
 
@@ -167,6 +167,8 @@ export function createDreams<
       for (const action of actions) {
         if (action.install) await Promise.resolve(action.install(agent));
       }
+
+      return agent;
     },
 
     async stop() {},
