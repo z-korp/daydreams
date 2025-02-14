@@ -12,6 +12,7 @@
         "vision": "bun run examples/example-vision.ts",
         "api": "bun run examples/example-api.ts",
         "zidle": "bun run examples/example-zidle.ts",
+        "zidle-chat": "bun run examples/example-zidle-chat.ts",
         "ui": "pnpm --dir clients/example-ui run dev",
         "test": "bun run packages/core",
         "build": "pnpm --dir packages/core run build",

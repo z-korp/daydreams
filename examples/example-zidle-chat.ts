@@ -14,7 +14,9 @@ import {
 } from "../packages/core/src/core/types";
 import { WebSocketServer } from "ws";
 import { MongoDb } from "../packages/core/src/core/db/mongo-db";
-import { ZIDLE_CONTEXT } from "./zidle/zidle-context";
+import { MasterProcessor } from "../packages/core/src/core/processors/master-processor";
+import { defaultCharacter } from "../packages/core/src/core/characters/character";
+import { ZIDLE_CONTEXT_CHAT } from "./zidle/zidle-context-chat";
 import { ZIDLE_PROVIDER } from "./zidle/zidle-provider"
 import { setupBroadcastFunctions } from "./zidle/utils/broadcast";
 
@@ -55,7 +57,7 @@ async function main() {
 
     // Initialize LLM client
     const llmClient = new LLMClient({
-        model: "anthropic/claude-3-5-sonnet-latest", //"openrouter:deepseek/deepseek-r1"
+        model: "anthropic/claude-3-5-sonnet-latest", //"openrouter:deepseek/deepseek-r1",
     });
 
     const starknetChain = new StarknetChain({
@@ -69,22 +71,27 @@ async function main() {
     await memory.purge(); // Clear previous session data
     await chat_memory.purge(); // Clear previous session data
 
-    // Load initial context documents
-    await memory.storeDocument({
+    await chat_memory.storeDocument({
         title: "Game Rules",
-        content: ZIDLE_CONTEXT,
+        content: ZIDLE_CONTEXT_CHAT,
         category: "rules",
         tags: ["game-mechanics", "rules"],
         lastUpdated: new Date(),
     });
 
-    await memory.storeDocument({
+    await chat_memory.storeDocument({
         title: "Provider Guide",
         content: ZIDLE_PROVIDER,
         category: "actions",
         tags: ["actions", "provider-guide"],
         lastUpdated: new Date(),
     });
+
+    const processor = new MasterProcessor(
+        llmClient,
+        defaultCharacter,
+        loglevel
+    );
 
     const scheduledTaskDb = new MongoDb(
         "mongodb://localhost:27017",
@@ -110,6 +117,94 @@ async function main() {
         console.log(chalk.blue("[WS] New client connected."));
         broadcast.broadcastWelcome("Welcome to the zIdle AI agent WebSocket server!");
 
+        ws.on("message", async (rawData) => {
+            try {
+                const dataString = rawData.toString();
+                console.log(chalk.magenta("[WS] Received message:"), dataString);
+
+                const parsed = JSON.parse(dataString);
+                const userMessage = parsed.goal;
+
+                console.log("userMessage ", dataString);
+                console.log("userMessage ", userMessage);
+                console.log("user_chat", JSON.stringify(userMessage));
+
+                console.log(chalk.cyan("\n🤔 Planning strategy for answering message..."));
+
+                // Create an objective based on the user message
+                const goalText = `Your objective is to answer this user query: "${userMessage} while keeping THE USER INFORMED:  Your number one priority is to provide immediate, clear, and detailed CHAT_REPLY updates at every step of any process."`;
+                await chatDreams.decomposeObjectiveIntoGoals(goalText);
+
+                console.log("getAllGoals", chatDreams.goalManager.getAllGoals());
+
+                // Now loop through all goals until there are none left to process.
+                const stats = { completed: 0, failed: 0, total: 0 };
+                while (true) {
+                    // Retrieve current goals from the goal manager.
+                    const readyGoals = chatDreams.goalManager.getReadyGoals();
+                    const activeGoals = chatDreams.goalManager
+                        .getGoalsByHorizon("short")
+                        .filter((g) => g.status === "active");
+                    const pendingGoals = chatDreams.goalManager
+                        .getGoalsByHorizon("short")
+                        .filter((g) => g.status === "pending");
+
+                    console.log(chalk.cyan("\n📊 Current Chat Progress:"));
+                    console.log(`Ready goals: ${readyGoals.length}`);
+                    console.log(`Active goals: ${activeGoals.length}`);
+                    console.log(`Pending goals: ${pendingGoals.length}`);
+                    console.log(`Completed: ${stats.completed}`);
+                    console.log(`Failed: ${stats.failed}`);
+
+                    // If no goals remain (all are completed) then break.
+                    if (
+                        readyGoals.length === 0 &&
+                        activeGoals.length === 0 &&
+                        pendingGoals.length === 0
+                    ) {
+                        console.log(chalk.green("\n✨ All chat goals completed!"));
+                        break;
+                    }
+
+                    // If there are pending goals but none ready or active, show details and break.
+                    if (readyGoals.length === 0 && activeGoals.length === 0) {
+                        console.log(
+                            chalk.yellow(
+                                "\n⚠️ No ready or active chat goals, but some goals are pending:"
+                            )
+                        );
+                        pendingGoals.forEach((goal) => {
+                            const blockingGoals = chatDreams.goalManager.getBlockingGoals(goal.id);
+                            console.log(chalk.yellow(`\n📌 Pending Chat Goal: ${goal.description}`));
+                            console.log(chalk.yellow(`   Blocked by: ${blockingGoals.length} goals`));
+                            blockingGoals.forEach((blocking) => {
+                                console.log(
+                                    chalk.yellow(`   - ${blocking.description} (${blocking.status})`)
+                                );
+                            });
+                        });
+                        break;
+                    }
+
+                    // Process the highest priority goal.
+                    try {
+                        await chatDreams.processHighestPriorityGoal();
+                        stats.completed++;
+                    } catch (error) {
+                        console.error(chalk.red("\n❌ Chat goal execution failed:"), error);
+                        stats.failed++;
+                    }
+                    stats.total++;
+                }
+            } catch (error) {
+                console.error(chalk.red("[WS] Error processing message:"), error);
+                ws.send(JSON.stringify({
+                    type: "error",
+                    error: (error as Error).message || String(error),
+                }));
+            }
+        });
+
         ws.on("close", () => {
             console.log(chalk.yellow("[WS] Client disconnected."));
         });
@@ -127,18 +222,17 @@ async function main() {
         process.exit(0);
     });
 
-    // Initialize the main reasoning engine
-    const dreams = new ChainOfThought(
+    const chatDreams = new ChainOfThought(
         llmClient,
-        memory,
+        chat_memory,
         {
-            worldState: ZIDLE_CONTEXT,
+            worldState: ZIDLE_CONTEXT_CHAT,
             providerContext: ZIDLE_PROVIDER,
         },
         { logLevel: LogLevel.DEBUG }
     );
 
-    dreams.registerOutput({
+    chatDreams.registerOutput({
         role: HandlerRole.ACTION,
         name: "EXECUTE_READ",
         execute: async (action: any) => {
@@ -146,12 +240,6 @@ async function main() {
                 "Preparing to execute read action... " +
                 JSON.stringify(action.payload)
             );
-            const shouldProceed = await getCliInput(
-                chalk.yellow("\nProceed with the read action? (y/n): ")
-            );
-            if (shouldProceed.toLowerCase() !== "y") {
-                return "Action aborted by the user.";
-            }
 
             const result = await starknetChain.read(action.payload);
             return `[EXECUTE_READ] ${action.context}: ${JSON.stringify(result, null, 2)}`;
@@ -173,7 +261,7 @@ async function main() {
             ),
     });
 
-    dreams.registerOutput({
+    chatDreams.registerOutput({
         role: HandlerRole.ACTION,
         name: "EXECUTE_TRANSACTION",
         execute: async (action: any) => {
@@ -181,14 +269,7 @@ async function main() {
                 "Preparing to execute transaction action... " +
                 JSON.stringify(action.payload)
             );
-            const shouldProceed = await getCliInput(
-                chalk.yellow(
-                    "\nProceed with the execute transaction action? (y/n): "
-                )
-            );
-            if (shouldProceed.toLowerCase() !== "y") {
-                return "Action aborted by the user.";
-            }
+
 
             const result = await starknetChain.write(action.payload);
             console.log("result", result);
@@ -218,7 +299,7 @@ async function main() {
             ),
     });
 
-    dreams.registerOutput({
+    chatDreams.registerOutput({
         role: HandlerRole.ACTION,
         name: "GRAPHQL_FETCH",
         execute: async (action: any) => {
@@ -226,14 +307,7 @@ async function main() {
                 "Preparing to execute graphql fetch action... " +
                 JSON.stringify(action.payload)
             );
-            const shouldProceed = await getCliInput(
-                chalk.yellow(
-                    "\nProceed with the execute graphql action? (y/n): "
-                )
-            );
-            if (shouldProceed.toLowerCase() !== "y") {
-                return "Action aborted by the user.";
-            }
+
 
             console.log("[GRAPHQL_FETCH handler] action", action);
             const { query, variables } = action.payload ?? {};
@@ -261,9 +335,36 @@ async function main() {
             ),
     });
 
+    chatDreams.registerOutput({
+        role: HandlerRole.OUTPUT,
+        name: "CHAT_REPLY",
+        outputSchema: z
+            .object({
+                answer: z
+                    .string()
+                    .describe(
+                        `Answer to the user`
+                    ),
+            })
+            .describe(
+                "The answer to the user"
+            ),
+        execute: async (ret) => {
+            console.log("ret: ", ret)
+            const { payload } = ret as {
+                payload: { answer: string };
+            };
+            broadcast.broadcastUserChat(payload.answer);
+
+            return {
+                message: payload.answer
+            };
+        },
+    });
+
     // Set up event logging
     // Thought process events
-    dreams.on("step", (step) => {
+    chatDreams.on("step", (step) => {
         if (step.type === "system") {
             console.log("\n💭 System prompt:", step.content);
             broadcast.broadcastSystemMessage(step.content);
@@ -281,7 +382,7 @@ async function main() {
     // });
 
     // Action execution events
-    dreams.on("action:start", (action) => {
+    chatDreams.on("action:start", (action) => {
         console.log("\n🎬 Starting action:", {
             type: action.type,
             payload: action.payload,
@@ -289,7 +390,7 @@ async function main() {
         broadcast.broadcastActionStart(action.type, action.payload);
     });
 
-    dreams.on("action:complete", ({ action, result }) => {
+    chatDreams.on("action:complete", ({ action, result }) => {
         console.log("\n✅ Action complete:", {
             type: action.type,
             result,
@@ -297,7 +398,7 @@ async function main() {
         broadcast.broadcastActionComplete(action.type, result);
     });
 
-    dreams.on("action:error", ({ action, error }) => {
+    chatDreams.on("action:error", ({ action, error }) => {
         console.log("\n❌ Action failed:", {
             type: action.type,
             error,
@@ -309,28 +410,28 @@ async function main() {
     });
 
     // Thinking process events
-    dreams.on("think:start", ({ query }) => {
+    chatDreams.on("think:start", ({ query }) => {
         console.log("\n🧠 Starting to think about:", query);
 
         broadcast.broadcastThinkingStart(query);
     });
 
-    dreams.on("think:complete", ({ query }) => {
+    chatDreams.on("think:complete", ({ query }) => {
         console.log("\n🎉 Finished thinking about:", query);
 
         broadcast.broadcastThinkingEnd();
     });
 
-    dreams.on("think:timeout", ({ query }) => {
+    chatDreams.on("think:timeout", ({ query }) => {
         console.log("\n⏰ Thinking timed out for:", query);
     });
 
-    dreams.on("think:error", ({ query, error }) => {
+    chatDreams.on("think:error", ({ query, error }) => {
         console.log("\n💥 Error while thinking about:", query, error);
     });
 
     // Goal management events
-    dreams.on("goal:created", ({ id, description, priority, horizon }) => {
+    chatDreams.on("goal:created", ({ id, description, priority, horizon }) => {
         console.log(chalk.cyan("\n🎯 New goal created:"), {
             id,
             description,
@@ -339,7 +440,7 @@ async function main() {
         broadcast.broadcastGoalCreated(id, description, priority, horizon.toString());
     });
 
-    dreams.on("goal:updated", ({ id, status }) => {
+    chatDreams.on("goal:updated", ({ id, status }) => {
         console.log(chalk.yellow("\n📝 Goal status updated:"), {
             id,
             status: printGoalStatus(status),
@@ -348,7 +449,7 @@ async function main() {
         broadcast.broadcastGoalUpdated(id, printGoalStatus(status));
     });
 
-    dreams.on("goal:completed", ({ id, result, description }) => {
+    chatDreams.on("goal:completed", ({ id, result, description }) => {
         console.log(chalk.green("\n✨ Goal completed:"), {
             id,
             result,
@@ -358,7 +459,7 @@ async function main() {
         broadcast.broadcastGoalCompleted(id, result, description);
     });
 
-    dreams.on("goal:failed", ({ id, error }) => {
+    chatDreams.on("goal:failed", ({ id, error }) => {
         console.log(chalk.red("\n💥 Goal failed:"), {
             id,
             error: error instanceof Error ? error.message : String(error),
@@ -371,7 +472,7 @@ async function main() {
     });
 
     // Memory management events
-    dreams.on("memory:experience_stored", ({ experience }) => {
+    chatDreams.on("memory:experience_stored", ({ experience }) => {
         console.log(chalk.blue("\n💾 New experience stored:"), {
             action: experience.action,
             outcome: experience.outcome,
@@ -387,7 +488,7 @@ async function main() {
         }
     });
 
-    dreams.on("memory:knowledge_stored", ({ document }) => {
+    chatDreams.on("memory:knowledge_stored", ({ document }) => {
         console.log(chalk.magenta("\n📚 New knowledge documented:"), {
             title: document.title,
             category: document.category,
@@ -397,7 +498,7 @@ async function main() {
         console.log(chalk.magenta("📝 Content:"), document.content);
     });
 
-    dreams.on("memory:experience_retrieved", ({ experiences }) => {
+    chatDreams.on("memory:experience_retrieved", ({ experiences }) => {
         console.log(chalk.yellow("\n🔍 Relevant past experiences found:"));
         experiences.forEach((exp, index) => {
             console.log(chalk.yellow(`\n${index + 1}. Previous Experience:`));
@@ -410,7 +511,7 @@ async function main() {
         });
     });
 
-    dreams.on("memory:knowledge_retrieved", ({ documents }) => {
+    chatDreams.on("memory:knowledge_retrieved", ({ documents }) => {
         console.log(chalk.green("\n📖 Relevant knowledge retrieved:"));
         documents.forEach((doc, index) => {
             console.log(chalk.green(`\n${index + 1}. Knowledge Entry:`));
@@ -427,154 +528,8 @@ async function main() {
         process.exit(0);
     });
 
-    // Main interaction loop
-    const main_goal =
-        "Achieve the 3 goals as fast as possible";
     while (true) {
-        try {
-            // Plan and execute goals
-            console.log(chalk.cyan("\n🤔 Planning strategy for goal..."));
-            await dreams.decomposeObjectiveIntoGoals(main_goal);
-
-            console.log(chalk.cyan("\n🎯 Executing goals..."));
-
-            const stats = {
-                completed: 0,
-                failed: 0,
-                total: 0,
-            };
-
-            // Execute goals until completion
-            while (true) {
-                console.log("getAllGoals ", dreams.goalManager.getAllGoals());
-                console.log("getAllGoals ", dreams.goalManager.getAllGoals());
-                const readyGoals = dreams.goalManager.getReadyGoals();
-                const activeGoals = dreams.goalManager
-                    .getGoalsByHorizon("short")
-                    .filter((g) => g.status === "active");
-                const pendingGoals = dreams.goalManager
-                    .getGoalsByHorizon("short")
-                    .filter((g) => g.status === "pending");
-
-                // Status update
-                console.log(chalk.cyan("\n📊 Current Progress:"));
-                console.log(`Ready goals: ${readyGoals.length}`);
-                console.log(`Active goals: ${activeGoals.length}`);
-                console.log(`Pending goals: ${pendingGoals.length}`);
-                console.log(`Completed: ${stats.completed}`);
-                console.log(`Failed: ${stats.failed}`);
-
-                // Check if all goals are complete
-                if (
-                    readyGoals.length === 0 &&
-                    activeGoals.length === 0 &&
-                    pendingGoals.length === 0
-                ) {
-                    console.log(chalk.green("\n✨ All goals completed!"));
-                    break;
-                }
-
-                // Handle blocked goals
-                if (readyGoals.length === 0 && activeGoals.length === 0) {
-                    console.log(
-                        chalk.yellow(
-                            "\n⚠️ No ready or active goals, but some goals are pending:"
-                        )
-                    );
-                    pendingGoals.forEach((goal) => {
-                        const blockingGoals =
-                            dreams.goalManager.getBlockingGoals(goal.id);
-                        console.log(
-                            chalk.yellow(
-                                `\n📌 Pending Goal: ${goal.description}`
-                            )
-                        );
-                        console.log(
-                            chalk.yellow(
-                                `   Blocked by: ${blockingGoals.length} goals`
-                            )
-                        );
-                        blockingGoals.forEach((blocking) => {
-                            console.log(
-                                chalk.yellow(
-                                    `   - ${blocking.description} (${blocking.status})`
-                                )
-                            );
-                        });
-                    });
-                    break;
-                }
-
-                // Execute next goal
-                try {
-                    await dreams.processHighestPriorityGoal();
-                    stats.completed++;
-                } catch (error) {
-                    console.error(
-                        chalk.red("\n❌ Goal execution failed:"),
-                        error
-                    );
-                    stats.failed++;
-
-                    // Ask to continue
-                    const shouldContinue = await getCliInput(
-                        chalk.yellow(
-                            "\nContinue executing remaining goals? (y/n): "
-                        )
-                    );
-
-                    if (shouldContinue.toLowerCase() !== "y") {
-                        console.log(chalk.yellow("Stopping goal execution."));
-                        break;
-                    }
-                }
-
-                stats.total++;
-            }
-
-            // Learning summary
-            console.log(chalk.cyan("\n📊 Learning Summary:"));
-
-            const recentExperiences = await dreams.memory.getRecentEpisodes(5);
-            console.log(chalk.blue("\n🔄 Recent Experiences:"));
-            recentExperiences.forEach((exp, index) => {
-                console.log(chalk.blue(`\n${index + 1}. Experience:`));
-                console.log(`   Action: ${exp.action}`);
-                console.log(`   Outcome: ${exp.outcome}`);
-                console.log(`   Importance: ${exp.importance || "N/A"}`);
-            });
-
-            const relevantDocs = await dreams.memory.findSimilarDocuments(
-                main_goal,
-                3
-            );
-            console.log(chalk.magenta("\n📚 Accumulated Knowledge:"));
-            relevantDocs.forEach((doc, index) => {
-                console.log(chalk.magenta(`\n${index + 1}. Knowledge Entry:`));
-                console.log(`   Title: ${doc.title}`);
-                console.log(`   Category: ${doc.category}`);
-                console.log(`   Tags: ${doc.tags.join(", ")}`);
-            });
-
-            // Final execution summary
-            console.log(chalk.cyan("\n📊 Final Execution Summary:"));
-            console.log(chalk.green(`✅ Completed Goals: ${stats.completed}`));
-            console.log(chalk.red(`❌ Failed Goals: ${stats.failed}`));
-            console.log(
-                chalk.blue(
-                    `📈 Success Rate: ${Math.round(
-                        (stats.completed / stats.total) * 100
-                    )}%`
-                )
-            );
-            console.log(
-                chalk.yellow(
-                    `🧠 Learning Progress: ${recentExperiences.length} new experiences, ${relevantDocs.length} relevant knowledge entries`
-                )
-            );
-        } catch (error) {
-            console.error(chalk.red("Error processing goal:"), error);
-        }
+        await new Promise(resolve => setTimeout(resolve, 2 * 60 * 1000));
     }
 }
 
