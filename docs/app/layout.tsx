@@ -6,7 +6,8 @@ import "nextra-theme-docs/style.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  description: "Make beautiful websites with Next.js & MDX.",
+  description:
+    "Daydreams is a powerful framework for building generative agents that can execute tasks across any blockchain or API.",
   metadataBase: new URL("https://dreams.fun"),
   keywords: ["Daydreams", "agents"],
   generator: "Next.js",
