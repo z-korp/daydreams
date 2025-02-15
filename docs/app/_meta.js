@@ -2,8 +2,8 @@ export default {
   index: "Daydreams",
   introduction: "Introduction",
   "getting-started": "Getting Started",
-  "api-reference": "API Reference",
   guides: "Guides",
+  "api-reference": "API Reference",
   contact: {
     title: "Contact",
     type: "menu",
