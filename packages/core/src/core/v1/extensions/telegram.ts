@@ -2,6 +2,7 @@ import { z } from "zod";
 import { context } from "../context";
 import { service } from "../serviceProvider";
 import { Telegraf } from "telegraf";
+import type { Chat } from "@telegraf/types";
 import { extension, input, output, splitTextIntoChunks } from "../utils";
 import { formatMsg } from "../formatters";
 
@@ -29,7 +30,7 @@ const telegramChat = context({
     const telegraf = container.resolve<Telegraf>("telegraf");
     const chat = await telegraf.telegram.getChat(args.chatId);
     return {
-      chat,
+      chat: chat as Chat,
     };
   },
   description(params, { chat }) {
