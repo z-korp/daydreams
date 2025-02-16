@@ -79,10 +79,10 @@ export function createMemoryStore(): MemoryStore {
 
 export function createVectorStore(): VectorStore {
   return {
-    add(data: any[]) {
+    add(contextId: string, data: any[]) {
       return Promise.resolve();
     },
-    search(query: string) {
+    search(contextId: string, query: string) {
       return Promise.resolve([]);
     },
   };

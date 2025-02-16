@@ -77,13 +77,13 @@ export interface VectorStore {
    * Adds data to the vector store
    * @param data - Data to add
    */
-  add(data: any): Promise<void>;
+  add(contextId: string, data: any): Promise<void>;
 
   /**
    * Searches the vector store for data
    * @param query - Query to search for
    */
-  search(query: string): Promise<any[]>;
+  search(contextId: string, query: string): Promise<any[]>;
 }
 
 /**
