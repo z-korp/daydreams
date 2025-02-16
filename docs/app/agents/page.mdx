@@ -1,0 +1,40 @@
+---
+title: Agents
+---
+
+import { Steps } from "nextra/components";
+
+---
+
+# Scaffolding an Agent
+
+To scaffold an agent, you can use the `createDreams` function. The following
+example will create an agent with a deepseek-r1-distill-llama-70b model, and the
+`cli` extension. Within the extension there are predefined inputs and outputs,
+these are generic enough, but you can add your own easily which we'll cover in
+the next section.
+
+<Steps>
+
+### Create Dreams
+
+The smallest agent you can create is:
+
+```ts
+import { createDreams, cli } from "@daydreamsai/core/v1";
+
+const agent = createDreams({
+  model: groq("deepseek-r1-distill-llama-70b"),
+  extensions: [cli],
+});
+```
+
+### Starting the agent
+
+The agent will start processing the inputs and outputs.
+
+```ts
+await agent.start();
+```
+
+</Steps>
