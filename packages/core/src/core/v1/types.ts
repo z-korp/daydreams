@@ -2,6 +2,7 @@ import { type LanguageModelV1 } from "ai";
 import { z } from "zod";
 import type { Container } from "./container";
 import type { ServiceProvider } from "./serviceProvider";
+import type { BaseMemory } from "./memory";
 
 /**
  * Represents a memory configuration for storing data
@@ -65,6 +66,41 @@ export interface MemoryStore {
    * Removes all data from memory
    */
   clear(): Promise<void>;
+}
+
+/**
+ * Interface for storing and retrieving vector data
+ */
+export interface VectorStore {
+  /** Optional connection string for the vector store */
+  connection?: string;
+
+  /**
+   * Adds or updates data in the vector store
+   * @param contextId - Unique identifier for the context
+   * @param data - Data to add or update
+   */
+  upsert(contextId: string, data: any): Promise<void>;
+
+  /**
+   * Searches the vector store for similar data
+   * @param contextId - Context to search within
+   * @param query - Query text to search for
+   * @returns Array of matching documents
+   */
+  query(contextId: string, query: string): Promise<any[]>;
+
+  /**
+   * Creates a new index in the vector store
+   * @param indexName - Name of the index to create
+   */
+  createIndex(indexName: string): Promise<void>;
+
+  /**
+   * Deletes an existing index from the vector store
+   * @param indexName - Name of the index to delete
+   */
+  deleteIndex(indexName: string): Promise<void>;
 }
 
 /**
@@ -309,7 +345,7 @@ export interface Agent<
     any
   >,
 > {
-  memory: MemoryStore;
+  memory: BaseMemory;
 
   context: TContext;
 
@@ -376,7 +412,7 @@ export type Config<
   TContext extends AnyContext = AnyContext,
 > = {
   // context: Context;
-  memory?: MemoryStore;
+  memory?: BaseMemory;
   container?: Container;
   context?: TContext;
   debugger?: Debugger;

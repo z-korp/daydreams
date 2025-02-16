@@ -31,7 +31,8 @@ import {
   defaultContextMemory,
   defaultContextRender,
 } from "./context";
-import { createMemoryStore } from "./memory";
+import { createMemory, createMemoryStore } from "./memory";
+import { createVectorStore } from "./memory/base";
 
 export function createDreams<
   Memory extends WorkingMemory = WorkingMemory,
@@ -100,7 +101,7 @@ export function createDreams<
         : {};
 
     const memory =
-      (await agent.memory.get(contextId)) ??
+      (await agent.memory.store.get(contextId)) ??
       (contextHandler.create
         ? contextHandler.create({ key, args }, ctx)
         : defaultContextMemory.create());
@@ -119,7 +120,7 @@ export function createDreams<
     events,
     actions,
     experts,
-    memory: memory ?? createMemoryStore(),
+    memory: memory ?? createMemory(createMemoryStore(), createVectorStore()),
     container,
     model,
     reasoningModel,
@@ -202,7 +203,7 @@ export function createDreams<
 
           if (action.memory) {
             actionMemory =
-              (await agent.memory.get(action.memory.key)) ??
+              (await agent.memory.store.get(action.memory.key)) ??
               action.memory.create();
           }
 
@@ -320,7 +321,7 @@ export function createDreams<
 
               if (action.memory) {
                 actionMemory =
-                  (await agent.memory.get(action.memory.key)) ??
+                  (await agent.memory.store.get(action.memory.key)) ??
                   action.memory.create();
               }
 
@@ -355,7 +356,8 @@ export function createDreams<
           })
         );
 
-        await agent.memory.set(contextId, memory);
+        await agent.memory.store.set(contextId, memory);
+        await agent.memory.vector.upsert(contextId, [memory]);
 
         if (
           [...memory.results, ...memory.inputs].find(
@@ -367,8 +369,8 @@ export function createDreams<
         step++;
       }
 
-      await agent.memory.set(contextId, memory);
-
+      await agent.memory.store.set(contextId, memory);
+      await agent.memory.vector.upsert(contextId, [memory]);
       contextsRunning.delete(contextId);
     },
 
@@ -414,8 +416,8 @@ export function createDreams<
         ctx,
       } as any);
 
-      await agent.memory.set(contextId, memory);
-
+      await agent.memory.store.set(contextId, memory);
+      await agent.memory.vector.upsert(contextId, [memory]);
       await agent.run(contextHandler, args);
     },
 
