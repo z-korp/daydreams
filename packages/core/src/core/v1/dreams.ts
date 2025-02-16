@@ -357,7 +357,7 @@ export function createDreams<
         );
 
         await agent.memory.store.set(contextId, memory);
-        await agent.memory.vector.add(contextId, [memory]);
+        await agent.memory.vector.upsert(contextId, [memory]);
 
         if (
           [...memory.results, ...memory.inputs].find(
@@ -370,7 +370,7 @@ export function createDreams<
       }
 
       await agent.memory.store.set(contextId, memory);
-      await agent.memory.vector.add(contextId, [memory]);
+      await agent.memory.vector.upsert(contextId, [memory]);
       contextsRunning.delete(contextId);
     },
 
@@ -417,7 +417,7 @@ export function createDreams<
       } as any);
 
       await agent.memory.store.set(contextId, memory);
-      await agent.memory.vector.add(contextId, [memory]);
+      await agent.memory.vector.upsert(contextId, [memory]);
       await agent.run(contextHandler, args);
     },
 

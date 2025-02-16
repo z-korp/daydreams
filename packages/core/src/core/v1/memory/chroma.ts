@@ -38,7 +38,10 @@ export class ChromaVectorStore implements VectorStore {
     });
   }
 
-  async add(contextId: string, data: InferContextMemory<any>[]): Promise<void> {
+  async upsert(
+    contextId: string,
+    data: InferContextMemory<any>[]
+  ): Promise<void> {
     if (data.length === 0) return;
 
     // Generate IDs for the documents
@@ -61,7 +64,7 @@ export class ChromaVectorStore implements VectorStore {
     });
   }
 
-  async search(contextId: string, query: string): Promise<any[]> {
+  async query(contextId: string, query: string): Promise<any[]> {
     const results = await this.collection.query({
       queryTexts: [query],
       nResults: 5,
@@ -71,6 +74,21 @@ export class ChromaVectorStore implements VectorStore {
     });
 
     return results.documents[0] || [];
+  }
+
+  async createIndex(indexName: string): Promise<void> {
+    await this.client.getOrCreateCollection({
+      name: indexName,
+      embeddingFunction: this.embedder,
+    });
+  }
+
+  async deleteIndex(indexName: string): Promise<void> {
+    await this.collection.delete({
+      where: {
+        indexName: indexName,
+      },
+    });
   }
 }
 

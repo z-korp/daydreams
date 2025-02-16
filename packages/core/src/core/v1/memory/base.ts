@@ -79,11 +79,17 @@ export function createMemoryStore(): MemoryStore {
 
 export function createVectorStore(): VectorStore {
   return {
-    add(contextId: string, data: any[]) {
+    upsert(contextId: string, data: any[]) {
       return Promise.resolve();
     },
-    search(contextId: string, query: string) {
+    query(contextId: string, query: string) {
       return Promise.resolve([]);
+    },
+    createIndex(indexName: string) {
+      return Promise.resolve();
+    },
+    deleteIndex(indexName: string) {
+      return Promise.resolve();
     },
   };
 }
