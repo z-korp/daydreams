@@ -1,4 +1,4 @@
-import type { MemoryStore, WorkingMemory } from "../types";
+import type { MemoryStore, VectorStore, WorkingMemory } from "../types";
 
 /**
  * Retrieves or creates a new conversation memory for the given ID
@@ -59,6 +59,17 @@ export function createMemoryStore(): MemoryStore {
      */
     async set(key: string, value: any) {
       data.set(key, value);
+    },
+  };
+}
+
+export function createVectorStore(): VectorStore {
+  return {
+    add(data: any[]) {
+      return Promise.resolve();
+    },
+    search(query: string) {
+      return Promise.resolve([]);
     },
   };
 }

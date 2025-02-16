@@ -2,6 +2,7 @@ import { type LanguageModelV1 } from "ai";
 import { z } from "zod";
 import type { Container } from "./container";
 import type { ServiceProvider } from "./serviceProvider";
+import type { BaseMemory } from "./memory";
 
 /**
  * Represents a memory configuration for storing data
@@ -65,6 +66,23 @@ export interface MemoryStore {
    * Removes all data from memory
    */
   clear(): Promise<void>;
+}
+
+/**
+ * Interface for storing and retrieving vector data
+ */
+export interface VectorStore {
+  /**
+   * Adds data to the vector store
+   * @param data - Data to add
+   */
+  add(data: any): Promise<void>;
+
+  /**
+   * Searches the vector store for data
+   * @param query - Query to search for
+   */
+  search(query: string): Promise<any[]>;
 }
 
 /**
@@ -309,7 +327,7 @@ export interface Agent<
     any
   >,
 > {
-  memory: MemoryStore;
+  memory: BaseMemory;
 
   context: TContext;
 
@@ -376,7 +394,7 @@ export type Config<
   TContext extends AnyContext = AnyContext,
 > = {
   // context: Context;
-  memory?: MemoryStore;
+  memory?: BaseMemory;
   container?: Container;
   context?: TContext;
   debugger?: Debugger;
