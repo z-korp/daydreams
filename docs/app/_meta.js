@@ -21,6 +21,16 @@ export default {
     title: "Reference",
   },
   "api-reference": "API Reference",
+  resources: {
+    title: "Resources",
+    type: "menu",
+    items: {
+      awesome: {
+        title: "Awesome Daydreams",
+        href: "https://github.com/wayzeek/awesome-daydreams",
+      },
+    },
+  },
   contact: {
     title: "Contact",
     type: "menu",
