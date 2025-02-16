@@ -54,7 +54,8 @@
     "telegram": "^2.26.16",
     "ws": "^8.18.0",
     "zod": "^3.24.1",
-    "zod-to-json-schema": "^3.24.1"
+    "zod-to-json-schema": "^3.24.1",
+    "chromadb": "^1.5.5"
   },
   "devDependencies": {
     "@types/bun": "^1.2.2",
