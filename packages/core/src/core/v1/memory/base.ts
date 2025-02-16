@@ -1,5 +1,19 @@
 import type { MemoryStore, VectorStore, WorkingMemory } from "../types";
 
+export class BaseMemory {
+  store: MemoryStore;
+  vector: VectorStore;
+
+  constructor(store: MemoryStore, vector: VectorStore) {
+    this.store = store;
+    this.vector = vector;
+  }
+}
+
+export function createMemory(store: MemoryStore, vector: VectorStore) {
+  return new BaseMemory(store, vector);
+}
+
 /**
  * Retrieves or creates a new conversation memory for the given ID
  * @param memory - The memory store to use

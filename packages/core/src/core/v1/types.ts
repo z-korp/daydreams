@@ -72,6 +72,7 @@ export interface MemoryStore {
  * Interface for storing and retrieving vector data
  */
 export interface VectorStore {
+  connection?: string;
   /**
    * Adds data to the vector store
    * @param data - Data to add
