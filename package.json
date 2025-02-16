@@ -14,6 +14,7 @@
     "server": "bun run examples/example-server.ts",
     "discord": "bun run examples/v1/example-discord.ts",
     "telegram": "bun run examples/v1/example-telegram.ts",
+    "vector": "bun run examples/v1/example-vector.ts",
     "hyperliquid": "bun run examples/example-hyperliquid.ts",
     "vision": "bun run examples/example-vision.ts",
     "new": "bun run examples/example-new.ts",
