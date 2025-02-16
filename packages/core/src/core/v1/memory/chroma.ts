@@ -1,18 +1,40 @@
-import { ChromaClient, Collection } from "chromadb";
+import {
+  ChromaClient,
+  Collection,
+  OpenAIEmbeddingFunction,
+  type IEmbeddingFunction,
+} from "chromadb";
 import type { VectorStore } from "../types";
 
 export class ChromaVectorStore implements VectorStore {
   private client: ChromaClient;
   private collection!: Collection;
+  private embedder: IEmbeddingFunction;
 
-  constructor(collectionName: string = "default") {
-    this.client = new ChromaClient();
+  constructor(
+    collectionName: string = "default",
+    connection?: string,
+    embedder?: IEmbeddingFunction
+  ) {
+    this.embedder =
+      embedder ||
+      new OpenAIEmbeddingFunction({
+        openai_api_key: process.env.OPENAI_API_KEY!,
+        openai_model: "text-embedding-3-small",
+      });
+    this.client = new ChromaClient({
+      path: connection,
+    });
     this.initCollection(collectionName);
   }
 
   private async initCollection(collectionName: string) {
-    this.collection = await this.client.createCollection({
+    this.collection = await this.client.getOrCreateCollection({
       name: collectionName,
+      embeddingFunction: this.embedder,
+      metadata: {
+        description: "Memory storage for AI consciousness",
+      },
     });
   }
 
@@ -41,4 +63,12 @@ export class ChromaVectorStore implements VectorStore {
 
     return results.documents[0] || [];
   }
+}
+
+export function createChromaVectorStore(
+  collectionName: string = "default",
+  connection?: string,
+  embedder?: IEmbeddingFunction
+) {
+  return new ChromaVectorStore(collectionName, connection, embedder);
 }
