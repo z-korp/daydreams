@@ -72,18 +72,35 @@ export interface MemoryStore {
  * Interface for storing and retrieving vector data
  */
 export interface VectorStore {
+  /** Optional connection string for the vector store */
   connection?: string;
-  /**
-   * Adds data to the vector store
-   * @param data - Data to add
-   */
-  add(contextId: string, data: any): Promise<void>;
 
   /**
-   * Searches the vector store for data
-   * @param query - Query to search for
+   * Adds or updates data in the vector store
+   * @param contextId - Unique identifier for the context
+   * @param data - Data to add or update
    */
-  search(contextId: string, query: string): Promise<any[]>;
+  upsert(contextId: string, data: any): Promise<void>;
+
+  /**
+   * Searches the vector store for similar data
+   * @param contextId - Context to search within
+   * @param query - Query text to search for
+   * @returns Array of matching documents
+   */
+  query(contextId: string, query: string): Promise<any[]>;
+
+  /**
+   * Creates a new index in the vector store
+   * @param indexName - Name of the index to create
+   */
+  createIndex(indexName: string): Promise<void>;
+
+  /**
+   * Deletes an existing index from the vector store
+   * @param indexName - Name of the index to delete
+   */
+  deleteIndex(indexName: string): Promise<void>;
 }
 
 /**
