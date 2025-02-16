@@ -4,7 +4,7 @@ import {
   OpenAIEmbeddingFunction,
   type IEmbeddingFunction,
 } from "chromadb";
-import type { VectorStore } from "../types";
+import type { Context, InferContextMemory, VectorStore } from "../types";
 
 export class ChromaVectorStore implements VectorStore {
   private client: ChromaClient;
@@ -38,7 +38,7 @@ export class ChromaVectorStore implements VectorStore {
     });
   }
 
-  async add(data: any[]): Promise<void> {
+  async add(contextId: string, data: InferContextMemory<any>[]): Promise<void> {
     if (data.length === 0) return;
 
     // Generate IDs for the documents
@@ -52,13 +52,22 @@ export class ChromaVectorStore implements VectorStore {
     await this.collection.add({
       ids,
       documents,
+      metadatas: [
+        {
+          contextId: contextId,
+          timestamp: Date.now(),
+        },
+      ],
     });
   }
 
-  async search(query: string): Promise<any[]> {
+  async search(contextId: string, query: string): Promise<any[]> {
     const results = await this.collection.query({
       queryTexts: [query],
       nResults: 5,
+      where: {
+        contextId: contextId,
+      },
     });
 
     return results.documents[0] || [];
