@@ -4,7 +4,7 @@ import {
   OpenAIEmbeddingFunction,
   type IEmbeddingFunction,
 } from "chromadb";
-import type { Context, InferContextMemory, VectorStore } from "../types";
+import type { InferContextMemory, VectorStore } from "../types";
 
 export class ChromaVectorStore implements VectorStore {
   private client: ChromaClient;
