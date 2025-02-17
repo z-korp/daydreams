@@ -8,6 +8,7 @@ import {
   type AnyAgent,
   type AnyContext,
   type Config,
+  type Context,
   type ContextState,
   type Debugger,
   type Log,
@@ -33,7 +34,12 @@ import { createPrompt } from "./prompt";
 
 export function createDreams<
   Memory = any,
-  TContext extends AnyContext = AnyContext,
+  TContext extends Context<Memory, any, any, any> = Context<
+    Memory,
+    any,
+    any,
+    any
+  >,
 >(config: Config<Memory, TContext>): Agent<Memory, TContext> {
   const inputSubscriptions = new Map<string, Subscription>();
 
@@ -247,6 +253,8 @@ export function createDreams<
           )
         : undefined;
 
+      console.log({ agentCtxState });
+
       const chain: Log[] = [];
 
       let hasError = false;
@@ -334,6 +342,7 @@ export function createDreams<
               agentCtxState,
               ctxState,
             ].filter((t) => !!t);
+
             const response = await generateObject({
               model: agent.model,
               schema: action.schema,
@@ -382,6 +391,7 @@ export function createDreams<
                 ...ctxState,
                 actionMemory,
                 workingMemory,
+                agentMemory: agentCtxState?.memory,
               },
             });
 
@@ -611,54 +621,7 @@ export const runGenerate = task(
     const mainContext = contexts.find((ctx) => ctx.id === contextId)!;
 
     const system = prompt({
-      context: [
-        contexts.map(({ id, context, key, args, memory, options }) =>
-          formatContext({
-            type: context.type,
-            key: key,
-            description:
-              typeof context.description === "function"
-                ? context.description({
-                    key,
-                    args,
-                    options,
-                    id,
-                    context,
-                    memory,
-                  })
-                : context.description,
-            instructions:
-              typeof context.instructions === "function"
-                ? context.instructions({
-                    key,
-                    args,
-                    options,
-                    id,
-                    context,
-                    memory,
-                  })
-                : context.instructions,
-            content: [
-              context.render ? context.render(memory) : "",
-              contextId === id
-                ? defaultContextRender({
-                    memory: {
-                      ...workingMemory,
-                      inputs: workingMemory.inputs.filter(
-                        (i) => i.processed === true
-                      ),
-                      results: workingMemory.results.filter(
-                        (i) => i.processed === true
-                      ),
-                    },
-                  })
-                : "",
-            ]
-              .flat()
-              .filter((t) => !!t),
-          })
-        ),
-      ].flat(),
+      context: renderContexts(contextId, contexts, workingMemory).flat(),
       outputs,
       actions,
       updates: formatContext({
@@ -791,6 +754,7 @@ export const runAction = task(
   }: {
     context: AgentContext<InferContextMemory<TContext>, TContext> & {
       actionMemory: unknown;
+      agentMemory: unknown;
     };
     action: AnyAction;
     call: ActionCall;
@@ -853,7 +817,9 @@ function renderContexts(
             })
           : context.instructions,
       content: [
-        context.render ? context.render(memory) : "",
+        context.render
+          ? context.render({ id, context, key, args, memory, options })
+          : "",
         mainContextId === id
           ? defaultContextRender({
               memory: {
