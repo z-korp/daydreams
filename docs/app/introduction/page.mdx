@@ -1,5 +1,6 @@
 ---
-title: Daydreams
+title: Daydreams Documentation
+description: Generative agents for anything onchain.
 ---
 
 <img src="/Daydreams.png" alt="Daydreams Logo" width="300" />
@@ -7,25 +8,113 @@ title: Daydreams
 > ⚠️ **Warning**: This is alpha software under active development. Expect
 > frequent breaking changes and bugs. The API is not yet stable.
 
-Daydreams is a framework for building generative agents that can execute tasks
-over long time horizons.
+# Architecture
 
-## What is a generative agent?
+Daydreams is a powerful yet simple system where agents process input streams
+into actions. The actions' results feed back as new inputs, creating a
+continuous loop of processing and execution - all orchestrated automatically by
+the LLM's reasoning capabilities.
 
-Daydreams is designed to be a simple and as powerful as possible, with most of
-the piping and orchestration handled for you by the LLMs reasoning.
+```mermaid
+graph TD;
+    subgraph Inputs
+        A[Twitter Stream]
+        B[Discord Stream]
+        C[Financial API]
+        D[Internal Consciousness]
+    end
+
+    subgraph Dreams[Dreams]
+        E[Agent Processing]
+    end
+
+    subgraph Outputs
+        F[Post to Twitter]
+        G[Send Email]
+    end
+
+    subgraph Actions
+        H[Call APIs]
+    end
+
+    A --> E
+    B --> E
+    C --> E
+    D --> E
+
+    E --> F
+    E --> G
+
+    E --> H
+    H --> E
+```
 
 ## Features
 
-- 🔗 Chain Agnostic: Execute transactions and interact with any blockchain
-  network
-- 👥 Multi-Expert System: Leverage specialized modules working together to solve
-  complex tasks
-- 🧠 Context Management: Simple yet powerful memory and context handling system
-- 🎯 Goal-Oriented: Long-term planning and goal-oriented behavior capabilities
-- 💾 Persistent Memory: Built-in support for storing and retrieving long-term
-  information
-- 🤔 Advanced Reasoning: Multi-step reasoning using Hierarchical Task Networks
+### 🔌 Any LLM Provider
+
+Seamlessly integrate with any LLM provider through the AI SDK. Switch between
+providers or use multiple providers simultaneously for different tasks.
+
+- OpenAI
+- Anthropic
+- Gemini
+- Groq
+- Ollama
+- And more!
+
+```ts
+const dreams = createDreams({
+  model: groq("deepseek-r1-distill-llama-70b"),
+});
+```
+
+### 🎮 Simple IO Interface
+
+A straightforward and intuitive input/output interface that makes it easy to
+build and control your agents without complex setup.
+
+### 💉 Dynamic Context Injection
+
+Inject context and information dynamically into your agent's reasoning process,
+allowing for real-time adaptation and response to changing conditions.
+
+### 💾 Memory Adaptors
+
+Bring your own memory solution or use our built-in adaptors. Flexible memory
+management that lets you choose how your agents store and retrieve information.
+
+### 🧩 Extensions
+
+Easily extend your agent's capabilities with drop-in clients for various
+platforms:
+
+- Twitter integration
+- Telegram support
+- Model Context Protocol (MCP) support coming soon
+- And more!
+
+### 🔗 Chain Agnostic
+
+Execute transactions and interact with any blockchain network seamlessly.
+
+- Ethereum
+- Solana
+- Arbitrum
+- Optimism
+- Base
+- Polygon
+- And more!
+
+### 🎯 Goal-Oriented Behavior
+
+Long-term planning and goal-oriented behavior capabilities for complex task
+execution.
+
+### 🤔 Advanced Reasoning
+
+Multi-step reasoning using Hierarchical Task Networks for sophisticated
+decision-making.
 
 Want to contribute? Check our
 [issues](https://github.com/daydreamsai/daydreams/issues) for tasks labeled
