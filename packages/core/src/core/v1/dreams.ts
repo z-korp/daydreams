@@ -1,40 +1,38 @@
 import {
   LogLevel,
-  type Action,
   type ActionCall,
+  type ActionResult,
   type Agent,
   type AgentContext,
+  type AnyAction,
   type AnyAgent,
   type AnyContext,
   type Config,
+  type ContextState,
   type Debugger,
+  type Log,
   type Output,
   type Subscription,
+  type Thought,
   type WorkingMemory,
 } from "./types";
 import { Logger } from "./logger";
-import { formatContext } from "./formatters";
-import { generateText, type LanguageModelV1 } from "ai";
+import { formatContext, formatContextLog } from "./formatters";
+import { generateObject, generateText, type LanguageModelV1 } from "ai";
 import { randomUUID } from "crypto";
 import createContainer from "./container";
 import { createServiceManager } from "./serviceProvider";
-import {
-  type Context,
-  type InferContextCtx,
-  type InferContextMemory,
-} from "./types";
+import { type InferContextMemory } from "./types";
 import { z } from "zod";
 import { task, type TaskContext } from "./task";
-import { parse, prompt } from "./prompts/main";
-import {
-  defaultContext,
-  defaultContextMemory,
-  defaultContextRender,
-} from "./context";
+import { parse, prompt, resultsPrompt } from "./prompts/main";
+import { context, defaultContextRender, defaultWorkingMemory } from "./context";
 import { createMemoryStore } from "./memory";
+import type { OutputRef } from "../../../dist";
+import { createPrompt } from "./prompt";
 
 export function createDreams<
-  Memory extends WorkingMemory = WorkingMemory,
+  Memory = any,
   TContext extends AnyContext = AnyContext,
 >(config: Config<Memory, TContext>): Agent<Memory, TContext> {
   const inputSubscriptions = new Map<string, Subscription>();
@@ -45,7 +43,7 @@ export function createDreams<
     enableColors: true,
   });
 
-  const contexts = new Map<string, { ctx: any }>();
+  const contexts = new Map<string, { args?: any }>();
 
   const {
     inputs = {},
@@ -68,7 +66,9 @@ export function createDreams<
     if (!config.debugger) return;
     try {
       config.debugger(...args);
-    } catch {}
+    } catch {
+      console.log("debugger failed");
+    }
   };
 
   let booted = false;
@@ -87,30 +87,37 @@ export function createDreams<
     serviceManager.register(service);
   }
 
-  async function getContext<
-    TContext extends Context<WorkingMemory, any, any, any>,
-  >(contextHandler: TContext, args: z.infer<TContext["schema"]>) {
-    const key = contextHandler.key(args);
-    const contextId = [contextHandler.type, key].join(":");
+  async function getContextState<TContext extends AnyContext>(
+    context: TContext,
+    args: z.infer<TContext["schema"]>
+  ): Promise<ContextState<TContext>> {
+    const key = context.key(args);
+    const contextId = [context.type, key].join(":");
 
-    const ctx = contexts.has(contextId)
-      ? contexts.get(contextId)
-      : contextHandler.setup
-        ? await contextHandler.setup(args, agent)
-        : {};
+    const options = context.setup ? await context.setup(args, agent) : {};
 
     const memory =
       (await agent.memory.get(contextId)) ??
-      (contextHandler.create
-        ? contextHandler.create({ key, args }, ctx)
-        : defaultContextMemory.create());
+      (context.create
+        ? context.create({ key, args, context, id: contextId, options })
+        : {});
 
     return {
       id: contextId,
       key,
-      ctx,
-      memory: memory as InferContextMemory<TContext>,
+      context,
+      args,
+      options,
+      memory,
     };
+  }
+
+  async function getContextWorkingMemory(contextId: string) {
+    return (
+      (await agent.memory.get<WorkingMemory>(
+        ["working-memory", contextId].join(":")
+      )) ?? (await defaultWorkingMemory.create())
+    );
   }
 
   const agent: Agent<Memory, TContext> = {
@@ -124,12 +131,13 @@ export function createDreams<
     model,
     reasoningModel,
     debugger: debug,
-    context: config.context ?? (defaultContext as TContext),
+    context: config.context ?? undefined,
     emit: (event: string, data: any) => {
       logger.info("agent:event", event, data);
     },
 
-    async start() {
+    async start(args) {
+      console.log({ args, booted });
       if (booted) return agent;
 
       booted = true;
@@ -144,17 +152,19 @@ export function createDreams<
         if (input.install) await Promise.resolve(input.install(agent));
 
         if (input.subscribe) {
-          const subscription = await Promise.resolve(
-            input.subscribe((contextHandler, args, data) => {
-              logger.info("agent", "input", { contextHandler, args, data });
-              agent
-                .send(contextHandler, args, { type: key, data })
-                .catch((err) => {
-                  console.error(err);
-                  // logger.error("agent", "input", err);
-                });
-            }, agent)
-          );
+          let subscription = input.subscribe((contextHandler, args, data) => {
+            logger.info("agent", "input", { contextHandler, args, data });
+            agent
+              .send(contextHandler, args, { type: key, data })
+              .catch((err) => {
+                console.error(err);
+                // logger.error("agent", "input", err);
+              });
+          }, agent);
+
+          if (typeof subscription === "object") {
+            subscription = await Promise.resolve(subscription);
+          }
 
           if (subscription) inputSubscriptions.set(key, subscription);
         }
@@ -168,26 +178,37 @@ export function createDreams<
         if (action.install) await Promise.resolve(action.install(agent));
       }
 
+      if (agent.context) {
+        const { id } = await getContextState(agent.context, args);
+        contexts.set(id, { args });
+        contexts.set("agent:context", { args });
+      }
+
       return agent;
     },
 
     async stop() {},
 
-    run: async (contextHandler, args) => {
-      if (!booted) await agent.start();
+    run: async (context, args) => {
+      if (!booted) throw new Error("Not booted");
 
-      const {
-        key,
-        id: contextId,
-        ctx,
-        memory,
-      } = await getContext(contextHandler, args);
+      const ctxState = await getContextState(context, args);
 
-      if (contextsRunning.has(contextId)) return;
-      contextsRunning.add(contextId);
+      if (contextsRunning.has(ctxState.id)) return;
+      contextsRunning.add(ctxState.id);
+
+      const workingMemory = await getContextWorkingMemory(ctxState.id);
 
       const contextOuputs = Object.entries(agent.outputs)
-        .filter(([_, output]) => (output.enabled ? output.enabled(ctx) : true))
+        .filter(([_, output]) =>
+          output.enabled
+            ? output.enabled({
+                ...ctxState,
+                context,
+                workingMemory,
+              })
+            : true
+        )
         .map(([type, output]) => ({
           type,
           ...output,
@@ -208,8 +229,10 @@ export function createDreams<
 
           const enabled = action.enabled
             ? action.enabled({
-                ...ctx,
-                data: actionMemory,
+                ...ctxState,
+                context,
+                workingMemory,
+                actionMemory,
               })
             : true;
 
@@ -217,37 +240,176 @@ export function createDreams<
         })
       ).then((r) => r.filter((a) => !!a));
 
+      const agentCtxState = agent.context
+        ? await getContextState(
+            agent.context,
+            contexts.get("agent:context")!.args
+          )
+        : undefined;
+
+      const chain: Log[] = [];
+
+      let hasError = false;
+
       while (maxSteps > step) {
-        const data = await runGenerate({
-          model: config.reasoningModel ?? config.model,
-          context: contextHandler,
-          actions: contextActions,
-          outputs: contextOuputs,
-          contextId,
-          memory,
-          logger,
-          args,
-          ctx,
-          key,
-        });
+        const data =
+          step > 1
+            ? await runGenerateResults(
+                {
+                  agent,
+                  model: config.reasoningModel ?? config.model,
+                  contexts: [agentCtxState, ctxState].filter((t) => !!t),
+                  contextId: ctxState.id,
+                  actions: contextActions,
+                  outputs: contextOuputs,
+                  workingMemory,
+                  logger,
+                  chain,
+                },
+                {
+                  debug: agent.debugger,
+                }
+              )
+            : await runGenerate(
+                {
+                  agent,
+                  model: config.reasoningModel ?? config.model,
+                  contexts: [agentCtxState, ctxState].filter((t) => !!t),
+                  contextId: ctxState.id,
+                  actions: contextActions,
+                  outputs: contextOuputs,
+                  workingMemory,
+                  logger,
+                },
+                {
+                  debug: agent.debugger,
+                }
+              );
 
         logger.debug("agent:parsed", "data", data);
 
-        memory.inputs.forEach((i) => {
-          i.processed = true;
-        });
+        hasError = false;
 
-        memory.results.forEach((i) => {
+        workingMemory.results.forEach((i) => {
           i.processed = true;
         });
 
         for (const content of data.think) {
-          logger.debug("agent:think", content);
+          const thought: Thought = {
+            ref: "thought",
+            content,
+            timestamp: Date.now(),
+          };
+
+          chain.push(thought);
+          workingMemory.thoughts.push(thought);
+          logger.debug("agent:think", "", thought);
         }
 
         for (const content of data.reasonings) {
-          logger.debug("agent:reasoning", content);
+          const thought: Thought = {
+            ref: "thought",
+            content,
+            timestamp: Date.now(),
+          };
+
+          chain.push(thought);
+          workingMemory.thoughts.push(thought);
+          logger.debug("agent:think", "", thought);
         }
+
+        const actionCalls = data.calls.map(async ({ name, data, error }) => {
+          const action = actions.find((a) => a.name === name);
+
+          if (!action) {
+            logger.error("agent:action", "ACTION_MISMATCH", {
+              name,
+              data,
+            });
+            return Promise.reject(new Error("ACTION MISMATCH"));
+          }
+
+          if (error) {
+            const contexts: ContextState<AnyContext>[] = [
+              agentCtxState,
+              ctxState,
+            ].filter((t) => !!t);
+            const response = await generateObject({
+              model: agent.model,
+              schema: action.schema,
+              prompt: actionParseErrorPrompt({
+                context: renderContexts(
+                  ctxState.id,
+                  contexts,
+                  workingMemory
+                ).join("\n"),
+                error: JSON.stringify(error),
+              }),
+            });
+
+            if (response.object) {
+              data = response.object;
+            }
+          }
+
+          try {
+            const call: ActionCall = {
+              ref: "action_call",
+              id: randomUUID(),
+              data: action.schema.parse(data),
+              name: name,
+              timestamp: Date.now(),
+            };
+
+            workingMemory.calls.push(call);
+
+            chain.push(call);
+
+            let actionMemory: unknown = {};
+
+            if (action.memory) {
+              actionMemory =
+                (await agent.memory.get(action.memory.key)) ??
+                action.memory.create();
+            }
+
+            const resultData = await runAction({
+              action,
+              call,
+              agent,
+              logger,
+              context: {
+                ...ctxState,
+                actionMemory,
+                workingMemory,
+              },
+            });
+
+            const result: ActionResult = {
+              ref: "action_result",
+              callId: call.id,
+              data: resultData,
+              name: call.name,
+              timestamp: Date.now(),
+              processed: false,
+            };
+
+            chain.push({
+              ...result,
+            });
+
+            if (action.format) result.formatted = action.format(result);
+
+            workingMemory.results.push(result);
+
+            if (action.memory) {
+              await agent.memory.set(action.memory.key, actionMemory);
+            }
+          } catch (error) {
+            logger.error("agent:action", "ACTION_FAILED", { error });
+            throw error;
+          }
+        });
 
         for (const { type, content } of data.outputs) {
           const output = outputs[type];
@@ -265,111 +427,89 @@ export function createDreams<
 
             const data = output.schema.parse(parsedContent);
 
-            const response = await output.handler(data, ctx, agent);
+            const response = await output.handler(
+              data,
+              {
+                ...ctxState,
+                workingMemory,
+              },
+              agent
+            );
 
             if (Array.isArray(response)) {
               for (const res of response) {
-                memory.outputs.push({
+                const ref: OutputRef = {
                   ref: "output",
                   type,
-                  formatted:
-                    res.formatted ??
-                    (output.format ? output.format(response) : undefined),
                   ...res,
+                };
+
+                chain.push({
+                  ...ref,
+                  data: content,
                 });
+
+                ref.formatted = output.format
+                  ? output.format(response)
+                  : undefined;
+
+                workingMemory.outputs.push(ref);
               }
             } else if (response) {
-              memory.outputs.push({
+              const ref: OutputRef = {
                 ref: "output",
                 type,
-                formatted:
-                  response.formatted ??
-                  (output.format ? output.format(response) : undefined),
                 ...response,
+              };
+
+              chain.push({
+                ...ref,
+                data: content,
               });
+
+              ref.formatted = output.format
+                ? output.format(response)
+                : undefined;
+
+              workingMemory.outputs.push(ref);
             }
           } catch (error) {
+            const ref: OutputRef = {
+              ref: "output",
+              type,
+              timestamp: Date.now(),
+              data: JSON.stringify({ content, error }),
+            };
+
+            hasError = true;
+
+            chain.push(ref);
+
             logger.error("agent:output", type, error);
           }
         }
 
-        await Promise.allSettled(
-          data.actions.map(async ({ name, data }) => {
-            const action = actions.find((a) => a.name === name);
+        await Promise.allSettled(actionCalls);
 
-            if (!action) {
-              logger.error("agent:action", "ACTION_MISMATCH", {
-                name,
-                data,
-              });
-              return Promise.reject(new Error("ACTION MISMATCH"));
-            }
-
-            try {
-              const call: ActionCall = {
-                ref: "action_call",
-                id: randomUUID(),
-                data: action.schema.parse(data),
-                name: name,
-                timestamp: Date.now(),
-              };
-
-              memory.calls.push(call);
-
-              let actionMemory: unknown = {};
-
-              if (action.memory) {
-                actionMemory =
-                  (await agent.memory.get(action.memory.key)) ??
-                  action.memory.create();
-              }
-
-              const result = await runAction({
-                action,
-                call,
-                agent,
-                logger,
-                context: {
-                  id: contextId,
-                  context: contextHandler,
-                  ctx,
-                  args,
-                  memory,
-                  data: actionMemory,
-                },
-              });
-
-              memory.results.push({
-                ref: "action_result",
-                callId: call.id,
-                data: result,
-                name: call.name,
-                timestamp: Date.now(),
-                processed: false,
-                formatted: action.format ? action.format(result) : undefined,
-              });
-            } catch (error) {
-              logger.error("agent:action", "ACTION_FAILED", { error });
-              throw error;
-            }
-          })
-        );
-
-        await agent.memory.set(contextId, memory);
-
-        if (
-          [...memory.results, ...memory.inputs].find(
-            (i) => i.processed === false
-          ) === undefined
-        )
-          break;
+        await agent.memory.set(ctxState.id, workingMemory);
 
         step++;
+
+        if (hasError) continue;
+
+        if (
+          workingMemory.results.find((i) => i.processed === false) === undefined
+        )
+          break;
       }
 
-      await agent.memory.set(contextId, memory);
+      workingMemory.inputs.forEach((i) => {
+        i.processed = true;
+      });
 
-      contextsRunning.delete(contextId);
+      await agent.memory.set(ctxState.id, workingMemory);
+
+      contextsRunning.delete(ctxState.id);
     },
 
     send: async (contextHandler, args, params: { type: string; data: any }) => {
@@ -378,12 +518,15 @@ export function createDreams<
       const {
         key,
         id: contextId,
-        ctx,
-        memory,
-      } = await getContext(contextHandler, contextHandler.schema.parse(args));
+        options,
+      } = await getContextState(
+        contextHandler,
+        contextHandler.schema.parse(args)
+      );
+
+      const workingMemory = await getContextWorkingMemory(contextId);
 
       const input = agent.inputs[params.type];
-
       const data = input.schema.parse(params.data);
 
       if (input.handler) {
@@ -393,12 +536,13 @@ export function createDreams<
             type: contextHandler.type,
             key,
             memory,
-            ctx,
+            workingMemory,
+            options,
           } as any,
           agent
         );
       } else {
-        memory.inputs.push({
+        workingMemory.inputs.push({
           ref: "input",
           type: params.type,
           data,
@@ -411,10 +555,15 @@ export function createDreams<
         type: contextHandler.type,
         key,
         memory,
-        ctx,
+        options,
       } as any);
 
       await agent.memory.set(contextId, memory);
+
+      await agent.memory.set(
+        ["working-memory", contextId].join(":"),
+        workingMemory
+      );
 
       await agent.run(contextHandler, args);
     },
@@ -425,66 +574,103 @@ export function createDreams<
     },
   };
 
+  container.instance("agent", agent);
+
   return agent;
 }
 
 export const runGenerate = task(
   "agent:run:generate",
-  async <TContext extends Context<WorkingMemory, any, any, any>>(
+  async (
     {
-      context,
-      contextId,
-      key,
-      args,
-      memory,
+      contexts,
+      workingMemory,
       outputs,
       actions,
-      ctx,
       logger,
       model,
+      contextId,
     }: {
-      context: TContext;
-      args: z.infer<TContext["schema"]>;
+      agent: AnyAgent;
+      contexts: ContextState<AnyContext>[];
       contextId: string;
-      key: string;
-      memory: WorkingMemory;
+      workingMemory: WorkingMemory;
       outputs: Output[];
-      actions: Action[];
-      ctx: InferContextCtx<TContext>;
+      actions: AnyAction[];
       logger: Logger;
       model: LanguageModelV1;
     },
     { callId, debug }: TaskContext
   ) => {
-    const newInputs = memory.inputs.filter((i) => i.processed !== true);
+    debug(
+      contextId,
+      ["workingMemory", callId],
+      JSON.stringify(workingMemory, null, 2)
+    );
 
-    debug(contextId, ["memory", callId], JSON.stringify(memory, null, 2));
+    const mainContext = contexts.find((ctx) => ctx.id === contextId)!;
 
     const system = prompt({
-      context: formatContext({
-        type: context.type ?? "system",
-        key: key,
-        description:
-          typeof context.description === "function"
-            ? context.description({ key, args }, ctx)
-            : context.description,
-        instructions:
-          typeof context.instructions === "function"
-            ? context.instructions({ key, args }, ctx)
-            : context.instructions,
-        content: context.render
-          ? context.render(memory, ctx)
-          : defaultContextRender(memory),
+      context: [
+        contexts.map(({ id, context, key, args, memory, options }) =>
+          formatContext({
+            type: context.type,
+            key: key,
+            description:
+              typeof context.description === "function"
+                ? context.description({
+                    key,
+                    args,
+                    options,
+                    id,
+                    context,
+                    memory,
+                  })
+                : context.description,
+            instructions:
+              typeof context.instructions === "function"
+                ? context.instructions({
+                    key,
+                    args,
+                    options,
+                    id,
+                    context,
+                    memory,
+                  })
+                : context.instructions,
+            content: [
+              context.render ? context.render(memory) : "",
+              contextId === id
+                ? defaultContextRender({
+                    memory: {
+                      ...workingMemory,
+                      inputs: workingMemory.inputs.filter(
+                        (i) => i.processed === true
+                      ),
+                      results: workingMemory.results.filter(
+                        (i) => i.processed === true
+                      ),
+                    },
+                  })
+                : "",
+            ]
+              .flat()
+              .filter((t) => !!t),
+          })
+        ),
+      ].flat(),
+      outputs,
+      actions,
+      updates: formatContext({
+        type: mainContext.context.type,
+        key: mainContext.key,
+        content: defaultContextRender({
+          memory: {
+            inputs: workingMemory.inputs.filter((i) => i.processed !== true),
+            results: workingMemory.results.filter((i) => i.processed !== true),
+          },
+        }),
       }),
-
-      outputs: outputs,
-      actions: actions.filter((action) =>
-        action.enabled ? action.enabled(ctx as any) : true
-      ),
-      updates: [
-        ...newInputs,
-        ...memory.results.filter((i) => i.processed !== true),
-      ],
     });
 
     debug(contextId, ["prompt", callId], system);
@@ -513,6 +699,87 @@ export const runGenerate = task(
   }
 );
 
+export const runGenerateResults = task(
+  "agent:run:generate-results",
+  async (
+    {
+      contexts,
+      workingMemory,
+      outputs,
+      actions,
+      logger,
+      model,
+      contextId,
+      chain,
+    }: {
+      agent: AnyAgent;
+      contexts: ContextState<AnyContext>[];
+      contextId: string;
+      workingMemory: WorkingMemory;
+      outputs: Output[];
+      actions: AnyAction[];
+      logger: Logger;
+      model: LanguageModelV1;
+      chain: Log[];
+    },
+    { callId, debug }: TaskContext
+  ) => {
+    debug(
+      contextId,
+      ["workingMemory", callId],
+      JSON.stringify(workingMemory, null, 2)
+    );
+
+    const mainContext = contexts.find((ctx) => ctx.id === contextId)!;
+
+    const system = resultsPrompt({
+      context: renderContexts(contextId, contexts, workingMemory),
+      outputs,
+      actions,
+      updates: formatContext({
+        type: mainContext.context.type,
+        key: mainContext.key,
+        content: defaultContextRender({
+          memory: {
+            inputs: workingMemory.inputs.filter((i) => i.processed !== true),
+          },
+        }),
+      }),
+      logs: chain.filter((i) =>
+        i.ref === "action_result" ? i.processed === true : true
+      ),
+      results: workingMemory.results.filter((i) => i.processed !== true),
+    });
+
+    debug(contextId, ["prompt-results", callId], system);
+
+    logger.debug("agent:system", system);
+
+    const result = await generateText({
+      model,
+      messages: [
+        {
+          role: "user",
+          content: system,
+        },
+        {
+          role: "assistant",
+          content: "<think>",
+        },
+      ],
+      stopSequences: ["</response>"],
+    });
+
+    const text = "<think>" + result.text + "</response>";
+
+    debug(contextId, ["results-response", callId], text);
+
+    logger.debug("agent:response", text);
+
+    return parse(text);
+  }
+);
+
 export const runAction = task(
   "agent:run:action",
   async <TContext extends AnyContext>({
@@ -523,9 +790,9 @@ export const runAction = task(
     logger,
   }: {
     context: AgentContext<InferContextMemory<TContext>, TContext> & {
-      data: unknown;
+      actionMemory: unknown;
     };
-    action: Action;
+    action: AnyAction;
     call: ActionCall;
     agent: AnyAgent;
     logger: Logger;
@@ -539,3 +806,70 @@ export const runAction = task(
     }
   }
 );
+
+const actionParseErrorPrompt = createPrompt(
+  `
+You are tasked with fixing an action call arguments parsing error!
+Here is the current context:
+{{context}}
+Here is the error:
+{{error}}
+`,
+  ({ context, error }: { context: string; error: string }) => ({
+    context,
+    error,
+  })
+);
+
+function renderContexts(
+  mainContextId: string,
+  contexts: ContextState[],
+  workingMemory: WorkingMemory
+) {
+  return contexts.map(({ id, context, key, args, memory, options }) =>
+    formatContext({
+      type: context.type,
+      key: key,
+      description:
+        typeof context.description === "function"
+          ? context.description({
+              key,
+              args,
+              options,
+              id,
+              context,
+              memory,
+            })
+          : context.description,
+      instructions:
+        typeof context.instructions === "function"
+          ? context.instructions({
+              key,
+              args,
+              options,
+              id,
+              context,
+              memory,
+            })
+          : context.instructions,
+      content: [
+        context.render ? context.render(memory) : "",
+        mainContextId === id
+          ? defaultContextRender({
+              memory: {
+                ...workingMemory,
+                inputs: workingMemory.inputs.filter(
+                  (i) => i.processed === true
+                ),
+                results: workingMemory.results.filter(
+                  (i) => i.processed === true
+                ),
+              },
+            })
+          : "",
+      ]
+        .flat()
+        .filter((t) => !!t),
+    })
+  );
+}
