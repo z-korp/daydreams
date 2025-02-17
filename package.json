@@ -15,6 +15,7 @@
     "server": "bun run examples/example-server.ts",
     "discord": "bun run examples/v1/example-discord.ts",
     "telegram": "bun run examples/v1/example-telegram.ts",
+    "vector": "bun run examples/v1/example-vector.ts",
     "hyperliquid": "bun run examples/example-hyperliquid.ts",
     "vision": "bun run examples/example-vision.ts",
     "new": "bun run examples/example-new.ts",
@@ -55,11 +56,12 @@
     "telegram": "^2.26.16",
     "ws": "^8.18.0",
     "zod": "^3.24.1",
-    "zod-to-json-schema": "^3.24.1"
+    "zod-to-json-schema": "^3.24.1",
+    "chromadb": "^1.5.5"
   },
   "devDependencies": {
     "@types/bun": "^1.2.2",
-    "@types/react": "19.0.8",
+    "@types/react": "19.0.9",
     "knip": "^5.43.6",
     "typescript": "~5.7.3",
     "typedoc": "^0.27.6",

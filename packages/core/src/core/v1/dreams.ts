@@ -32,6 +32,9 @@ import { createMemoryStore } from "./memory";
 import type { OutputRef } from "../../../dist";
 import { createPrompt } from "./prompt";
 
+import { createMemory } from "./memory";
+import { createVectorStore } from "./memory/base";
+
 export function createDreams<
   Memory = any,
   TContext extends Context<Memory, any, any, any> = Context<
@@ -103,7 +106,7 @@ export function createDreams<
     const options = context.setup ? await context.setup(args, agent) : {};
 
     const memory =
-      (await agent.memory.get(contextId)) ??
+      (await agent.memory.store.get(contextId)) ??
       (context.create
         ? context.create({ key, args, context, id: contextId, options })
         : {});
@@ -120,7 +123,7 @@ export function createDreams<
 
   async function getContextWorkingMemory(contextId: string) {
     return (
-      (await agent.memory.get<WorkingMemory>(
+      (await agent.memory.store.get<WorkingMemory>(
         ["working-memory", contextId].join(":")
       )) ?? (await defaultWorkingMemory.create())
     );
@@ -132,7 +135,7 @@ export function createDreams<
     events,
     actions,
     experts,
-    memory: memory ?? createMemoryStore(),
+    memory: memory ?? createMemory(createMemoryStore(), createVectorStore()),
     container,
     model,
     reasoningModel,
@@ -229,7 +232,7 @@ export function createDreams<
 
           if (action.memory) {
             actionMemory =
-              (await agent.memory.get(action.memory.key)) ??
+              (await agent.memory.store.get(action.memory.key)) ??
               action.memory.create();
           }
 
@@ -378,7 +381,7 @@ export function createDreams<
 
             if (action.memory) {
               actionMemory =
-                (await agent.memory.get(action.memory.key)) ??
+                (await agent.memory.store.get(action.memory.key)) ??
                 action.memory.create();
             }
 
@@ -413,7 +416,7 @@ export function createDreams<
             workingMemory.results.push(result);
 
             if (action.memory) {
-              await agent.memory.set(action.memory.key, actionMemory);
+              await agent.memory.store.set(action.memory.key, actionMemory);
             }
           } catch (error) {
             logger.error("agent:action", "ACTION_FAILED", { error });
@@ -501,7 +504,8 @@ export function createDreams<
 
         await Promise.allSettled(actionCalls);
 
-        await agent.memory.set(ctxState.id, workingMemory);
+        await agent.memory.store.set(ctxState.id, memory);
+        await agent.memory.vector.upsert(ctxState.id, [memory]);
 
         step++;
 
@@ -517,7 +521,7 @@ export function createDreams<
         i.processed = true;
       });
 
-      await agent.memory.set(ctxState.id, workingMemory);
+      await agent.memory.store.set(ctxState.id, workingMemory);
 
       contextsRunning.delete(ctxState.id);
     },
@@ -568,9 +572,10 @@ export function createDreams<
         options,
       } as any);
 
-      await agent.memory.set(contextId, memory);
+      await agent.memory.store.set(contextId, memory);
+      await agent.memory.vector.upsert(contextId, [memory]);
 
-      await agent.memory.set(
+      await agent.memory.store.set(
         ["working-memory", contextId].join(":"),
         workingMemory
       );
