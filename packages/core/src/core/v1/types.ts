@@ -84,6 +84,8 @@ export interface WorkingMemory {
   // chains: Chain[];
 }
 
+type InferAgentMemory<TAgent extends AnyAgent> =
+  TAgent extends Agent<infer Memory> ? Memory : never;
 /**
  * Represents an action that can be executed with typed parameters
  * @template Schema - Zod schema defining parameter types
@@ -108,7 +110,10 @@ export type Action<
   examples?: z.infer<Schema>[];
   handler: (
     call: ActionCall<z.infer<Schema>>,
-    ctx: Context & { actionMemory: InferMemoryData<TMemory> },
+    ctx: Context & {
+      actionMemory: InferMemoryData<TMemory>;
+      agentMemory?: InferAgentMemory<TAgent>;
+    },
     agent: TAgent
   ) => Promise<Result> | Result;
   format?: (result: ActionResult<Result>) => string | string[];
