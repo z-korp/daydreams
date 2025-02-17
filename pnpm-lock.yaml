@@ -91,8 +91,8 @@ importers:
         specifier: ^1.2.2
         version: 1.2.2
       '@types/react':
-        specifier: 19.0.8
-        version: 19.0.8
+        specifier: 19.0.9
+        version: 19.0.9
       knip:
         specifier: ^5.43.6
         version: 5.44.1(@types/node@22.10.5)(typescript@5.7.3)
@@ -119,7 +119,7 @@ importers:
         version: 4.2.10(acorn@8.14.0)(next@15.1.7(@opentelemetry/api@1.9.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3)
       nextra-theme-docs:
         specifier: ^4.2.10
-        version: 4.2.10(@types/react@19.0.8)(next@15.1.7(@opentelemetry/api@1.9.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(nextra@4.2.10(acorn@8.14.0)(next@15.1.7(@opentelemetry/api@1.9.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0))
+        version: 4.2.10(@types/react@19.0.9)(next@15.1.7(@opentelemetry/api@1.9.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(nextra@4.2.10(acorn@8.14.0)(next@15.1.7(@opentelemetry/api@1.9.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0))
       postcss:
         specifier: ^8.5.2
         version: 8.5.2
@@ -143,8 +143,8 @@ importers:
         specifier: ^1.2.2
         version: 1.2.2
       '@types/react':
-        specifier: 19.0.8
-        version: 19.0.8
+        specifier: 19.0.9
+        version: 19.0.9
       knip:
         specifier: ^5.43.6
         version: 5.44.1(@types/node@22.10.5)(typescript@5.7.3)
@@ -2968,8 +2968,8 @@ packages:
   '@types/prismjs@1.26.5':
     resolution: {integrity: sha512-AUZTa7hQ2KY5L7AmtSiqxlhWxb4ina0yd8hNbl4TWuqnv/pFP0nDMb3YrfSBf4hJVGLh2YEIBfKaBW/9UEl6IQ==}
 
-  '@types/react@19.0.8':
-    resolution: {integrity: sha512-9P/o1IGdfmQxrujGbIMDyYaaCykhLKc0NGCtYcECNUr9UAaDe4gwvV9bR6tvd5Br1SG0j+PBpbKr2UYY8CwqSw==}
+  '@types/react@19.0.9':
+    resolution: {integrity: sha512-FedNTYgmMwSZmD1Sru/W1gJKuiYCN/3SuBkmZkcxX+FpO5zL76B22A9YNfAKg4HQO3Neh/30AiynP6BELdU0qQ==}
 
   '@types/retry@0.12.0':
     resolution: {integrity: sha512-wWKOClTTiizcZhXnPY4wikVAwmdYHp8q6DmC+EJUzAMsycb7HB32Kh9RN4+0gExjmPmZSAQjgURXIGATPegAvA==}
@@ -11521,7 +11521,7 @@ snapshots:
 
   '@types/prismjs@1.26.5': {}
 
-  '@types/react@19.0.8':
+  '@types/react@19.0.9':
     dependencies:
       csstype: 3.1.3
 
@@ -15425,7 +15425,7 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
-  nextra-theme-docs@4.2.10(@types/react@19.0.8)(next@15.1.7(@opentelemetry/api@1.9.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(nextra@4.2.10(acorn@8.14.0)(next@15.1.7(@opentelemetry/api@1.9.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0)):
+  nextra-theme-docs@4.2.10(@types/react@19.0.9)(next@15.1.7(@opentelemetry/api@1.9.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(nextra@4.2.10(acorn@8.14.0)(next@15.1.7(@opentelemetry/api@1.9.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0)):
     dependencies:
       '@headlessui/react': 2.2.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       clsx: 2.1.1
@@ -15438,7 +15438,7 @@ snapshots:
       scroll-into-view-if-needed: 3.1.0
       zod: 3.24.1
       zod-validation-error: 3.4.0(zod@3.24.1)
-      zustand: 5.0.3(@types/react@19.0.8)(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0))
+      zustand: 5.0.3(@types/react@19.0.9)(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0))
     transitivePeerDependencies:
       - '@types/react'
       - immer
@@ -17678,9 +17678,9 @@ snapshots:
 
   zod@3.24.1: {}
 
-  zustand@5.0.3(@types/react@19.0.8)(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0)):
+  zustand@5.0.3(@types/react@19.0.9)(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0)):
     optionalDependencies:
-      '@types/react': 19.0.8
+      '@types/react': 19.0.9
       react: 19.0.0
       use-sync-external-store: 1.4.0(react@19.0.0)
 
