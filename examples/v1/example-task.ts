@@ -131,11 +131,33 @@ const agent = createDreams({
       description: "Create goal plan",
       schema: z.object({ goal: goalPlanningSchema }),
       handler(call, ctx, agent) {
-        const agentMemory = ctx.agentMemory;
+        const agentMemory = ctx.agentMemory.goal as Goal;
 
-        agentMemory.goal.long_term.push(...call.data.goal.long_term);
-        agentMemory.goal.medium_term.push(...call.data.goal.medium_term);
-        agentMemory.goal.short_term.push(...call.data.goal.short_term);
+        agentMemory.long_term.push(...call.data.goal.long_term);
+        agentMemory.medium_term.push(...call.data.goal.medium_term);
+        agentMemory.short_term.push(...call.data.goal.short_term);
+        return {};
+      },
+    }),
+    action({
+      name: "updateGoal",
+      description:
+        "Use this to update a goals state if you think it is complete",
+      schema: z.object({ goal: goalSchema }),
+      handler(call, ctx, agent) {
+        const agentMemory = ctx.agentMemory.goal as Goal;
+        const goal = agentMemory.long_term.find(
+          (goal) => goal.id === call.data.goal.id
+        );
+        if (!goal) {
+          return { error: "Goal not found" };
+        }
+        goal.description = call.data.goal.description;
+        goal.success_criteria = call.data.goal.success_criteria;
+        goal.dependencies = call.data.goal.dependencies;
+        goal.priority = call.data.goal.priority;
+        goal.required_resources = call.data.goal.required_resources;
+        goal.estimated_difficulty = call.data.goal.estimated_difficulty;
         return {};
       },
     }),
