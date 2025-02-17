@@ -13,6 +13,7 @@ import {
   type Debugger,
   type Log,
   type Output,
+  type OutputRef,
   type Subscription,
   type Thought,
   type WorkingMemory,
@@ -27,9 +28,9 @@ import { type InferContextMemory } from "./types";
 import { z } from "zod";
 import { task, TaskRunner, type TaskContext } from "./task";
 import { parse, prompt, resultsPrompt } from "./prompts/main";
-import { context, defaultContextRender, defaultWorkingMemory } from "./context";
+import { defaultContextRender, defaultWorkingMemory } from "./context";
 import { createMemoryStore } from "./memory";
-import type { OutputRef } from "../../../dist";
+
 import { createPrompt } from "./prompt";
 
 import { createMemory } from "./memory";
