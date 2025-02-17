@@ -29,6 +29,7 @@ export class TaskRunner {
   private queue: QueuedTask[] = [];
   private running: Set<string> = new Set();
   private concurrency: number;
+  private processing: boolean = false;
 
   constructor(concurrency: number = 1) {
     this.concurrency = concurrency;
@@ -40,25 +41,36 @@ export class TaskRunner {
   }
 
   private async processQueue() {
-    if (this.running.size >= this.concurrency || this.queue.length === 0) {
-      return;
-    }
-
-    this.queue.sort((a, b) => b.priority - a.priority);
-
-    const task = this.queue.shift();
-    if (!task) return;
-
-    this.running.add(task.id);
+    if (this.processing) return;
+    this.processing = true;
 
     try {
-      const result = await task.execute();
-      task.resolve(result);
-    } catch (error) {
-      task.reject(error);
+      while (this.queue.length > 0 && this.running.size < this.concurrency) {
+        // Sort entire queue by priority
+        this.queue.sort((a, b) => b.priority - a.priority);
+
+        const task = this.queue.shift();
+        if (!task) break;
+
+        this.running.add(task.id);
+
+        // Execute task without awaiting to allow concurrent execution
+        task
+          .execute()
+          .then((result) => {
+            task.resolve(result);
+          })
+          .catch((error) => {
+            task.reject(error);
+          })
+          .finally(() => {
+            this.running.delete(task.id);
+            // Try to process more tasks after one completes
+            this.processQueue();
+          });
+      }
     } finally {
-      this.running.delete(task.id);
-      this.processQueue();
+      this.processing = false;
     }
   }
 
@@ -73,7 +85,8 @@ export class TaskRunner {
       };
 
       this.queue.push(queuedTask);
-      this.processQueue();
+      // Use setTimeout to ensure proper task ordering
+      setTimeout(() => this.processQueue(), 0);
     });
   }
 
