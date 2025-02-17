@@ -25,7 +25,7 @@ import createContainer from "./container";
 import { createServiceManager } from "./serviceProvider";
 import { type InferContextMemory } from "./types";
 import { z } from "zod";
-import { task, type TaskContext } from "./task";
+import { task, TaskRunner, type TaskContext } from "./task";
 import { parse, prompt, resultsPrompt } from "./prompts/main";
 import { context, defaultContextRender, defaultWorkingMemory } from "./context";
 import { createMemoryStore } from "./memory";
@@ -34,6 +34,8 @@ import { createPrompt } from "./prompt";
 
 import { createMemory } from "./memory";
 import { createVectorStore } from "./memory/base";
+
+const taskRunner = new TaskRunner(3);
 
 export function createDreams<
   Memory = any,
@@ -385,18 +387,23 @@ export function createDreams<
                 action.memory.create();
             }
 
-            const resultData = await runAction({
-              action,
-              call,
-              agent,
-              logger,
-              context: {
-                ...ctxState,
-                actionMemory,
-                workingMemory,
-                agentMemory: agentCtxState?.memory,
+            const resultData = await runAction(
+              {
+                action,
+                call,
+                agent,
+                logger,
+                context: {
+                  ...ctxState,
+                  actionMemory,
+                  workingMemory,
+                  agentMemory: agentCtxState?.memory,
+                },
               },
-            });
+              {
+                debug: agent.debugger,
+              }
+            );
 
             const result: ActionResult = {
               ref: "action_result",
@@ -664,7 +671,8 @@ export const runGenerate = task(
     logger.debug("agent:response", text);
 
     return parse(text);
-  }
+  },
+  taskRunner
 );
 
 export const runGenerateResults = task(
@@ -745,7 +753,8 @@ export const runGenerateResults = task(
     logger.debug("agent:response", text);
 
     return parse(text);
-  }
+  },
+  taskRunner
 );
 
 export const runAction = task(
@@ -773,7 +782,8 @@ export const runAction = task(
       logger.error("agent:action", "ACTION_FAILED", { error });
       throw error;
     }
-  }
+  },
+  taskRunner
 );
 
 const actionParseErrorPrompt = createPrompt(
