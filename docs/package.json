@@ -9,8 +9,8 @@
   },
   "dependencies": {
     "next": "^15.1.7",
-    "nextra": "^4.2.10",
-    "nextra-theme-docs": "^4.2.10",
+    "nextra": "^4.2.12",
+    "nextra-theme-docs": "^4.2.12",
     "postcss": "^8.5.2",
     "prettier": "^3.4.2",
     "prism-react-renderer": "^2.4.1",
