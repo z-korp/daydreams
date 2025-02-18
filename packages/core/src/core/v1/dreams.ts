@@ -149,7 +149,7 @@ export function createDreams<
     },
 
     async start(args) {
-      console.log({ args, booted });
+      logger.info("agent:start", "booting", { args, booted });
       if (booted) return agent;
 
       booted = true;
@@ -169,8 +169,7 @@ export function createDreams<
             agent
               .send(contextHandler, args, { type: key, data })
               .catch((err) => {
-                console.error(err);
-                // logger.error("agent", "input", err);
+                logger.error("agent:input", "error", err);
               });
           }, agent);
 

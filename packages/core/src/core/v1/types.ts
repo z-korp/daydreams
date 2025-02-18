@@ -123,6 +123,32 @@ export interface WorkingMemory {
 type InferAgentMemory<TAgent extends AnyAgent> =
   TAgent extends Agent<infer Memory> ? Memory : never;
 /**
+ * Represents an evaluator that can validate action/output results
+ * @template Data - Type of data being evaluated
+ * @template Context - Context type for the evaluation
+ */
+export type Evaluator<
+  Data = any,
+  Context extends AgentContext<any, any> = AgentContext<any, any>,
+  TAgent extends AnyAgent = AnyAgent,
+> = {
+  name: string;
+  description?: string;
+  /** Schema for the evaluation result */
+  schema?: z.ZodType<any>;
+  /** Custom prompt template for LLM-based evaluation */
+  prompt?: string;
+  /** Custom handler for evaluation logic */
+  handler?: (
+    data: Data,
+    ctx: Context,
+    agent: TAgent
+  ) => Promise<boolean> | boolean;
+  /** Optional callback when evaluation fails */
+  onFailure?: (ctx: Context, agent: TAgent) => Promise<void> | void;
+};
+
+/**
  * Represents an action that can be executed with typed parameters
  * @template Schema - Zod schema defining parameter types
  * @template Result - Return type of the action
@@ -153,6 +179,8 @@ export type Action<
     agent: TAgent
   ) => Promise<Result> | Result;
   format?: (result: ActionResult<Result>) => string | string[];
+  /** Optional evaluator for this specific action */
+  evaluator?: Evaluator<Result, Context, TAgent>;
 };
 
 export type OutputSchema = z.AnyZodObject | z.ZodString;
@@ -184,6 +212,8 @@ export type Output<
   ) => Promise<Response> | Response;
   format?: (res: Response) => string | string[];
   examples?: z.infer<Schema>[];
+  /** Optional evaluator for this specific output */
+  evaluator?: Evaluator<Response, Context, TAgent>;
 };
 
 export type AnyAction = Action<any, any, any>;
@@ -559,10 +589,21 @@ export interface Context<
   /** Optional function to render memory state as string(s) */
   render?: (state: ContextState<this>) => string | string[];
 
-  // with: <TContext extends Context<any, any, any, any> = AnyContext>(
-  //   context: TContext,
-  //   init: () => z.infer<TContext["schema"]>
-  // ) => void;
+  /** Optional configuration for evaluation behavior */
+  evaluation?: {
+    /** Evaluate after every action execution */
+    evaluateActions?: boolean;
+    /** Global evaluator for all actions */
+    actionEvaluator?: Evaluator<any, AgentContext<Memory>>;
+    /** Global evaluator for all outputs */
+    outputEvaluator?: Evaluator<any, AgentContext<Memory>>;
+    /** Default prompt template for action evaluation */
+    defaultActionPrompt?: string;
+    /** Default prompt template for output evaluation */
+    defaultOutputPrompt?: string;
+    /** Default schema for evaluation results */
+    defaultSchema?: z.ZodType<any>;
+  };
 }
 
 export type ContextState<TContext extends AnyContext = AnyContext> = {
