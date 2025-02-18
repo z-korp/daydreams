@@ -135,44 +135,55 @@ export class TaskRunner {
   get queuedTasksCount(): number {
     return this.queue.length;
   }
+
+  /**
+   * Enqueues a task function for execution.
+   * @param taskFn - The task function to execute
+   * @param params - Parameters to pass to the task
+   * @param options - Task options including priority
+   * @returns A promise that resolves when the task is completed
+   */
+  enqueueTask<Params, Result>(
+    taskFn: (params: Params, options?: TaskOptions) => Promise<Result>,
+    params: Params,
+    options: TaskOptions = {}
+  ): Promise<Result> {
+    return this.enqueue(() => taskFn(params, options), options.priority ?? 0);
+  }
 }
 
 /**
- * Creates a task function that can be enqueued and executed by a TaskRunner.
+ * Creates a task function that can be executed or enqueued.
  * @param key - A unique key for the task.
  * @param fn - The function to execute as the task.
- * @param runner - The TaskRunner instance to manage the task.
  * @param defaultOptions - Default options for the task.
- * @returns A task function.
+ * @returns A task function that can be executed directly or enqueued.
  */
 export function task<Params, Result>(
   key: string,
   fn: (params: Params, ctx: TaskContext) => Promise<Result>,
-  runner: TaskRunner,
   defaultOptions?: TaskOptions
-): Task<Params, Result> {
-  async function call(params: Params, callOptions?: TaskOptions) {
+): (params: Params, options?: TaskOptions) => Promise<Result> {
+  async function execute(params: Params, options?: TaskOptions) {
     const callId = randomUUID();
 
-    const options = {
+    const mergedOptions = {
       ...defaultOptions,
-      ...callOptions,
+      ...options,
     };
 
-    return runner.enqueue(async () => {
-      try {
-        const res = await Promise.resolve(
-          fn(params, {
-            callId,
-            debug: options?.debug ?? (() => {}),
-          })
-        );
-        return res;
-      } catch (error) {
-        throw error;
-      }
-    }, options.priority);
+    try {
+      const res = await Promise.resolve(
+        fn(params, {
+          callId,
+          debug: mergedOptions?.debug ?? (() => {}),
+        })
+      );
+      return res;
+    } catch (error) {
+      throw error;
+    }
   }
 
-  return Object.assign(call, {});
+  return execute;
 }

@@ -19,7 +19,7 @@ import {
   type WorkingMemory,
 } from "./types";
 import { Logger } from "./logger";
-import { formatContext, formatContextLog } from "./formatters";
+import { formatContext } from "./formatters";
 import { generateObject, generateText, type LanguageModelV1 } from "ai";
 import { randomUUID } from "crypto";
 import createContainer from "./container";
@@ -268,7 +268,8 @@ export function createDreams<
       while (maxSteps > step) {
         const data =
           step > 1
-            ? await runGenerateResults(
+            ? await taskRunner.enqueueTask(
+                runGenerateResults,
                 {
                   agent,
                   model: config.reasoningModel ?? config.model,
@@ -284,7 +285,8 @@ export function createDreams<
                   debug: agent.debugger,
                 }
               )
-            : await runGenerate(
+            : await taskRunner.enqueueTask(
+                runGenerate,
                 {
                   agent,
                   model: config.reasoningModel ?? config.model,
@@ -388,7 +390,8 @@ export function createDreams<
                 action.memory.create();
             }
 
-            const resultData = await runAction(
+            const resultData = await taskRunner.enqueueTask(
+              runAction,
               {
                 action,
                 call,
@@ -672,8 +675,7 @@ export const runGenerate = task(
     logger.debug("agent:response", text);
 
     return parse(text);
-  },
-  taskRunner
+  }
 );
 
 export const runGenerateResults = task(
@@ -760,8 +762,7 @@ export const runGenerateResults = task(
     });
 
     return parse(text);
-  },
-  taskRunner
+  }
 );
 
 export const runAction = task(
@@ -790,8 +791,7 @@ export const runAction = task(
       logger.error("agent:action", "ACTION_FAILED", { error });
       throw error;
     }
-  },
-  taskRunner
+  }
 );
 
 const actionParseErrorPrompt = createPrompt(
