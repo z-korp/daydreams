@@ -259,7 +259,7 @@ export function createDreams<
           )
         : undefined;
 
-      console.log({ agentCtxState });
+      logger.debug("agent:context", "agentCtxState", agentCtxState);
 
       const chain: Log[] = [];
 
@@ -730,7 +730,10 @@ export const runGenerateResults = task(
 
     debug(contextId, ["prompt-results", callId], system);
 
-    logger.debug("agent:system", system);
+    logger.debug("agent:system", system, {
+      contextId,
+      callId,
+    });
 
     const result = await generateText({
       model,
@@ -751,7 +754,10 @@ export const runGenerateResults = task(
 
     debug(contextId, ["results-response", callId], text);
 
-    logger.debug("agent:response", text);
+    logger.debug("agent:response", text, {
+      contextId,
+      callId,
+    });
 
     return parse(text);
   },
@@ -778,6 +784,7 @@ export const runAction = task(
   }) => {
     try {
       const result = await action.handler(call, context, agent);
+      logger.debug("agent:action", "ACTION_SUCCESS", { result });
       return result;
     } catch (error) {
       logger.error("agent:action", "ACTION_FAILED", { error });
