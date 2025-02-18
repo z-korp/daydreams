@@ -160,6 +160,19 @@ const agent = createDreams({
         goal.estimated_difficulty = call.data.goal.estimated_difficulty;
         return {};
       },
+      evaluator: {
+        name: "validateFetchData",
+        description: "Ensures fetched data meets requirements",
+        handler: async (result, ctx, agent) => {
+          console.log({ result, ctx, agent });
+          const isValid = true;
+          return isValid;
+        },
+        prompt: "Ensure the goal is achievable",
+        onFailure: async (ctx, agent) => {
+          console.log({ ctx, agent });
+        },
+      },
     }),
   ],
 }).start({
