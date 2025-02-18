@@ -151,11 +151,10 @@ describe("task function", () => {
       async (params: { value: number }, ctx) => {
         mockFn(params, ctx.callId);
         return params.value * 2;
-      },
-      runner
+      }
     );
 
-    const result = await testTask({ value: 5 });
+    const result = await runner.enqueueTask(testTask, { value: 5 });
 
     expect(result).toBe(10);
     expect(mockFn).toHaveBeenCalledTimes(1);
@@ -171,11 +170,10 @@ describe("task function", () => {
         ctx.debug("test-task", ["test"], params);
         return params.value;
       },
-      runner,
       { debug: debugFn }
     );
 
-    await testTask({ value: 5 }, { priority: 2 });
+    await runner.enqueueTask(testTask, { value: 5 }, { priority: 2 });
 
     expect(debugFn).toHaveBeenCalledWith("test-task", ["test"], { value: 5 });
   });
@@ -190,11 +188,10 @@ describe("task function", () => {
         ctx.debug("test-task", ["debug"], params);
         return params.value;
       },
-      runner,
       { debug: defaultDebug }
     );
 
-    await testTask({ value: 5 }, { debug: callDebug });
+    await runner.enqueueTask(testTask, { value: 5 }, { debug: callDebug });
 
     expect(defaultDebug).not.toHaveBeenCalled();
     expect(callDebug).toHaveBeenCalledWith("test-task", ["debug"], {
@@ -203,14 +200,39 @@ describe("task function", () => {
   });
 
   it("should handle errors in tasks", async () => {
-    const testTask = task(
-      "test-task",
-      async () => {
-        throw new Error("Task error");
-      },
-      runner
-    );
+    const testTask = task("test-task", async () => {
+      throw new Error("Task error");
+    });
 
-    await expect(testTask({})).rejects.toThrow("Task error");
+    await expect(runner.enqueueTask(testTask, {})).rejects.toThrow(
+      "Task error"
+    );
+  });
+
+  it("should allow direct execution without runner", async () => {
+    const testTask = task("test-task", async (params: { value: number }) => {
+      return params.value * 2;
+    });
+
+    const result = await testTask({ value: 5 });
+    expect(result).toBe(10);
+  });
+
+  it("should work with both direct and enqueued execution", async () => {
+    const executionOrder: number[] = [];
+    const testTask = task("test-task", async (params: { value: number }) => {
+      await new Promise((resolve) => setTimeout(resolve, params.value));
+      executionOrder.push(params.value);
+      return params.value;
+    });
+
+    // Direct execution
+    const direct = testTask({ value: 50 });
+
+    // Enqueued execution
+    const enqueued = runner.enqueueTask(testTask, { value: 25 });
+
+    await Promise.all([direct, enqueued]);
+    expect(executionOrder).toEqual([25, 50]); // Enqueued task should finish first due to shorter timeout
   });
 });
