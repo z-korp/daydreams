@@ -115,7 +115,8 @@ export const prompt = createPrompt(
   }) => ({
     context: context,
     outputs: outputs.map(formatOutputInterface),
-    actions: actions.map(formatAction),
+    actions:
+      actions.length > 0 ? actions.map(formatAction) : "NO ACTIONS AVAILABLE",
     updates: updates,
     examples: [],
   })

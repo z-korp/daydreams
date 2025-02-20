@@ -46,9 +46,17 @@ export function formatOutput(output: OutputRef) {
  * @returns XML string representation of the output interface
  */
 export function formatOutputInterface(output: Output) {
+  const params: Record<string, string> = {
+    name: output.type,
+  };
+
+  if (output.required) {
+    params.required = "true";
+  }
+
   return formatXml({
     tag: "output",
-    params: { name: output.type },
+    params,
     content: [
       output.description
         ? { tag: "description", content: output.description }
@@ -56,10 +64,12 @@ export function formatOutputInterface(output: Output) {
       output.instructions
         ? { tag: "instructions", content: output.instructions }
         : null,
-      {
-        tag: "schema",
-        content: JSON.stringify(zodToJsonSchema(output.schema, "output")),
-      },
+      output.schema
+        ? {
+            tag: "schema",
+            content: JSON.stringify(zodToJsonSchema(output.schema, "output")),
+          }
+        : null,
     ].filter((c) => !!c),
   });
 }
@@ -73,6 +83,12 @@ export function formatAction(action: Action<any, any, any>) {
         ? {
             tag: "description",
             content: action.description,
+          }
+        : null,
+      action.instructions
+        ? {
+            tag: "instructions",
+            content: action.instructions,
           }
         : null,
       action.schema

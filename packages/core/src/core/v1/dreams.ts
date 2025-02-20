@@ -21,7 +21,6 @@ import {
 import { Logger } from "./logger";
 import { formatContext } from "./formatters";
 import { generateObject, generateText, type LanguageModelV1 } from "ai";
-import { randomUUID } from "crypto";
 import createContainer from "./container";
 import { createServiceManager } from "./serviceProvider";
 import { type InferContextMemory } from "./types";
@@ -35,6 +34,7 @@ import { createPrompt } from "./prompt";
 
 import { createMemory } from "./memory";
 import { createVectorStore } from "./memory/base";
+import { v7 as randomUUIDv7 } from "uuid";
 
 const taskRunner = new TaskRunner(3);
 
@@ -132,6 +132,16 @@ export function createDreams<
     );
   }
 
+  async function saveContextWorkingMemory(
+    contextId: string,
+    workingMemory: WorkingMemory
+  ) {
+    return await agent.memory.store.set(
+      ["working-memory", contextId].join(":"),
+      workingMemory
+    );
+  }
+
   const agent: Agent<Memory, TContext> = {
     inputs,
     outputs,
@@ -200,12 +210,12 @@ export function createDreams<
 
     async stop() {},
 
-    run: async (context, args) => {
+    run: async (context, args, runOutputs) => {
       if (!booted) throw new Error("Not booted");
 
       const ctxState = await getContextState(context, args);
 
-      if (contextsRunning.has(ctxState.id)) return;
+      if (contextsRunning.has(ctxState.id)) return [];
       contextsRunning.add(ctxState.id);
 
       const workingMemory = await getContextWorkingMemory(ctxState.id);
@@ -224,6 +234,15 @@ export function createDreams<
           type,
           ...output,
         }));
+
+      if (runOutputs) {
+        for (const [key, output] of Object.entries(runOutputs)) {
+          contextOuputs.push({
+            type: key,
+            ...output,
+          });
+        }
+      }
 
       const maxSteps = 5;
       let step = 1;
@@ -265,41 +284,23 @@ export function createDreams<
       let hasError = false;
 
       while (maxSteps > step) {
-        const data =
-          step > 1
-            ? await taskRunner.enqueueTask(
-                runGenerateResults,
-                {
-                  agent,
-                  model: config.reasoningModel ?? config.model,
-                  contexts: [agentCtxState, ctxState].filter((t) => !!t),
-                  contextId: ctxState.id,
-                  actions: contextActions,
-                  outputs: contextOuputs,
-                  workingMemory,
-                  logger,
-                  chain,
-                },
-                {
-                  debug: agent.debugger,
-                }
-              )
-            : await taskRunner.enqueueTask(
-                runGenerate,
-                {
-                  agent,
-                  model: config.reasoningModel ?? config.model,
-                  contexts: [agentCtxState, ctxState].filter((t) => !!t),
-                  contextId: ctxState.id,
-                  actions: contextActions,
-                  outputs: contextOuputs,
-                  workingMemory,
-                  logger,
-                },
-                {
-                  debug: agent.debugger,
-                }
-              );
+        const data = await taskRunner.enqueueTask(
+          step > 1 ? runGenerateResults : runGenerate,
+          {
+            agent,
+            model: config.reasoningModel ?? config.model,
+            contexts: [agentCtxState, ctxState].filter((t) => !!t),
+            contextId: ctxState.id,
+            actions: contextActions,
+            outputs: contextOuputs,
+            workingMemory,
+            logger,
+            chain,
+          },
+          {
+            debug: agent.debugger,
+          }
+        );
 
         logger.debug("agent:parsed", "data", data);
 
@@ -341,6 +342,7 @@ export function createDreams<
               name,
               data,
             });
+
             return Promise.reject(new Error("ACTION MISMATCH"));
           }
 
@@ -371,7 +373,7 @@ export function createDreams<
           try {
             const call: ActionCall = {
               ref: "action_call",
-              id: randomUUID(),
+              id: randomUUIDv7(),
               data: action.schema.parse(data),
               name: name,
               timestamp: Date.now(),
@@ -435,7 +437,12 @@ export function createDreams<
         });
 
         for (const { type, content } of data.outputs) {
-          const output = outputs[type];
+          const output = contextOuputs.find((output) => output.type === type);
+
+          if (!output) {
+            console.log({ outputFailed: output });
+            continue;
+          }
 
           logger.info("agent:output", type, content);
           try {
@@ -517,6 +524,12 @@ export function createDreams<
         await agent.memory.store.set(ctxState.id, memory);
         await agent.memory.vector.upsert(ctxState.id, [memory]);
 
+        if (agentCtxState) {
+          await agent.memory.store.set(agentCtxState.id, agentCtxState.memory);
+        }
+
+        await saveContextWorkingMemory(ctxState.id, workingMemory);
+
         step++;
 
         if (hasError) continue;
@@ -531,13 +544,23 @@ export function createDreams<
         i.processed = true;
       });
 
-      await agent.memory.store.set(ctxState.id, workingMemory);
+      await agent.memory.store.set(ctxState.id, memory);
+
+      await saveContextWorkingMemory(ctxState.id, workingMemory);
 
       contextsRunning.delete(ctxState.id);
+
+      return chain;
     },
 
-    send: async (contextHandler, args, params: { type: string; data: any }) => {
-      if (params.type in agent.inputs === false) return;
+    send: async (
+      contextHandler,
+      args,
+      params: { type: string; data: any },
+      outputs
+    ) => {
+      if (params.type in agent.inputs === false)
+        throw new Error("invalid input");
 
       const {
         key,
@@ -590,7 +613,7 @@ export function createDreams<
         workingMemory
       );
 
-      await agent.run(contextHandler, args);
+      return await agent.run(contextHandler, args, outputs);
     },
 
     evaluator: async (ctx) => {
@@ -657,14 +680,18 @@ export const runGenerate = task(
 
     const result = await generateText({
       model,
-      system,
       messages: [
+        {
+          role: "user",
+          content: system,
+        },
         {
           role: "assistant",
           content: "<think>",
         },
       ],
       stopSequences: ["</response>"],
+      temperature: 0.6,
     });
 
     const text = "<think>" + result.text + "</response>";
@@ -749,6 +776,7 @@ export const runGenerateResults = task(
         },
       ],
       stopSequences: ["</response>"],
+      temperature: 0.6,
     });
 
     const text = "<think>" + result.text + "</response>";
