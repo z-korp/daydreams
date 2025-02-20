@@ -1,14 +1,17 @@
 import zodToJsonSchema from "zod-to-json-schema";
 import type {
   Action,
+  ContextState,
   InputRef,
   Log,
   Output,
   OutputRef,
+  WorkingMemory,
   XMLElement,
 } from "./types";
 import { formatXml } from "./xml";
 import { formatValue } from "./utils";
+import { defaultContextRender } from "./context";
 
 /**
  * Formats an input reference into XML format
@@ -207,4 +210,62 @@ export function formatContextLog(i: Log) {
     default:
       throw new Error("invalid context");
   }
+}
+
+export function formatContexts(
+  mainContextId: string,
+  contexts: ContextState[],
+  workingMemory: WorkingMemory
+) {
+  return contexts
+    .map(({ id, context, key, args, memory, options }) =>
+      formatContext({
+        type: context.type,
+        key: key,
+        description:
+          typeof context.description === "function"
+            ? context.description({
+                key,
+                args,
+                options,
+                id,
+                context,
+                memory,
+              })
+            : context.description,
+        instructions:
+          typeof context.instructions === "function"
+            ? context.instructions({
+                key,
+                args,
+                options,
+                id,
+                context,
+                memory,
+              })
+            : context.instructions,
+        content: [
+          context.render
+            ? context.render({ id, context, key, args, memory, options })
+            : "",
+          mainContextId === id
+            ? defaultContextRender({
+                memory: {
+                  ...workingMemory,
+                  inputs: workingMemory.inputs.filter(
+                    (i) => i.processed === true
+                  ),
+                  results: workingMemory.results.filter(
+                    (i) => i.processed === true
+                  ),
+                },
+              })
+            : "",
+        ]
+          .flat()
+          .filter((t) => !!t),
+      })
+    )
+    .flat()
+    .join("\n");
 }

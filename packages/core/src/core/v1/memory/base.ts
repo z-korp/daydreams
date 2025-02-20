@@ -57,7 +57,7 @@ export function createMemoryStore(): MemoryStore {
      * @returns The stored value or null if not found
      */
     async get(key: string) {
-      return data.get(key);
+      return data.get(key) ?? null;
     },
 
     /**
