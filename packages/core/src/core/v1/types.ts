@@ -120,6 +120,12 @@ export interface WorkingMemory {
   // chains: Chain[];
 }
 
+export type InferSchema<T> = T extends {
+  schema?: infer S extends z.AnyZodObject;
+}
+  ? z.infer<S>
+  : unknown;
+
 type InferAgentMemory<TAgent extends AnyAgent> =
   TAgent extends Agent<infer Memory> ? Memory : never;
 /**
@@ -186,7 +192,7 @@ export type Action<
 
 export type OutputSchema = z.AnyZodObject | z.ZodString;
 
-export type OutputRefResponse = Omit<OutputRef, "ref" | "type">;
+export type OutputRefResponse = Omit<OutputRef, "id" | "ref" | "type">;
 
 export type OutputResponse =
   | OutputRefResponse
@@ -251,10 +257,11 @@ export type Input<
 };
 
 /** Reference to an input event in the system */
-export type InputRef = {
+export type InputRef<Data = any> = {
+  id: string;
   ref: "input";
   type: string;
-  data: any;
+  data: Data;
   params?: Record<string, string>;
   timestamp: number;
   processed?: boolean;
@@ -263,6 +270,7 @@ export type InputRef = {
 
 /** Reference to an output event in the system */
 export type OutputRef<Data = any> = {
+  id: string;
   ref: "output";
   type: string;
   data: Data;
@@ -283,6 +291,7 @@ export type ActionCall<Data = any> = {
 /** Represents the result of an action execution */
 export type ActionResult<Data = any> = {
   ref: "action_result";
+  id: string;
   callId: string;
   name: string;
   data: Data;
@@ -294,6 +303,7 @@ export type ActionResult<Data = any> = {
 /** Represents a thought or reasoning step */
 export type Thought = {
   ref: "thought";
+  id: string;
   content: string;
   timestamp: number;
 };
@@ -373,6 +383,11 @@ export interface AgentContext<
 
 export type AnyAgent = Agent<any, any>;
 
+interface Handlers {
+  onLogStream: (log: Log, done: boolean) => void;
+  onThinking: (thought: Thought) => void;
+}
+
 export interface Agent<
   Memory = any,
   TContext extends Context<any, any, any, any> = Context<any, any, any, any>,
@@ -415,20 +430,37 @@ export interface Agent<
       string,
       Omit<Output<any, AgentContext<Memory>, any, any>, "type">
     >;
+    handlers?: Partial<Handlers>;
   }) => Promise<Log[]>;
+
   send: <TContext extends AnyContext>(opts: {
     context: TContext;
-    args: z.infer<TContext["schema"]>;
+    args: z.infer<NonNullable<TContext["schema"]>>;
     input: { type: string; data: any };
     outputs?: Record<
       string,
       Omit<Output<any, AgentContext<Memory>, any, any>, "type">
     >;
+    handlers?: Partial<Handlers>;
   }) => Promise<Log[]>;
+
   evaluator: (ctx: AgentContext<Memory, TContext>) => Promise<void>;
 
   start(args?: z.infer<TContext["schema"]>): Promise<this>;
   stop(): Promise<void>;
+
+  getContexts(): Promise<{ id: string; type: string; args?: any }[]>;
+  getContextId<TContext extends AnyContext>(params: {
+    context: TContext;
+    args: z.infer<NonNullable<TContext["schema"]>>;
+  }): string;
+
+  getContext<TContext extends AnyContext>(params: {
+    context: TContext;
+    args: z.infer<NonNullable<TContext["schema"]>>;
+  }): Promise<ContextState<TContext>>;
+
+  getWorkingMemory(contextId: string): Promise<WorkingMemory>;
 }
 
 export type Debugger = (contextId: string, keys: string[], data: any) => void;

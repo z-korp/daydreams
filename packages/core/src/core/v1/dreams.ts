@@ -19,7 +19,7 @@ import {
   type WorkingMemory,
 } from "./types";
 import { Logger } from "./logger";
-import { formatContext } from "./formatters";
+import { formatContext, formatContexts } from "./formatters";
 import {
   generateObject,
   generateText,
@@ -32,18 +32,19 @@ import { createServiceManager } from "./serviceProvider";
 import { type InferContextMemory } from "./types";
 import { z } from "zod";
 import { task, TaskRunner, type TaskContext } from "./task";
-import { parse, prompt, resultsPrompt } from "./prompts/main";
+import {
+  handleStream,
+  parse,
+  prompt,
+  resultsPrompt,
+  type StackElement,
+} from "./prompts/main";
 import { defaultContextRender, defaultWorkingMemory } from "./context";
 import { createMemoryStore } from "./memory";
-
 import { createPrompt } from "./prompt";
-
 import { createMemory } from "./memory";
 import { createVectorStore } from "./memory/base";
 import { v7 as randomUUIDv7 } from "uuid";
-import { xmlStreamParser } from "./xml";
-
-const taskRunner = new TaskRunner(3);
 
 export function createDreams<
   Memory = any,
@@ -54,9 +55,11 @@ export function createDreams<
     any
   >,
 >(config: Config<Memory, TContext>): Agent<Memory, TContext> {
+  const taskRunner = new TaskRunner(3);
+
   const inputSubscriptions = new Map<string, Subscription>();
 
-  const contexts = new Map<string, { args?: any }>();
+  const contexts = new Map<string, { type: string; args?: any }>();
 
   const {
     inputs = {},
@@ -66,7 +69,6 @@ export function createDreams<
     experts = {},
     services = [],
     extensions = [],
-    memory,
     model,
     reasoningModel,
   } = config;
@@ -106,6 +108,14 @@ export function createDreams<
 
   for (const service of services) {
     serviceManager.register(service);
+  }
+
+  function getContextId<TContext extends AnyContext>(
+    context: TContext,
+    args: z.infer<TContext["schema"]>
+  ) {
+    const key = context.key ? context.key(args) : context.type;
+    return context.key ? [context.type, key].join(":") : context.type;
   }
 
   async function getContextState<TContext extends AnyContext>(
@@ -157,7 +167,8 @@ export function createDreams<
     events,
     actions,
     experts,
-    memory: memory ?? createMemory(createMemoryStore(), createVectorStore()),
+    memory:
+      config.memory ?? createMemory(createMemoryStore(), createVectorStore()),
     container,
     model,
     reasoningModel,
@@ -165,6 +176,26 @@ export function createDreams<
     context: config.context ?? undefined,
     emit: (event: string, data: any) => {
       logger.info("agent:event", event, data);
+    },
+
+    async getContexts() {
+      return Array.from(contexts.entries()).map(([id, { type, args }]) => ({
+        id,
+        type,
+        args,
+      }));
+    },
+
+    getContext(params) {
+      return getContextState(params.context, params.args);
+    },
+
+    getContextId(params) {
+      return getContextId(params.context, params.args);
+    },
+
+    getWorkingMemory(contextId) {
+      return getContextWorkingMemory(contextId);
     },
 
     async start(args) {
@@ -214,8 +245,19 @@ export function createDreams<
 
       if (agent.context) {
         const { id } = await getContextState(agent.context, args);
-        contexts.set(id, { args });
-        contexts.set("agent:context", { args });
+        contexts.set(id, { type: agent.context.type, args });
+        contexts.set("agent:context", { type: agent.context.type, args });
+      }
+
+      const savedContexts =
+        await agent.memory.store.get<[string, { type: string; args?: any }][]>(
+          "contexts"
+        );
+
+      if (savedContexts) {
+        for (const [id, { type, args }] of savedContexts) {
+          contexts.set(id, { type, args });
+        }
       }
 
       return agent;
@@ -223,17 +265,24 @@ export function createDreams<
 
     async stop() {},
 
-    run: async ({ context, args, outputs }) => {
+    run: async ({ context, args, outputs, handlers }) => {
       if (!booted) throw new Error("Not booted");
 
       const ctxState = await getContextState(context, args);
+
+      contexts.set(ctxState.id, { type: context.type, args });
+
+      await agent.memory.store.set<[string, { args?: any }][]>(
+        "contexts",
+        Array.from(contexts.entries())
+      );
 
       if (contextsRunning.has(ctxState.id)) return [];
       contextsRunning.add(ctxState.id);
 
       const workingMemory = await getContextWorkingMemory(ctxState.id);
 
-      const contextOuputs = Object.entries({
+      const contextOuputs: Output[] = Object.entries({
         ...agent.outputs,
         ...(outputs ?? {}),
       })
@@ -292,55 +341,118 @@ export function createDreams<
 
       let actionCalls: Promise<any>[] = [];
 
-      async function handleLogStream(log: Log) {
-        if (log.ref === "thought") {
+      async function handleLogStream(log: Log, done: boolean) {
+        if (log.ref === "thought" && done) {
           workingMemory.thoughts.push(log);
           logger.info("agent:think", "", log.content);
+          chain.push(log);
+          handlers?.onThinking?.(log);
         }
+
+        handlers?.onLogStream?.(log, done);
+      }
+
+      let lastIndex = 0;
+
+      const idsByIndex = new Map<number, { id: string; timestamp: number }>();
+
+      function getOrCreate(index: number) {
+        if (!idsByIndex.has(index)) {
+          idsByIndex.set(index, { id: randomUUIDv7(), timestamp: Date.now() });
+        }
+
+        return idsByIndex.get(index)!;
       }
 
       async function handler(el: StackElement) {
-        if (!el.done) return;
+        lastIndex = el.index > lastIndex ? el.index : lastIndex;
+        console.log({ index: el.index, lastIndex });
 
+        const { id, timestamp } = getOrCreate(el.index);
         if (el.tag === "think") {
-          handleLogStream({
-            ref: "thought",
-            content: el.content.join("").trim(),
-            timestamp: Date.now(),
-          });
-        }
-
-        if (el.tag === "reasoning") {
-          handleLogStream({
-            ref: "thought",
-            content: el.content.join("").trim(),
-            timestamp: Date.now(),
-          });
-        }
-
-        if (el.tag === "action_call") {
-          actionCalls.push(
-            handleActionCall({
-              name: el.attributes.name,
-              data: el.content.join(""),
-            })
+          handleLogStream(
+            {
+              id,
+              ref: "thought",
+              content: el.content.join("").trim(),
+              timestamp: timestamp,
+            },
+            el.done
           );
         }
 
+        if (el.tag === "reasoning") {
+          handleLogStream(
+            {
+              id,
+              ref: "thought",
+              content: el.content.join("").trim(),
+              timestamp,
+            },
+            el.done
+          );
+        }
+
+        if (el.tag === "action_call") {
+          if (!el.done) {
+            handleLogStream(
+              {
+                id,
+                ref: "action_call",
+                timestamp,
+                name: el.attributes.name,
+                data: el.content.join(""),
+              },
+              false
+            );
+          }
+
+          if (el.done) {
+            actionCalls.push(
+              handleActionCall({
+                id,
+                name: el.attributes.name,
+                data: el.content.join(""),
+                timestamp,
+              })
+            );
+          }
+        }
+
         if (el.tag === "output") {
-          handleOutput({
-            type: el.attributes.type,
-            content: el.content.join(""),
-          });
+          if (!el.done) {
+            handleLogStream(
+              {
+                id,
+                ref: "output",
+                timestamp,
+                type: el.attributes.type,
+                data: el.content.join(""),
+              },
+              false
+            );
+          }
+
+          if (el.done)
+            handleOutput({
+              id,
+              timestamp,
+              type: el.attributes.type,
+              content: el.content.join(""),
+            });
         }
       }
 
       async function handleActionCall({
+        id,
         name,
         data,
+        timestamp,
       }: {
+        id: string;
         name: string;
         data: any;
+        timestamp: number;
       }) {
         const action = actions.find((a) => a.name === name);
 
@@ -365,11 +477,7 @@ export function createDreams<
             model: agent.model,
             schema: action.schema,
             prompt: actionParseErrorPrompt({
-              context: renderContexts(
-                ctxState.id,
-                contexts,
-                workingMemory
-              ).join("\n"),
+              context: formatContexts(ctxState.id, contexts, workingMemory),
               error: JSON.stringify(error),
             }),
           });
@@ -382,15 +490,16 @@ export function createDreams<
         try {
           const call: ActionCall = {
             ref: "action_call",
-            id: randomUUIDv7(),
+            id,
             data: action.schema.parse(data),
             name: name,
-            timestamp: Date.now(),
+            timestamp,
           };
 
           workingMemory.calls.push(call);
-
           chain.push(call);
+
+          handleLogStream(call, true);
 
           let actionMemory: unknown = {};
 
@@ -421,6 +530,7 @@ export function createDreams<
 
           const result: ActionResult = {
             ref: "action_result",
+            id: randomUUIDv7(),
             callId: call.id,
             data: resultData,
             name: call.name,
@@ -436,6 +546,8 @@ export function createDreams<
 
           workingMemory.results.push(result);
 
+          handleLogStream(result, true);
+
           if (action.memory) {
             await agent.memory.store.set(action.memory.key, actionMemory);
           }
@@ -446,11 +558,15 @@ export function createDreams<
       }
 
       async function handleOutput({
+        id,
         type,
         content,
+        timestamp,
       }: {
+        id: string;
         type: string;
         content: string;
+        timestamp: number;
       }) {
         const output = contextOuputs.find((output) => output.type === type);
 
@@ -464,14 +580,22 @@ export function createDreams<
         try {
           let parsedContent = content;
           if (typeof content === "string") {
-            try {
-              parsedContent = JSON.parse(content);
-            } catch {
-              parsedContent = content;
+            if (output.schema._def.typeName !== "ZodString") {
+              try {
+                parsedContent = JSON.parse(content.trim());
+              } catch (error) {
+                console.log("failed parsing output content", { content });
+                throw error;
+              }
             }
           }
-
-          const data = output.schema.parse(parsedContent);
+          let data: any;
+          try {
+            data = output.schema.parse(parsedContent);
+          } catch (error) {
+            console.log("failed parsing output schema");
+            throw error;
+          }
 
           const response = await output.handler(
             data,
@@ -485,42 +609,39 @@ export function createDreams<
           if (Array.isArray(response)) {
             for (const res of response) {
               const ref: OutputRef = {
+                id: randomUUIDv7(),
                 ref: "output",
                 type,
                 ...res,
               };
 
-              chain.push({
-                ...ref,
-                data: content,
-              });
-
               ref.formatted = output.format
                 ? output.format(response)
                 : undefined;
+
+              chain.push(ref);
 
               workingMemory.outputs.push(ref);
             }
           } else if (response) {
             const ref: OutputRef = {
+              id,
               ref: "output",
               type,
               // params: { success: "true" },
               ...response,
             };
 
-            chain.push({
-              ...ref,
-              data: content,
-            });
-
             ref.formatted = output.format ? output.format(response) : undefined;
 
+            chain.push(ref);
             workingMemory.outputs.push(ref);
+            handleLogStream(ref, true);
           }
         } catch (error) {
           const ref: OutputRef = {
             ref: "output",
+            id: randomUUIDv7(),
             type,
             params: { error: "true" },
             timestamp: Date.now(),
@@ -549,6 +670,7 @@ export function createDreams<
             logger,
             chain,
             handler,
+            index: lastIndex + 1,
           },
           {
             debug: agent.debugger,
@@ -563,8 +685,8 @@ export function createDreams<
 
         actionCalls.length = 0;
 
-        await agent.memory.store.set(ctxState.id, memory);
-        await agent.memory.vector.upsert(ctxState.id, [memory]);
+        await agent.memory.store.set(ctxState.id, ctxState.memory);
+        // await agent.memory.vector.upsert(ctxState.id, []);
 
         if (agentCtxState) {
           await agent.memory.store.set(agentCtxState.id, agentCtxState.memory);
@@ -586,7 +708,7 @@ export function createDreams<
         i.processed = true;
       });
 
-      await agent.memory.store.set(ctxState.id, memory);
+      await agent.memory.store.set(ctxState.id, ctxState.memory);
 
       await saveContextWorkingMemory(ctxState.id, workingMemory);
 
@@ -603,6 +725,7 @@ export function createDreams<
         key,
         id: contextId,
         options,
+        memory,
       } = await getContextState(
         params.context,
         params.context.schema.parse(params.args)
@@ -627,6 +750,7 @@ export function createDreams<
         );
       } else {
         workingMemory.inputs.push({
+          id: randomUUIDv7(),
           ref: "input",
           type: params.context.type,
           data,
@@ -663,76 +787,6 @@ export function createDreams<
 
   return agent;
 }
-type AsyncIterableStream<T> = AsyncIterable<T> & ReadableStream<T>;
-
-type StackElement = {
-  index: number;
-  tag: string;
-  attributes: Record<string, any>;
-  content: string[];
-  done: boolean;
-};
-
-async function parseStreamOutput(
-  textStream: AsyncIterableStream<string>,
-  fn: (el: StackElement) => Promise<void>
-) {
-  const parser = xmlStreamParser(
-    new Set(["think", "response", "output", "action_call", "reasoning"])
-  );
-
-  parser.next();
-
-  let current: StackElement | undefined = undefined;
-  let stack: StackElement[] = [];
-
-  let res = "";
-
-  let index = 0;
-
-  async function handleChunk(chunk: string) {
-    let result = parser.next(chunk);
-    while (!result.done && result.value) {
-      if (result.value.type === "start") {
-        if (current) stack.push(current);
-        current = {
-          index: index++,
-          tag: result.value.name,
-          attributes: result.value.attributes,
-          content: [],
-          done: false,
-        };
-        await fn(current);
-      }
-
-      if (result.value.type === "end") {
-        if (current)
-          await fn({
-            ...current,
-            done: true,
-          });
-        current = stack.pop();
-      }
-
-      if (result.value.type === "text") {
-        if (current) {
-          current.content.push(result.value.content);
-          await fn(current);
-        }
-      }
-      // console.log(result.value);
-      result = parser.next();
-    }
-  }
-
-  await handleChunk("<think>");
-  for await (const chunk of textStream) {
-    await handleChunk(chunk);
-  }
-  await handleChunk("</response>");
-
-  parser.return?.();
-}
 
 export const runGenerate = task(
   "agent:run:generate",
@@ -746,6 +800,7 @@ export const runGenerate = task(
       model,
       contextId,
       handler,
+      index,
     }: {
       agent: AnyAgent;
       contexts: ContextState<AnyContext>[];
@@ -756,6 +811,7 @@ export const runGenerate = task(
       logger: Logger;
       model: LanguageModelV1;
       handler: (el: StackElement) => Promise<void>;
+      index: number;
     },
     { callId, debug }: TaskContext
   ) => {
@@ -768,7 +824,7 @@ export const runGenerate = task(
     const mainContext = contexts.find((ctx) => ctx.id === contextId)!;
 
     const system = prompt({
-      context: renderContexts(contextId, contexts, workingMemory).flat(),
+      context: formatContexts(contextId, contexts, workingMemory),
       outputs,
       actions,
       updates: formatContext({
@@ -806,7 +862,9 @@ export const runGenerate = task(
       }),
     });
 
-    await parseStreamOutput(stream.textStream, handler);
+    handleStream(stream.textStream, index, handler).catch((err) => {
+      console.error(err);
+    });
 
     const result = await stream.text;
     const text = "<think>" + result + "</response>";
@@ -832,6 +890,7 @@ export const runGenerateResults = task(
       contextId,
       chain,
       handler,
+      index,
     }: {
       agent: AnyAgent;
       contexts: ContextState<AnyContext>[];
@@ -843,6 +902,7 @@ export const runGenerateResults = task(
       model: LanguageModelV1;
       chain: Log[];
       handler: (el: StackElement) => Promise<void>;
+      index: number;
     },
     { callId, debug }: TaskContext
   ) => {
@@ -855,7 +915,7 @@ export const runGenerateResults = task(
     const mainContext = contexts.find((ctx) => ctx.id === contextId)!;
 
     const system = resultsPrompt({
-      context: renderContexts(contextId, contexts, workingMemory),
+      context: formatContexts(contextId, contexts, workingMemory),
       outputs,
       actions,
       updates: formatContext({
@@ -903,7 +963,7 @@ export const runGenerateResults = task(
       }),
     });
 
-    await parseStreamOutput(stream.textStream, handler);
+    handleStream(stream.textStream, index, handler);
 
     const result = await stream.text;
     const text = "<think>" + result + "</response>";
@@ -966,58 +1026,3 @@ Here is the error:
     error,
   })
 );
-
-function renderContexts(
-  mainContextId: string,
-  contexts: ContextState[],
-  workingMemory: WorkingMemory
-) {
-  return contexts.map(({ id, context, key, args, memory, options }) =>
-    formatContext({
-      type: context.type,
-      key: key,
-      description:
-        typeof context.description === "function"
-          ? context.description({
-              key,
-              args,
-              options,
-              id,
-              context,
-              memory,
-            })
-          : context.description,
-      instructions:
-        typeof context.instructions === "function"
-          ? context.instructions({
-              key,
-              args,
-              options,
-              id,
-              context,
-              memory,
-            })
-          : context.instructions,
-      content: [
-        context.render
-          ? context.render({ id, context, key, args, memory, options })
-          : "",
-        mainContextId === id
-          ? defaultContextRender({
-              memory: {
-                ...workingMemory,
-                inputs: workingMemory.inputs.filter(
-                  (i) => i.processed === true
-                ),
-                results: workingMemory.results.filter(
-                  (i) => i.processed === true
-                ),
-              },
-            })
-          : "",
-      ]
-        .flat()
-        .filter((t) => !!t),
-    })
-  );
-}
