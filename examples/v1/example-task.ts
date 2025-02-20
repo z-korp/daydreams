@@ -5,12 +5,13 @@
 import { createGroq } from "@ai-sdk/groq";
 import {
   createDreams,
-  cli,
   context,
   render,
   action,
   LogLevel,
+  type InferContextMemory,
 } from "@daydreamsai/core/v1";
+import { cli } from "@daydreamsai/core/extensions";
 import { deepResearch } from "./deep-research/research";
 import { string, z } from "zod";
 
@@ -36,6 +37,7 @@ const groq = createGroq({
 });
 
 const template = `
+
 Goal: {{goal}} 
 Tasks: {{tasks}}
 Current Task: {{currentTask}}
@@ -72,7 +74,6 @@ const goalContexts = context({
   type: "goal-manager",
   schema: z.object({
     id: string(),
-    goalPlanningSchema,
   }),
 
   key({ id }) {
@@ -81,62 +82,69 @@ const goalContexts = context({
 
   create(state) {
     console.log({ state });
+
     return {
-      goal: state.args.goalPlanningSchema,
-      tasks: state.args?.goalPlanningSchema?.long_term?.map(
-        (goal) => goal.description
-      ),
-      currentTask: state.args?.goalPlanningSchema?.long_term?.[0]?.description,
+      goal: null as null | Goal,
+      tasks: [],
+      currentTask: null,
     };
   },
 
   render({ memory }) {
     return render(template, {
-      goal: memory.goal,
+      goal: memory.goal ?? "NONE",
       tasks: memory?.tasks?.join("\n"),
       currentTask: memory?.currentTask ?? "NONE",
     });
   },
 });
 
+type GoalContextMemory = InferContextMemory<typeof goalContexts>;
+
 // Create Dreams agent instance
 const agent = createDreams({
-  logger: LogLevel.DEBUG,
+  logger: LogLevel.ERROR,
+  debugger: async (contextId, keys, data) => {
+    const [type, id] = keys;
+    await Bun.write(`./logs/tasks/${contextId}/${id}-${type}.md`, data);
+  },
   model: groq("deepseek-r1-distill-llama-70b"),
   extensions: [cli, deepResearch],
   context: goalContexts,
   actions: [
+    // action({
+    //   name: "addTask",
+    //   description: "Add a task to the goal",
+    //   schema: z.object({ task: z.string() }),
+    //   // enabled: ({ context }) => context.type === goalContexts.type,
+    //   handler(call, ctx, agent) {
+    //     if
+    //     const agentMemory = ctx.agentMemory.goal as Goal;
+    //     console.log(agentMemory);
+    //     agentMemory.long_term.push({
+    //       id: "1",
+    //       description: call.data.task,
+    //       success_criteria: [],
+    //       dependencies: [],
+    //       priority: 1,
+    //       required_resources: [],
+    //       estimated_difficulty: 1,
+    //     });
+
+    //     return {};
+    //   },
+    // }),
     action({
-      name: "addTask",
-      description: "Add a task to the goal",
-      schema: z.object({ task: z.string() }),
-      // enabled: ({ context }) => context.type === goalContexts.type,
-      handler(call, ctx, agent) {
-        const agentMemory = ctx.agentMemory as Goal;
-        console.log(agentMemory);
-        agentMemory.long_term.push({
-          id: "1",
-          description: call.data.task,
-          success_criteria: [],
-          dependencies: [],
-          priority: 1,
-          required_resources: [],
-          estimated_difficulty: 1,
-        });
-        return {};
-      },
-    }),
-    action({
-      name: "createGoalPlan",
-      description: "Create goal plan",
+      name: "setGoalPlan",
+      description: "Set goal plan",
       schema: z.object({ goal: goalPlanningSchema }),
       handler(call, ctx, agent) {
-        const agentMemory = ctx.agentMemory.goal as Goal;
-
-        // agentMemory.long_term.push(...call.data.goal.long_term);
-        // agentMemory.medium_term.push(...call.data.goal.medium_term);
-        // agentMemory.short_term.push(...call.data.goal.short_term);
-        return {};
+        const agentMemory = ctx.agentMemory as GoalContextMemory;
+        console.log({ agentMemory });
+        agentMemory.goal = call.data.goal;
+        return {
+          newGoal: call.data.goal,
+        };
       },
     }),
     action({
@@ -149,26 +157,34 @@ const agent = createDreams({
         const goal = agentMemory.long_term.find(
           (goal) => goal.id === call.data.goal.id
         );
+
         if (!goal) {
           return { error: "Goal not found" };
         }
+
         goal.description = call.data.goal.description;
         goal.success_criteria = call.data.goal.success_criteria;
         goal.dependencies = call.data.goal.dependencies;
         goal.priority = call.data.goal.priority;
         goal.required_resources = call.data.goal.required_resources;
         goal.estimated_difficulty = call.data.goal.estimated_difficulty;
-        return {};
+
+        return {
+          goal,
+        };
       },
+
       evaluator: {
         name: "validateFetchData",
+        prompt: "Ensure the goal is achievable",
         description: "Ensures fetched data meets requirements",
+
         handler: async (result, ctx, agent) => {
           console.log({ result, ctx, agent });
           const isValid = true;
           return isValid;
         },
-        prompt: "Ensure the goal is achievable",
+
         onFailure: async (ctx, agent) => {
           console.log({ ctx, agent });
         },
@@ -177,9 +193,4 @@ const agent = createDreams({
   ],
 }).start({
   id: "game",
-  goalPlanningSchema: {
-    long_term: [],
-    medium_term: [],
-    short_term: [],
-  },
 });

@@ -1,5 +1,5 @@
+import { v7 as randomUUIDv7 } from "uuid";
 import type { Debugger } from "./types";
-import { randomUUID } from "crypto";
 
 /**
  * Options for configuring a task.
@@ -9,6 +9,7 @@ export type TaskOptions = {
   retry?: number;
   debug?: Debugger;
   priority?: number;
+  callId?: string;
 };
 
 /**
@@ -109,7 +110,7 @@ export class TaskRunner {
   enqueue<T>(taskFn: () => Promise<T>, priority: number = 0): Promise<T> {
     return new Promise((resolve, reject) => {
       const queuedTask: QueuedTask = {
-        id: randomUUID(),
+        id: randomUUIDv7(),
         execute: taskFn,
         priority,
         resolve,
@@ -162,15 +163,17 @@ export class TaskRunner {
 export function task<Params, Result>(
   key: string,
   fn: (params: Params, ctx: TaskContext) => Promise<Result>,
-  defaultOptions?: TaskOptions
+  defaultOptions?: Omit<TaskOptions, "callId">
 ): (params: Params, options?: TaskOptions) => Promise<Result> {
   async function execute(params: Params, options?: TaskOptions) {
-    const callId = randomUUID();
+    const callId = options?.callId ?? randomUUIDv7();
 
     const mergedOptions = {
       ...defaultOptions,
       ...options,
     };
+
+    delete mergedOptions.callId;
 
     try {
       const res = await Promise.resolve(
