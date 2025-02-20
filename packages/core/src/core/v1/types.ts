@@ -408,23 +408,23 @@ export interface Agent<
 
   //
   emit: (...args: any[]) => void;
-  run: <TContext extends Context<any, any, any, any>>(
-    context: TContext,
-    args: z.infer<TContext["schema"]>,
+  run: <TContext extends Context<any, any, any, any>>(opts: {
+    context: TContext;
+    args: z.infer<TContext["schema"]>;
     outputs?: Record<
       string,
       Omit<Output<any, AgentContext<Memory>, any, any>, "type">
-    >
-  ) => Promise<Log[]>;
-  send: <TContext extends AnyContext>(
-    context: TContext,
-    args: z.infer<TContext["schema"]>,
-    input: { type: string; data: any },
+    >;
+  }) => Promise<Log[]>;
+  send: <TContext extends AnyContext>(opts: {
+    context: TContext;
+    args: z.infer<TContext["schema"]>;
+    input: { type: string; data: any };
     outputs?: Record<
       string,
       Omit<Output<any, AgentContext<Memory>, any, any>, "type">
-    >
-  ) => Promise<Log[]>;
+    >;
+  }) => Promise<Log[]>;
   evaluator: (ctx: AgentContext<Memory, TContext>) => Promise<void>;
 
   start(args?: z.infer<TContext["schema"]>): Promise<this>;
@@ -594,6 +594,8 @@ export interface Context<
 
   /** Optional function to render memory state as string(s) */
   render?: (state: ContextState<this>) => string | string[];
+
+  use?: [];
 }
 
 export type ContextState<TContext extends AnyContext = AnyContext> = {

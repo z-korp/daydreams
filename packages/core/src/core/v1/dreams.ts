@@ -20,7 +20,13 @@ import {
 } from "./types";
 import { Logger } from "./logger";
 import { formatContext } from "./formatters";
-import { generateObject, generateText, type LanguageModelV1 } from "ai";
+import {
+  generateObject,
+  generateText,
+  smoothStream,
+  streamText,
+  type LanguageModelV1,
+} from "ai";
 import createContainer from "./container";
 import { createServiceManager } from "./serviceProvider";
 import { type InferContextMemory } from "./types";
@@ -35,6 +41,7 @@ import { createPrompt } from "./prompt";
 import { createMemory } from "./memory";
 import { createVectorStore } from "./memory/base";
 import { v7 as randomUUIDv7 } from "uuid";
+import { xmlStreamParser } from "./xml";
 
 const taskRunner = new TaskRunner(3);
 
@@ -48,12 +55,6 @@ export function createDreams<
   >,
 >(config: Config<Memory, TContext>): Agent<Memory, TContext> {
   const inputSubscriptions = new Map<string, Subscription>();
-
-  const logger = new Logger({
-    level: config.logger ?? LogLevel.INFO,
-    enableTimestamp: true,
-    enableColors: true,
-  });
 
   const contexts = new Map<string, { args?: any }>();
 
@@ -71,6 +72,14 @@ export function createDreams<
   } = config;
 
   const container = config.container ?? createContainer();
+
+  const logger = new Logger({
+    level: config.logger ?? LogLevel.INFO,
+    enableTimestamp: true,
+    enableColors: true,
+  });
+
+  container.instance("logger", logger);
 
   const contextsRunning = new Set<string>();
 
@@ -103,23 +112,23 @@ export function createDreams<
     context: TContext,
     args: z.infer<TContext["schema"]>
   ): Promise<ContextState<TContext>> {
-    const key = context.key(args);
-    const contextId = [context.type, key].join(":");
+    const key = context.key ? context.key(args) : context.type;
+    const id = context.key ? [context.type, key].join(":") : context.type;
 
     const options = context.setup ? await context.setup(args, agent) : {};
 
     const memory =
-      (await agent.memory.store.get(contextId)) ??
+      (await agent.memory.store.get(id)) ??
       (context.create
-        ? context.create({ key, args, context, id: contextId, options })
+        ? context.create({ key, args, context, id: id, options })
         : {});
 
     return {
-      id: contextId,
+      id,
       key,
-      context,
       args,
       options,
+      context,
       memory,
     };
   }
@@ -170,14 +179,18 @@ export function createDreams<
         if (extension.install) await extension.install(agent);
       }
 
-      for (const [key, input] of Object.entries(agent.inputs)) {
+      for (const [type, input] of Object.entries(agent.inputs)) {
         if (input.install) await Promise.resolve(input.install(agent));
 
         if (input.subscribe) {
           let subscription = input.subscribe((contextHandler, args, data) => {
             logger.info("agent", "input", { contextHandler, args, data });
             agent
-              .send(contextHandler, args, { type: key, data })
+              .send({
+                context: contextHandler,
+                input: { type, data },
+                args,
+              })
               .catch((err) => {
                 logger.error("agent:input", "error", err);
               });
@@ -187,7 +200,7 @@ export function createDreams<
             subscription = await Promise.resolve(subscription);
           }
 
-          if (subscription) inputSubscriptions.set(key, subscription);
+          if (subscription) inputSubscriptions.set(type, subscription);
         }
       }
 
@@ -210,7 +223,7 @@ export function createDreams<
 
     async stop() {},
 
-    run: async (context, args, runOutputs) => {
+    run: async ({ context, args, outputs }) => {
       if (!booted) throw new Error("Not booted");
 
       const ctxState = await getContextState(context, args);
@@ -220,7 +233,10 @@ export function createDreams<
 
       const workingMemory = await getContextWorkingMemory(ctxState.id);
 
-      const contextOuputs = Object.entries(agent.outputs)
+      const contextOuputs = Object.entries({
+        ...agent.outputs,
+        ...(outputs ?? {}),
+      })
         .filter(([_, output]) =>
           output.enabled
             ? output.enabled({
@@ -234,15 +250,6 @@ export function createDreams<
           type,
           ...output,
         }));
-
-      if (runOutputs) {
-        for (const [key, output] of Object.entries(runOutputs)) {
-          contextOuputs.push({
-            type: key,
-            ...output,
-          });
-        }
-      }
 
       const maxSteps = 5;
       let step = 1;
@@ -283,213 +290,204 @@ export function createDreams<
 
       let hasError = false;
 
-      while (maxSteps > step) {
-        const data = await taskRunner.enqueueTask(
-          step > 1 ? runGenerateResults : runGenerate,
-          {
-            agent,
-            model: config.reasoningModel ?? config.model,
-            contexts: [agentCtxState, ctxState].filter((t) => !!t),
-            contextId: ctxState.id,
-            actions: contextActions,
-            outputs: contextOuputs,
-            workingMemory,
-            logger,
-            chain,
-          },
-          {
-            debug: agent.debugger,
-          }
-        );
+      let actionCalls: Promise<any>[] = [];
 
-        logger.debug("agent:parsed", "data", data);
+      async function handleLogStream(log: Log) {
+        if (log.ref === "thought") {
+          workingMemory.thoughts.push(log);
+          logger.info("agent:think", "", log.content);
+        }
+      }
 
-        hasError = false;
+      async function handler(el: StackElement) {
+        if (!el.done) return;
 
-        workingMemory.results.forEach((i) => {
-          i.processed = true;
-        });
-
-        for (const content of data.think) {
-          const thought: Thought = {
+        if (el.tag === "think") {
+          handleLogStream({
             ref: "thought",
-            content,
+            content: el.content.join("").trim(),
+            timestamp: Date.now(),
+          });
+        }
+
+        if (el.tag === "reasoning") {
+          handleLogStream({
+            ref: "thought",
+            content: el.content.join("").trim(),
+            timestamp: Date.now(),
+          });
+        }
+
+        if (el.tag === "action_call") {
+          actionCalls.push(
+            handleActionCall({
+              name: el.attributes.name,
+              data: el.content.join(""),
+            })
+          );
+        }
+
+        if (el.tag === "output") {
+          handleOutput({
+            type: el.attributes.type,
+            content: el.content.join(""),
+          });
+        }
+      }
+
+      async function handleActionCall({
+        name,
+        data,
+      }: {
+        name: string;
+        data: any;
+      }) {
+        const action = actions.find((a) => a.name === name);
+
+        if (!action) {
+          logger.error("agent:action", "ACTION_MISMATCH", {
+            name,
+            data,
+          });
+
+          return Promise.reject(new Error("ACTION MISMATCH"));
+        }
+
+        try {
+          data = JSON.parse(data);
+        } catch (error) {
+          const contexts: ContextState<AnyContext>[] = [
+            agentCtxState,
+            ctxState,
+          ].filter((t) => !!t);
+
+          const response = await generateObject({
+            model: agent.model,
+            schema: action.schema,
+            prompt: actionParseErrorPrompt({
+              context: renderContexts(
+                ctxState.id,
+                contexts,
+                workingMemory
+              ).join("\n"),
+              error: JSON.stringify(error),
+            }),
+          });
+
+          if (response.object) {
+            data = response.object;
+          }
+        }
+
+        try {
+          const call: ActionCall = {
+            ref: "action_call",
+            id: randomUUIDv7(),
+            data: action.schema.parse(data),
+            name: name,
             timestamp: Date.now(),
           };
 
-          chain.push(thought);
-          workingMemory.thoughts.push(thought);
-          logger.debug("agent:think", "", thought);
-        }
+          workingMemory.calls.push(call);
 
-        for (const content of data.reasonings) {
-          const thought: Thought = {
-            ref: "thought",
-            content,
-            timestamp: Date.now(),
-          };
+          chain.push(call);
 
-          chain.push(thought);
-          workingMemory.thoughts.push(thought);
-          logger.debug("agent:think", "", thought);
-        }
+          let actionMemory: unknown = {};
 
-        const actionCalls = data.calls.map(async ({ name, data, error }) => {
-          const action = actions.find((a) => a.name === name);
-
-          if (!action) {
-            logger.error("agent:action", "ACTION_MISMATCH", {
-              name,
-              data,
-            });
-
-            return Promise.reject(new Error("ACTION MISMATCH"));
+          if (action.memory) {
+            actionMemory =
+              (await agent.memory.store.get(action.memory.key)) ??
+              action.memory.create();
           }
 
-          if (error) {
-            const contexts: ContextState<AnyContext>[] = [
-              agentCtxState,
-              ctxState,
-            ].filter((t) => !!t);
-
-            const response = await generateObject({
-              model: agent.model,
-              schema: action.schema,
-              prompt: actionParseErrorPrompt({
-                context: renderContexts(
-                  ctxState.id,
-                  contexts,
-                  workingMemory
-                ).join("\n"),
-                error: JSON.stringify(error),
-              }),
-            });
-
-            if (response.object) {
-              data = response.object;
-            }
-          }
-
-          try {
-            const call: ActionCall = {
-              ref: "action_call",
-              id: randomUUIDv7(),
-              data: action.schema.parse(data),
-              name: name,
-              timestamp: Date.now(),
-            };
-
-            workingMemory.calls.push(call);
-
-            chain.push(call);
-
-            let actionMemory: unknown = {};
-
-            if (action.memory) {
-              actionMemory =
-                (await agent.memory.store.get(action.memory.key)) ??
-                action.memory.create();
-            }
-
-            const resultData = await taskRunner.enqueueTask(
-              runAction,
-              {
-                action,
-                call,
-                agent,
-                logger,
-                context: {
-                  ...ctxState,
-                  actionMemory,
-                  workingMemory,
-                  agentMemory: agentCtxState?.memory,
-                },
-              },
-              {
-                debug: agent.debugger,
-              }
-            );
-
-            const result: ActionResult = {
-              ref: "action_result",
-              callId: call.id,
-              data: resultData,
-              name: call.name,
-              timestamp: Date.now(),
-              processed: false,
-            };
-
-            chain.push({
-              ...result,
-            });
-
-            if (action.format) result.formatted = action.format(result);
-
-            workingMemory.results.push(result);
-
-            if (action.memory) {
-              await agent.memory.store.set(action.memory.key, actionMemory);
-            }
-          } catch (error) {
-            logger.error("agent:action", "ACTION_FAILED", { error });
-            throw error;
-          }
-        });
-
-        for (const { type, content } of data.outputs) {
-          const output = contextOuputs.find((output) => output.type === type);
-
-          if (!output) {
-            console.log({ outputFailed: output });
-            continue;
-          }
-
-          logger.info("agent:output", type, content);
-          try {
-            let parsedContent = content;
-            if (typeof content === "string") {
-              try {
-                parsedContent = JSON.parse(content);
-              } catch {
-                parsedContent = content;
-              }
-            }
-
-            const data = output.schema.parse(parsedContent);
-
-            const response = await output.handler(
-              data,
-              {
+          const resultData = await taskRunner.enqueueTask(
+            runAction,
+            {
+              action,
+              call,
+              agent,
+              logger,
+              context: {
                 ...ctxState,
+                actionMemory,
                 workingMemory,
+                agentMemory: agentCtxState?.memory,
               },
-              agent
-            );
+            },
+            {
+              debug: agent.debugger,
+            }
+          );
 
-            if (Array.isArray(response)) {
-              for (const res of response) {
-                const ref: OutputRef = {
-                  ref: "output",
-                  type,
-                  ...res,
-                };
+          const result: ActionResult = {
+            ref: "action_result",
+            callId: call.id,
+            data: resultData,
+            name: call.name,
+            timestamp: Date.now(),
+            processed: false,
+          };
 
-                chain.push({
-                  ...ref,
-                  data: content,
-                });
+          chain.push({
+            ...result,
+          });
 
-                ref.formatted = output.format
-                  ? output.format(response)
-                  : undefined;
+          if (action.format) result.formatted = action.format(result);
 
-                workingMemory.outputs.push(ref);
-              }
-            } else if (response) {
+          workingMemory.results.push(result);
+
+          if (action.memory) {
+            await agent.memory.store.set(action.memory.key, actionMemory);
+          }
+        } catch (error) {
+          logger.error("agent:action", "ACTION_FAILED", { error });
+          throw error;
+        }
+      }
+
+      async function handleOutput({
+        type,
+        content,
+      }: {
+        type: string;
+        content: string;
+      }) {
+        const output = contextOuputs.find((output) => output.type === type);
+
+        if (!output) {
+          console.log({ outputFailed: output });
+          return;
+        }
+
+        logger.info("agent:output", type, content);
+
+        try {
+          let parsedContent = content;
+          if (typeof content === "string") {
+            try {
+              parsedContent = JSON.parse(content);
+            } catch {
+              parsedContent = content;
+            }
+          }
+
+          const data = output.schema.parse(parsedContent);
+
+          const response = await output.handler(
+            data,
+            {
+              ...ctxState,
+              workingMemory,
+            },
+            agent
+          );
+
+          if (Array.isArray(response)) {
+            for (const res of response) {
               const ref: OutputRef = {
                 ref: "output",
                 type,
-                ...response,
+                ...res,
               };
 
               chain.push({
@@ -503,23 +501,67 @@ export function createDreams<
 
               workingMemory.outputs.push(ref);
             }
-          } catch (error) {
+          } else if (response) {
             const ref: OutputRef = {
               ref: "output",
               type,
-              timestamp: Date.now(),
-              data: JSON.stringify({ content, error }),
+              // params: { success: "true" },
+              ...response,
             };
 
-            hasError = true;
+            chain.push({
+              ...ref,
+              data: content,
+            });
 
-            chain.push(ref);
+            ref.formatted = output.format ? output.format(response) : undefined;
 
-            logger.error("agent:output", type, error);
+            workingMemory.outputs.push(ref);
           }
+        } catch (error) {
+          const ref: OutputRef = {
+            ref: "output",
+            type,
+            params: { error: "true" },
+            timestamp: Date.now(),
+            data: { content, error },
+          };
+
+          hasError = true;
+
+          chain.push(ref);
+
+          logger.error("agent:output", type, error);
         }
+      }
+
+      while (maxSteps > step) {
+        const data = await taskRunner.enqueueTask(
+          step > 1 ? runGenerateResults : runGenerate,
+          {
+            agent,
+            model: config.reasoningModel ?? config.model,
+            contexts: [agentCtxState, ctxState].filter((t) => !!t),
+            contextId: ctxState.id,
+            actions: contextActions,
+            outputs: contextOuputs,
+            workingMemory,
+            logger,
+            chain,
+            handler,
+          },
+          {
+            debug: agent.debugger,
+          }
+        );
+
+        logger.debug("agent:parsed", "data", data);
+
+        hasError = false;
 
         await Promise.allSettled(actionCalls);
+
+        actionCalls.length = 0;
 
         await agent.memory.store.set(ctxState.id, memory);
         await agent.memory.vector.upsert(ctxState.id, [memory]);
@@ -553,13 +595,8 @@ export function createDreams<
       return chain;
     },
 
-    send: async (
-      contextHandler,
-      args,
-      params: { type: string; data: any },
-      outputs
-    ) => {
-      if (params.type in agent.inputs === false)
+    send: async (params) => {
+      if (params.input.type in agent.inputs === false)
         throw new Error("invalid input");
 
       const {
@@ -567,20 +604,20 @@ export function createDreams<
         id: contextId,
         options,
       } = await getContextState(
-        contextHandler,
-        contextHandler.schema.parse(args)
+        params.context,
+        params.context.schema.parse(params.args)
       );
 
       const workingMemory = await getContextWorkingMemory(contextId);
 
-      const input = agent.inputs[params.type];
-      const data = input.schema.parse(params.data);
+      const input = agent.inputs[params.input.type];
+      const data = input.schema.parse(params.input.data);
 
       if (input.handler) {
         await input.handler(
           data,
           {
-            type: contextHandler.type,
+            type: params.context.type,
             key,
             memory,
             workingMemory,
@@ -591,7 +628,7 @@ export function createDreams<
       } else {
         workingMemory.inputs.push({
           ref: "input",
-          type: params.type,
+          type: params.context.type,
           data,
           timestamp: Date.now(),
           formatted: input.format ? input.format(data) : undefined,
@@ -599,7 +636,7 @@ export function createDreams<
       }
 
       await agent.evaluator({
-        type: contextHandler.type,
+        type: params.context.type,
         key,
         memory,
         options,
@@ -613,7 +650,7 @@ export function createDreams<
         workingMemory
       );
 
-      return await agent.run(contextHandler, args, outputs);
+      return await agent.run(params);
     },
 
     evaluator: async (ctx) => {
@@ -625,6 +662,76 @@ export function createDreams<
   container.instance("agent", agent);
 
   return agent;
+}
+type AsyncIterableStream<T> = AsyncIterable<T> & ReadableStream<T>;
+
+type StackElement = {
+  index: number;
+  tag: string;
+  attributes: Record<string, any>;
+  content: string[];
+  done: boolean;
+};
+
+async function parseStreamOutput(
+  textStream: AsyncIterableStream<string>,
+  fn: (el: StackElement) => Promise<void>
+) {
+  const parser = xmlStreamParser(
+    new Set(["think", "response", "output", "action_call", "reasoning"])
+  );
+
+  parser.next();
+
+  let current: StackElement | undefined = undefined;
+  let stack: StackElement[] = [];
+
+  let res = "";
+
+  let index = 0;
+
+  async function handleChunk(chunk: string) {
+    let result = parser.next(chunk);
+    while (!result.done && result.value) {
+      if (result.value.type === "start") {
+        if (current) stack.push(current);
+        current = {
+          index: index++,
+          tag: result.value.name,
+          attributes: result.value.attributes,
+          content: [],
+          done: false,
+        };
+        await fn(current);
+      }
+
+      if (result.value.type === "end") {
+        if (current)
+          await fn({
+            ...current,
+            done: true,
+          });
+        current = stack.pop();
+      }
+
+      if (result.value.type === "text") {
+        if (current) {
+          current.content.push(result.value.content);
+          await fn(current);
+        }
+      }
+      // console.log(result.value);
+      result = parser.next();
+    }
+  }
+
+  await handleChunk("<think>");
+  for await (const chunk of textStream) {
+    await handleChunk(chunk);
+  }
+  await handleChunk("</response>");
+
+  parser.return?.();
 }
 
 export const runGenerate = task(
@@ -638,6 +745,7 @@ export const runGenerate = task(
       logger,
       model,
       contextId,
+      handler,
     }: {
       agent: AnyAgent;
       contexts: ContextState<AnyContext>[];
@@ -647,6 +755,7 @@ export const runGenerate = task(
       actions: AnyAction[];
       logger: Logger;
       model: LanguageModelV1;
+      handler: (el: StackElement) => Promise<void>;
     },
     { callId, debug }: TaskContext
   ) => {
@@ -678,7 +787,7 @@ export const runGenerate = task(
 
     logger.debug("agent:system", system);
 
-    const result = await generateText({
+    const stream = streamText({
       model,
       messages: [
         {
@@ -692,9 +801,15 @@ export const runGenerate = task(
       ],
       stopSequences: ["</response>"],
       temperature: 0.6,
+      experimental_transform: smoothStream({
+        chunking: "word",
+      }),
     });
 
-    const text = "<think>" + result.text + "</response>";
+    await parseStreamOutput(stream.textStream, handler);
+
+    const result = await stream.text;
+    const text = "<think>" + result + "</response>";
 
     debug(contextId, ["response", callId], text);
 
@@ -716,6 +831,7 @@ export const runGenerateResults = task(
       model,
       contextId,
       chain,
+      handler,
     }: {
       agent: AnyAgent;
       contexts: ContextState<AnyContext>[];
@@ -726,6 +842,7 @@ export const runGenerateResults = task(
       logger: Logger;
       model: LanguageModelV1;
       chain: Log[];
+      handler: (el: StackElement) => Promise<void>;
     },
     { callId, debug }: TaskContext
   ) => {
@@ -756,6 +873,10 @@ export const runGenerateResults = task(
       results: workingMemory.results.filter((i) => i.processed !== true),
     });
 
+    workingMemory.results.forEach((i) => {
+      i.processed = true;
+    });
+
     debug(contextId, ["prompt-results", callId], system);
 
     logger.debug("agent:system", system, {
@@ -763,7 +884,7 @@ export const runGenerateResults = task(
       callId,
     });
 
-    const result = await generateText({
+    const stream = streamText({
       model,
       messages: [
         {
@@ -777,9 +898,15 @@ export const runGenerateResults = task(
       ],
       stopSequences: ["</response>"],
       temperature: 0.6,
+      experimental_transform: smoothStream({
+        chunking: "word",
+      }),
     });
 
-    const text = "<think>" + result.text + "</response>";
+    await parseStreamOutput(stream.textStream, handler);
+
+    const result = await stream.text;
+    const text = "<think>" + result + "</response>";
 
     debug(contextId, ["results-response", callId], text);
 
@@ -811,8 +938,13 @@ export const runAction = task(
     logger: Logger;
   }) => {
     try {
+      logger.info(
+        "agent:action_call:" + call.id,
+        call.name,
+        JSON.stringify(call.data)
+      );
       const result = await action.handler(call, context, agent);
-      logger.debug("agent:action", "ACTION_SUCCESS", { result });
+      logger.info("agent:action_resull:" + call.id, call.name, result);
       return result;
     } catch (error) {
       logger.error("agent:action", "ACTION_FAILED", { error });
