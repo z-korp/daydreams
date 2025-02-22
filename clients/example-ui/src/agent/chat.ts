@@ -28,7 +28,6 @@ export const chat = extension({
     message: input({
       schema: z.object({ user: z.string(), content: z.string() }),
       format(params) {
-        console.log("formatting");
         return formatMsg({
           role: "user",
           user: params.user,

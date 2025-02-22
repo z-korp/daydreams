@@ -174,7 +174,10 @@ export type Action<
   memory?: TMemory;
   install?: (agent: TAgent) => Promise<void> | void;
   enabled?: (
-    ctx: AgentContext<any, any> & { actionMemory: InferMemoryData<TMemory> }
+    ctx: Context & {
+      actionMemory: InferMemoryData<TMemory>;
+      agentMemory?: InferAgentMemory<TAgent>;
+    }
   ) => boolean;
   examples?: z.infer<Schema>[];
   handler: (
@@ -284,7 +287,8 @@ export type ActionCall<Data = any> = {
   ref: "action_call";
   id: string;
   name: string;
-  data: Data;
+  content: string;
+  data: Data | undefined;
   timestamp: number;
 };
 
@@ -383,7 +387,7 @@ export interface AgentContext<
 
 export type AnyAgent = Agent<any, any>;
 
-interface Handlers {
+export interface Handlers {
   onLogStream: (log: Log, done: boolean) => void;
   onThinking: (thought: Thought) => void;
 }
