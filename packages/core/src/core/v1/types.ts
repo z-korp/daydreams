@@ -289,7 +289,7 @@ export type ActionCall<Data = any> = {
   id: string;
   name: string;
   content: string;
-  data: Data | undefined;
+  data: Data;
   timestamp: number;
 };
 
@@ -607,7 +607,7 @@ export interface Context<
   /** Unique type identifier for this context */
   type: string;
   /** Zod schema for validating context arguments */
-  schema?: Args;
+  schema: Args;
 
   key?: (args: z.infer<Args>) => string;
 
