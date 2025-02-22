@@ -1,4 +1,4 @@
-import { ChevronRight, type LucideIcon } from "lucide-react";
+import { Brain, ChevronRight, type LucideIcon } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -32,7 +32,7 @@ interface NavItem {
 export function NavMain({ items }: { items: NavItem[] }) {
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Platform</SidebarGroupLabel>
+      <SidebarGroupLabel>Daydreams</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) =>
           item.items ? (

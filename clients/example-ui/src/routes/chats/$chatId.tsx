@@ -7,6 +7,7 @@ import { useAgent } from "@/hooks/use-agent";
 import { chat } from "@/agent/chat";
 import { v7 as randomUUIDv7 } from "uuid";
 import { useQueryClient } from "@tanstack/react-query";
+import { useMessages } from "@/hooks/use-messages";
 
 export const Route = createFileRoute("/chats/$chatId")({
   component: RouteComponent,
@@ -33,9 +34,9 @@ export const Route = createFileRoute("/chats/$chatId")({
 
 function RouteComponent() {
   const { chatId } = Route.useParams();
-  const [messages, setMessages] = useState<MessageType[]>([]);
 
   const dreams = useAgent();
+  const { messages, setMessages, handleLog } = useMessages();
 
   const contextId = dreams.getContextId({
     context: chat.contexts!.chat,
@@ -46,94 +47,72 @@ function RouteComponent() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  function handleLog(log: Log) {
-    if (log.ref === "input") {
-      setMessages((msgs) => [
-        ...msgs.filter((msg) => msg.id !== log.id),
-        {
-          id: log.id,
-          type: "user",
-          message: log.data.content,
-        },
-      ]);
-    }
-    if (log.ref === "thought") {
-      setMessages((msgs) => [
-        ...msgs.filter((msg) => msg.id !== log.id),
-        {
-          id: log.id,
-          type: "thought",
-          message: log.content + "\n",
-        },
-      ]);
-    }
-
-    if (log.ref === "output" && log.type === "message") {
-      setMessages((msgs) => [
-        ...msgs.filter((msg) => msg.id !== log.id),
-        {
-          id: log.id,
-          type: "assistant",
-          message: log.data.content,
-        },
-      ]);
-    }
-    if (log.ref === "action_call") {
-      setMessages((msgs) => [
-        ...msgs.filter((msg) => msg.id !== log.id),
-        {
-          id: log.id,
-          type: "system",
-          message: `Action call\nAction:${log.name}\nId:${log.id}\nData:${JSON.stringify(log.data)}`,
-        },
-      ]);
-    }
-    if (log.ref === "action_result") {
-      setMessages((msgs) => [
-        ...msgs.filter((msg) => msg.id !== log.id),
-        {
-          id: log.id,
-          type: "system",
-          message: `Action Result\nAction:${log.name}\nId:${log.id}\nData:${JSON.stringify(log.data)}`,
-        },
-      ]);
-    }
-  }
-
   useEffect(() => {
+    setMessages([]);
     dreams.start().then(async () => {
       const workingMemory = await dreams.getWorkingMemory(contextId);
-      setMessages([]);
-      getWorkingMemoryLogs(workingMemory).map((log) => handleLog(log));
+      getWorkingMemoryLogs(workingMemory).map((log) => handleLog(log, true));
     });
   }, [dreams, chatId]);
 
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    window.scrollTo({
-      top: document.body.scrollHeight,
-      behavior: "smooth",
-    });
+    const SCROLL_THRESHOLD = 200;
+    let userScrolled = false;
+
+    const isNearBottom = () => {
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const distanceFromBottom = documentHeight - (scrollTop + windowHeight);
+
+      return distanceFromBottom <= SCROLL_THRESHOLD;
+    };
+
+    // When user starts scrolling manually
+    const handleUserScroll = () => {
+      userScrolled = true;
+
+      // Reset the flag after a short delay
+      setTimeout(() => {
+        userScrolled = false;
+      }, 1000);
+    };
+
+    // Add scroll event listener
+    window.addEventListener("wheel", handleUserScroll);
+    window.addEventListener("touchmove", handleUserScroll);
+
+    // Only auto-scroll if user hasn't manually scrolled
+    if (isNearBottom() && !userScrolled) {
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+
+    // Cleanup event listeners
+    return () => {
+      window.removeEventListener("wheel", handleUserScroll);
+      window.removeEventListener("touchmove", handleUserScroll);
+    };
   }, [messages]);
 
   return (
     <>
       <div className="flex flex-col flex-1 relative">
-        <div className=" flex flex-col rounded-lg">
+        <div className="flex flex-col">
           <div className="flex-1 p-4 pb-36" ref={scrollRef}>
             <MessagesList messages={messages} />
           </div>
         </div>
       </div>
       <form
-        className="border-t bg-background flex items-center mt-auto sticky bottom-0 left-0 right-0"
+        className="bg-background flex items-center mt-auto sticky bottom-0 left-0 right-0"
         onSubmit={async (e) => {
           e.preventDefault();
-
           const msg = new FormData(e.currentTarget).get("message") as string;
-
-          const isNew = messages.length === 0;
 
           setMessages((msgs) => [
             ...msgs,
@@ -146,7 +125,7 @@ function RouteComponent() {
 
           e.currentTarget.reset();
 
-          const res = await dreams.send({
+          await dreams.send({
             context: chat.contexts!.chat,
             args: {
               chatId,
@@ -160,22 +139,15 @@ function RouteComponent() {
             },
             handlers: {
               onLogStream(log, done) {
-                handleLog(log);
-              },
-              onThinking(thought) {
-                handleLog(thought);
+                handleLog(log, done);
               },
             },
           });
 
-          if (isNew) {
+          if (messages.length === 0) {
             queryClient.invalidateQueries({
               queryKey: ["agent:chats"],
             });
-          }
-
-          for (const log of res) {
-            handleLog(log);
           }
         }}
       >
@@ -183,15 +155,10 @@ function RouteComponent() {
           type="text"
           name="message"
           placeholder="Type your message..."
-          className="flex-1 px-8 py-8 rounded-lg bg-background text-foreground placeholder:text-primary
-                       focus:outline-none focus:ring-2 focus:ring-primary"
+          className="border flex-1 px-6 py-4 rounded-lg bg-background text-foreground placeholder:text-primary focus:outline-none focus:border-primary"
           disabled={false} // Disable input while loading history
         />
-        <button
-          className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 
-                       focus:outline-none focus:ring-2 focus:ring-primary h-full w-64
-                       disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <button className="bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary h-full w-1/4 max-w-64 disabled:opacity-50 disabled:cursor-not-allowed">
           Send
         </button>
       </form>
