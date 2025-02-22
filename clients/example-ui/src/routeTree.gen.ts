@@ -13,6 +13,7 @@ import { createFileRoute } from '@tanstack/react-router'
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as WorkbenchIndexImport } from './routes/workbench/index'
 import { Route as ChatsChatIdImport } from './routes/chats/$chatId'
 
 // Create Virtual Routes
@@ -26,6 +27,12 @@ const IndexLazyRoute = IndexLazyImport.update({
   path: '/',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+
+const WorkbenchIndexRoute = WorkbenchIndexImport.update({
+  id: '/workbench/',
+  path: '/workbench/',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const ChatsChatIdRoute = ChatsChatIdImport.update({
   id: '/chats/$chatId',
@@ -51,6 +58,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatsChatIdImport
       parentRoute: typeof rootRoute
     }
+    '/workbench/': {
+      id: '/workbench/'
+      path: '/workbench'
+      fullPath: '/workbench'
+      preLoaderRoute: typeof WorkbenchIndexImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -59,36 +73,41 @@ declare module '@tanstack/react-router' {
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
+  '/workbench': typeof WorkbenchIndexRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
+  '/workbench': typeof WorkbenchIndexRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexLazyRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
+  '/workbench/': typeof WorkbenchIndexRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chats/$chatId'
+  fullPaths: '/' | '/chats/$chatId' | '/workbench'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chats/$chatId'
-  id: '__root__' | '/' | '/chats/$chatId'
+  to: '/' | '/chats/$chatId' | '/workbench'
+  id: '__root__' | '/' | '/chats/$chatId' | '/workbench/'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
   ChatsChatIdRoute: typeof ChatsChatIdRoute
+  WorkbenchIndexRoute: typeof WorkbenchIndexRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
   ChatsChatIdRoute: ChatsChatIdRoute,
+  WorkbenchIndexRoute: WorkbenchIndexRoute,
 }
 
 export const routeTree = rootRoute
@@ -102,7 +121,8 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/chats/$chatId"
+        "/chats/$chatId",
+        "/workbench/"
       ]
     },
     "/": {
@@ -110,6 +130,9 @@ export const routeTree = rootRoute
     },
     "/chats/$chatId": {
       "filePath": "chats/$chatId.tsx"
+    },
+    "/workbench/": {
+      "filePath": "workbench/index.tsx"
     }
   }
 }

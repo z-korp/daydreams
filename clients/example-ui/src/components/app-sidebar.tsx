@@ -1,12 +1,16 @@
 import * as React from "react";
-import { Bot, MessageSquare, History, Bookmark, Settings } from "lucide-react";
+import {
+  Bot,
+  MessageSquare,
+  History,
+  Bookmark,
+  Settings,
+  Wrench,
+} from "lucide-react";
 import { NavMain } from "@/components/nav-main";
-import { NavProjects } from "@/components/nav-projects";
-import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
@@ -36,6 +40,7 @@ const data = {
       icon: Bot,
       isActive: true,
     },
+
     // {
     //   title: "Agents",
     //   url: "#",
@@ -78,6 +83,12 @@ const data = {
           component: ChatHistoryList,
         },
       ],
+    },
+    {
+      title: "Workbench",
+      url: "/workbench",
+      icon: Wrench,
+      isActive: true,
     },
   ],
   projects: [],
@@ -133,11 +144,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     >
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
-      <SidebarFooter>
+      {/* <SidebarFooter>
         <NavUser user={data.user} />
-      </SidebarFooter>
+      </SidebarFooter> */}
       <SidebarRail />
     </Sidebar>
   );
