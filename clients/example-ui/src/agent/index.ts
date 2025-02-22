@@ -18,7 +18,6 @@ const browserStorage = (): MemoryStore => {
   return {
     async get<T>(key: string) {
       let data = await memoryStore.get<T>(key);
-      console.log({ key, data });
       if (data === null) {
         const local = localStorage.getItem(key);
         if (local) {

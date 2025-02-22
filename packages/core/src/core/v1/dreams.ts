@@ -3,7 +3,6 @@ import {
   type ActionCall,
   type ActionResult,
   type Agent,
-  type AgentContext,
   type AnyAction,
   type AnyAgent,
   type AnyContext,
@@ -11,40 +10,26 @@ import {
   type Context,
   type ContextState,
   type Debugger,
+  type Handlers,
   type Log,
   type Output,
   type OutputRef,
   type Subscription,
-  type Thought,
   type WorkingMemory,
 } from "./types";
 import { Logger } from "./logger";
-import { formatContext, formatContexts } from "./formatters";
-import {
-  generateObject,
-  generateText,
-  smoothStream,
-  streamText,
-  type LanguageModelV1,
-} from "ai";
 import createContainer from "./container";
 import { createServiceManager } from "./serviceProvider";
-import { type InferContextMemory } from "./types";
 import { z } from "zod";
-import { task, TaskRunner, type TaskContext } from "./task";
-import {
-  handleStream,
-  parse,
-  prompt,
-  resultsPrompt,
-  type StackElement,
-} from "./prompts/main";
-import { defaultContextRender, defaultWorkingMemory } from "./context";
+import { TaskRunner } from "./task";
+import { handleStream, type StackElement } from "./prompts/main";
+import { defaultWorkingMemory } from "./context";
 import { createMemoryStore } from "./memory";
 import { createPrompt } from "./prompt";
 import { createMemory } from "./memory";
 import { createVectorStore } from "./memory/base";
 import { v7 as randomUUIDv7 } from "uuid";
+import { runAction, runGenerate, runGenerateResults } from "./tasks";
 
 export function createDreams<
   Memory = any,
@@ -341,323 +326,22 @@ export function createDreams<
 
       let actionCalls: Promise<any>[] = [];
 
-      async function handleLogStream(log: Log, done: boolean) {
-        if (log.ref === "thought" && done) {
-          workingMemory.thoughts.push(log);
-          logger.info("agent:think", "", log.content);
-          chain.push(log);
-          handlers?.onThinking?.(log);
-        }
-
-        handlers?.onLogStream?.(log, done);
-      }
-
-      let lastIndex = 0;
-
-      const idsByIndex = new Map<number, { id: string; timestamp: number }>();
-
-      function getOrCreate(index: number) {
-        if (!idsByIndex.has(index)) {
-          idsByIndex.set(index, { id: randomUUIDv7(), timestamp: Date.now() });
-        }
-
-        return idsByIndex.get(index)!;
-      }
-
-      async function handler(el: StackElement) {
-        lastIndex = el.index > lastIndex ? el.index : lastIndex;
-        console.log({ index: el.index, lastIndex });
-
-        const { id, timestamp } = getOrCreate(el.index);
-        if (el.tag === "think") {
-          handleLogStream(
-            {
-              id,
-              ref: "thought",
-              content: el.content.join("").trim(),
-              timestamp: timestamp,
-            },
-            el.done
-          );
-        }
-
-        if (el.tag === "reasoning") {
-          handleLogStream(
-            {
-              id,
-              ref: "thought",
-              content: el.content.join("").trim(),
-              timestamp,
-            },
-            el.done
-          );
-        }
-
-        if (el.tag === "action_call") {
-          if (!el.done) {
-            handleLogStream(
-              {
-                id,
-                ref: "action_call",
-                timestamp,
-                name: el.attributes.name,
-                data: el.content.join(""),
-              },
-              false
-            );
-          }
-
-          if (el.done) {
-            actionCalls.push(
-              handleActionCall({
-                id,
-                name: el.attributes.name,
-                data: el.content.join(""),
-                timestamp,
-              })
-            );
-          }
-        }
-
-        if (el.tag === "output") {
-          if (!el.done) {
-            handleLogStream(
-              {
-                id,
-                ref: "output",
-                timestamp,
-                type: el.attributes.type,
-                data: el.content.join(""),
-              },
-              false
-            );
-          }
-
-          if (el.done)
-            handleOutput({
-              id,
-              timestamp,
-              type: el.attributes.type,
-              content: el.content.join(""),
-            });
-        }
-      }
-
-      async function handleActionCall({
-        id,
-        name,
-        data,
-        timestamp,
-      }: {
-        id: string;
-        name: string;
-        data: any;
-        timestamp: number;
-      }) {
-        const action = actions.find((a) => a.name === name);
-
-        if (!action) {
-          logger.error("agent:action", "ACTION_MISMATCH", {
-            name,
-            data,
-          });
-
-          return Promise.reject(new Error("ACTION MISMATCH"));
-        }
-
-        try {
-          data = JSON.parse(data);
-        } catch (error) {
-          const contexts: ContextState<AnyContext>[] = [
-            agentCtxState,
-            ctxState,
-          ].filter((t) => !!t);
-
-          const response = await generateObject({
-            model: agent.model,
-            schema: action.schema,
-            prompt: actionParseErrorPrompt({
-              context: formatContexts(ctxState.id, contexts, workingMemory),
-              error: JSON.stringify(error),
-            }),
-          });
-
-          if (response.object) {
-            data = response.object;
-          }
-        }
-
-        try {
-          const call: ActionCall = {
-            ref: "action_call",
-            id,
-            data: action.schema.parse(data),
-            name: name,
-            timestamp,
-          };
-
-          workingMemory.calls.push(call);
-          chain.push(call);
-
-          handleLogStream(call, true);
-
-          let actionMemory: unknown = {};
-
-          if (action.memory) {
-            actionMemory =
-              (await agent.memory.store.get(action.memory.key)) ??
-              action.memory.create();
-          }
-
-          const resultData = await taskRunner.enqueueTask(
-            runAction,
-            {
-              action,
-              call,
-              agent,
-              logger,
-              context: {
-                ...ctxState,
-                actionMemory,
-                workingMemory,
-                agentMemory: agentCtxState?.memory,
-              },
-            },
-            {
-              debug: agent.debugger,
-            }
-          );
-
-          const result: ActionResult = {
-            ref: "action_result",
-            id: randomUUIDv7(),
-            callId: call.id,
-            data: resultData,
-            name: call.name,
-            timestamp: Date.now(),
-            processed: false,
-          };
-
-          chain.push({
-            ...result,
-          });
-
-          if (action.format) result.formatted = action.format(result);
-
-          workingMemory.results.push(result);
-
-          handleLogStream(result, true);
-
-          if (action.memory) {
-            await agent.memory.store.set(action.memory.key, actionMemory);
-          }
-        } catch (error) {
-          logger.error("agent:action", "ACTION_FAILED", { error });
-          throw error;
-        }
-      }
-
-      async function handleOutput({
-        id,
-        type,
-        content,
-        timestamp,
-      }: {
-        id: string;
-        type: string;
-        content: string;
-        timestamp: number;
-      }) {
-        const output = contextOuputs.find((output) => output.type === type);
-
-        if (!output) {
-          console.log({ outputFailed: output });
-          return;
-        }
-
-        logger.info("agent:output", type, content);
-
-        try {
-          let parsedContent = content;
-          if (typeof content === "string") {
-            if (output.schema._def.typeName !== "ZodString") {
-              try {
-                parsedContent = JSON.parse(content.trim());
-              } catch (error) {
-                console.log("failed parsing output content", { content });
-                throw error;
-              }
-            }
-          }
-          let data: any;
-          try {
-            data = output.schema.parse(parsedContent);
-          } catch (error) {
-            console.log("failed parsing output schema");
-            throw error;
-          }
-
-          const response = await output.handler(
-            data,
-            {
-              ...ctxState,
-              workingMemory,
-            },
-            agent
-          );
-
-          if (Array.isArray(response)) {
-            for (const res of response) {
-              const ref: OutputRef = {
-                id: randomUUIDv7(),
-                ref: "output",
-                type,
-                ...res,
-              };
-
-              ref.formatted = output.format
-                ? output.format(response)
-                : undefined;
-
-              chain.push(ref);
-
-              workingMemory.outputs.push(ref);
-            }
-          } else if (response) {
-            const ref: OutputRef = {
-              id,
-              ref: "output",
-              type,
-              // params: { success: "true" },
-              ...response,
-            };
-
-            ref.formatted = output.format ? output.format(response) : undefined;
-
-            chain.push(ref);
-            workingMemory.outputs.push(ref);
-            handleLogStream(ref, true);
-          }
-        } catch (error) {
-          const ref: OutputRef = {
-            ref: "output",
-            id: randomUUIDv7(),
-            type,
-            params: { error: "true" },
-            timestamp: Date.now(),
-            data: { content, error },
-          };
-
-          hasError = true;
-
-          chain.push(ref);
-
-          logger.error("agent:output", type, error);
-        }
-      }
+      const { state, handler } = createContextStreamHandler({
+        agent,
+        chain,
+        actions: contextActions,
+        actionCalls,
+        agentCtxState,
+        ctxState,
+        handlers,
+        logger,
+        outputs: contextOuputs,
+        taskRunner,
+        workingMemory,
+      });
 
       while (maxSteps > step) {
-        const data = await taskRunner.enqueueTask(
+        const { stream, response } = await taskRunner.enqueueTask(
           step > 1 ? runGenerateResults : runGenerate,
           {
             agent,
@@ -669,17 +353,17 @@ export function createDreams<
             workingMemory,
             logger,
             chain,
-            handler,
-            index: lastIndex + 1,
           },
           {
             debug: agent.debugger,
           }
         );
 
-        logger.debug("agent:parsed", "data", data);
+        await handleStream(stream, state.index, handler);
 
-        hasError = false;
+        const data = await response;
+
+        logger.debug("agent:parsed", "data", data);
 
         await Promise.allSettled(actionCalls);
 
@@ -768,7 +452,6 @@ export function createDreams<
 
       await agent.memory.store.set(contextId, memory);
       await agent.memory.vector.upsert(contextId, [memory]);
-
       await agent.memory.store.set(
         ["working-memory", contextId].join(":"),
         workingMemory
@@ -788,231 +471,6 @@ export function createDreams<
   return agent;
 }
 
-export const runGenerate = task(
-  "agent:run:generate",
-  async (
-    {
-      contexts,
-      workingMemory,
-      outputs,
-      actions,
-      logger,
-      model,
-      contextId,
-      handler,
-      index,
-    }: {
-      agent: AnyAgent;
-      contexts: ContextState<AnyContext>[];
-      contextId: string;
-      workingMemory: WorkingMemory;
-      outputs: Output[];
-      actions: AnyAction[];
-      logger: Logger;
-      model: LanguageModelV1;
-      handler: (el: StackElement) => Promise<void>;
-      index: number;
-    },
-    { callId, debug }: TaskContext
-  ) => {
-    debug(
-      contextId,
-      ["workingMemory", callId],
-      JSON.stringify(workingMemory, null, 2)
-    );
-
-    const mainContext = contexts.find((ctx) => ctx.id === contextId)!;
-
-    const system = prompt({
-      context: formatContexts(contextId, contexts, workingMemory),
-      outputs,
-      actions,
-      updates: formatContext({
-        type: mainContext.context.type,
-        key: mainContext.key,
-        content: defaultContextRender({
-          memory: {
-            inputs: workingMemory.inputs.filter((i) => i.processed !== true),
-            results: workingMemory.results.filter((i) => i.processed !== true),
-          },
-        }),
-      }),
-    });
-
-    debug(contextId, ["prompt", callId], system);
-
-    logger.debug("agent:system", system);
-
-    const stream = streamText({
-      model,
-      messages: [
-        {
-          role: "user",
-          content: system,
-        },
-        {
-          role: "assistant",
-          content: "<think>",
-        },
-      ],
-      stopSequences: ["</response>"],
-      temperature: 0.6,
-      experimental_transform: smoothStream({
-        chunking: "word",
-      }),
-    });
-
-    handleStream(stream.textStream, index, handler).catch((err) => {
-      console.error(err);
-    });
-
-    const result = await stream.text;
-    const text = "<think>" + result + "</response>";
-
-    debug(contextId, ["response", callId], text);
-
-    logger.debug("agent:response", text);
-
-    return parse(text);
-  }
-);
-
-export const runGenerateResults = task(
-  "agent:run:generate-results",
-  async (
-    {
-      contexts,
-      workingMemory,
-      outputs,
-      actions,
-      logger,
-      model,
-      contextId,
-      chain,
-      handler,
-      index,
-    }: {
-      agent: AnyAgent;
-      contexts: ContextState<AnyContext>[];
-      contextId: string;
-      workingMemory: WorkingMemory;
-      outputs: Output[];
-      actions: AnyAction[];
-      logger: Logger;
-      model: LanguageModelV1;
-      chain: Log[];
-      handler: (el: StackElement) => Promise<void>;
-      index: number;
-    },
-    { callId, debug }: TaskContext
-  ) => {
-    debug(
-      contextId,
-      ["workingMemory", callId],
-      JSON.stringify(workingMemory, null, 2)
-    );
-
-    const mainContext = contexts.find((ctx) => ctx.id === contextId)!;
-
-    const system = resultsPrompt({
-      context: formatContexts(contextId, contexts, workingMemory),
-      outputs,
-      actions,
-      updates: formatContext({
-        type: mainContext.context.type,
-        key: mainContext.key,
-        content: defaultContextRender({
-          memory: {
-            inputs: workingMemory.inputs.filter((i) => i.processed !== true),
-          },
-        }),
-      }),
-      logs: chain.filter((i) =>
-        i.ref === "action_result" ? i.processed === true : true
-      ),
-      results: workingMemory.results.filter((i) => i.processed !== true),
-    });
-
-    workingMemory.results.forEach((i) => {
-      i.processed = true;
-    });
-
-    debug(contextId, ["prompt-results", callId], system);
-
-    logger.debug("agent:system", system, {
-      contextId,
-      callId,
-    });
-
-    const stream = streamText({
-      model,
-      messages: [
-        {
-          role: "user",
-          content: system,
-        },
-        {
-          role: "assistant",
-          content: "<think>",
-        },
-      ],
-      stopSequences: ["</response>"],
-      temperature: 0.6,
-      experimental_transform: smoothStream({
-        chunking: "word",
-      }),
-    });
-
-    handleStream(stream.textStream, index, handler);
-
-    const result = await stream.text;
-    const text = "<think>" + result + "</response>";
-
-    debug(contextId, ["results-response", callId], text);
-
-    logger.debug("agent:response", text, {
-      contextId,
-      callId,
-    });
-
-    return parse(text);
-  }
-);
-
-export const runAction = task(
-  "agent:run:action",
-  async <TContext extends AnyContext>({
-    context,
-    action,
-    call,
-    agent,
-    logger,
-  }: {
-    context: AgentContext<InferContextMemory<TContext>, TContext> & {
-      actionMemory: unknown;
-      agentMemory: unknown;
-    };
-    action: AnyAction;
-    call: ActionCall;
-    agent: AnyAgent;
-    logger: Logger;
-  }) => {
-    try {
-      logger.info(
-        "agent:action_call:" + call.id,
-        call.name,
-        JSON.stringify(call.data)
-      );
-      const result = await action.handler(call, context, agent);
-      logger.info("agent:action_resull:" + call.id, call.name, result);
-      return result;
-    } catch (error) {
-      logger.error("agent:action", "ACTION_FAILED", { error });
-      throw error;
-    }
-  }
-);
-
 const actionParseErrorPrompt = createPrompt(
   `
 You are tasked with fixing an action call arguments parsing error!
@@ -1026,3 +484,415 @@ Here is the error:
     error,
   })
 );
+
+class ActionNotFoundError extends Error {
+  constructor(public call: ActionCall) {
+    super();
+  }
+}
+
+class ParsingError extends Error {
+  constructor(public parsingError: unknown) {
+    super();
+  }
+}
+
+// function handleActionCallParsingError() {
+//   const contexts: ContextState<AnyContext>[] = [agentCtxState, ctxState].filter(
+//     (t) => !!t
+//   );
+
+//   const response = await generateObject({
+//     model: agent.model,
+//     schema: action.schema,
+//     prompt: actionParseErrorPrompt({
+//       context: formatContexts(ctxState.id, contexts, workingMemory),
+//       error: JSON.stringify(error),
+//     }),
+//   });
+
+//   if (response.object) {
+//     data = response.object;
+//   }
+// }
+
+async function prepareActionCall({
+  call,
+  actions,
+  logger,
+}: {
+  call: ActionCall;
+  actions: AnyAction[];
+  logger: Logger;
+}) {
+  const action = actions.find((a) => a.name === call.name);
+
+  if (!action) {
+    logger.error("agent:action", "ACTION_MISMATCH", {
+      name: call.name,
+      data: call.content,
+    });
+
+    throw new ActionNotFoundError(call);
+  }
+
+  try {
+    const data = action.schema.parse(JSON.parse(call.content));
+    call.data = data;
+    return { action, data };
+  } catch (error) {
+    throw new ParsingError(error);
+  }
+}
+
+async function handleActionCall({
+  state,
+  workingMemory,
+  action,
+  logger,
+  call,
+  taskRunner,
+  agent,
+  agentState,
+}: {
+  state: ContextState<AnyContext>;
+  workingMemory: WorkingMemory;
+  call: ActionCall;
+  action: AnyAction;
+  logger: Logger;
+  taskRunner: TaskRunner;
+  agent: AnyAgent;
+  agentState?: ContextState;
+}) {
+  let actionMemory: unknown = {};
+
+  if (action.memory) {
+    actionMemory =
+      (await agent.memory.store.get(action.memory.key)) ??
+      action.memory.create();
+  }
+
+  const resultData = await taskRunner.enqueueTask(
+    runAction,
+    {
+      action,
+      call,
+      agent,
+      logger,
+      ctx: {
+        ...state,
+        workingMemory,
+        actionMemory,
+        agentMemory: agentState?.memory,
+      },
+    },
+    {
+      debug: agent.debugger,
+    }
+  );
+
+  const result: ActionResult = {
+    ref: "action_result",
+    id: randomUUIDv7(),
+    callId: call.id,
+    data: resultData,
+    name: call.name,
+    timestamp: Date.now(),
+    processed: false,
+  };
+
+  if (action.format) result.formatted = action.format(result);
+
+  if (action.memory) {
+    await agent.memory.store.set(action.memory.key, actionMemory);
+  }
+
+  return result;
+}
+
+async function handleOutput({
+  outputRef,
+  outputs,
+  logger,
+  state,
+  workingMemory,
+  agent,
+}: {
+  outputs: Output[];
+  outputRef: OutputRef;
+  logger: Logger;
+  workingMemory: WorkingMemory;
+  state: ContextState;
+  agent: AnyAgent;
+}) {
+  const output = outputs.find((output) => output.type === outputRef.type);
+
+  if (!output) {
+    console.log({ outputFailed: output });
+    throw new Error("OUTPUT NOT FOUND");
+  }
+
+  logger.info("agent:output", outputRef.type, outputRef.data);
+
+  try {
+    let parsedContent = outputRef.data;
+    if (typeof parsedContent === "string") {
+      if (output.schema._def.typeName !== "ZodString") {
+        try {
+          parsedContent = JSON.parse(parsedContent.trim());
+        } catch (error) {
+          console.log("failed parsing output content", {
+            content: parsedContent,
+          });
+          throw error;
+        }
+      }
+    }
+    let data: any;
+    try {
+      data = output.schema.parse(parsedContent);
+    } catch (error) {
+      console.log("failed parsing output schema");
+      throw error;
+    }
+
+    const response = await output.handler(
+      data,
+      {
+        ...state,
+        workingMemory,
+      },
+      agent
+    );
+
+    if (Array.isArray(response)) {
+      const refs: OutputRef[] = [];
+      for (const res of response) {
+        const ref: OutputRef = {
+          ...outputRef,
+          id: randomUUIDv7(),
+          ...res,
+        };
+
+        ref.formatted = output.format ? output.format(response) : undefined;
+        refs.push(ref);
+      }
+      return refs;
+    } else if (response) {
+      const ref: OutputRef = {
+        ...outputRef,
+        ...response,
+      };
+
+      ref.formatted = output.format ? output.format(response) : undefined;
+
+      return ref;
+    }
+
+    return {
+      ...outputRef,
+      formatted: output.format ? output.format(data) : undefined,
+      data,
+    };
+  } catch (error) {
+    const ref: OutputRef = {
+      ...outputRef,
+      params: { error: "true" },
+      timestamp: Date.now(),
+      data: { content: outputRef.data, error },
+    };
+
+    logger.error("agent:output", outputRef.type, error);
+
+    return ref;
+  }
+}
+
+type PartialLog = Partial<Log> & Pick<Log, "ref" | "id" | "timestamp">;
+
+function createContextStreamHandler({
+  agent,
+  chain,
+  ctxState,
+  agentCtxState,
+  logger,
+  handlers,
+  taskRunner,
+  outputs,
+  actions,
+  actionCalls,
+  workingMemory,
+}: {
+  agent: AnyAgent;
+  taskRunner: TaskRunner;
+  ctxState: ContextState<AnyContext>;
+  agentCtxState?: ContextState<AnyContext>;
+  chain: Log[];
+  logger: Logger;
+  handlers?: Partial<Handlers>;
+  outputs: Output[];
+  actions: AnyAction[];
+  actionCalls: Promise<any>[];
+  workingMemory: WorkingMemory;
+}) {
+  const state = {
+    index: 0,
+    logsByIndex: new Map<number, PartialLog>(),
+  };
+
+  function getOrCreateRef<TLog extends Omit<PartialLog, "id" | "timestamp">>(
+    index: number,
+    ref: TLog
+  ): TLog & Pick<PartialLog, "id" | "timestamp"> {
+    if (!state.logsByIndex.has(index)) {
+      state.logsByIndex.set(index, {
+        id: randomUUIDv7(),
+        timestamp: Date.now(),
+        ...ref,
+      });
+    }
+
+    return state.logsByIndex.get(index)! as TLog &
+      Pick<PartialLog, "id" | "timestamp">;
+  }
+
+  async function pushLogStream(log: Log, done: boolean) {
+    if (done) chain.push(log);
+
+    if (log.ref === "thought" && done) {
+      workingMemory.thoughts.push(log);
+      logger.info("agent:think", "", log.content);
+      handlers?.onThinking?.(log);
+    }
+
+    if (log.ref === "output" && done) {
+      workingMemory.outputs.push(log);
+    }
+
+    if (log.ref === "action_call" && done) {
+      workingMemory.calls.push(log);
+    }
+    if (log.ref === "action_result" && done) {
+      workingMemory.results.push(log);
+    }
+
+    handlers?.onLogStream?.(log, done);
+  }
+
+  async function handleActionCallStream(call: ActionCall, done: boolean) {
+    if (!done) {
+      return pushLogStream(call, false);
+    }
+
+    // todo: handle errors
+    const { action } = await prepareActionCall({
+      call,
+      actions,
+      logger,
+    });
+
+    pushLogStream(call, true);
+
+    actionCalls.push(
+      handleActionCall({
+        call,
+        action,
+        agent,
+        logger,
+        state: ctxState,
+        taskRunner,
+        workingMemory,
+        agentState: agentCtxState,
+      }).then((res) => {
+        pushLogStream(res, true);
+        return res;
+      })
+    );
+  }
+
+  async function handleOutputStream(outputRef: OutputRef, done: boolean) {
+    if (!done) {
+      return pushLogStream(outputRef, false);
+    }
+
+    const refs = await handleOutput({
+      agent,
+      logger,
+      state: ctxState,
+      workingMemory,
+      outputs,
+      outputRef,
+    });
+
+    for (const ref of Array.isArray(refs) ? refs : [refs]) {
+      chain.push(ref);
+      workingMemory.outputs.push(ref);
+      pushLogStream(ref, true);
+    }
+  }
+
+  async function handler(el: StackElement) {
+    state.index = el.index > state.index ? el.index : state.index;
+    console.log({ index: el.index, lastIndex: state.index });
+
+    switch (el.tag) {
+      case "think":
+      case "reasoning": {
+        const ref = getOrCreateRef(el.index, {
+          ref: "thought",
+        });
+
+        pushLogStream(
+          {
+            ...ref,
+            content: el.content.join(""),
+          },
+          el.done
+        );
+
+        break;
+      }
+
+      case "action_call": {
+        const ref = getOrCreateRef(el.index, {
+          ref: "action_call",
+        });
+
+        handleActionCallStream(
+          {
+            ...ref,
+            name: el.attributes.name,
+            content: el.content.join(""),
+            data: undefined,
+          },
+          el.done
+        );
+
+        break;
+      }
+      case "output": {
+        const ref = getOrCreateRef(el.index, {
+          ref: "output",
+        });
+
+        handleOutputStream(
+          {
+            ...ref,
+            type: el.attributes.type,
+            data: el.content.join("").trim(),
+          },
+          el.done
+        );
+        break;
+      }
+
+      default:
+        break;
+    }
+  }
+
+  return {
+    state,
+    handler,
+  };
+}

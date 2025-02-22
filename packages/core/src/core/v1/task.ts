@@ -23,9 +23,15 @@ export type TaskContext = {
 /**
  * A task function that takes parameters and options and returns a promise.
  */
-export type Task<Params, Result> = {
-  (params: Params, options?: TaskOptions): Promise<Result>;
-};
+export type Task<in Params, out Result> = (
+  params: Params,
+  options?: TaskOptions
+) => Promise<Result>;
+
+type InferTaskParams<T extends Task<any, any>> =
+  T extends Task<infer Params, any> ? Params : unknown;
+type InferTaskResult<T extends Task<any, any>> =
+  T extends Task<any, infer Result> ? Result : unknown;
 
 /**
  * Represents a task that is queued for execution.
@@ -144,11 +150,11 @@ export class TaskRunner {
    * @param options - Task options including priority
    * @returns A promise that resolves when the task is completed
    */
-  enqueueTask<Params, Result>(
-    taskFn: (params: Params, options?: TaskOptions) => Promise<Result>,
-    params: Params,
+  enqueueTask<TTask extends Task<any, any>>(
+    taskFn: TTask,
+    params: InferTaskParams<TTask>,
     options: TaskOptions = {}
-  ): Promise<Result> {
+  ): Promise<InferTaskResult<TTask>> {
     return this.enqueue(() => taskFn(params, options), options.priority ?? 0);
   }
 }

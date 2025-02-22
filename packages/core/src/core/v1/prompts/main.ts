@@ -332,7 +332,7 @@ const tags = new Set([
 ]);
 
 export async function handleStream(
-  textStream: AsyncIterableStream<string>,
+  textStream: AsyncGenerator<string>,
   initialIndex: number,
   fn: (el: StackElement) => void
 ) {
@@ -375,17 +375,25 @@ export async function handleStream(
           fn(current);
         }
       }
-      // console.log(result.value);
       result = parser.next();
     }
   }
 
-  handleChunk("<think>");
   for await (const chunk of textStream) {
     handleChunk(chunk);
   }
 
-  handleChunk("</response>");
-
   parser.return?.();
+}
+
+export async function* wrapStream(
+  stream: AsyncIterableStream<string>,
+  prefix: string,
+  suffix: string
+) {
+  yield prefix;
+  for await (const value of stream) {
+    yield value;
+  }
+  yield suffix;
 }
