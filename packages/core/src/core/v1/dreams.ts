@@ -40,11 +40,11 @@ export function createDreams<
     any
   >,
 >(config: Config<Memory, TContext>): Agent<Memory, TContext> {
-  const taskRunner = new TaskRunner(3);
+  let booted = false;
 
   const inputSubscriptions = new Map<string, Subscription>();
-
   const contexts = new Map<string, { type: string; args?: any }>();
+  const contextsRunning = new Set<string>();
 
   const {
     inputs = {},
@@ -60,6 +60,8 @@ export function createDreams<
 
   const container = config.container ?? createContainer();
 
+  const taskRunner = config.taskRunner ?? new TaskRunner(3);
+
   const logger = new Logger({
     level: config.logger ?? LogLevel.INFO,
     enableTimestamp: true,
@@ -67,8 +69,6 @@ export function createDreams<
   });
 
   container.instance("logger", logger);
-
-  const contextsRunning = new Set<string>();
 
   const debug: Debugger = (...args) => {
     if (!config.debugger) return;
@@ -79,9 +79,11 @@ export function createDreams<
     }
   };
 
-  let booted = false;
-
   const serviceManager = createServiceManager(container);
+
+  for (const service of services) {
+    serviceManager.register(service);
+  }
 
   for (const extension of extensions) {
     if (extension.inputs) Object.assign(inputs, extension.inputs);
@@ -89,61 +91,6 @@ export function createDreams<
     if (extension.events) Object.assign(events, extension.events);
     if (extension.actions) actions.push(...extension.actions);
     if (extension.services) services.push(...extension.services);
-  }
-
-  for (const service of services) {
-    serviceManager.register(service);
-  }
-
-  function getContextId<TContext extends AnyContext>(
-    context: TContext,
-    args: z.infer<TContext["schema"]>
-  ) {
-    const key = context.key ? context.key(args) : context.type;
-    return context.key ? [context.type, key].join(":") : context.type;
-  }
-
-  async function getContextState<TContext extends AnyContext>(
-    context: TContext,
-    args: z.infer<TContext["schema"]>
-  ): Promise<ContextState<TContext>> {
-    const key = context.key ? context.key(args) : context.type;
-    const id = context.key ? [context.type, key].join(":") : context.type;
-
-    const options = context.setup ? await context.setup(args, agent) : {};
-
-    const memory =
-      (await agent.memory.store.get(id)) ??
-      (context.create
-        ? context.create({ key, args, context, id: id, options })
-        : {});
-
-    return {
-      id,
-      key,
-      args,
-      options,
-      context,
-      memory,
-    };
-  }
-
-  async function getContextWorkingMemory(contextId: string) {
-    return (
-      (await agent.memory.store.get<WorkingMemory>(
-        ["working-memory", contextId].join(":")
-      )) ?? (await defaultWorkingMemory.create())
-    );
-  }
-
-  async function saveContextWorkingMemory(
-    contextId: string,
-    workingMemory: WorkingMemory
-  ) {
-    return await agent.memory.store.set(
-      ["working-memory", contextId].join(":"),
-      workingMemory
-    );
   }
 
   const agent: Agent<Memory, TContext> = {
@@ -157,6 +104,7 @@ export function createDreams<
     container,
     model,
     reasoningModel,
+    taskRunner,
     debugger: debug,
     context: config.context ?? undefined,
     emit: (event: string, data: any) => {
@@ -172,7 +120,7 @@ export function createDreams<
     },
 
     getContext(params) {
-      return getContextState(params.context, params.args);
+      return getContextState(agent, params.context, params.args);
     },
 
     getContextId(params) {
@@ -180,7 +128,7 @@ export function createDreams<
     },
 
     getWorkingMemory(contextId) {
-      return getContextWorkingMemory(contextId);
+      return getContextWorkingMemory(agent, contextId);
     },
 
     async start(args) {
@@ -199,11 +147,11 @@ export function createDreams<
         if (input.install) await Promise.resolve(input.install(agent));
 
         if (input.subscribe) {
-          let subscription = input.subscribe((contextHandler, args, data) => {
-            logger.info("agent", "input", { contextHandler, args, data });
+          let subscription = input.subscribe((context, args, data) => {
+            logger.info("agent", "input", { context, args, data });
             agent
               .send({
-                context: contextHandler,
+                context,
                 input: { type, data },
                 args,
               })
@@ -229,7 +177,7 @@ export function createDreams<
       }
 
       if (agent.context) {
-        const { id } = await getContextState(agent.context, args);
+        const { id } = await getContextState(agent, agent.context, args);
         contexts.set(id, { type: agent.context.type, args });
         contexts.set("agent:context", { type: agent.context.type, args });
       }
@@ -253,7 +201,7 @@ export function createDreams<
     run: async ({ context, args, outputs, handlers }) => {
       if (!booted) throw new Error("Not booted");
 
-      const ctxState = await getContextState(context, args);
+      const ctxState = await getContextState(agent, context, args);
 
       contexts.set(ctxState.id, { type: context.type, args });
 
@@ -265,7 +213,7 @@ export function createDreams<
       if (contextsRunning.has(ctxState.id)) return [];
       contextsRunning.add(ctxState.id);
 
-      const workingMemory = await getContextWorkingMemory(ctxState.id);
+      const workingMemory = await getContextWorkingMemory(agent, ctxState.id);
 
       const contextOuputs: Output[] = Object.entries({
         ...agent.outputs,
@@ -313,6 +261,7 @@ export function createDreams<
 
       const agentCtxState = agent.context
         ? await getContextState(
+            agent,
             agent.context,
             contexts.get("agent:context")!.args
           )
@@ -361,9 +310,8 @@ export function createDreams<
 
         await handleStream(stream, state.index, handler);
 
-        const data = await response;
-
-        logger.debug("agent:parsed", "data", data);
+        // const data = await response;
+        // logger.debug("agent:parsed", "data", data);
 
         await Promise.allSettled(actionCalls);
 
@@ -376,7 +324,7 @@ export function createDreams<
           await agent.memory.store.set(agentCtxState.id, agentCtxState.memory);
         }
 
-        await saveContextWorkingMemory(ctxState.id, workingMemory);
+        await saveContextWorkingMemory(agent, ctxState.id, workingMemory);
 
         step++;
 
@@ -394,7 +342,7 @@ export function createDreams<
 
       await agent.memory.store.set(ctxState.id, ctxState.memory);
 
-      await saveContextWorkingMemory(ctxState.id, workingMemory);
+      await saveContextWorkingMemory(agent, ctxState.id, workingMemory);
 
       contextsRunning.delete(ctxState.id);
 
@@ -411,11 +359,12 @@ export function createDreams<
         options,
         memory,
       } = await getContextState(
+        agent,
         params.context,
         params.context.schema.parse(params.args)
       );
 
-      const workingMemory = await getContextWorkingMemory(contextId);
+      const workingMemory = await getContextWorkingMemory(agent, contextId);
 
       const input = agent.inputs[params.input.type];
       const data = input.schema.parse(params.input.data);
@@ -452,10 +401,8 @@ export function createDreams<
 
       await agent.memory.store.set(contextId, memory);
       await agent.memory.vector.upsert(contextId, [memory]);
-      await agent.memory.store.set(
-        ["working-memory", contextId].join(":"),
-        workingMemory
-      );
+
+      await saveContextWorkingMemory(agent, contextId, workingMemory);
 
       return await agent.run(params);
     },
@@ -469,6 +416,59 @@ export function createDreams<
   container.instance("agent", agent);
 
   return agent;
+}
+
+function getContextId<TContext extends AnyContext>(
+  context: TContext,
+  args: z.infer<TContext["schema"]>
+) {
+  const key = context.key ? context.key(args) : context.type;
+  return context.key ? [context.type, key].join(":") : context.type;
+}
+
+async function getContextState<TContext extends AnyContext>(
+  agent: AnyAgent,
+  context: TContext,
+  args: z.infer<TContext["schema"]>
+): Promise<ContextState<TContext>> {
+  const key = context.key ? context.key(args) : context.type;
+  const id = context.key ? [context.type, key].join(":") : context.type;
+
+  const options = context.setup ? await context.setup(args, agent) : {};
+
+  const memory =
+    (await agent.memory.store.get(id)) ??
+    (context.create
+      ? context.create({ key, args, context, id: id, options })
+      : {});
+
+  return {
+    id,
+    key,
+    args,
+    options,
+    context,
+    memory,
+  };
+}
+
+async function getContextWorkingMemory(agent: AnyAgent, contextId: string) {
+  return (
+    (await agent.memory.store.get<WorkingMemory>(
+      [contextId, "working-memory"].join(":")
+    )) ?? (await defaultWorkingMemory.create())
+  );
+}
+
+async function saveContextWorkingMemory(
+  agent: AnyAgent,
+  contextId: string,
+  workingMemory: WorkingMemory
+) {
+  return await agent.memory.store.set(
+    [contextId, "working-memory"].join(":"),
+    workingMemory
+  );
 }
 
 const actionParseErrorPrompt = createPrompt(

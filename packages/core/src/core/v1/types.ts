@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { Container } from "./container";
 import type { ServiceProvider } from "./serviceProvider";
 import type { BaseMemory } from "./memory";
+import type { TaskRunner } from "./task";
 
 /**
  * Represents a memory configuration for storing data
@@ -403,6 +404,8 @@ export interface Agent<
   debugger: Debugger;
 
   container: Container;
+
+  taskRunner: TaskRunner;
 
   model: LanguageModelV1;
   reasoningModel?: LanguageModelV1;
