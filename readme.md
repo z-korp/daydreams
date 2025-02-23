@@ -96,7 +96,11 @@ We use [bun](https://bun.sh/) for development.
 
 ```bash
 bun install
+
+bun build:core --watch
 ```
+
+Edit the core package and watch for changes, and play with examples.
 
 ## Contributing
 
