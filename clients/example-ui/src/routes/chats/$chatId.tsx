@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
-import { MessagesList, MessageType } from "@/components/message-list";
-import { getWorkingMemoryLogs, Log } from "@daydreamsai/core";
+import { useEffect, useRef } from "react";
+import { MessagesList } from "@/components/message-list";
+import { getWorkingMemoryLogs } from "@daydreamsai/core";
 import { SidebarRight } from "@/components/sidebar-right";
 import { useAgent } from "@/hooks/use-agent";
 import { chat } from "@/agent/chat";

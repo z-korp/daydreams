@@ -3,8 +3,6 @@ import { Link } from "@tanstack/react-router";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAgent } from "@/hooks/use-agent";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 
 export const Route = createLazyFileRoute("/")({
   component: Index,

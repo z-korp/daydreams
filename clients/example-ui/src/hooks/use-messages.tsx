@@ -5,7 +5,7 @@ import { useState } from "react";
 export function useMessages() {
   const [messages, setMessages] = useState<MessageType[]>([]);
 
-  function handleLog(log: Log, done: boolean) {
+  function handleLog(log: Log, _done: boolean) {
     if (log.ref === "input") {
       setMessages((msgs) => [
         ...msgs.filter((msg) => msg.id !== log.id),
