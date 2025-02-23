@@ -14,22 +14,15 @@
         "default": "./src/index.ts"
       }
     },
-    "./v1": {
-      "import": {
-        "@daydreamsai/core": "./src/core/v1/index.ts",
-        "types": "./src/core/v1/index.ts",
-        "default": "./src/core/v1/index.ts"
-      }
-    },
     "./extensions": {
       "import": {
-        "@daydreamsai/core": "./src/core/v1/extensions/index.ts",
-        "types": "./src/core/v1/extensions/index.ts",
-        "default": "./src/core/v1/extensions/index.ts"
+        "@daydreamsai/core": "./src/extensions/index.ts",
+        "types": "./src/extensions/index.ts",
+        "default": "./src/extensions/index.ts"
       }
     },
     "./io/*": {
-      "default": "./src/core/v1/io/*.ts"
+      "default": "./src/io/*.ts"
     }
   },
   "devDependencies": {

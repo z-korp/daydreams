@@ -3,7 +3,7 @@
  * with a command line interface and Groq's LLM.
  */
 import { createGroq } from "@ai-sdk/groq";
-import { createDreams, context, render, action } from "@daydreamsai/core/v1";
+import { createDreams, context, render, action } from "@daydreamsai/core";
 import { cli } from "@daydreamsai/core/extensions";
 import { string, z } from "zod";
 

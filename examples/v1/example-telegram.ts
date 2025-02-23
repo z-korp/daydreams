@@ -4,7 +4,7 @@ import {
   LogLevel,
   seachWebAction,
   getWeatherAction,
-} from "@daydreamsai/core/v1";
+} from "@daydreamsai/core";
 import { telegram } from "@daydreamsai/core/extensions";
 import { deepResearch } from "./deep-research/research";
 

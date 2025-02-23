@@ -14,7 +14,7 @@ import {
   extension,
   context,
   type Debugger,
-} from "@daydreamsai/core/v1";
+} from "@daydreamsai/core";
 import { z } from "zod";
 import { v7 as randomUUUIDv7 } from "uuid";
 

@@ -10,7 +10,7 @@ import {
   action,
   LogLevel,
   type InferContextMemory,
-} from "@daydreamsai/core/v1";
+} from "@daydreamsai/core";
 import { cli } from "@daydreamsai/core/extensions";
 import { deepResearch } from "./deep-research/research";
 import { string, z } from "zod";
