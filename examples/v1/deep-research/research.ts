@@ -14,8 +14,9 @@ import {
   extension,
   context,
   type Debugger,
-} from "@daydreamsai/core/v1";
+} from "@daydreamsai/core";
 import { z } from "zod";
+import { v7 as randomUUUIDv7 } from "uuid";
 
 export type Research = {
   id: string;
@@ -282,19 +283,20 @@ const startDeepResearchAction = action({
       status: "in_progress",
     };
 
-    ctx.data.researches.push(research);
+    ctx.actionMemory.researches.push(research);
 
     startDeepResearch({
       model: agent.reasoningModel ?? agent.model,
       research,
-      tavilyClient: agent.container.resolve(tavily),
+      tavilyClient: agent.container.resolve("tavily"),
       maxDepth: call.data.maxDepth ?? 2,
       contextId: ctx.id,
       debug: agent.debugger,
     })
       .then((res) => {
-        ctx.memory.results.push({
+        ctx.workingMemory.results.push({
           ref: "action_result",
+          id: randomUUUIDv7(),
           callId: call.id,
           data: res,
           name: call.name,
@@ -304,7 +306,10 @@ const startDeepResearchAction = action({
 
         research.status = "done";
 
-        return agent.run(ctx.context, ctx.args);
+        return agent.run({
+          context: ctx.context,
+          args: ctx.args,
+        });
       })
       .catch((err) => console.error(err));
 
@@ -316,7 +321,10 @@ const cancelResearchAction = action({
   name: "cancel-deep-research",
   schema: researchSchema,
   memory: researchMemory,
-  enabled: (ctx) => ctx.data.researches.length > 0,
+  enabled: (ctx) => {
+    console.log({ ctx });
+    return ctx.actionMemory.researches.length > 0;
+  },
   async handler(params, ctx) {
     return "Research canceled!";
   },
@@ -326,6 +334,9 @@ const deepResearchContext = context({
   type: "deep-research",
   schema: z.string(),
   key: (id) => id,
+  create() {
+    return researchMemory.create();
+  },
 });
 
 export const deepResearch = extension({
