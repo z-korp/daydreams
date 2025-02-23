@@ -90,7 +90,11 @@ export function createDreams<
     if (extension.outputs) Object.assign(outputs, extension.outputs);
     if (extension.events) Object.assign(events, extension.events);
     if (extension.actions) actions.push(...extension.actions);
-    if (extension.services) services.push(...extension.services);
+    if (extension.services) {
+      for (const service of extension.services) {
+        serviceManager.register(service);
+      }
+    }
   }
 
   const agent: Agent<Memory, TContext> = {
