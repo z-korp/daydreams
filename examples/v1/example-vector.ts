@@ -4,7 +4,7 @@ import {
   createDreams,
   LogLevel,
   createMemoryStore,
-} from "@daydreamsai/core/v1";
+} from "@daydreamsai/core";
 import { cli, createChromaVectorStore } from "@daydreamsai/core/extensions";
 
 const groq = createGroq({

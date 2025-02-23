@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createDreams, LogLevel, action, task } from "@daydreamsai/core/v1";
+import { createDreams, LogLevel, action, task } from "@daydreamsai/core";
 import { discord } from "@daydreamsai/core/extensions";
 import { Octokit } from "@octokit/rest";
 import { google } from "@ai-sdk/google";

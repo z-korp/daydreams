@@ -13,7 +13,7 @@ import {
   output,
   extension,
   LogLevel,
-} from "@daydreamsai/core/v1";
+} from "@daydreamsai/core";
 import { string, z } from "zod";
 
 // Initialize Groq client
