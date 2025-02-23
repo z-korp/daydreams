@@ -1,10 +1,6 @@
 import { createGroq } from "@ai-sdk/groq";
-import {
-  createContainer,
-  createDreams,
-  LogLevel,
-  twitter,
-} from "@daydreamsai/core/v1";
+import { twitter } from "@daydreamsai/core/extensions";
+import { createDreams, LogLevel, memory } from "@daydreamsai/core";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -12,7 +8,6 @@ const groq = createGroq({
 
 const agent = createDreams({
   logger: LogLevel.DEBUG,
-  container: createContainer(),
   model: groq("deepseek-r1-distill-llama-70b"),
   extensions: [twitter],
 });
