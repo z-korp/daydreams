@@ -11,6 +11,8 @@ const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
 });
 
+process.env.NODE_ENV;
+
 const agent = createDreams({
   logger: LogLevel.DEBUG,
   container: createContainer(),
