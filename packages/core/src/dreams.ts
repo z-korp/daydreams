@@ -837,7 +837,7 @@ function createContextStreamHandler({
 
   async function handler(el: StackElement) {
     state.index = el.index > state.index ? el.index : state.index;
-    console.log({ index: el.index, lastIndex: state.index });
+    // console.log({ index: el.index, lastIndex: state.index });
 
     switch (el.tag) {
       case "think":
