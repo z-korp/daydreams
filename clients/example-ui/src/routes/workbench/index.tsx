@@ -54,7 +54,7 @@ function RouteComponent() {
   keyRef.current = key;
 
   return (
-    <div className="grid grid-cols-2 max-h-screen min-h-screen relative bg-card">
+    <div className="grid grid-cols-2 max-h-screen min-h-[calc(100vh-64px)] relative bg-card">
       <div className="h-full flex flex-col max-h-screen overflow-hidden pr-0.5">
         <ScrollArea className="w-full flex-1 rounded-md">
           <div className="flex flex-col pb-20 px-4 pt-6">
@@ -135,7 +135,7 @@ function RouteComponent() {
               type="text"
               name="message"
               placeholder="Type your message..."
-              className="border border-collapse flex-1 px-6 py-4 rounded-lg bg-background text-foreground placeholder:text-primary focus:outline-none focus:border-primary"
+              className="border-t border-l border-collapse flex-1 px-6 py-4 rounded-lg bg-background text-foreground placeholder:text-primary focus:outline-none focus:border-primary"
               disabled={false} // Disable input while loading history
             />
             <button className="border border-primary rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary h-full w-1/4 disabled:opacity-50 disabled:cursor-not-allowed">

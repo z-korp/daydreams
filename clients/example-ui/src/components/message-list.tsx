@@ -1,9 +1,10 @@
+import { ChevronsUpDown } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "./ui/collapsible";
-
+import { Button } from "./ui/button";
 export interface MessageType {
   id: string;
   type:
@@ -74,11 +75,16 @@ export function MessagesList({ messages }: MessagesListProps) {
             <div className={bubbleClass}>
               {msg.type === "thought" ? (
                 <Collapsible>
-                  <CollapsibleTrigger>
-                    <div className="mb-1 text-xs font-medium uppercase tracking-wider opacity-80">
-                      {msg.type}
-                    </div>
-                  </CollapsibleTrigger>
+                  <div className="mb-1 text-xs font-medium uppercase tracking-wider opacity-80 flex items-center justify-between">
+                    {msg.type}
+
+                    <CollapsibleTrigger>
+                      <Button variant="ghost" size="sm">
+                        <ChevronsUpDown className="h-4 w-4" />
+                        <span className="sr-only">Toggle</span>
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
                   <CollapsibleContent>
                     {msg.message && (
                       <div className="text-base">{msg.message.trim()}</div>
