@@ -42,9 +42,9 @@ export const chat = extension({
         user: z.string().describe("the user you are replying to"),
         content: z.string(),
       }),
-      handler(params, ctx, agent) {
+      handler(_params, _ctx, _agent) {
         return {
-          data: params,
+          data: _params,
           timestamp: Date.now(),
         };
       },
@@ -55,7 +55,7 @@ export const chat = extension({
     action({
       name: "get_weather",
       schema: z.object({ location: z.string() }),
-      handler(call, ctx, agent) {
+      handler(_call, _ctx, _agent) {
         return "Sunny";
       },
     }),

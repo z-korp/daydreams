@@ -2,16 +2,11 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import {
-  createRootRoute,
   createRootRouteWithContext,
   Link,
   Outlet,
-  useChildMatches,
-  useMatch,
-  useMatches,
-  useRouteContext,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -21,7 +16,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ModeToggle } from "@/components/mode-toggle";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { SidebarRight } from "@/components/sidebar-right";
+
 import { AnyAgent } from "@daydreamsai/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
