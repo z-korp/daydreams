@@ -32,8 +32,10 @@ interface NavItem {
 export function NavMain({ items }: { items: NavItem[] }) {
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Daydreams</SidebarGroupLabel>
-      <SidebarMenu>
+      <SidebarGroupLabel>
+        <img src="/Daydreams.svg" className=" h-6" />
+      </SidebarGroupLabel>
+      <SidebarMenu className="my-4">
         {items.map((item) =>
           item.items ? (
             <Collapsible
