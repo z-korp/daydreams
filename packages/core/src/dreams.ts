@@ -16,6 +16,8 @@ import {
   type OutputRef,
   type Subscription,
   type WorkingMemory,
+  type Episode,
+  type EpisodicMemory,
 } from "./types";
 import { Logger } from "./logger";
 import createContainer from "./container";
@@ -30,6 +32,7 @@ import { createMemory } from "./memory";
 import { createVectorStore } from "./memory/base";
 import { v7 as randomUUIDv7 } from "uuid";
 import { runAction, runGenerate, runGenerateResults } from "./tasks";
+import { createEpisodeFromWorkingMemory } from "./memory/utils";
 
 export function createDreams<
   Memory = any,
@@ -322,7 +325,6 @@ export function createDreams<
         actionCalls.length = 0;
 
         await agent.memory.store.set(ctxState.id, ctxState.memory);
-        // await agent.memory.vector.upsert(ctxState.id, []);
 
         if (agentCtxState) {
           await agent.memory.store.set(agentCtxState.id, agentCtxState.memory);
@@ -343,8 +345,6 @@ export function createDreams<
       workingMemory.inputs.forEach((i) => {
         i.processed = true;
       });
-
-      await agent.memory.store.set(ctxState.id, ctxState.memory);
 
       await saveContextWorkingMemory(agent, ctxState.id, workingMemory);
 
@@ -372,6 +372,15 @@ export function createDreams<
 
       const input = agent.inputs[params.input.type];
       const data = input.schema.parse(params.input.data);
+
+      const episodicMemory = await agent.memory.vector.query(
+        `${contextId}`,
+        JSON.stringify(data)
+      );
+
+      workingMemory.episodicMemory = {
+        episodes: episodicMemory,
+      };
 
       if (input.handler) {
         await input.handler(
@@ -404,7 +413,6 @@ export function createDreams<
       } as any);
 
       await agent.memory.store.set(contextId, memory);
-      await agent.memory.vector.upsert(contextId, [memory]);
 
       await saveContextWorkingMemory(agent, contextId, workingMemory);
 
@@ -469,6 +477,22 @@ async function saveContextWorkingMemory(
   contextId: string,
   workingMemory: WorkingMemory
 ) {
+  if (
+    workingMemory.inputs.some((i) => i.processed) &&
+    workingMemory.outputs.length > 0
+  ) {
+    const episode = await createEpisodeFromWorkingMemory(workingMemory, agent);
+
+    await agent.memory.vector.upsert(`${contextId}`, [
+      {
+        id: episode.id,
+        text: episode.observation,
+        metadata: episode,
+      },
+    ]);
+  }
+
+  // Store working memory as before
   return await agent.memory.store.set(
     [contextId, "working-memory"].join(":"),
     workingMemory

@@ -119,6 +119,7 @@ export interface WorkingMemory {
   /** List of action results */
   results: ActionResult[];
   // chains: Chain[];
+  episodicMemory?: EpisodicMemory;
 }
 
 export type InferSchema<T> = T extends {
@@ -669,3 +670,35 @@ export type Extension<
   install?: (agent: AnyAgent) => Promise<void> | void;
   contexts?: Contexts;
 };
+
+export type EposodicMemory = {
+  id: string;
+  observation: string;
+  thoughts: string;
+  action: string;
+  result: string;
+};
+
+export type EposodicMemoryStore = {
+  generate: (conversation: string[]) => Promise<EposodicMemory>;
+};
+
+export interface Episode {
+  id: string;
+  timestamp: number;
+  observation: string; // Context and setup
+  thoughts: string[]; // Internal reasoning process
+  actions: ActionCall[]; // What actions were taken
+  outputs: OutputRef[]; // What outputs were generated
+  result: string; // Outcomes of actions
+  metadata?: {
+    success?: boolean;
+    tags?: string[];
+    [key: string]: any;
+  };
+}
+
+export interface EpisodicMemory {
+  episodes: Episode[];
+  index?: number; // For vector store indexing
+}
