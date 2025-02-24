@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "start": "bun run examples/v1/example-basic.ts",
-    "task": "bun run examples/v1/example-basic.ts",
+    "task": "bun run examples/v1/example-task.ts",
     "twitter": "bun run examples/v1/example-twitter.ts",
     "discord": "bun run examples/v1/example-discord.ts",
     "telegram": "bun run examples/v1/example-telegram.ts",

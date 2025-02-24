@@ -115,7 +115,7 @@ export function createDreams<
     debugger: debug,
     context: config.context ?? undefined,
     emit: (event: string, data: any) => {
-      logger.info("agent:event", event, data);
+      logger.debug("agent:event", event, data);
     },
 
     async getContexts() {
@@ -139,7 +139,7 @@ export function createDreams<
     },
 
     async start(args) {
-      logger.info("agent:start", "booting", { args, booted });
+      logger.debug("agent:start", "booting", { args, booted });
       if (booted) return agent;
 
       booted = true;
@@ -155,7 +155,7 @@ export function createDreams<
 
         if (input.subscribe) {
           let subscription = input.subscribe((context, args, data) => {
-            logger.info("agent", "input", { context, args, data });
+            logger.debug("agent", "input", { context, args, data });
             agent
               .send({
                 context,
@@ -660,7 +660,7 @@ async function handleOutput({
     throw new Error("OUTPUT NOT FOUND");
   }
 
-  logger.info("agent:output", outputRef.type, outputRef.data);
+  logger.debug("agent:output", outputRef.type, outputRef.data);
 
   try {
     let parsedContent = outputRef.data;
@@ -789,7 +789,7 @@ function createContextStreamHandler({
 
     if (log.ref === "thought" && done) {
       workingMemory.thoughts.push(log);
-      logger.info("agent:think", "", log.content);
+      logger.debug("agent:think", "thought", log.content);
       handlers?.onThinking?.(log);
     }
 
