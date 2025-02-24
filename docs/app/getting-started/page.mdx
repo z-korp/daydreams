@@ -6,20 +6,23 @@ import { Tabs } from "nextra/components";
 
 - Node.js 18+ using [nvm](https://github.com/nvm-sh/nvm)
 
+We use [ai-sdk](https://sdk.vercel.ai/docs/introduction) to support multiple
+LLMs. You will need to install the ai-sdk for the LLM you want to use.
+
 ```bash [npm]
-npm install @daydreamsai/core
+npm i @daydreamsai/core @ai-sdk/groq discord.js @tavily/core
 ```
 
 ```bash [pnpm]
-pnpm add @daydreamsai/core
+pnpm add @daydreamsai/core @ai-sdk/groq discord.js @tavily/core
 ```
 
 ```bash [yarn]
-yarn add @daydreamsai/core
+yarn add @daydreamsai/core @ai-sdk/groq discord.js @tavily/core
 ```
 
 ```bash [bun]
-bun add @daydreamsai/core
+bun add @daydreamsai/core @ai-sdk/groq discord.js @tavily/core
 ```
 
 ### Basic Usage
