@@ -12,3 +12,4 @@ export * from "./context";
 export * from "./container";
 export * from "./serviceProvider";
 export * from "./actions";
+export * from "./providers";

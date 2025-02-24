@@ -11,6 +11,7 @@ import {
   LogLevel,
   output,
   createContainer,
+  fetchGraphQL,
   type InferContextMemory,
 } from "@daydreamsai/core";
 import { cli } from "@daydreamsai/core/extensions";
@@ -155,36 +156,6 @@ const agent = createDreams({
   container,
   actions: [
     action({
-      name: "buildGoals",
-      description: "Build a hierarchical goal structure based on an objective",
-      schema: z.object({
-        objective: z.string().describe("The main objective to achieve"),
-        context: z
-          .string()
-          .optional()
-          .describe("Additional context for goal planning"),
-      }),
-      handler(call, ctx, agent) {
-        const agentMemory = ctx.agentMemory as GoalContextMemory;
-
-        // Initialize goal structure if it doesn't exist
-        if (!agentMemory.goal) {
-          agentMemory.goal = {
-            long_term: [],
-            medium_term: [],
-            short_term: [],
-          };
-        }
-
-        // Return the current goal structure
-        return {
-          message: `Goals are being built for objective: ${call.data.objective}`,
-          currentGoals: agentMemory.goal,
-        };
-      },
-    }),
-
-    action({
       name: "decomposeGoal",
       description: "Decompose a goal into executable tasks",
       schema: z.object({
@@ -295,12 +266,44 @@ const agent = createDreams({
     action({
       name: "Query:Eternum:Graphql",
       description: "Search Eternum GraphQL API",
-      schema: z.object({ query: z.string() }),
-      handler(call, ctx, agent) {
-        console.log(call.data.query);
+      schema: z.object({
+        query: z.string().describe(`
+            query GetRealmDetails {
+  s0EternumResourceModels(where: { entity_id: ENTITY_ID }, limit: 100) {
+    edges {
+      node {
+          resource_type
+          balance
+      }
+    }
+  }
+  s0EternumBuildingModels(where: { outer_col: X, outer_row: Y }) {
+    edges {
+      node {
+          category
+          entity_id
+          inner_col
+          inner_row
+      }
+    }
+  }
+}`),
+      }),
+      async handler(call, ctx, agent) {
+        const result = await fetchGraphQL(
+          "https://api.cartridge.gg/x/eternum-sepolia/torii/graphql",
+          call.data.query
+        );
+
+        if (result instanceof Error) {
+          return {
+            error: result.message,
+          };
+        }
+
         return {
           data: {
-            result: ETERNUM_CONTEXT,
+            result: result,
           },
           timestamp: Date.now(),
         };
