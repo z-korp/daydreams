@@ -9,26 +9,66 @@ import {
   render,
   action,
   LogLevel,
+  output,
+  createContainer,
   type InferContextMemory,
 } from "@daydreamsai/core";
 import { cli } from "@daydreamsai/core/extensions";
 import { deepResearch } from "./deep-research/research";
 import { string, z } from "zod";
+import { tavily } from "@tavily/core";
+import { ETERNUM_CONTEXT } from "../v0/eternum-context";
+import { anthropic } from "@ai-sdk/anthropic";
 
-export const goalSchema = z.object({
-  id: z.string(),
-  description: z.string(),
-  success_criteria: z.array(z.string()),
-  dependencies: z.array(z.string()),
-  priority: z.number().min(1).max(10),
-  required_resources: z.array(z.string()),
-  estimated_difficulty: z.number().min(1).max(10),
+const taskSchema = z.object({
+  plan: z.string().optional(),
+  meta: z.any().optional(),
+  actions: z.array(
+    z.object({
+      type: z.string(),
+      context: z.string(),
+      payload: z.any(),
+    })
+  ),
 });
 
+export const goalSchema = z
+  .object({
+    id: z.string(),
+    description: z.string().describe("A description of the goal"),
+    success_criteria: z.array(z.string()).describe("The criteria for success"),
+    dependencies: z.array(z.string()).describe("The dependencies of the goal"),
+    priority: z.number().min(1).max(10).describe("The priority of the goal"),
+    required_resources: z
+      .array(z.string())
+      .describe("The resources needed to achieve the goal"),
+    estimated_difficulty: z
+      .number()
+      .min(1)
+      .max(10)
+      .describe("The estimated difficulty of the goal"),
+    tasks: z
+      .array(taskSchema)
+      .describe(
+        "The tasks to achieve the goal. This is where you build potential tasks you need todo, based on your understanding of what you can do. These are actions."
+      ),
+  })
+  .describe("A goal to be achieved");
+
 export const goalPlanningSchema = z.object({
-  long_term: z.array(goalSchema),
-  medium_term: z.array(goalSchema),
-  short_term: z.array(goalSchema),
+  long_term: z
+    .array(goalSchema)
+    .describe("Strategic goals that are the main goals you want to achieve"),
+  medium_term: z
+    .array(goalSchema)
+    .describe(
+      "Tactical goals that will require many short term goals to achieve"
+    ),
+  short_term: z
+    .array(goalSchema)
+    .describe(
+      "Immediate actionable goals that will require a few tasks to achieve"
+    ),
 });
 
 // Initialize Groq client
@@ -51,11 +91,6 @@ Current Task: {{currentTask}}
 6. Ensure goals are achievable given the current context
 7. Consider past experiences when setting goals
 8. Use available game state information to inform strategy
-
-# Return a JSON structure with three arrays:
-- long_term: Strategic goals that might take multiple sessions
-- medium_term: Tactical goals achievable in one session
-- short_term: Immediate actionable goals
 
 # Each goal must include:
 - id: Unique temporary ID used in dependencies
@@ -81,8 +116,6 @@ const goalContexts = context({
   },
 
   create(state) {
-    console.log({ state });
-
     return {
       goal: null as null | Goal,
       tasks: [],
@@ -99,98 +132,206 @@ const goalContexts = context({
   },
 });
 
+const container = createContainer();
+
+container.singleton("tavily", () => {
+  return tavily({
+    apiKey: process.env.TAVILY_API_KEY!,
+  });
+});
+
 type GoalContextMemory = InferContextMemory<typeof goalContexts>;
 
 // Create Dreams agent instance
 const agent = createDreams({
-  logger: LogLevel.ERROR,
+  logger: LogLevel.DEBUG,
   debugger: async (contextId, keys, data) => {
     const [type, id] = keys;
     await Bun.write(`./logs/tasks/${contextId}/${id}-${type}.md`, data);
   },
-  model: groq("deepseek-r1-distill-llama-70b"),
+  model: anthropic("claude-3-7-sonnet-latest"),
   extensions: [cli, deepResearch],
   context: goalContexts,
+  container,
   actions: [
-    // action({
-    //   name: "addTask",
-    //   description: "Add a task to the goal",
-    //   schema: z.object({ task: z.string() }),
-    //   // enabled: ({ context }) => context.type === goalContexts.type,
-    //   handler(call, ctx, agent) {
-    //     if
-    //     const agentMemory = ctx.agentMemory.goal as Goal;
-    //     console.log(agentMemory);
-    //     agentMemory.long_term.push({
-    //       id: "1",
-    //       description: call.data.task,
-    //       success_criteria: [],
-    //       dependencies: [],
-    //       priority: 1,
-    //       required_resources: [],
-    //       estimated_difficulty: 1,
-    //     });
+    action({
+      name: "buildGoals",
+      description: "Build a hierarchical goal structure based on an objective",
+      schema: z.object({
+        objective: z.string().describe("The main objective to achieve"),
+        context: z
+          .string()
+          .optional()
+          .describe("Additional context for goal planning"),
+      }),
+      handler(call, ctx, agent) {
+        const agentMemory = ctx.agentMemory as GoalContextMemory;
 
-    //     return {};
-    //   },
-    // }),
+        // Initialize goal structure if it doesn't exist
+        if (!agentMemory.goal) {
+          agentMemory.goal = {
+            long_term: [],
+            medium_term: [],
+            short_term: [],
+          };
+        }
+
+        // Return the current goal structure
+        return {
+          message: `Goals are being built for objective: ${call.data.objective}`,
+          currentGoals: agentMemory.goal,
+        };
+      },
+    }),
+
+    action({
+      name: "decomposeGoal",
+      description: "Decompose a goal into executable tasks",
+      schema: z.object({
+        goalId: z.string().describe("ID of the goal to decompose"),
+        goalType: z
+          .enum(["long_term", "medium_term", "short_term"])
+          .describe("Type of goal"),
+      }),
+      handler(call, ctx, agent) {
+        const agentMemory = ctx.agentMemory as GoalContextMemory;
+
+        if (!agentMemory.goal) {
+          return { error: "No goals have been set yet" };
+        }
+
+        const goalType = call.data.goalType;
+        const goalId = call.data.goalId;
+
+        // Find the goal in the specified category
+        const goal = agentMemory.goal[goalType].find((g) => g.id === goalId);
+
+        if (!goal) {
+          return {
+            error: `Goal with ID ${goalId} not found in ${goalType} goals`,
+          };
+        }
+
+        // Return the goal for task decomposition
+        return {
+          goal,
+          message: `Ready to decompose goal: ${goal.description}`,
+        };
+      },
+    }),
+
     action({
       name: "setGoalPlan",
-      description: "Set goal plan",
+      description: "Set the complete goal plan",
       schema: z.object({ goal: goalPlanningSchema }),
       handler(call, ctx, agent) {
         const agentMemory = ctx.agentMemory as GoalContextMemory;
-        console.log({ agentMemory });
         agentMemory.goal = call.data.goal;
         return {
-          newGoal: call.data.goal,
+          plan: call.data.goal,
+          message: "Goal plan has been set successfully",
+        };
+      },
+    }),
+
+    action({
+      name: "updateGoal",
+      description: "Update a goal's state or properties",
+      schema: z.object({
+        goalId: z.string().describe("ID of the goal to update"),
+        goalType: z
+          .enum(["long_term", "medium_term", "short_term"])
+          .describe("Type of goal"),
+        updates: goalSchema.partial().describe("Properties to update"),
+      }),
+      handler(call, ctx, agent) {
+        const agentMemory = ctx.agentMemory as GoalContextMemory;
+
+        if (!agentMemory.goal) {
+          return { error: "No goals have been set yet" };
+        }
+
+        const goalType = call.data.goalType;
+        const goalId = call.data.goalId;
+
+        // Find the goal in the specified category
+        const goalIndex = agentMemory.goal[goalType].findIndex(
+          (g) => g.id === goalId
+        );
+
+        if (goalIndex === -1) {
+          return {
+            error: `Goal with ID ${goalId} not found in ${goalType} goals`,
+          };
+        }
+
+        // Update the goal with the provided updates
+        agentMemory.goal[goalType][goalIndex] = {
+          ...agentMemory.goal[goalType][goalIndex],
+          ...call.data.updates,
+        };
+
+        return {
+          updatedGoal: agentMemory.goal[goalType][goalIndex],
+          message: `Goal ${goalId} has been updated successfully`,
+        };
+      },
+    }),
+
+    action({
+      name: "queryEternum",
+      description:
+        "This will tell you everything you need to know about Eternum for how to win the game",
+      schema: z.object({ query: z.string() }),
+      handler(call, ctx, agent) {
+        return {
+          data: {
+            result: ETERNUM_CONTEXT,
+          },
+          timestamp: Date.now(),
         };
       },
     }),
     action({
-      name: "updateGoal",
-      description:
-        "Use this to update a goals state if you think it is complete",
-      schema: z.object({ goal: goalSchema }),
+      name: "Query:Eternum:Graphql",
+      description: "Search Eternum GraphQL API",
+      schema: z.object({ query: z.string() }),
       handler(call, ctx, agent) {
-        const agentMemory = ctx.agentMemory.goal as Goal;
-        const goal = agentMemory.long_term.find(
-          (goal) => goal.id === call.data.goal.id
-        );
-
-        if (!goal) {
-          return { error: "Goal not found" };
-        }
-
-        goal.description = call.data.goal.description;
-        goal.success_criteria = call.data.goal.success_criteria;
-        goal.dependencies = call.data.goal.dependencies;
-        goal.priority = call.data.goal.priority;
-        goal.required_resources = call.data.goal.required_resources;
-        goal.estimated_difficulty = call.data.goal.estimated_difficulty;
-
+        console.log(call.data.query);
         return {
-          goal,
+          data: {
+            result: ETERNUM_CONTEXT,
+          },
+          timestamp: Date.now(),
         };
-      },
-
-      evaluator: {
-        name: "validateFetchData",
-        prompt: "Ensure the goal is achievable",
-        description: "Ensures fetched data meets requirements",
-
-        handler: async (result, ctx, agent) => {
-          console.log({ result, ctx, agent });
-          const isValid = true;
-          return isValid;
-        },
-
-        onFailure: async (ctx, agent) => {
-          console.log({ ctx, agent });
-        },
       },
     }),
   ],
+  outputs: {
+    "goal-manager:state": output({
+      description:
+        "Use this when you need to update the goals. Use the goal id to update the goal. You should attempt the goal then call this to update the goal.",
+      instructions: "Increment the state of the goal manager",
+      schema: z.object({
+        type: z
+          .enum(["SET", "UPDATE"])
+          .describe("SET to set the goals. UPDATE to update a goal."),
+        goal: goalSchema,
+      }),
+      handler: async (call, ctx, agent) => {
+        // get goal id
+        // update state of the goal id and the changes
+        console.log("handler", { call, ctx, agent });
+
+        return {
+          data: {
+            goal: "",
+          },
+          timestamp: Date.now(),
+        };
+      },
+    }),
+  },
 }).start({
   id: "game",
 });
