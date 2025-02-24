@@ -61,7 +61,7 @@
     "p-defer": "^4.0.1",
     "starknet": "^6.23.1",
     "telegraf": "^4.16.3",
-    "uuid": "^11.0.5",
+    "uuid": "^11.1.0",
     "zod": "^3.24.2",
     "zod-to-json-schema": "^3.24.1"
   }
