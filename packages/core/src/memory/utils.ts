@@ -15,7 +15,7 @@ export const generateEposodicMemory = async (
   conversation: string[]
 ): Promise<EposodicMemory> => {
   const extractEpisode = await generateObject({
-    model: anthropic("claude-3-5-haiku-latest"),
+    model: anthropic("claude-3-7-sonnet-latest"),
     schema: z.object({
       episode: z.string(),
       observation: z.string().describe("The context and setup - what happened"),
