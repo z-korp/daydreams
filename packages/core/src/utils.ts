@@ -167,3 +167,27 @@ export function extension<
 >(config: Extension<AnyContext, Contexts>) {
   return config;
 }
+
+/**
+ * Validates environment variables against a Zod schema
+ * @param schema The Zod schema to validate against
+ * @param env The environment object to validate (defaults to process.env)
+ * @returns The validated environment variables
+ */
+export function validateEnv<T extends z.ZodTypeAny>(
+  schema: T,
+  env = process.env
+): z.infer<T> {
+  try {
+    return schema.parse(env);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.error("Environment validation failed:");
+      error.errors.forEach((err) => {
+        console.error(`- ${err.message}`);
+      });
+      process.exit(1);
+    }
+    throw error;
+  }
+}

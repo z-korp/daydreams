@@ -13,16 +13,18 @@ import {
   output,
   extension,
   LogLevel,
+  validateEnv,
 } from "@daydreamsai/core";
 import { string, z } from "zod";
 
-// Initialize Groq client
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY!,
-});
+const env = validateEnv(
+  z.object({
+    ANTHROPIC_API_KEY: z.string().min(1, "ANTHROPIC_API_KEY is required"),
+  })
+);
 
 const anthropic = createAnthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
+  apiKey: env.ANTHROPIC_API_KEY!,
 });
 
 function createChat() {
@@ -92,7 +94,6 @@ const agent = await createDreams({
     const [type, id] = keys;
     await Bun.write(`./logs/chat/${contextId}/${id}-${type}.md`, data);
   },
-  // model: groq("deepseek-r1-distill-llama-70b"),
   model: anthropic("claude-3-5-haiku-latest"),
   extensions: [chat] as const,
   inputs: {

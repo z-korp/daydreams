@@ -1,9 +1,19 @@
 import { createGroq } from "@ai-sdk/groq";
 import { twitter } from "@daydreamsai/core/extensions";
-import { createDreams, LogLevel, memory } from "@daydreamsai/core";
+import { createDreams, LogLevel, memory, validateEnv } from "@daydreamsai/core";
+import { z } from "zod";
+
+const env = validateEnv(
+  z.object({
+    GROQ_API_KEY: z.string().min(1, "GROQ_API_KEY is required"),
+    TWITTER_USERNAME: z.string().min(1, "TWITTER_USERNAME is required"),
+    TWITTER_PASSWORD: z.string().min(1, "TWITTER_PASSWORD is required"),
+    TWITTER_EMAIL: z.string().min(1, "TWITTER_EMAIL is required"),
+  })
+);
 
 const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY!,
+  apiKey: env.GROQ_API_KEY!,
 });
 
 const agent = createDreams({
