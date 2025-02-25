@@ -47,6 +47,7 @@
     "@langchain/textsplitters": "^0.1.0",
     "@mysten/sui": "^1.16.0",
     "@solana/web3.js": "^1.98.0",
+    "@ai-sdk/openai": "^1.1.14",
     "agent-twitter-client": "^0.0.18",
     "ai": "^4.1.41",
     "ajv": "^8.17.1",

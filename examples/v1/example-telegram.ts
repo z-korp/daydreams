@@ -16,6 +16,7 @@ const env = validateEnv(
     TELEGRAM_BOT_NAME: z.string().min(1, "TELEGRAM_BOT_NAME is required"),
     GROQ_API_KEY: z.string().min(1, "GROQ_API_KEY is required"),
     TAVILY_API_KEY: z.string().min(1, "TAVILY_API_KEY is required"),
+    OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
   })
 );
 

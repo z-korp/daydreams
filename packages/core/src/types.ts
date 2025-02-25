@@ -394,33 +394,81 @@ export interface Handlers {
   onThinking: (thought: Thought) => void;
 }
 
+/**
+ * Represents an agent with various configurations and methods for handling contexts, inputs, outputs, and more.
+ * @template Memory - The type of memory used by the agent.
+ * @template TContext - The type of context used by the agent.
+ */
 export interface Agent<
   Memory = any,
   TContext extends Context<any, any, any, any> = Context<any, any, any, any>,
 > {
+  /**
+   * The memory store and vector store used by the agent.
+   */
   memory: BaseMemory;
 
+  /**
+   * The current context of the agent.
+   */
   context?: TContext;
 
+  /**
+   * Debugger function for the agent.
+   */
   debugger: Debugger;
 
+  /**
+   * The container used by the agent.
+   */
   container: Container;
 
+  /**
+   * The task runner used by the agent.
+   */
   taskRunner: TaskRunner;
 
+  /**
+   * The primary language model used by the agent.
+   */
   model: LanguageModelV1;
+
+  /**
+   * The reasoning model used by the agent, if any.
+   */
   reasoningModel?: LanguageModelV1;
 
+  /**
+   * The vector model used by the agent, if any.
+   */
+  vectorModel?: LanguageModelV1;
+
+  /**
+   * A record of input configurations for the agent.
+   */
   inputs: Record<string, InputConfig<any, AgentContext<Memory>>>;
+
+  /**
+   * A record of output configurations for the agent.
+   */
   outputs: Record<
     string,
     Omit<Output<any, AgentContext<Memory>, any, any>, "type">
   >;
 
+  /**
+   * A record of event schemas for the agent.
+   */
   events: Record<string, z.AnyZodObject>;
 
+  /**
+   * A record of expert configurations for the agent.
+   */
   experts: Record<string, ExpertConfig>;
 
+  /**
+   * An array of actions available to the agent.
+   */
   actions: Action<
     any,
     any,
@@ -429,8 +477,17 @@ export interface Agent<
     any
   >[];
 
-  //
+  /**
+   * Emits an event with the provided arguments.
+   * @param args - Arguments to pass to the event handler.
+   */
   emit: (...args: any[]) => void;
+
+  /**
+   * Runs the agent with the provided options.
+   * @param opts - Options for running the agent.
+   * @returns A promise that resolves to an array of logs.
+   */
   run: <TContext extends Context<any, any, any, any>>(opts: {
     context: TContext;
     args: z.infer<TContext["schema"]>;
@@ -441,6 +498,11 @@ export interface Agent<
     handlers?: Partial<Handlers>;
   }) => Promise<Log[]>;
 
+  /**
+   * Sends an input to the agent with the provided options.
+   * @param opts - Options for sending input to the agent.
+   * @returns A promise that resolves to an array of logs.
+   */
   send: <TContext extends AnyContext>(opts: {
     context: TContext;
     args: z.infer<NonNullable<TContext["schema"]>>;
@@ -452,22 +514,57 @@ export interface Agent<
     handlers?: Partial<Handlers>;
   }) => Promise<Log[]>;
 
+  /**
+   * Evaluates the provided context.
+   * @param ctx - The context to evaluate.
+   * @returns A promise that resolves when evaluation is complete.
+   */
   evaluator: (ctx: AgentContext<Memory, TContext>) => Promise<void>;
 
+  /**
+   * Starts the agent with the provided arguments.
+   * @param args - Arguments to pass to the agent on start.
+   * @returns A promise that resolves to the agent instance.
+   */
   start(args?: z.infer<TContext["schema"]>): Promise<this>;
+
+  /**
+   * Stops the agent.
+   * @returns A promise that resolves when the agent is stopped.
+   */
   stop(): Promise<void>;
 
+  /**
+   * Retrieves the contexts managed by the agent.
+   * @returns A promise that resolves to an array of context objects.
+   */
   getContexts(): Promise<{ id: string; type: string; args?: any }[]>;
+
+  /**
+   * Retrieves the ID for a given context and arguments.
+   * @param params - Parameters for retrieving the context ID.
+   * @returns The context ID.
+   */
   getContextId<TContext extends AnyContext>(params: {
     context: TContext;
     args: z.infer<NonNullable<TContext["schema"]>>;
   }): string;
 
+  /**
+   * Retrieves the state of a given context and arguments.
+   * @param params - Parameters for retrieving the context state.
+   * @returns A promise that resolves to the context state.
+   */
   getContext<TContext extends AnyContext>(params: {
     context: TContext;
     args: z.infer<NonNullable<TContext["schema"]>>;
   }): Promise<ContextState<TContext>>;
 
+  /**
+   * Retrieves the working memory for a given context ID.
+   * @param contextId - The ID of the context.
+   * @returns A promise that resolves to the working memory.
+   */
   getWorkingMemory(contextId: string): Promise<WorkingMemory>;
 }
 
@@ -669,14 +766,6 @@ export type Extension<
   name: string;
   install?: (agent: AnyAgent) => Promise<void> | void;
   contexts?: Contexts;
-};
-
-export type EposodicMemory = {
-  id: string;
-  observation: string;
-  thoughts: string;
-  action: string;
-  result: string;
 };
 
 export interface Episode {

@@ -1,33 +1,29 @@
 import { generateObject } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
-import type {
-  AnyAgent,
-  EposodicMemory,
-  Episode,
-  WorkingMemory,
-  Log,
-} from "../types";
+import { openai } from "@ai-sdk/openai";
+import type { AnyAgent, Episode, WorkingMemory, Log } from "../types";
 import { z } from "zod";
 import { v7 as randomUUIDv7 } from "uuid";
 
-export const generateEposodicMemory = async (
+export const generateEpisodicMemory = async (
   agent: AnyAgent,
   conversation: string[]
-): Promise<EposodicMemory> => {
+): Promise<{
+  observation: string;
+  thoughts: string;
+  result: string;
+}> => {
+  if (!conversation.length) {
+    throw new Error("Cannot generate episodic memory from empty conversation");
+  }
+
   const extractEpisode = await generateObject({
-    model: anthropic("claude-3-7-sonnet-latest"),
+    model: agent.memory.vectorModel || openai("gpt-4-turbo"),
     schema: z.object({
-      episode: z.string(),
       observation: z.string().describe("The context and setup - what happened"),
       thoughts: z
         .string()
         .describe(
           "Internal reasoning process and observations of the agent in the episode that let it arrive at the correct action and result. 'I ...'"
-        ),
-      action: z
-        .string()
-        .describe(
-          "What was done, how, and in what format. (Include whatever is salient to the success of the action). I .."
         ),
       result: z
         .string()
@@ -40,19 +36,15 @@ export const generateEposodicMemory = async (
     
     The conversation is a list of messages between a user and an assistant.
 
-    The conversation is:
+    Extract the key elements from this conversation:
     ${conversation.join("\n")}
-
-    The episode is a list of thoughts, actions, and results.
-
-    Extract the episode from the conversation: ${conversation.join("\n")}`,
+    
+    Provide a concise summary of what happened, the agent's thought process, actions taken, and the final outcome.`,
   });
 
   return {
-    id: conversation[0],
     observation: extractEpisode.object.observation,
     thoughts: extractEpisode.object.thoughts,
-    action: extractEpisode.object.action,
     result: extractEpisode.object.result,
   };
 };
@@ -65,18 +57,26 @@ export async function createEpisodeFromWorkingMemory(
   const conversation = formatConversation(memory);
 
   // Generate episodic memory using LLM
-  const episodicMemory = await generateEposodicMemory(agent, conversation);
+  const episodicMemory = await generateEpisodicMemory(agent, conversation);
+
+  // Extract success status from results
+  const isSuccessful =
+    memory.results.length > 0
+      ? memory.results.every((r) => !r.processed)
+      : false;
 
   return {
     id: randomUUIDv7(),
     timestamp: Date.now(),
     observation: episodicMemory.observation,
-    thoughts: episodicMemory.thoughts.split("\n"), // Split into array of thoughts
+    thoughts: episodicMemory.thoughts
+      .split("\n")
+      .filter((thought) => thought.trim()), // Split into array and remove empty lines
     actions: memory.calls,
     outputs: memory.outputs,
     result: episodicMemory.result,
     metadata: {
-      success: memory.results.every((r) => !r.processed),
+      success: isSuccessful,
       tags: extractTags(memory),
     },
   };

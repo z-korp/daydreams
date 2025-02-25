@@ -1,4 +1,5 @@
 import { createGroq } from "@ai-sdk/groq";
+import { openai } from "@ai-sdk/openai";
 import {
   createContainer,
   createDreams,
@@ -12,6 +13,7 @@ import { z } from "zod";
 const env = validateEnv(
   z.object({
     GROQ_API_KEY: z.string().min(1, "GROQ_API_KEY is required"),
+    OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
   })
 );
 
@@ -27,6 +29,7 @@ const agent = createDreams({
   memory: {
     store: createMemoryStore(),
     vector: createChromaVectorStore("agent", "http://localhost:8000"),
+    vectorModel: openai("gpt-4-turbo"),
   },
 });
 

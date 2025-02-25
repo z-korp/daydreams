@@ -16,6 +16,7 @@ import { string, z } from "zod";
 const env = validateEnv(
   z.object({
     GROQ_API_KEY: z.string().min(1, "GROQ_API_KEY is required"),
+    OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
   })
 );
 
@@ -72,12 +73,25 @@ createDreams({
   actions: [
     action({
       name: "addTask",
+      description: "Add a task to the goal",
       schema: z.object({ task: z.string() }),
       // enabled: ({ context }) => context.type === goalContexts.type,
       handler(call, ctx, agent) {
         const agentMemory = ctx.agentMemory as GoalMemory;
         console.log(agentMemory);
         agentMemory.tasks.push(call.data.task);
+        return {};
+      },
+    }),
+    action({
+      name: "completeTask",
+      description: "Complete a task",
+      schema: z.object({ task: z.string() }),
+      handler(call, ctx, agent) {
+        const agentMemory = ctx.agentMemory as GoalMemory;
+        agentMemory.tasks = agentMemory.tasks.filter(
+          (task) => task !== call.data.task
+        );
         return {};
       },
     }),
