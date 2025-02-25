@@ -74,7 +74,8 @@ telegram, or any other input/output to the agent and define your own actions.
 
 ```typescript
 import { createGroq } from "@ai-sdk/groq";
-import { createDreams, cli } from "@daydreamsai/core";
+import { createDreams } from "@daydreamsai/core";
+import { cli } from "@daydreamsai/core/extensions";
 
 // Initialize Groq client
 const groq = createGroq({
