@@ -143,9 +143,8 @@ container.singleton("tavily", () => {
 
 type GoalContextMemory = InferContextMemory<typeof goalContexts>;
 
-// Create Dreams agent instance
-const agent = createDreams({
-  logger: LogLevel.DEBUG,
+createDreams({
+  logger: LogLevel.INFO,
   debugger: async (contextId, keys, data) => {
     const [type, id] = keys;
     await Bun.write(`./logs/tasks/${contextId}/${id}-${type}.md`, data);
