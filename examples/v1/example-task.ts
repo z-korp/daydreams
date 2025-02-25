@@ -1,8 +1,17 @@
 /**
- * Basic example demonstrating a simple chat interface using Dreams
- * with a command line interface and Groq's LLM.
+ * Advanced example demonstrating a hierarchical goal planning system using Dreams
+ * with Claude 3.7 Sonnet for autonomous agent behavior in a game environment. This is still alpha and not all features are available.
+ *
+ * This example shows how to:
+ * 1. Create a hierarchical goal planning system (long/medium/short-term goals)
+ * 2. Decompose goals into executable tasks
+ * 3. Track and update goal progress
+ * 4. Integrate with external APIs (Tavily, Eternum)
+ *
+ * Usage
+ * 1. First ask the agent to "set up a plan to win at Eternum"
+ * 2. Then ask the agent to execute the plan.
  */
-import { createGroq } from "@ai-sdk/groq";
 import {
   createDreams,
   context,
@@ -13,6 +22,7 @@ import {
   createContainer,
   fetchGraphQL,
   type InferContextMemory,
+  validateEnv,
 } from "@daydreamsai/core";
 import { cli } from "@daydreamsai/core/extensions";
 import { deepResearch } from "./deep-research/research";
@@ -21,6 +31,39 @@ import { tavily } from "@tavily/core";
 import { ETERNUM_CONTEXT } from "../v0/eternum-context";
 import { anthropic } from "@ai-sdk/anthropic";
 
+validateEnv(
+  z.object({
+    ANTHROPIC_API_KEY: z.string().min(1, "ANTHROPIC_API_KEY is required"),
+    TAVILY_API_KEY: z.string().min(1, "TAVILY_API_KEY is required"),
+  })
+);
+
+/**
+ * EXAMPLE USAGE:
+ *
+ * 1. Initialize the agent with a high-level objective:
+ *    "Build a thriving settlement in Eternum with sustainable resource production"
+ *
+ * 2. The agent will automatically:
+ *    - Break this down into hierarchical goals (long/medium/short-term)
+ *    - Prioritize goals based on dependencies and importance
+ *    - Execute tasks to achieve each goal
+ *    - Update goal status as progress is made
+ *
+ * 3. Sample goal hierarchy:
+ *    - Long-term: "Establish a self-sustaining settlement"
+ *      - Medium-term: "Secure reliable food production"
+ *        - Short-term: "Build 3 farms near water source"
+ *          - Tasks: [Scout location, Gather resources, Construct buildings]
+ */
+
+// ==========================================
+// SCHEMA DEFINITIONS
+// ==========================================
+
+/**
+ * Defines the structure of individual tasks that make up a goal
+ */
 const taskSchema = z.object({
   plan: z.string().optional(),
   meta: z.any().optional(),
@@ -33,6 +76,9 @@ const taskSchema = z.object({
   ),
 });
 
+/**
+ * Defines the structure of a goal with metadata for tracking and execution
+ */
 export const goalSchema = z
   .object({
     id: z.string(),
@@ -56,6 +102,9 @@ export const goalSchema = z
   })
   .describe("A goal to be achieved");
 
+/**
+ * Defines the hierarchical goal planning structure with three time horizons
+ */
 export const goalPlanningSchema = z.object({
   long_term: z
     .array(goalSchema)
@@ -72,13 +121,29 @@ export const goalPlanningSchema = z.object({
     ),
 });
 
-// Initialize Groq client
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY!,
+// ==========================================
+// MODEL AND CONTAINER SETUP
+// ==========================================
+
+// Create a dependency injection container for services
+const container = createContainer();
+
+// Register Tavily search service
+container.singleton("tavily", () => {
+  return tavily({
+    apiKey: process.env.TAVILY_API_KEY!,
+  });
 });
 
-const template = `
+// ==========================================
+// CONTEXT DEFINITION
+// ==========================================
 
+/**
+ * Template for the goal manager context
+ * This provides structure for the LLM to understand the current state
+ */
+const template = `
 Goal: {{goal}} 
 Tasks: {{tasks}}
 Current Task: {{currentTask}}
@@ -104,8 +169,13 @@ Current Task: {{currentTask}}
 </goal_planning_rules>
 `;
 
+// Type definition for the goal planning schema
 type Goal = z.infer<typeof goalPlanningSchema>;
 
+/**
+ * Context for managing goals and tasks
+ * This maintains the state of goals and provides rendering for the LLM
+ */
 const goalContexts = context({
   type: "goal-manager",
   schema: z.object({
@@ -133,16 +203,16 @@ const goalContexts = context({
   },
 });
 
-const container = createContainer();
-
-container.singleton("tavily", () => {
-  return tavily({
-    apiKey: process.env.TAVILY_API_KEY!,
-  });
-});
-
+// Type for the goal context memory
 type GoalContextMemory = InferContextMemory<typeof goalContexts>;
 
+// ==========================================
+// ACTIONS DEFINITION
+// ==========================================
+
+/**
+ * Create the Dreams agent with all necessary components
+ */
 createDreams({
   logger: LogLevel.INFO,
   debugger: async (contextId, keys, data) => {
@@ -154,6 +224,9 @@ createDreams({
   context: goalContexts,
   container,
   actions: [
+    /**
+     * Action to decompose a goal into executable tasks
+     */
     action({
       name: "decomposeGoal",
       description: "Decompose a goal into executable tasks",
@@ -190,6 +263,9 @@ createDreams({
       },
     }),
 
+    /**
+     * Action to set the complete goal plan
+     */
     action({
       name: "setGoalPlan",
       description: "Set the complete goal plan",
@@ -204,6 +280,9 @@ createDreams({
       },
     }),
 
+    /**
+     * Action to update a goal's state or properties
+     */
     action({
       name: "updateGoal",
       description: "Update a goal's state or properties",
@@ -248,6 +327,9 @@ createDreams({
       },
     }),
 
+    /**
+     * Action to query Eternum game context
+     */
     action({
       name: "queryEternum",
       description:
@@ -262,6 +344,10 @@ createDreams({
         };
       },
     }),
+
+    /**
+     * Action to query Eternum GraphQL API for game state
+     */
     action({
       name: "Query:Eternum:Graphql",
       description: "Search Eternum GraphQL API",
@@ -309,7 +395,15 @@ createDreams({
       },
     }),
   ],
+
+  // ==========================================
+  // OUTPUTS DEFINITION
+  // ==========================================
+
   outputs: {
+    /**
+     * Output to update the goal state
+     */
     "goal-manager:state": output({
       description:
         "Use this when you need to update the goals. Use the goal id to update the goal. You should attempt the goal then call this to update the goal.",
@@ -321,8 +415,6 @@ createDreams({
         goal: goalSchema,
       }),
       handler: async (call, ctx, agent) => {
-        // get goal id
-        // update state of the goal id and the changes
         console.log("handler", { call, ctx, agent });
 
         return {

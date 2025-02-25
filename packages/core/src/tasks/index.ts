@@ -23,6 +23,17 @@ import type {
 } from "../types";
 import type { Logger } from "../logger";
 
+/**
+ * Prepares a stream response by handling the stream result and parsing it.
+ *
+ * @param options - Configuration options
+ * @param options.contextId - The ID of the context
+ * @param options.step - The current step in the process
+ * @param options.stream - The stream result to process
+ * @param options.logger - The logger instance
+ * @param options.task - The task context containing callId and debug function
+ * @returns An object containing the parsed response promise and wrapped text stream
+ */
 function prepareStreamResponse({
   stream,
   logger,
@@ -62,6 +73,21 @@ function prepareStreamResponse({
   };
 }
 
+/**
+ * Task that generates a response from the agent based on the current context and working memory.
+ *
+ * @param options - Configuration options
+ * @param options.agent - The agent instance
+ * @param options.contexts - Array of context states
+ * @param options.contextId - The ID of the current context
+ * @param options.workingMemory - The working memory state
+ * @param options.outputs - Available outputs
+ * @param options.actions - Available actions
+ * @param options.logger - The logger instance
+ * @param options.model - The language model to use
+ * @param taskContext - The task context containing callId and debug function
+ * @returns The prepared stream response with parsed result and text stream
+ */
 export const runGenerate = task(
   "agent:run:generate",
   async (
@@ -142,6 +168,22 @@ export const runGenerate = task(
   }
 );
 
+/**
+ * Task that generates results based on the agent's actions and working memory.
+ *
+ * @param options - Configuration options
+ * @param options.agent - The agent instance
+ * @param options.contexts - Array of context states
+ * @param options.contextId - The ID of the current context
+ * @param options.workingMemory - The working memory state
+ * @param options.outputs - Available outputs
+ * @param options.actions - Available actions
+ * @param options.logger - The logger instance
+ * @param options.model - The language model to use
+ * @param options.chain - Array of logs representing the action chain
+ * @param taskContext - The task context containing callId and debug function
+ * @returns The prepared stream response with parsed result and text stream
+ */
 export const runGenerateResults = task(
   "agent:run:generate-results",
   async (
@@ -234,6 +276,18 @@ export const runGenerateResults = task(
   }
 );
 
+/**
+ * Task that executes an action with the given context and parameters.
+ *
+ * @param options - Configuration options
+ * @param options.ctx - The agent context with memory
+ * @param options.action - The action to execute
+ * @param options.call - The action call details
+ * @param options.agent - The agent instance
+ * @param options.logger - The logger instance
+ * @returns The result of the action execution
+ * @throws Will throw an error if the action execution fails
+ */
 export const runAction = task(
   "agent:run:action",
   async <TContext extends AnyContext>({
