@@ -35,6 +35,7 @@ validateEnv(
   z.object({
     ANTHROPIC_API_KEY: z.string().min(1, "ANTHROPIC_API_KEY is required"),
     TAVILY_API_KEY: z.string().min(1, "TAVILY_API_KEY is required"),
+    OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
   })
 );
 
