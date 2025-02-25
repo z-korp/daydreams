@@ -7,7 +7,8 @@ import { nightOwl, light } from "react-syntax-highlighter";
 const inter = Inter({ subsets: ["latin"] });
 
 const exampleCode1 = `import { createGroq } from "@ai-sdk/groq";
-import { createDreams, cli } from "@daydreamsai/core/v1";
+import { createDreams } from "@daydreamsai/core";
+import { cli } from "@daydreamsai/core/extensions";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -23,8 +24,8 @@ import {
   createContainer,
   createDreams,
   LogLevel,
-  twitter,
-} from "@daydreamsai/core/v1";
+} from "@daydreamsai/core";
+import { twitter } from "@daydreamsai/core/extensions";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -60,7 +61,8 @@ export default function Home() {
   const handleCopyExample1 = async () => {
     await navigator.clipboard
       .writeText(`import { createGroq } from "@ai-sdk/groq";
-import { createDreams, cli } from "@daydreamsai/core/v1";
+import { createDreams } from "@daydreamsai/core";
+import { cli } from "@daydreamsai/core/extensions";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -81,8 +83,8 @@ import {
   createContainer,
   createDreams,
   LogLevel,
-  twitter,
-} from "@daydreamsai/core/v1";
+} from "@daydreamsai/core";
+import { twitter } from "@daydreamsai/core/extensions";
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY!,
