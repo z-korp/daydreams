@@ -1,4 +1,5 @@
 import { createGroq } from "@ai-sdk/groq";
+import { openai } from "@ai-sdk/openai";
 import {
   createContainer,
   createDreams,
@@ -27,6 +28,7 @@ const agent = createDreams({
   memory: {
     store: createMemoryStore(),
     vector: createChromaVectorStore("agent", "http://localhost:8000"),
+    vectorModel: openai("gpt-4-turbo"),
   },
 });
 

@@ -1,5 +1,5 @@
 import type { MemoryStore, VectorStore, WorkingMemory } from "../types";
-
+import type { LanguageModelV1 } from "ai";
 /**
  * Base memory implementation providing storage and vector capabilities
  */
@@ -8,19 +8,22 @@ export type BaseMemory = {
   store: MemoryStore;
   /** Store for vector embeddings and similarity search */
   vector: VectorStore;
+  vectorModel?: LanguageModelV1;
 };
 
 /**
  * Creates a new BaseMemory instance
  * @param store - Memory store implementation for conversation data
  * @param vector - Vector store implementation for embeddings
+ * @param vectorModel - Vector model implementation for embeddings
  * @returns A new BaseMemory instance
  */
 export function createMemory(
   store: MemoryStore,
-  vector: VectorStore
+  vector: VectorStore,
+  vectorModel?: LanguageModelV1
 ): BaseMemory {
-  return { store, vector };
+  return { store, vector, vectorModel };
 }
 
 /**
