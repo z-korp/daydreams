@@ -1,5 +1,5 @@
-import { generateObject, type LanguageModelV1 } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
+import { generateObject } from "ai";
+import { openai } from "@ai-sdk/openai";
 import type { AnyAgent, Episode, WorkingMemory, Log } from "../types";
 import { z } from "zod";
 import { v7 as randomUUIDv7 } from "uuid";
@@ -17,7 +17,7 @@ export const generateEpisodicMemory = async (
   }
 
   const extractEpisode = await generateObject({
-    model: agent.memory.vectorModel || anthropic("claude-3-7-sonnet-latest"),
+    model: agent.memory.vectorModel || openai("gpt-4-turbo"),
     schema: z.object({
       observation: z.string().describe("The context and setup - what happened"),
       thoughts: z

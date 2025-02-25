@@ -11,6 +11,7 @@ const env = validateEnv(
     DISCORD_TOKEN: z.string().min(1, "DISCORD_TOKEN is required"),
     DISCORD_BOT_NAME: z.string().min(1, "DISCORD_BOT_NAME is required"),
     TAVILY_API_KEY: z.string().min(1, "TAVILY_API_KEY is required"),
+    OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
   })
 );
 
