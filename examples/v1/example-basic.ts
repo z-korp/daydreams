@@ -16,6 +16,7 @@ import { string, z } from "zod";
 const env = validateEnv(
   z.object({
     GROQ_API_KEY: z.string().min(1, "GROQ_API_KEY is required"),
+    OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
   })
 );
 

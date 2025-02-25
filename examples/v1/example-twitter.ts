@@ -9,6 +9,7 @@ const env = validateEnv(
     TWITTER_USERNAME: z.string().min(1, "TWITTER_USERNAME is required"),
     TWITTER_PASSWORD: z.string().min(1, "TWITTER_PASSWORD is required"),
     TWITTER_EMAIL: z.string().min(1, "TWITTER_EMAIL is required"),
+    OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
   })
 );
 
