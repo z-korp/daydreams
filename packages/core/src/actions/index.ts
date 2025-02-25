@@ -13,7 +13,7 @@ export const getWeatherAction = action({
   },
 });
 
-export const seachWebAction = action({
+export const searchWebAction = action({
   name: "search",
   description: "Search online information using Tavily",
   install({ container }) {

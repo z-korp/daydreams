@@ -3,13 +3,25 @@
  * with a command line interface and Groq's LLM.
  */
 import { createGroq } from "@ai-sdk/groq";
-import { createDreams, context, render, action } from "@daydreamsai/core";
+import {
+  createDreams,
+  context,
+  render,
+  action,
+  validateEnv,
+} from "@daydreamsai/core";
 import { cli } from "@daydreamsai/core/extensions";
 import { string, z } from "zod";
 
+const env = validateEnv(
+  z.object({
+    GROQ_API_KEY: z.string().min(1, "GROQ_API_KEY is required"),
+  })
+);
+
 // Initialize Groq client
 const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY!,
+  apiKey: env.GROQ_API_KEY!,
 });
 
 const template = `
@@ -53,8 +65,7 @@ const goalContexts = context({
   },
 });
 
-// Create Dreams agent instance
-const agent = createDreams({
+createDreams({
   model: groq("deepseek-r1-distill-llama-70b"),
   extensions: [cli],
   context: goalContexts,

@@ -679,10 +679,6 @@ export type EposodicMemory = {
   result: string;
 };
 
-export type EposodicMemoryStore = {
-  generate: (conversation: string[]) => Promise<EposodicMemory>;
-};
-
 export interface Episode {
   id: string;
   timestamp: number;

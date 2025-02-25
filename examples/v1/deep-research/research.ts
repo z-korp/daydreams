@@ -1,4 +1,4 @@
-import { tavily, type TavilyClient } from "@tavily/core";
+import { type TavilyClient } from "@tavily/core";
 import { generateText, type LanguageModelV1 } from "ai";
 import pLimit from "p-limit";
 import {

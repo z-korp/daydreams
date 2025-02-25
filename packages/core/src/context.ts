@@ -24,6 +24,12 @@ export function context<
   return ctx;
 }
 
+/**
+ * Retrieves and sorts working memory logs
+ * @param memory - Working memory object
+ * @param includeThoughts - Whether to include thought logs (default: true)
+ * @returns Sorted array of memory logs
+ */
 export function getWorkingMemoryLogs(
   memory: Partial<WorkingMemory>,
   includeThoughts = true
@@ -37,6 +43,12 @@ export function getWorkingMemoryLogs(
   ].sort((a, b) => (a.timestamp > b.timestamp ? 1 : -1));
 }
 
+/**
+ * Default renderer for context logs
+ * @param options - Options containing the working memory
+ * @param options.memory - Working memory to render
+ * @returns Formatted context logs
+ */
 export function defaultContextRender({
   memory,
 }: {
@@ -47,6 +59,10 @@ export function defaultContextRender({
     .flat();
 }
 
+/**
+ * Creates a default working memory object
+ * @returns Empty working memory with initialized arrays
+ */
 export function createDefaultContextMemory(): WorkingMemory {
   return {
     inputs: [],
@@ -57,11 +73,19 @@ export function createDefaultContextMemory(): WorkingMemory {
   };
 }
 
+/**
+ * Default working memory instance
+ * Provides a memory container with standard working memory structure
+ */
 export const defaultWorkingMemory = memory<WorkingMemory>({
   key: "working-memory",
   create: createDefaultContextMemory,
 });
 
+/**
+ * Default context configuration
+ * Provides a basic context with string schema and test property
+ */
 export const defaultContext = context({
   type: "default",
   schema: z.string(),
