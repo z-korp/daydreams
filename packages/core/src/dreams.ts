@@ -446,10 +446,23 @@ export function createDreams<
         });
 
         if (pendingResults === 0) {
-          logger.info("agent:run", "All results processed, breaking loop", {
-            step,
+          const pendingOutputs = workingMemory.outputs.filter(
+            (o) => o.processed === false
+          ).length;
+          logger.debug("agent:run", "Checking for pending outputs", {
+            pendingOutputs,
           });
-          break;
+
+          if (pendingOutputs === 0) {
+            logger.info(
+              "agent:run",
+              "All results and outputs processed, breaking loop",
+              {
+                step,
+              }
+            );
+            break;
+          }
         }
       }
 
@@ -782,7 +795,7 @@ async function handleActionCall({
     data: resultData,
     name: call.name,
     timestamp: Date.now(),
-    processed: false,
+    processed: true,
   };
 
   if (action.format) result.formatted = action.format(result);
@@ -812,8 +825,15 @@ async function handleOutput({
   const output = outputs.find((output) => output.type === outputRef.type);
 
   if (!output) {
-    console.log({ outputFailed: output });
-    throw new Error("OUTPUT NOT FOUND");
+    logger.error("agent:output", "OUTPUT_NOT_FOUND", {
+      outputRef,
+    });
+    return {
+      ...outputRef,
+      params: { error: "OUTPUT NOT FOUND" },
+      timestamp: Date.now(),
+      data: { content: outputRef.data, error: "OUTPUT NOT FOUND" },
+    };
   }
 
   logger.debug("agent:output", outputRef.type, outputRef.data);
@@ -950,6 +970,9 @@ function createContextStreamHandler({
     }
 
     if (log.ref === "output" && done) {
+      if ("processed" in log) {
+        log.processed = true;
+      }
       workingMemory.outputs.push(log);
     }
 
@@ -957,6 +980,9 @@ function createContextStreamHandler({
       workingMemory.calls.push(log);
     }
     if (log.ref === "action_result" && done) {
+      if ("processed" in log) {
+        log.processed = true;
+      }
       workingMemory.results.push(log);
     }
 
@@ -1009,6 +1035,8 @@ function createContextStreamHandler({
     });
 
     for (const ref of Array.isArray(refs) ? refs : [refs]) {
+      // Mark the output as processed to prevent duplicate processing in subsequent steps
+      ref.processed = true;
       chain.push(ref);
       workingMemory.outputs.push(ref);
       pushLogStream(ref, true);

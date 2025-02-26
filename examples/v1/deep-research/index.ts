@@ -13,7 +13,7 @@ container.singleton("tavily", () =>
 );
 
 createDreams({
-  logger: LogLevel.INFO,
+  logger: LogLevel.DEBUG,
   model: anthropic("claude-3-7-sonnet-latest"),
   debugger: async (contextId, keys, data) => {
     const [type, id] = keys;

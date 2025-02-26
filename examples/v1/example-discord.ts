@@ -1,8 +1,10 @@
 import { createGroq } from "@ai-sdk/groq";
-import { createDreams, validateEnv } from "@daydreamsai/core";
+import { createContainer, createDreams, validateEnv } from "@daydreamsai/core";
 import { discord } from "@daydreamsai/core/extensions";
 import { deepResearch } from "./deep-research/research";
 import { z } from "zod";
+import { tavily } from "@tavily/core";
+import { anthropic } from "@ai-sdk/anthropic";
 
 // Validate environment before proceeding
 const env = validateEnv(
@@ -15,13 +17,18 @@ const env = validateEnv(
   })
 );
 
-const groq = createGroq({
-  apiKey: env.GROQ_API_KEY,
-});
+const container = createContainer();
+
+container.singleton("tavily", () =>
+  tavily({
+    apiKey: process.env.TAVILY_API_KEY!,
+  })
+);
 
 const agent = createDreams({
-  model: groq("deepseek-r1-distill-llama-70b"),
+  model: anthropic("claude-3-7-sonnet-latest"),
   extensions: [discord, deepResearch],
+  container,
 });
 
 console.log("Starting Daydreams Discord Bot...");
