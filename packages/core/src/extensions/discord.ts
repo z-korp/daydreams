@@ -108,7 +108,16 @@ export const discord = extension({
           .describe("The Discord channel ID to send the message to"),
         content: z.string().describe("The content of the message to send"),
       }),
-      description: "Send a message to a Discord channel",
+      description: `
+      Send a message to a Discord channel
+      
+      # Rules for sending messages:
+      1. Always respond if you have been tagged in the message
+      2. Don't repeat yourself
+      3. Don't take part in conversations unless you have been mentioned or asked to join the conversation
+      4. Don't send multiple messages in a row
+      
+      `,
       enabled({ context }) {
         return context.type === discordChannelContext.type;
       },

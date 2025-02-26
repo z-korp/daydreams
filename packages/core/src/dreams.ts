@@ -827,6 +827,7 @@ async function handleOutput({
   if (!output) {
     logger.error("agent:output", "OUTPUT_NOT_FOUND", {
       outputRef,
+      availableOutputs: outputs.map((o) => o.type),
     });
     return {
       ...outputRef,
@@ -1086,6 +1087,15 @@ function createContextStreamHandler({
         const ref = getOrCreateRef(el.index, {
           ref: "output",
         });
+
+        // Check if the type attribute exists
+        if (!el.attributes.type) {
+          logger.error("agent:output", "Missing output type attribute", {
+            content: el.content.join(""),
+            attributes: el.attributes,
+          });
+          break;
+        }
 
         handleOutputStream(
           {
