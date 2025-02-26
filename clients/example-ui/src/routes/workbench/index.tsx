@@ -1,13 +1,17 @@
 import { MessagesList } from "@/components/message-list";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useAgent } from "@/hooks/use-agent";
 import { useMessages } from "@/hooks/use-messages";
 import { context, getWorkingMemoryLogs } from "@daydreamsai/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { RefreshCw, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
@@ -22,8 +26,20 @@ function RouteComponent() {
 
   const [prompt, setPrompt] = useState("");
   const [key, setKey] = useState("this-is-a-test");
+  const [isLoading, setIsLoading] = useState(false);
 
   const keyRef = useRef(key);
+  const messageInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Auto-scroll when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const ctx = context({
     schema: z.object({
@@ -43,106 +59,165 @@ function RouteComponent() {
     },
   });
 
-  useEffect(() => {
+  const resetContext = async () => {
+    setIsLoading(true);
     setMessages([]);
-    dreams.start().then(async () => {
+    try {
+      await dreams.start();
       const workingMemory = await dreams.getWorkingMemory(contextId);
       getWorkingMemoryLogs(workingMemory).map((log) => handleLog(log, true));
-    });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    resetContext();
   }, [dreams, key]);
 
   keyRef.current = key;
 
   return (
-    <div className="grid grid-cols-2 max-h-screen min-h-[calc(100vh-64px)] relative bg-card">
-      <div className="h-full flex flex-col max-h-screen overflow-hidden pr-0.5">
-        <ScrollArea className="w-full flex-1 rounded-md">
-          <div className="flex flex-col pb-20 px-4 pt-6">
-            <Label className="mb-4">Context Prompt</Label>
-            <Textarea
-              value={prompt}
-              className="min-h-96"
-              onChange={(e) => {
-                setPrompt(e.target.value);
-              }}
-            />
-          </div>
-        </ScrollArea>
+    <div className="flex flex-col lg:flex-row max-h-screen min-h-[calc(100vh-64px)] relative bg-background">
+      {/* Left Panel - Context Configuration */}
+      <div className="w-full lg:w-2/5 h-full flex flex-col max-h-screen overflow-hidden border-r">
+        <Card className="border-0 rounded-none shadow-none h-full flex flex-col">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl flex items-center justify-between">
+              Context Configuration
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetContext}
+                disabled={isLoading}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                />
+                Reset
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 flex-1 p-4 overflow-hidden">
+            <div className="space-y-2">
+              <Label htmlFor="context-key">Context Key</Label>
+              <Input
+                id="context-key"
+                value={key}
+                onChange={(e) => {
+                  setKey(e.target.value);
+                }}
+                className="font-mono text-sm"
+              />
+            </div>
+
+            <Separator className="my-2" />
+
+            <div className="space-y-2 flex-1 overflow-hidden">
+              <Label htmlFor="context-prompt">Context Prompt</Label>
+              <ScrollArea className="h-[calc(100%-2rem)]">
+                <Textarea
+                  id="context-prompt"
+                  value={prompt}
+                  className="min-h-[300px] font-mono text-sm resize-none"
+                  onChange={(e) => {
+                    setPrompt(e.target.value);
+                  }}
+                />
+              </ScrollArea>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-      <div className="h-full flex flex-col max-h-screen overflow-hidden">
-        <div className="flex flex-col border-l w-full px-4 pt-6 pb-4 border-b">
-          <Label className="mb-4">Context Key</Label>
-          <Input
-            value={key}
-            onChange={(e) => {
-              setKey(e.target.value);
-            }}
-          />
-        </div>
-        <ScrollArea className="border-l w-full flex-1 px-4 pt-4">
-          <MessagesList messages={messages} />
-          <div className="pb-32"></div>
-        </ScrollArea>
-        <div className="bg-background flex">
-          <form
-            className="flex flex-1"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const msg = new FormData(e.currentTarget).get(
-                "message"
-              ) as string;
 
-              setMessages((msgs) => [
-                ...msgs,
-                {
-                  id: Date.now().toString(),
-                  type: "user",
-                  message: msg,
-                },
-              ]);
+      {/* Right Panel - Chat Interface */}
+      <div className="w-full lg:w-3/5 h-full flex flex-col max-h-screen overflow-hidden">
+        <Card className="border-0 rounded-none shadow-none h-full flex flex-col">
+          <CardHeader className="pb-2 border-b">
+            <CardTitle className="text-xl">Conversation</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
+            <ScrollArea className="flex-1">
+              <div className="px-4 py-4">
+                <MessagesList messages={messages} />
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
 
-              e.currentTarget.reset();
+            <div className="border-t p-4 bg-background">
+              <form
+                className="flex items-center gap-2"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const msg = formData.get("message") as string;
 
-              await dreams.send({
-                context: ctx,
-                args: {
-                  key,
-                },
-                input: {
-                  type: "message",
-                  data: {
-                    user: "galego",
-                    content: msg,
-                  },
-                },
-                handlers: {
-                  onLogStream(log, done) {
-                    if (keyRef.current === key) {
-                      handleLog(log, done);
+                  if (!msg.trim()) return;
+
+                  setIsLoading(true);
+                  setMessages((msgs) => [
+                    ...msgs,
+                    {
+                      id: Date.now().toString(),
+                      type: "user",
+                      message: msg,
+                    },
+                  ]);
+
+                  e.currentTarget.reset();
+                  if (messageInputRef.current) {
+                    messageInputRef.current.focus();
+                  }
+
+                  try {
+                    await dreams.send({
+                      context: ctx,
+                      args: {
+                        key,
+                      },
+                      input: {
+                        type: "message",
+                        data: {
+                          user: "galego",
+                          content: msg,
+                        },
+                      },
+                      handlers: {
+                        onLogStream(log, done) {
+                          if (keyRef.current === key) {
+                            handleLog(log, done);
+                          }
+                        },
+                      },
+                    });
+
+                    if (messages.length === 0) {
+                      queryClient.invalidateQueries({
+                        queryKey: ["agent:chats"],
+                      });
                     }
-                  },
-                },
-              });
-
-              if (messages.length === 0) {
-                queryClient.invalidateQueries({
-                  queryKey: ["agent:chats"],
-                });
-              }
-            }}
-          >
-            <input
-              type="text"
-              name="message"
-              placeholder="Type your message..."
-              className="border-t border-l border-collapse flex-1 px-6 py-4 rounded-lg bg-background text-foreground placeholder:text-primary focus:outline-none focus:border-primary"
-              disabled={false} // Disable input while loading history
-            />
-            <button className="border border-primary rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary h-full w-1/4 disabled:opacity-50 disabled:cursor-not-allowed">
-              Send
-            </button>
-          </form>
-        </div>
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+              >
+                <Input
+                  type="text"
+                  name="message"
+                  ref={messageInputRef}
+                  placeholder="Type your message..."
+                  className="flex-1"
+                  disabled={isLoading}
+                />
+                <Button type="submit" disabled={isLoading} className="gap-1">
+                  <Send className="h-4 w-4" />
+                  Send
+                </Button>
+              </form>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
