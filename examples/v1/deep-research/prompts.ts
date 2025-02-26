@@ -95,8 +95,23 @@ export const searchResultsParser = createParser<
 
 export const finalReportPrompt = createPrompt(
   `
-Given the following research, write a final report on the topic using the learnings from research. 
-Make it as detailed as possible, aim for 3 or more pages, include ALL the learnings from research.
+Given the following research, write a comprehensive final report on the topic using the learnings from research. 
+
+# Report Requirements:
+1. Create a well-structured report with clear sections including:
+   - Executive Summary (brief overview of key findings)
+   - Introduction (context and background)
+   - Main Findings (organized by themes or subtopics)
+   - Analysis and Implications
+   - Conclusion
+   - References (properly cite all sources)
+
+2. Include ALL the learnings from the research, organized logically by theme or subtopic.
+3. Add proper citations and references to original sources where available.
+4. Use data visualization descriptions where appropriate (charts, graphs, tables).
+5. Make the report detailed and comprehensive, aiming for 3+ pages of content.
+6. Use clear headings and subheadings to organize information.
+7. Include a table of contents at the beginning.
 
 Here is all the data from research:
 {{research}}

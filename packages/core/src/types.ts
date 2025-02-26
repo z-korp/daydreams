@@ -281,6 +281,7 @@ export type OutputRef<Data = any> = {
   data: Data;
   params?: Record<string, string>;
   timestamp: number;
+  processed?: boolean;
   formatted?: string | string[];
 };
 

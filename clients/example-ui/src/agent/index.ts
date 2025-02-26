@@ -1,4 +1,3 @@
-import { createGroq } from "@ai-sdk/groq";
 import {
   type MemoryStore,
   createContainer,
@@ -8,9 +7,20 @@ import {
   createVectorStore,
 } from "@daydreamsai/core";
 import { chat } from "./chat";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { deepResearch } from "../../../../examples/v1/deep-research/research";
+import { tavily } from "@tavily/core";
 
-export const groq = createGroq({
-  apiKey: import.meta.env.VITE_GROQ_API_KEY,
+export const anthropic = createAnthropic({
+  apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
+  headers: {
+    "anthropic-dangerous-direct-browser-access": "true",
+  },
+});
+
+export const openai = createOpenAI({
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
 });
 
 const browserStorage = (): MemoryStore => {
@@ -46,10 +56,20 @@ export function createAgent() {
   const memoryStorage = browserStorage();
   const container = createContainer();
 
+  container.singleton("tavily", () =>
+    tavily({
+      apiKey: import.meta.env.VITE_TAVILY_API_KEY,
+    })
+  );
+
   return createDreams({
-    model: groq("deepseek-r1-distill-llama-70b"),
+    model: anthropic("claude-3-7-sonnet-latest"),
     container,
-    memory: createMemory(memoryStorage, createVectorStore()),
-    extensions: [chat],
+    memory: createMemory(
+      memoryStorage,
+      createVectorStore(),
+      openai("gpt-4-turbo")
+    ),
+    extensions: [chat, deepResearch],
   });
 }
