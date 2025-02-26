@@ -1,6 +1,5 @@
 import { type TavilyClient } from "@tavily/core";
 import { generateText, type LanguageModelV1 } from "ai";
-import pLimit from "p-limit";
 import {
   finalReportPrompt,
   searchResultsParser,
@@ -12,10 +11,8 @@ import {
   task,
   memory,
   extension,
-  context,
   type Debugger,
 } from "@daydreamsai/core";
-import { z } from "zod";
 import { v7 as randomUUUIDv7 } from "uuid";
 
 export type Research = {
@@ -37,27 +34,6 @@ export type ResearchProgress = {
   totalQueries: number;
   completedQueries: number;
 };
-
-const ConcurrencyLimit = 1;
-const limit = pLimit(ConcurrencyLimit);
-
-async function retry<T>(
-  key: string,
-  fn: () => Promise<T>,
-  retries: number = 3
-) {
-  console.log("trying", { key });
-  while (retries > 0) {
-    try {
-      return await fn();
-    } catch (error) {
-      retries--;
-      if (retries === 0) {
-        throw error;
-      }
-    }
-  }
-}
 
 type SearchQueryParams = {
   model: LanguageModelV1;
@@ -128,10 +104,10 @@ const researchQueryTask = task(
           followUpQueries: output.followUpQueries,
         };
       } else {
-        throw new Error("test");
+        throw new Error("Failed to parse search results output");
       }
     } catch (error) {
-      console.log("failed parsing");
+      debug(contextId, ["research-query-results-error", callId], String(error));
       throw error;
     }
   }
@@ -168,7 +144,6 @@ const generateResearchReport = task(
       ],
     });
 
-    console.log("====FINAL REPORT=====");
     debug(
       contextId,
       ["research-report-response", callId],
@@ -176,7 +151,6 @@ const generateResearchReport = task(
     );
 
     const report = res.text.slice(res.text.lastIndexOf("</think>"));
-    console.log(report);
     return report;
   }
 );
@@ -198,7 +172,7 @@ export async function startDeepResearch({
   onProgress?: (progress: ResearchProgress) => void;
   debug: Debugger;
 }) {
-  console.log("=======STARTING-DEEP-RESEARCH=======");
+  debug(contextId, ["deep-research-start"], "Starting deep research");
 
   let queries = research.queries.slice();
   let depth = 1;
@@ -251,13 +225,9 @@ export async function startDeepResearch({
     { debug }
   );
 
-  console.log({ report });
+  debug(contextId, ["deep-research-complete"], "Research completed");
   return report;
 }
-
-// const researchContext = context({
-//   ""
-// })
 
 type ResearchMemory = {
   researches: Research[];
@@ -311,7 +281,10 @@ const startDeepResearchAction = action({
           args: ctx.args,
         });
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        agent.debugger(ctx.id, ["deep-research-error"], String(err));
+        research.status = "done";
+      });
 
     return "Research created!";
   },
@@ -321,21 +294,9 @@ const cancelResearchAction = action({
   name: "cancel-deep-research",
   schema: researchSchema,
   memory: researchMemory,
-  enabled: (ctx) => {
-    console.log({ ctx });
-    return ctx.actionMemory.researches.length > 0;
-  },
+  enabled: (ctx) => ctx.actionMemory.researches.length > 0,
   async handler(params, ctx) {
     return "Research canceled!";
-  },
-});
-
-const deepResearchContext = context({
-  type: "deep-research",
-  schema: z.string(),
-  key: (id) => id,
-  create() {
-    return researchMemory.create();
   },
 });
 
@@ -343,8 +304,3 @@ export const deepResearch = extension({
   name: "deep-research",
   actions: [startDeepResearchAction, cancelResearchAction],
 });
-
-export const deepResearchActions = [
-  startDeepResearchAction,
-  cancelResearchAction,
-];
