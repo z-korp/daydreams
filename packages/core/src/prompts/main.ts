@@ -98,6 +98,7 @@ Here's how you structure your response:
 </output>
 </response>
 
+IMPORTANT: Always include the 'type' attribute in the output tag and ensure it matches one of the available output types listed above.
 {{examples}}
 `;
 
