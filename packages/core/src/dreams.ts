@@ -455,12 +455,54 @@ export function createDreams<
             });
 
             // Check if there are any action calls that might need follow-up actions
-            const hasActionCalls = workingMemory.calls.length > 0;
-            logger.debug("agent:run", "Checking for action calls", {
-              actionCallsCount: workingMemory.calls.length,
+            const pendingActionCalls = workingMemory.calls.filter(
+              (c) => !workingMemory.results.some((r) => r.callId === c.id)
+            ).length;
+            logger.debug("agent:run", "Checking for pending action calls", {
+              pendingActionCalls,
             });
 
-            if (pendingOutputs === 0 && !hasActionCalls) {
+            // Check if there are recent action results that haven't been reasoned about yet
+            const recentResults = workingMemory.results
+              .sort((a, b) => b.timestamp - a.timestamp)
+              .slice(0, 3);
+
+            // Check if there's been a thought after the most recent action result
+            const mostRecentResultTime =
+              recentResults.length > 0 ? recentResults[0].timestamp : 0;
+            const hasReasonedAfterResults = workingMemory.thoughts.some(
+              (t) => t.timestamp > mostRecentResultTime
+            );
+
+            logger.debug(
+              "agent:run",
+              "Checking for reasoning after recent results",
+              {
+                hasReasonedAfterResults,
+                mostRecentResultTime,
+                recentThoughtTimes: workingMemory.thoughts
+                  .sort((a, b) => b.timestamp - a.timestamp)
+                  .slice(0, 3)
+                  .map((t) => t.timestamp),
+              }
+            );
+
+            // Only break if there are no pending outputs, no pending action calls,
+            // AND either there are no recent results or we've reasoned about them already
+            const shouldContinue =
+              recentResults.length > 0 && !hasReasonedAfterResults;
+
+            logger.debug("agent:run", "Checking if should continue", {
+              shouldContinue,
+              recentResultsCount: recentResults.length,
+              hasReasonedAfterResults,
+            });
+
+            if (
+              pendingOutputs === 0 &&
+              pendingActionCalls === 0 &&
+              !shouldContinue
+            ) {
               logger.info(
                 "agent:run",
                 "All results and outputs processed, breaking loop",
