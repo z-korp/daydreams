@@ -16,8 +16,6 @@ import {
   type OutputRef,
   type Subscription,
   type WorkingMemory,
-  type Episode,
-  type EpisodicMemory,
 } from "./types";
 import { Logger } from "./logger";
 import createContainer from "./container";
@@ -323,6 +321,7 @@ export function createDreams<
 
       const maxSteps = 5;
       let step = 1;
+      const minSteps = 3; // Increased from 2 to 3 to ensure more steps are executed
 
       logger.debug("agent:run", "Preparing actions");
       const contextActions = await Promise.all(
@@ -438,31 +437,45 @@ export function createDreams<
           continue;
         }
 
-        const pendingResults = workingMemory.results.filter(
-          (i) => i.processed === false
-        ).length;
-        logger.debug("agent:run", "Checking for pending results", {
-          pendingResults,
-        });
-
-        if (pendingResults === 0) {
-          const pendingOutputs = workingMemory.outputs.filter(
-            (o) => o.processed === false
+        // Only check for early termination if we've completed the minimum number of steps
+        if (step > minSteps) {
+          const pendingResults = workingMemory.results.filter(
+            (i) => i.processed === false
           ).length;
-          logger.debug("agent:run", "Checking for pending outputs", {
-            pendingOutputs,
+          logger.debug("agent:run", "Checking for pending results", {
+            pendingResults,
           });
 
-          if (pendingOutputs === 0) {
-            logger.info(
-              "agent:run",
-              "All results and outputs processed, breaking loop",
-              {
-                step,
-              }
-            );
-            break;
+          if (pendingResults === 0) {
+            const pendingOutputs = workingMemory.outputs.filter(
+              (o) => o.processed === false
+            ).length;
+            logger.debug("agent:run", "Checking for pending outputs", {
+              pendingOutputs,
+            });
+
+            // Check if there are any action calls that might need follow-up actions
+            const hasActionCalls = workingMemory.calls.length > 0;
+            logger.debug("agent:run", "Checking for action calls", {
+              actionCallsCount: workingMemory.calls.length,
+            });
+
+            if (pendingOutputs === 0 && !hasActionCalls) {
+              logger.info(
+                "agent:run",
+                "All results and outputs processed, breaking loop",
+                {
+                  step,
+                }
+              );
+              break;
+            }
           }
+        } else {
+          logger.debug("agent:run", "Skipping early termination check", {
+            step,
+            minSteps,
+          });
         }
       }
 
@@ -646,20 +659,20 @@ async function saveContextWorkingMemory(
   contextId: string,
   workingMemory: WorkingMemory
 ) {
-  if (
-    workingMemory.inputs.some((i) => i.processed) &&
-    workingMemory.outputs.length > 0
-  ) {
-    const episode = await createEpisodeFromWorkingMemory(workingMemory, agent);
+  // if (
+  //   workingMemory.inputs.some((i) => i.processed) &&
+  //   workingMemory.outputs.length > 0
+  // ) {
+  //   const episode = await createEpisodeFromWorkingMemory(workingMemory, agent);
 
-    await agent.memory.vector.upsert(`${contextId}`, [
-      {
-        id: episode.id,
-        text: episode.observation,
-        metadata: episode,
-      },
-    ]);
-  }
+  //   await agent.memory.vector.upsert(`${contextId}`, [
+  //     {
+  //       id: episode.id,
+  //       text: episode.observation,
+  //       metadata: episode,
+  //     },
+  //   ]);
+  // }
 
   // Store working memory as before
   return await agent.memory.store.set(
