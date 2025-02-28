@@ -18,6 +18,11 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxtst-dev libpng-dev libxinerama-dev libxkbcommon-dev
+
       - name: Install dependencies
         run: bun install
 

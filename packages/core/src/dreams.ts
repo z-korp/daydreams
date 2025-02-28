@@ -319,7 +319,7 @@ export function createDreams<
         count: contextOuputs.length,
       });
 
-      const maxSteps = 10;
+      const maxSteps = 100;
       let step = 1;
       const minSteps = 3; // Minimum steps before considering early termination
 
@@ -512,7 +512,9 @@ export function createDreams<
             // Only break if there are no pending outputs, no pending action calls,
             // AND either there are no recent results/outputs or we've reasoned about them already
             const shouldContinue =
-              (recentResults.length > 0 && !hasReasonedAfterResults) ||
+              (recentResults.length > 0 &&
+                (!hasReasonedAfterResults ||
+                  step < recentResults.length + minSteps)) ||
               (recentOutputs.length > 0 && !hasReasonedAfterOutputs);
 
             logger.debug("agent:run", "Checking if should continue", {
