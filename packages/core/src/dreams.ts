@@ -465,7 +465,7 @@ export function createDreams<
             // Check if there are recent action results that haven't been reasoned about yet
             const recentResults = workingMemory.results
               .sort((a, b) => b.timestamp - a.timestamp)
-              .slice(0, 3);
+              .slice(0, 5);
 
             // Check if there's been a thought after the most recent action result
             const mostRecentResultTime =
@@ -482,7 +482,7 @@ export function createDreams<
                 mostRecentResultTime,
                 recentThoughtTimes: workingMemory.thoughts
                   .sort((a, b) => b.timestamp - a.timestamp)
-                  .slice(0, 3)
+                  .slice(0, 5)
                   .map((t) => t.timestamp),
               }
             );
@@ -511,24 +511,39 @@ export function createDreams<
 
             // Only break if there are no pending outputs, no pending action calls,
             // AND either there are no recent results/outputs or we've reasoned about them already
-            const shouldContinue =
-              (recentResults.length > 0 &&
-                (!hasReasonedAfterResults ||
-                  step < recentResults.length + minSteps)) ||
-              (recentOutputs.length > 0 && !hasReasonedAfterOutputs);
 
             logger.debug("agent:run", "Checking if should continue", {
-              shouldContinue,
               recentResultsCount: recentResults.length,
               hasReasonedAfterResults,
               recentOutputsCount: recentOutputs.length,
               hasReasonedAfterOutputs,
             });
 
+            // Add detailed condition evaluation logging
+            const condition1 = pendingActionCalls === 0;
+            const condition2 =
+              recentResults.length === 0 || hasReasonedAfterResults;
+            const condition3 =
+              recentOutputs.length === 0 || hasReasonedAfterOutputs;
+
+            logger.debug("agent:run", "Early termination condition details", {
+              condition1,
+              condition2,
+              condition3,
+              allConditionsMet: condition1 && condition2 && condition3,
+              step,
+              maxSteps,
+              pendingActionCalls,
+              recentResultsLength: recentResults.length,
+              hasReasonedAfterResults,
+              recentOutputsLength: recentOutputs.length,
+              hasReasonedAfterOutputs,
+            });
+
             if (
-              pendingOutputs === 0 &&
               pendingActionCalls === 0 &&
-              !shouldContinue
+              (recentResults.length === 0 || hasReasonedAfterResults) &&
+              (recentOutputs.length === 0 || hasReasonedAfterOutputs)
             ) {
               logger.info(
                 "agent:run",
@@ -537,7 +552,6 @@ export function createDreams<
                   step,
                   pendingOutputs,
                   pendingActionCalls,
-                  shouldContinue,
                   recentResultsCount: recentResults.length,
                   hasReasonedAfterResults,
                   recentOutputsCount: recentOutputs.length,
