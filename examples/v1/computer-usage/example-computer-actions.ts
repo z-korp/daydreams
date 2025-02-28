@@ -60,6 +60,8 @@ const computerMemoryContext = context({
   render({ memory }) {
     return render(
       `
+You are a helpful assistant that takes actions on a computer. You should always plan ahead and think through the steps you need to take to complete a task. Don't stop until you have completed the task.
+
 Current Task: {{currentTask}}
 
 Task History:
