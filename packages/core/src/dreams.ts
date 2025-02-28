@@ -749,20 +749,20 @@ async function saveContextWorkingMemory(
   contextId: string,
   workingMemory: WorkingMemory
 ) {
-  // if (
-  //   workingMemory.inputs.some((i) => i.processed) &&
-  //   workingMemory.outputs.length > 0
-  // ) {
-  //   const episode = await createEpisodeFromWorkingMemory(workingMemory, agent);
+  if (
+    workingMemory.inputs.some((i) => i.processed) &&
+    workingMemory.outputs.length > 0
+  ) {
+    const episode = await createEpisodeFromWorkingMemory(workingMemory, agent);
 
-  //   await agent.memory.vector.upsert(`${contextId}`, [
-  //     {
-  //       id: episode.id,
-  //       text: episode.observation,
-  //       metadata: episode,
-  //     },
-  //   ]);
-  // }
+    await agent.memory.vector.upsert(`${contextId}`, [
+      {
+        id: episode.id,
+        text: episode.observation,
+        metadata: episode,
+      },
+    ]);
+  }
 
   // Store working memory as before
   return await agent.memory.store.set(
