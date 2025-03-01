@@ -51,5 +51,34 @@ pnpm install
 pnpm run build
 
 # Test the CLI locally
-pnpm run test
+pnpm run start
 ```
+
+## Testing
+
+The create-agent CLI is tested using Vitest. To run tests:
+
+```bash
+# Run all tests
+pnpm run test
+
+# Run tests in watch mode during development
+pnpm run test:watch
+
+# Run tests with coverage report
+pnpm run test:coverage
+```
+
+### Test Structure
+
+- `test/index.test.ts`: Main CLI integration tests
+- `test/utils/utils.test.ts`: Unit tests for utility functions
+- `test/template-generation.test.ts`: Tests for template generation functionality
+
+### Adding New Tests
+
+When adding new features to the CLI, make sure to:
+
+1. Extract pure functions to the `src/utils.ts` file where possible
+2. Add unit tests for those functions in `test/utils/utils.test.ts`
+3. Add integration tests for CLI behavior in `test/index.test.ts`

@@ -6,6 +6,11 @@ import ora from "ora";
 import { execa } from "execa";
 import prompts from "prompts";
 import { fileURLToPath } from "url";
+import {
+    generateTemplateContent,
+    createEnvVariables,
+    createReadme,
+} from "./utils.js";
 
 // Define __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -26,12 +31,21 @@ const program = new Command()
         "--model <model>",
         "Specify the model to use (openai, groq, anthropic, google)",
         "groq"
-    )
-    .parse(process.argv);
+    );
 
-async function main() {
-    const options = program.opts();
-    const targetDir = program.args[0] || ".";
+// Export the main function for testing purposes
+export async function main(
+    testArgs?: string[],
+    testOpts?: Record<string, any>,
+    testTemplateContent?: string // Add template content parameter for testing
+) {
+    // Parse arguments and options only if not in test mode
+    if (!testArgs && !testOpts) {
+        program.parse(process.argv);
+    }
+
+    const options = testOpts || program.opts();
+    const targetDir = (testArgs && testArgs[0]) || program.args[0] || ".";
     const cwd = process.cwd();
     const targetPath = path.resolve(cwd, targetDir);
 
@@ -206,27 +220,35 @@ async function main() {
         `Creating agent with ${selectedModel} model and selected extensions`
     );
 
-    // Get the template file path
-    const templateFile = path.join(
-        __dirname,
-        "..",
-        "templates",
-        "basic",
-        "template.ts"
-    );
+    // Read template content - either from test parameter or from file
+    let templateContent: string;
 
-    if (!fs.existsSync(templateFile)) {
-        spinner.fail(`Template file not found: ${templateFile}`);
-        console.error(
-            chalk.red(
-                `Error: Template file not found. Please check your installation.`
-            )
+    if (testTemplateContent) {
+        // Use the provided test template content
+        templateContent = testTemplateContent;
+    } else {
+        // Get the template file path
+        const templateFile = path.join(
+            __dirname,
+            "..",
+            "templates",
+            "basic",
+            "template.ts"
         );
-        return;
-    }
 
-    // Read the template file
-    let templateContent = await fs.readFile(templateFile, "utf-8");
+        if (!fs.existsSync(templateFile)) {
+            spinner.fail(`Template file not found: ${templateFile}`);
+            console.error(
+                chalk.red(
+                    `Error: Template file not found. Please check your installation.`
+                )
+            );
+            return;
+        }
+
+        // Read the template file
+        templateContent = await fs.readFile(templateFile, "utf-8");
+    }
 
     // Define model-specific replacements
     const modelConfig = {
@@ -266,14 +288,10 @@ async function main() {
 
     // Replace placeholders with model-specific values
     const config = modelConfig[selectedModel as keyof typeof modelConfig];
-    Object.entries(config).forEach(([key, value]) => {
-        const placeholder = new RegExp(`{{${key}}}`, "g");
-        templateContent = templateContent.replace(placeholder, value);
-    });
 
-    // Modify the template to include the selected extensions
-    const extensionImports = [];
-    const extensionsList = [];
+    // Prepare extension imports and extension list for template generation
+    const extensionImports: string[] = [];
+    const extensionsList: string[] = [];
 
     for (const ext of selectedExtensions) {
         if (ext === "cli") {
@@ -299,209 +317,41 @@ async function main() {
         }
     }
 
-    // Replace the CLI import with all selected extensions
-    if (selectedExtensions.length > 0 && selectedExtensions[0] !== "cli") {
-        templateContent = templateContent.replace(
-            `import { cli } from "@daydreamsai/core/extensions";`,
-            extensionImports.join("\n")
-        );
-    }
-
-    // Replace the extensions list in createDreams
-    if (extensionsList.length > 0 && !extensionsList.includes("cli")) {
-        templateContent = templateContent.replace(
-            "extensions: [cli]",
-            `extensions: [${extensionsList.join(", ")}]`
-        );
-    }
-
-    // Add header comment
-    const headerComment = `/**
- * Daydreams agent with ${selectedExtensions.join(", ")} extension(s)
- * Using ${selectedModel} as the model provider
- */`;
-
-    templateContent = templateContent.replace(
-        /\/\*\*[\s\S]*?\*\//,
-        headerComment
+    // Generate the template content with all replacements
+    const processedContent = generateTemplateContent(
+        templateContent,
+        config,
+        extensionImports,
+        extensionsList
     );
 
     // Write the modified template to the target directory
-    await fs.writeFile(path.join(targetPath, "index.ts"), templateContent);
+    await fs.writeFile(path.join(targetPath, "index.ts"), processedContent);
     spinner.succeed(
         `Created agent with ${selectedModel} model and extensions: ${selectedExtensions.join(", ")}`
     );
 
     // Create .env file with required environment variables
     spinner.start("Creating .env file");
-    const envVariables = ["# Daydreams Environment Variables\n"];
-
-    // Model configurations
-    envVariables.push("# Model Configurations");
-    if (selectedModel === "groq") {
-        envVariables.push("GROQ_API_KEY=your_groq_api_key");
-    } else if (selectedModel === "openai") {
-        envVariables.push("OPENAI_API_KEY=your_openai_api_key");
-    } else if (selectedModel === "anthropic") {
-        envVariables.push("ANTHROPIC_API_KEY=your_anthropic_api_key");
-    } else if (selectedModel === "google") {
-        envVariables.push("GOOGLE_API_KEY=your_google_api_key");
-    }
-
-    // Add OpenRouter API key regardless of selected model
-    envVariables.push("OPENROUTER_API_KEY=your_openrouter_api_key\n");
-
-    // Twitter Configuration
-    if (selectedExtensions.includes("twitter")) {
-        envVariables.push("# Twitter Configuration");
-        // Add both authentication methods
-        envVariables.push("# Method 1: Username/Password");
-        envVariables.push("TWITTER_USERNAME=your_twitter_username");
-        envVariables.push("TWITTER_PASSWORD=your_twitter_password");
-        envVariables.push("TWITTER_EMAIL=your_twitter_email");
-
-        envVariables.push("# Method 2: API Keys");
-        envVariables.push("TWITTER_CONSUMER_KEY=your_consumer_key");
-        envVariables.push("TWITTER_CONSUMER_SECRET=your_consumer_secret");
-        envVariables.push("TWITTER_ACCESS_TOKEN=your_access_token");
-        envVariables.push(
-            "TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret\n"
-        );
-    }
-
-    // Discord Configuration
-    if (selectedExtensions.includes("discord")) {
-        envVariables.push("# Discord Configuration");
-        envVariables.push(
-            "# Discord Bot Token (https://discord.com/developers/applications)"
-        );
-        envVariables.push(
-            "# Required Gateway Intents: Server Members, Message Content, Presence"
-        );
-        envVariables.push("DISCORD_TOKEN=your_discord_token");
-        envVariables.push("DISCORD_BOT_NAME=your_bot_name\n");
-    }
-
-    // Telegram Configuration
-    if (selectedExtensions.includes("telegram")) {
-        envVariables.push("# Telegram Configuration");
-        envVariables.push(
-            "# TELEGRAM_STARTUP_CHAT_ID: Chat ID where startup notifications will be sent"
-        );
-        envVariables.push("TELEGRAM_STARTUP_CHAT_ID=your_startup_chat_id");
-
-        envVariables.push(
-            "# GramJS Configuration (required for both bot and user clients)"
-        );
-        envVariables.push(
-            "# TELEGRAM_TOKEN: Bot token from @BotFather (required for bot mode)"
-        );
-        envVariables.push("TELEGRAM_TOKEN=your_telegram_token");
-
-        envVariables.push("# Get these from https://my.telegram.org/apps");
-        envVariables.push("TELEGRAM_API_ID=your_api_id");
-        envVariables.push("TELEGRAM_API_HASH=your_api_hash");
-
-        envVariables.push("# Optional: Session string for user authentication");
-        envVariables.push(
-            "# After first successful interactive login, the app will provide a session string"
-        );
-        envVariables.push(
-            "# Save it here to avoid interactive login in subsequent runs"
-        );
-        envVariables.push("TELEGRAM_USER_SESSION=your_session_string\n");
-    }
-
-    // Add common configurations regardless of extensions
-    envVariables.push("# General Configuration");
-    envVariables.push("DRY_RUN=1");
-    envVariables.push(
-        "GRAPHQL_URL=https://api.cartridge.gg/x/sepolia-rc-18/torii\n"
-    );
-
-    // Add blockchain configurations
-    envVariables.push("# Blockchain Configurations");
-
-    envVariables.push("# Starknet Configuration");
-    envVariables.push("STARKNET_RPC_URL=your_starknet_rpc_url");
-    envVariables.push("STARKNET_ADDRESS=your_starknet_address");
-    envVariables.push("STARKNET_PRIVATE_KEY=your_starknet_private_key\n");
-
-    envVariables.push("# Hyperliquid Trading Configuration");
-    envVariables.push(
-        "# HYPERLIQUID_MAIN_ADDRESS: Your main Hyperliquid address (format: 0x...)"
-    );
-    envVariables.push(
-        "# HYPERLIQUID_WALLET_ADDRESS: Your wallet address for trading (format: 0x...)"
-    );
-    envVariables.push(
-        "# HYPERLIQUID_PRIVATE_KEY: Your private key (Keep this secure!)"
-    );
-    envVariables.push("HYPERLIQUID_MAIN_ADDRESS=your_main_address");
-    envVariables.push("HYPERLIQUID_WALLET_ADDRESS=your_wallet_address");
-    envVariables.push("HYPERLIQUID_PRIVATE_KEY=your_private_key\n");
-
-    envVariables.push("# Sui Configuration");
-    envVariables.push(
-        "# Sui Mnemonic Seed Phrase (`sui keytool generate ed25519`), Also support `suiprivatekeyxxxx` (sui keytool export --key-identity 0x63)"
-    );
-    envVariables.push("SUI_PRIVATE_KEY=your_sui_private_key");
-    envVariables.push(
-        "SUI_NETWORK=mainnet   # must be one of mainnet, testnet, devnet, localnet\n"
-    );
-
-    await fs.writeFile(
-        path.join(targetPath, ".env.example"),
-        envVariables.join("\n")
-    );
+    const envContent = createEnvVariables(selectedModel, selectedExtensions);
+    await fs.writeFile(path.join(targetPath, ".env.example"), envContent);
     spinner.succeed("Created .env.example file");
 
     // Create README
     spinner.start("Creating README");
-    const readmeContent = `# ${path.basename(targetPath)}
-
-A Daydreams agent with the following extensions:
-${selectedExtensions.map((ext) => `- ${ext}`).join("\n")}
-
-## Features
-
-- Uses ${selectedModel} as the model provider
-- Includes context for managing goals and tasks
-- Provides actions for adding and completing tasks
-
-## Getting Started
-
-1. Copy \`.env.example\` to \`.env\` and fill in the required values.
-2. Install dependencies:
-
-\`\`\`
-npm install
-\`\`\`
-
-3. Run the agent:
-
-\`\`\`
-npm start
-\`\`\`
-
-## Customizing Your Agent
-
-You can modify the \`index.ts\` file to add more contexts, actions, or change the model configuration.
-`;
-
+    const readmeContent = createReadme(
+        path.basename(targetPath),
+        selectedExtensions,
+        selectedModel
+    );
     await fs.writeFile(path.join(targetPath, "README.md"), readmeContent);
     spinner.succeed("Created README");
 
     // Install dependencies
     spinner.start("Installing dependencies");
     try {
-        const packageManager = await detectPackageManager();
-        console.log(chalk.blue(`Using package manager: ${packageManager}`));
-
-        console.log(
-            chalk.blue(`Running: ${packageManager} install in ${targetPath}`)
-        );
-        const { stdout, stderr } = await execa(packageManager, ["install"], {
+        console.log(chalk.blue(`Running: pnpm install in ${targetPath}`));
+        const { stdout, stderr } = await execa("pnpm", ["install"], {
             cwd: targetPath,
             stdio: "pipe", // Capture output
         });
@@ -519,7 +369,7 @@ You can modify the \`index.ts\` file to add more contexts, actions, or change th
         const nodeModulesExists = await fs.pathExists(nodeModulesPath);
 
         if (nodeModulesExists) {
-            spinner.succeed(`Installed dependencies using ${packageManager}`);
+            spinner.succeed(`Installed dependencies using pnpm`);
             console.log(
                 chalk.green(
                     `Node modules directory created at: ${nodeModulesPath}`
@@ -587,33 +437,20 @@ You can modify the \`index.ts\` file to add more contexts, actions, or change th
     console.log();
 }
 
-async function detectPackageManager() {
-    try {
-        // Check if pnpm is available first
-        try {
-            await execa("pnpm", ["--version"]);
-            return "pnpm"; // Prefer pnpm if it's available
-        } catch {
-            // pnpm not available, continue with other checks
-        }
-
-        const userAgent = process.env.npm_config_user_agent;
-        if (userAgent) {
-            if (userAgent.includes("pnpm")) return "pnpm"; // Check pnpm first
-            if (userAgent.includes("yarn")) return "yarn";
-            if (userAgent.includes("bun")) return "bun";
-        }
-        return "npm";
-    } catch (error) {
-        return "npm";
-    }
+// Directly run the main function when this file is executed directly
+if (
+    import.meta.url &&
+    process.argv[1] &&
+    (import.meta.url.endsWith(process.argv[1]) ||
+        process.argv[1].endsWith("index.js") ||
+        process.argv[1].endsWith("create-agent"))
+) {
+    main().catch((error) => {
+        console.error(
+            chalk.red(
+                `Error: ${error instanceof Error ? error.message : String(error)}`
+            )
+        );
+        process.exit(1);
+    });
 }
-
-main().catch((error) => {
-    console.error(
-        chalk.red(
-            `Error: ${error instanceof Error ? error.message : String(error)}`
-        )
-    );
-    process.exit(1);
-});
