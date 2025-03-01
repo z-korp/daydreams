@@ -128,7 +128,6 @@ async function main() {
         type: "module",
         scripts: {
             start: "bun run index.ts",
-            dev: "bun run index.ts",
             build: "tsc",
         },
         dependencies: {
@@ -337,28 +336,31 @@ async function main() {
     spinner.start("Creating .env file");
     const envVariables = ["# Daydreams Environment Variables\n"];
 
+    // Model configurations
+    envVariables.push("# Model Configurations");
     if (selectedModel === "groq") {
-        envVariables.push("# Groq Configuration");
-        envVariables.push("GROQ_API_KEY=your_groq_api_key\n");
+        envVariables.push("GROQ_API_KEY=your_groq_api_key");
     } else if (selectedModel === "openai") {
-        envVariables.push("# OpenAI Configuration");
-        envVariables.push("OPENAI_API_KEY=your_openai_api_key\n");
+        envVariables.push("OPENAI_API_KEY=your_openai_api_key");
     } else if (selectedModel === "anthropic") {
-        envVariables.push("# Anthropic Configuration");
-        envVariables.push("ANTHROPIC_API_KEY=your_anthropic_api_key\n");
+        envVariables.push("ANTHROPIC_API_KEY=your_anthropic_api_key");
     } else if (selectedModel === "google") {
-        envVariables.push("# Google Configuration");
-        envVariables.push("GOOGLE_API_KEY=your_google_api_key\n");
+        envVariables.push("GOOGLE_API_KEY=your_google_api_key");
     }
 
-    if (selectedExtensions.includes("discord")) {
-        envVariables.push("# Discord Configuration");
-        envVariables.push("DISCORD_TOKEN=your_discord_token");
-        envVariables.push("DISCORD_BOT_NAME=your_bot_name\n");
-    }
+    // Add OpenRouter API key regardless of selected model
+    envVariables.push("OPENROUTER_API_KEY=your_openrouter_api_key\n");
 
+    // Twitter Configuration
     if (selectedExtensions.includes("twitter")) {
         envVariables.push("# Twitter Configuration");
+        // Add both authentication methods
+        envVariables.push("# Method 1: Username/Password");
+        envVariables.push("TWITTER_USERNAME=your_twitter_username");
+        envVariables.push("TWITTER_PASSWORD=your_twitter_password");
+        envVariables.push("TWITTER_EMAIL=your_twitter_email");
+
+        envVariables.push("# Method 2: API Keys");
         envVariables.push("TWITTER_CONSUMER_KEY=your_consumer_key");
         envVariables.push("TWITTER_CONSUMER_SECRET=your_consumer_secret");
         envVariables.push("TWITTER_ACCESS_TOKEN=your_access_token");
@@ -367,10 +369,86 @@ async function main() {
         );
     }
 
+    // Discord Configuration
+    if (selectedExtensions.includes("discord")) {
+        envVariables.push("# Discord Configuration");
+        envVariables.push(
+            "# Discord Bot Token (https://discord.com/developers/applications)"
+        );
+        envVariables.push(
+            "# Required Gateway Intents: Server Members, Message Content, Presence"
+        );
+        envVariables.push("DISCORD_TOKEN=your_discord_token");
+        envVariables.push("DISCORD_BOT_NAME=your_bot_name\n");
+    }
+
+    // Telegram Configuration
     if (selectedExtensions.includes("telegram")) {
         envVariables.push("# Telegram Configuration");
-        envVariables.push("TELEGRAM_BOT_TOKEN=your_telegram_token\n");
+        envVariables.push(
+            "# TELEGRAM_STARTUP_CHAT_ID: Chat ID where startup notifications will be sent"
+        );
+        envVariables.push("TELEGRAM_STARTUP_CHAT_ID=your_startup_chat_id");
+
+        envVariables.push(
+            "# GramJS Configuration (required for both bot and user clients)"
+        );
+        envVariables.push(
+            "# TELEGRAM_TOKEN: Bot token from @BotFather (required for bot mode)"
+        );
+        envVariables.push("TELEGRAM_TOKEN=your_telegram_token");
+
+        envVariables.push("# Get these from https://my.telegram.org/apps");
+        envVariables.push("TELEGRAM_API_ID=your_api_id");
+        envVariables.push("TELEGRAM_API_HASH=your_api_hash");
+
+        envVariables.push("# Optional: Session string for user authentication");
+        envVariables.push(
+            "# After first successful interactive login, the app will provide a session string"
+        );
+        envVariables.push(
+            "# Save it here to avoid interactive login in subsequent runs"
+        );
+        envVariables.push("TELEGRAM_USER_SESSION=your_session_string\n");
     }
+
+    // Add common configurations regardless of extensions
+    envVariables.push("# General Configuration");
+    envVariables.push("DRY_RUN=1");
+    envVariables.push(
+        "GRAPHQL_URL=https://api.cartridge.gg/x/sepolia-rc-18/torii\n"
+    );
+
+    // Add blockchain configurations
+    envVariables.push("# Blockchain Configurations");
+
+    envVariables.push("# Starknet Configuration");
+    envVariables.push("STARKNET_RPC_URL=your_starknet_rpc_url");
+    envVariables.push("STARKNET_ADDRESS=your_starknet_address");
+    envVariables.push("STARKNET_PRIVATE_KEY=your_starknet_private_key\n");
+
+    envVariables.push("# Hyperliquid Trading Configuration");
+    envVariables.push(
+        "# HYPERLIQUID_MAIN_ADDRESS: Your main Hyperliquid address (format: 0x...)"
+    );
+    envVariables.push(
+        "# HYPERLIQUID_WALLET_ADDRESS: Your wallet address for trading (format: 0x...)"
+    );
+    envVariables.push(
+        "# HYPERLIQUID_PRIVATE_KEY: Your private key (Keep this secure!)"
+    );
+    envVariables.push("HYPERLIQUID_MAIN_ADDRESS=your_main_address");
+    envVariables.push("HYPERLIQUID_WALLET_ADDRESS=your_wallet_address");
+    envVariables.push("HYPERLIQUID_PRIVATE_KEY=your_private_key\n");
+
+    envVariables.push("# Sui Configuration");
+    envVariables.push(
+        "# Sui Mnemonic Seed Phrase (`sui keytool generate ed25519`), Also support `suiprivatekeyxxxx` (sui keytool export --key-identity 0x63)"
+    );
+    envVariables.push("SUI_PRIVATE_KEY=your_sui_private_key");
+    envVariables.push(
+        "SUI_NETWORK=mainnet   # must be one of mainnet, testnet, devnet, localnet\n"
+    );
 
     await fs.writeFile(
         path.join(targetPath, ".env.example"),
