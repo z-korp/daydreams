@@ -45,11 +45,11 @@ This tool:
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Build the package
-npm run build
+pnpm run build
 
 # Test the CLI locally
-npm run dev
+pnpm run test
 ```

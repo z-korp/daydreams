@@ -17,7 +17,9 @@
     "scripts": {
         "build": "tsup",
         "dev": "tsup --watch",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "start": "node dist/index.js",
+        "test": "node dist/index.js test-agent --cli"
     },
     "dependencies": {
         "chalk": "^5.3.0",
