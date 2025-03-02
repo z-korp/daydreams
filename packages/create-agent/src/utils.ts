@@ -214,13 +214,13 @@ ${selectedExtensions.map((ext) => `- ${ext}`).join("\n")}
 2. Install dependencies:
 
 \`\`\`
-npm install
+bun install
 \`\`\`
 
 3. Run the agent:
 
 \`\`\`
-npm start
+bun start
 \`\`\`
 
 ## Customizing Your Agent
