@@ -16,7 +16,7 @@ import { cli } from "@daydreamsai/core/extensions";
 // Create an agent with the MCP extension
 createDreams({
   model: anthropic("claude-3-7-sonnet-latest"),
-  logger: LogLevel.DEBUG,
+  logger: LogLevel.INFO,
 
   // Add the MCP extension with the example server configuration
   extensions: [
