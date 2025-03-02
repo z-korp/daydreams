@@ -74,45 +74,47 @@ export async function main(
     console.log();
 
     // Determine selected extensions
-    const selectedExtensions = [];
+    const availableExtensions = ["cli", "twitter", "discord", "telegram"];
+    let selectedExtensions = [];
+
     if (options.all) {
-        selectedExtensions.push("cli", "twitter", "discord", "telegram");
+        selectedExtensions = [...availableExtensions];
     } else {
-        if (options.cli) selectedExtensions.push("cli");
-        if (options.twitter) selectedExtensions.push("twitter");
-        if (options.discord) selectedExtensions.push("discord");
-        if (options.telegram) selectedExtensions.push("telegram");
-    }
+        // Collect extensions from command line options
+        selectedExtensions = availableExtensions.filter((ext) => options[ext]);
 
-    // If no extensions were selected via flags, prompt the user
-    if (selectedExtensions.length === 0) {
-        const { extensions } = await prompts({
-            type: "multiselect",
-            name: "extensions",
-            message: "Select extensions to include",
-            choices: [
-                { title: "CLI", value: "cli" },
-                { title: "Twitter", value: "twitter" },
-                { title: "Discord", value: "discord" },
-                { title: "Telegram", value: "telegram" },
-            ],
-        });
+        // If no extensions were selected via flags, prompt the user
+        if (selectedExtensions.length === 0) {
+            const { extensions } = await prompts({
+                type: "multiselect",
+                name: "extensions",
+                message: "Select extensions to include",
+                choices: [
+                    { title: "CLI", value: "cli" },
+                    { title: "Twitter", value: "twitter" },
+                    { title: "Discord", value: "discord" },
+                    { title: "Telegram", value: "telegram" },
+                ],
+            });
 
-        if (!extensions || extensions.length === 0) {
-            console.log(
-                chalk.yellow(
-                    "No extensions selected. Including CLI extension by default."
-                )
-            );
-            selectedExtensions.push("cli");
-        } else {
-            selectedExtensions.push(...extensions);
+            if (!extensions || extensions.length === 0) {
+                console.log(
+                    chalk.yellow(
+                        "No extensions selected. Including CLI extension by default."
+                    )
+                );
+                selectedExtensions = ["cli"];
+            } else {
+                selectedExtensions = extensions;
+            }
         }
     }
 
     // Determine the model to use
+    const validModels = ["openai", "groq", "anthropic", "google"];
     let selectedModel = options.model || "groq";
-    if (!["openai", "groq", "anthropic", "google"].includes(selectedModel)) {
+
+    if (!validModels.includes(selectedModel)) {
         const { model } = await prompts({
             type: "select",
             name: "model",
@@ -347,51 +349,26 @@ export async function main(
     await fs.writeFile(path.join(targetPath, "README.md"), readmeContent);
     spinner.succeed("Created README");
 
-    // Install dependencies
-    spinner.start("Installing dependencies");
+    // Install dependencies - simplified to directly use pnpm
+    spinner.start("Installing dependencies with pnpm");
     try {
-        console.log(chalk.blue(`Running: pnpm install in ${targetPath}`));
-        const { stdout, stderr } = await execa("pnpm", ["install"], {
-            cwd: targetPath,
-            stdio: "pipe", // Capture output
-        });
-
-        console.log(chalk.gray("Installation output:"));
-        console.log(chalk.gray(stdout));
-
-        if (stderr) {
-            console.log(chalk.yellow("Installation warnings:"));
-            console.log(chalk.yellow(stderr));
-        }
+        await execa("pnpm", ["install"], { cwd: targetPath });
 
         // Verify node_modules exists
         const nodeModulesPath = path.join(targetPath, "node_modules");
         const nodeModulesExists = await fs.pathExists(nodeModulesPath);
 
         if (nodeModulesExists) {
-            spinner.succeed(`Installed dependencies using pnpm`);
+            spinner.succeed("Installed dependencies using pnpm");
+        } else {
+            spinner.fail(
+                "Dependencies installed but node_modules directory wasn't found"
+            );
             console.log(
-                chalk.green(
-                    `Node modules directory created at: ${nodeModulesPath}`
+                chalk.yellow(
+                    "You can install dependencies manually by running 'pnpm install' in the project directory."
                 )
             );
-        } else {
-            spinner.warn(
-                `Dependencies seemed to install but node_modules directory wasn't found`
-            );
-            console.log(chalk.yellow(`Will try with pnpm specifically...`));
-
-            // Try with pnpm specifically if node_modules wasn't created
-            console.log(chalk.blue(`Running: pnpm install in ${targetPath}`));
-            await execa("pnpm", ["install"], { cwd: targetPath });
-
-            // Check again
-            const nodeModulesExistsNow = await fs.pathExists(nodeModulesPath);
-            if (nodeModulesExistsNow) {
-                spinner.succeed(`Installed dependencies using pnpm`);
-            } else {
-                spinner.fail(`Could not create node_modules directory`);
-            }
         }
     } catch (error: unknown) {
         spinner.fail("Failed to install dependencies");
@@ -400,24 +377,11 @@ export async function main(
                 `Error: ${error instanceof Error ? error.message : String(error)}`
             )
         );
-
-        // Try with pnpm as fallback
-        try {
-            console.log(chalk.yellow("Trying with pnpm as fallback..."));
-            await execa("pnpm", ["install"], { cwd: targetPath });
-            spinner.succeed("Installed dependencies using pnpm");
-        } catch (fallbackError: unknown) {
-            console.error(
-                chalk.red(
-                    `Fallback also failed: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`
-                )
-            );
-            console.log(
-                chalk.yellow(
-                    "You can install dependencies manually by running 'pnpm install' in the project directory."
-                )
-            );
-        }
+        console.log(
+            chalk.yellow(
+                "You can install dependencies manually by running 'pnpm install' in the project directory."
+            )
+        );
     }
 
     console.log();
