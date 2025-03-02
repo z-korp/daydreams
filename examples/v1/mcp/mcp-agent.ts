@@ -30,9 +30,6 @@ createDreams({
           command: "node",
           args: [path.join(__dirname, "mcp-server-example.mjs")],
         },
-        capabilities: {
-          resources: {},
-        },
       },
     ]),
   ],

@@ -3,6 +3,8 @@ import { createMcpClient } from "./client";
 import type { AnyAgent, Extension, ActionCall } from "../../types";
 import { Logger } from "../../logger";
 
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+
 export interface McpServerConfig {
   id: string;
   name: string;
@@ -31,7 +33,7 @@ export interface McpServerConfig {
  * @returns An extension that can be added to the agent's extensions list
  */
 export function createMcpExtension(servers: McpServerConfig[]): Extension {
-  const clients = new Map<string, any>();
+  const clients = new Map<string, Client>();
 
   return {
     name: "mcp",
@@ -290,6 +292,37 @@ export function createMcpExtension(servers: McpServerConfig[]): Extension {
           }));
 
           return { servers: serverList };
+        },
+      },
+
+      // Action to list available tools from a specific MCP server
+      {
+        name: "mcp.listTools",
+        description: "List available tools from an MCP server",
+        schema: z.object({
+          serverId: z.string().describe("ID of the MCP server to query"),
+        }),
+        async handler(call: ActionCall<{ serverId: string }>, ctx, agent) {
+          const logger = agent.container.resolve<Logger>("logger");
+          const { serverId } = call.data;
+
+          const client = clients.get(serverId);
+          if (!client) {
+            return {
+              error: `MCP server with ID '${serverId}' not found`,
+            };
+          }
+
+          try {
+            const tools = await client.listTools();
+            return { tools };
+          } catch (error) {
+            logger.error("mcp:action", "Failed to list tools", {
+              serverId,
+              error,
+            });
+            return { error: String(error) };
+          }
         },
       },
     ],
