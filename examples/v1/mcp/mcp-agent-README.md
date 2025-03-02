@@ -9,8 +9,8 @@ The example shows:
 
 1. How to set up the MCP extension with a server configuration
 2. How to connect to an MCP server using stdio transport
-3. How to create a custom action that uses MCP server resources
-4. How to list and read resources from an MCP server
+3. How to create a custom action that uses MCP server capabilities
+4. How to interact with MCP server resources and tools
 
 ## How It Works
 
@@ -18,11 +18,12 @@ The example:
 
 1. Connects to an MCP server (mcp-server-example.mjs) using stdio transport
 2. Creates an agent with the MCP extension configured to connect to this server
-3. Defines a custom action that lists and reads resources from the server
-4. Executes the custom action to read application logs
+3. Defines a custom action that interacts with the server's capabilities
+4. Executes the custom action to demonstrate MCP functionality
 
 The MCP server provides access to resources including a dynamic greeting
-resource that can be accessed through the MCP extension.
+resource and tools like an addition calculator that can be accessed through the
+MCP extension.
 
 ## Server Implementation
 
@@ -100,10 +101,13 @@ createMcpExtension([
 
 ### Custom Action
 
-The example defines a custom action that uses the MCP extension to:
+The example defines a custom action that demonstrates how to:
 
-1. List available resources from the server
-2. Read the application log resource
+1. Call the server's `add` tool to perform calculations
+2. Access the dynamic greeting resource using the resource URI pattern
+
+Note: The server does not support all MCP methods (like `listPrompts`), so the
+agent should only use the methods that are explicitly implemented in the server.
 
 ## Related Resources
 

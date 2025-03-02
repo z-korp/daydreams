@@ -3,6 +3,7 @@ import {
   ResourceTemplate,
 } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
 // Create an MCP server
@@ -29,6 +30,17 @@ server.resource(
     ],
   })
 );
+
+server.resource(ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      {
+        name: "add",
+        description: "Add two numbers",
+      },
+    ],
+  };
+});
 
 // Start receiving messages on stdin and sending messages on stdout
 const transport = new StdioServerTransport();
