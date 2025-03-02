@@ -37,6 +37,10 @@ server.resource(ListToolsRequestSchema, async () => {
       {
         name: "add",
         description: "Add two numbers",
+        parameters: {
+          a: { type: "number" },
+          b: { type: "number" },
+        },
       },
     ],
   };
