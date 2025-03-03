@@ -321,7 +321,7 @@ export function createDreams<
 
       const maxSteps = 100;
       let step = 1;
-      const minSteps = 3; // Minimum steps before considering early termination
+      const minSteps = 1; // Minimum steps before considering early termination
 
       logger.debug("agent:run", "Preparing actions");
       const contextActions = await Promise.all(
