@@ -30,13 +30,12 @@ export class ChromaVectorStore implements VectorStore {
     embedder?: IEmbeddingFunction
   ) {
     this.embedder =
-      embedder ||
-      process.env.OPENAI_API_KEY ?
-      new OpenAIEmbeddingFunction({
-        openai_api_key: process.env.OPENAI_API_KEY!,
-        openai_model: "text-embedding-3-small",
-      }) :
-      new DefaultEmbeddingFunction();
+      embedder || process.env.OPENAI_API_KEY
+        ? new OpenAIEmbeddingFunction({
+            openai_api_key: process.env.OPENAI_API_KEY!,
+            openai_model: "text-embedding-3-small",
+          })
+        : new DefaultEmbeddingFunction();
 
     this.client = new ChromaClient({
       path: connection,
