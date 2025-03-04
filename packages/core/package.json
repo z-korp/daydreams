@@ -54,6 +54,7 @@
     "ajv": "^8.17.1",
     "bignumber.js": "9.1.2",
     "bs58": "^6.0.0",
+    "chromadb-default-embed": "^2.13.2",
     "cohere-ai": "^7.15.4",
     "dotenv": "^16.4.7",
     "ethers": "^6.13.5",
