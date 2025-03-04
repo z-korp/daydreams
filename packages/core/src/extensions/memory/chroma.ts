@@ -7,6 +7,7 @@ import {
   OpenAIEmbeddingFunction,
   type IEmbeddingFunction,
 } from "chromadb";
+import { DefaultEmbeddingFunction } from "chromadb";
 import type { InferContextMemory, VectorStore } from "../../types";
 
 /**
@@ -29,11 +30,13 @@ export class ChromaVectorStore implements VectorStore {
     embedder?: IEmbeddingFunction
   ) {
     this.embedder =
-      embedder ||
-      new OpenAIEmbeddingFunction({
-        openai_api_key: process.env.OPENAI_API_KEY!,
-        openai_model: "text-embedding-3-small",
-      });
+      embedder || process.env.OPENAI_API_KEY
+        ? new OpenAIEmbeddingFunction({
+            openai_api_key: process.env.OPENAI_API_KEY!,
+            openai_model: "text-embedding-3-small",
+          })
+        : new DefaultEmbeddingFunction();
+
     this.client = new ChromaClient({
       path: connection,
     });

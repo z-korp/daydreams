@@ -29,7 +29,8 @@ Available extensions:
 - `--telegram`: Include Telegram extension
 - `--all`: Include all extensions
 
-If no extensions are specified, you will be prompted to select which ones to include.
+If no extensions are specified, you will be prompted to select which ones to
+include.
 
 ## What it does
 
@@ -73,7 +74,8 @@ pnpm run test:coverage
 
 - `test/index.test.ts`: Main CLI integration tests
 - `test/utils/utils.test.ts`: Unit tests for utility functions
-- `test/template-generation.test.ts`: Tests for template generation functionality
+- `test/template-generation.test.ts`: Tests for template generation
+  functionality
 
 ### Adding New Tests
 
