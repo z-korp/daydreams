@@ -4,8 +4,7 @@
   "workspaces": [
     "clients/*",
     "packages/*",
-    "examples/*",
-    "docs"
+    "examples/*"
   ],
   "scripts": {
     "start": "bun run examples/v1/example-basic.ts",
@@ -19,12 +18,13 @@
     "test": "bun run packages/core",
     "build:core": "cd packages/core && bun run build",
     "build:create-agent": "cd packages/create-agent && bun run build",
+    "build": "cd docs && pnpm run docs:build",
     "release": "cd packages/core && bun run build && cd ../.. && cd packages/create-agent && bun run build && cd ../.. && npx lerna publish --no-private --force-publish",
     "prettier-check": "pnpx prettier --check packages",
     "prettier": "pnpx prettier --write packages",
     "knip": "knip",
     "docs:dev": "cd docs && bun run dev",
-    "docs:build": "cd docs && bun run build",
+    "docs:build": "cd docs && bun run docs:build",
     "docs:start": "cd docs && bun run start"
   },
   "dependencies": {
@@ -32,14 +32,14 @@
     "@ai-sdk/google": "^1.1.16",
     "@ai-sdk/groq": "^1.1.7",
     "@ai-sdk/openai": "^1.1.14",
-    "@jitsi/robotjs": "^0.6.13",
     "@mendable/firecrawl-js": "^1.16.0",
     "@modelcontextprotocol/sdk": "^1.6.1",
     "@openrouter/ai-sdk-provider": "^0.2.1",
-    "@tailwindcss/postcss": "^4.0.6",
     "@tavily/core": "^0.3.1",
+    "@types/blessed": "^0.1.25",
     "ai": "^4.1.25",
     "ajv": "^8.17.1",
+    "blessed": "^0.1.81",
     "chalk": "^5.4.1",
     "chromadb": "^1.5.5",
     "cors": "^2.8.5",
@@ -52,7 +52,6 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "readline": "^1.3.0",
-    "robotjs": "^0.6.0",
     "screenshot-desktop": "^1.15.1",
     "sharp": "^0.33.5",
     "tailwindcss": "^4.0.6",
@@ -61,6 +60,10 @@
     "ws": "^8.18.0",
     "zod": "^3.24.1",
     "zod-to-json-schema": "^3.24.1"
+  },
+  "optionalDependencies": {
+    "@jitsi/robotjs": "^0.6.13",
+    "robotjs": "^0.6.0"
   },
   "devDependencies": {
     "@types/bun": "^1.2.2",
