@@ -8,13 +8,16 @@
     "docs:start": "next start"
   },
   "dependencies": {
+    "@tailwindcss/postcss": "^4.0.6",
+    "@types/connect": "^3.4.38",
+    "@types/node-fetch": "^2.6.12",
+    "@types/three": "^0.174.0",
     "next": "^15.1.7",
     "nextra": "^4.2.12",
     "nextra-theme-docs": "^4.2.12",
     "postcss": "^8.5.2",
     "prettier": "^3.4.2",
     "prism-react-renderer": "^2.4.1",
-    "@tailwindcss/postcss": "^4.0.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-syntax-highlighter": "^15.6.1"
@@ -27,17 +30,5 @@
     "typedoc": "^0.27.6",
     "typedoc-plugin-frontmatter": "^1.1.2",
     "typedoc-plugin-markdown": "^4.4.1"
-  },
-  "pnpm": {
-    "neverBuiltDependencies": [
-      "@jitsi/robotjs",
-      "robotjs"
-    ],
-    "peerDependencyRules": {
-      "ignoreMissing": [
-        "@jitsi/robotjs",
-        "robotjs"
-      ]
-    }
   }
 }
