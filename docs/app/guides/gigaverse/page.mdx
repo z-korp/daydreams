@@ -38,6 +38,7 @@ const env = validateEnv(
   z.object({
     ANTHROPIC_API_KEY: z.string().min(1, "ANTHROPIC_API_KEY is required"),
     GIGA_TOKEN: z.string().min(1, "GIGA_TOKEN is required"),
+    OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
   })
 );
 
