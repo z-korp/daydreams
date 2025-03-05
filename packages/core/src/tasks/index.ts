@@ -354,7 +354,7 @@ export const runAction = task(
         JSON.stringify(call.data)
       );
       const result = await action.handler(call, ctx, agent);
-      logger.info("agent:action_resull:" + call.id, call.name, result);
+      logger.debug("agent:action_result:" + call.id, call.name, result);
       return result;
     } catch (error) {
       logger.error("agent:action", "ACTION_FAILED", { error });
