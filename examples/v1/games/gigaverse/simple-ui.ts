@@ -327,13 +327,6 @@ export function printDetailedGameState(state: any): void {
     });
   }
   
-  // Resources
-  console.log(`\n${COLORS.bright}${COLORS.yellow}Resources:${COLORS.reset}`);
-  console.log(`${COLORS.bright}Energy:${COLORS.reset} ${state.currentEnergy}`);
-  console.log(`${COLORS.bright}Level:${COLORS.reset} ${state.currentLevel}`);
-  console.log(`${COLORS.bright}XP:${COLORS.reset} ${state.currentXP}`);
-  console.log(`${COLORS.bright}Gold:${COLORS.reset} ${state.currentGold}`);
-  
   printDivider();
 }
 
