@@ -20,5 +20,6 @@ export default defineConfig({
     "b58",
     "telegram",
     "@tavily/core",
+    "ollama"
   ],
 });
