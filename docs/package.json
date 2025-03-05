@@ -17,7 +17,8 @@
     "@tailwindcss/postcss": "^4.0.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-syntax-highlighter": "^15.6.1"
+    "react-syntax-highlighter": "^15.6.1",
+    "@theguild/remark-mermaid": "^0.2.0"
   },
   "devDependencies": {
     "@types/bun": "^1.2.2",
