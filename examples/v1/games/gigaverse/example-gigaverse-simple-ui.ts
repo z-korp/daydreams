@@ -30,6 +30,7 @@ import {
   LogLevel,
   type ActionCall,
   type Agent,
+  type InferContextMemory,
 } from "@daydreamsai/core";
 import { cli } from "@daydreamsai/core/extensions";
 import { string, z } from "zod";
@@ -105,7 +106,69 @@ Remember to:
 Goal: {{goal}} 
 Tasks: {{tasks}}
 Current Task: {{currentTask}}
+
+## Game State:
+Dungeon: {{currentDungeon}}
+Room: {{currentRoom}}
+Loot Phase: {{lootPhase}}
+Last Battle Result: {{lastBattleResult}}
+Last Enemy Move: {{lastEnemyMove}}
+
+## Player Stats:
+HP: {{playerHealth}}/{{playerMaxHealth}}
+Shield: {{playerShield}}/{{playerMaxShield}}
+Rock: ATK {{rockAttack}} | DEF {{rockDefense}} | Charges {{rockCharges}}
+Paper: ATK {{paperAttack}} | DEF {{paperDefense}} | Charges {{paperCharges}}
+Scissor: ATK {{scissorAttack}} | DEF {{scissorDefense}} | Charges {{scissorCharges}}
+
+## Enemy Stats:
+Enemy ID: {{currentEnemy}}
+HP: {{enemyHealth}}/{{enemyMaxHealth}}
+Shield: {{enemyShield}}/{{enemyMaxShield}}
+
+## Resources:
+Energy: {{currentEnergy}}
+Level: {{currentLevel}}
+XP: {{currentXP}}
+Gold: {{currentGold}}
 `;
+
+// Define an interface for the state
+interface GigaverseState {
+  goal: string;
+  tasks: string[];
+  currentTask: string | null;
+  currentDungeon: string;
+  currentRoom: string;
+  currentEnemy: string;
+  currentLoot: string;
+  currentHP: string;
+  currentEnergy: string;
+  currentLevel: string;
+  currentXP: string;
+  currentGold: string;
+  playerHealth: string;
+  playerMaxHealth: string;
+  playerShield: string;
+  playerMaxShield: string;
+  rockAttack: string;
+  rockDefense: string;
+  rockCharges: string;
+  paperAttack: string;
+  paperDefense: string;
+  paperCharges: string;
+  scissorAttack: string;
+  scissorDefense: string;
+  scissorCharges: string;
+  enemyHealth: string;
+  enemyMaxHealth: string;
+  enemyShield: string;
+  enemyMaxShield: string;
+  lootPhase: string;
+  lootOptions: any[];
+  lastBattleResult: string;
+  lastEnemyMove: string;
+}
 
 // Context for the agent
 const goalContexts = context({
@@ -120,11 +183,41 @@ const goalContexts = context({
     return id;
   },
 
-  create(state) {
+  create(state): GigaverseState {
     return {
       goal: state.args.initialGoal,
       tasks: state.args.initialTasks ?? [],
       currentTask: state.args.initialTasks?.[0],
+      currentDungeon: "0",
+      currentRoom: "0",
+      currentEnemy: "0",
+      currentLoot: "0",
+      currentHP: "0",
+      currentEnergy: "0",
+      currentLevel: "0",
+      currentXP: "0",
+      currentGold: "0",
+      playerHealth: "0",
+      playerMaxHealth: "0",
+      playerShield: "0",
+      playerMaxShield: "0",
+      rockAttack: "0",
+      rockDefense: "0",
+      rockCharges: "0",
+      paperAttack: "0",
+      paperDefense: "0",
+      paperCharges: "0",
+      scissorAttack: "0",
+      scissorDefense: "0",
+      scissorCharges: "0",
+      enemyHealth: "0",
+      enemyMaxHealth: "0",
+      enemyShield: "0",
+      enemyMaxShield: "0",
+      lootPhase: "false",
+      lootOptions: [],
+      lastBattleResult: "",
+      lastEnemyMove: "",
     };
   },
 
@@ -133,9 +226,42 @@ const goalContexts = context({
       goal: memory.goal,
       tasks: memory.tasks.join("\n"),
       currentTask: memory.currentTask ?? "NONE",
-    });
+      currentDungeon: memory.currentDungeon ?? "0",
+      currentRoom: memory.currentRoom ?? "0",
+      currentEnemy: memory.currentEnemy ?? "0",
+      currentLoot: memory.currentLoot ?? "0",
+      currentHP: memory.currentHP ?? "0",
+      currentEnergy: memory.currentEnergy ?? "0",
+      currentLevel: memory.currentLevel ?? "0",
+      currentXP: memory.currentXP ?? "0",
+      currentGold: memory.currentGold ?? "0",
+      playerHealth: memory.playerHealth ?? "0",
+      playerMaxHealth: memory.playerMaxHealth ?? "0",
+      playerShield: memory.playerShield ?? "0",
+      playerMaxShield: memory.playerMaxShield ?? "0",
+      rockAttack: memory.rockAttack ?? "0",
+      rockDefense: memory.rockDefense ?? "0",
+      rockCharges: memory.rockCharges ?? "0",
+      paperAttack: memory.paperAttack ?? "0",
+      paperDefense: memory.paperDefense ?? "0",
+      paperCharges: memory.paperCharges ?? "0",
+      scissorAttack: memory.scissorAttack ?? "0",
+      scissorDefense: memory.scissorDefense ?? "0",
+      scissorCharges: memory.scissorCharges ?? "0",
+      enemyHealth: memory.enemyHealth ?? "0",
+      enemyMaxHealth: memory.enemyMaxHealth ?? "0",
+      enemyShield: memory.enemyShield ?? "0",
+      enemyMaxShield: memory.enemyMaxShield ?? "0",
+      lootPhase: memory.lootPhase ?? "false",
+      lootOptions: memory.lootOptions ?? [],
+      lastBattleResult: memory.lastBattleResult ?? "",
+      lastEnemyMove: memory.lastEnemyMove ?? "",
+    } as any);
   },
 });
+
+// Define a type for the goal context memory
+type GoalContextMemory = InferContextMemory<typeof goalContexts>;
 
 // Create the Gigaverse agent with UI integration
 const agent = createDreams({
@@ -225,34 +351,87 @@ const agent = createDreams({
           simpleUI.logAgentAction(`Attack with ${action}`, successResult);
 
           // If this was a combat action, visualize the RPS result
-          if (["rock", "paper", "scissor"].includes(action)) {
-            // Extract enemy move and result from the API response
-            let enemyMove = "unknown";
-            let battleResult = "draw";
+          let enemyMove = "unknown";
+          let battleResult = "draw";
 
-            // Extract data from the response structure
-            if (
-              result.data &&
-              result.data.run &&
-              result.data.run.players &&
-              result.data.run.players.length >= 2
-            ) {
-              const playerData = result.data.run.players[0]; // First player is the user
-              const enemyData = result.data.run.players[1]; // Second player is the enemy
+          // Extract data from the response structure
+          if (
+            result.data &&
+            result.data.run &&
+            result.data.run.players &&
+            result.data.run.players.length >= 2
+          ) {
+            const playerData = result.data.run.players[0]; // First player is the user
+            const enemyData = result.data.run.players[1]; // Second player is the enemy
 
-              // Get the enemy's last move
-              enemyMove = enemyData.lastMove || "unknown";
+            // Get the enemy's last move
+            enemyMove = enemyData.lastMove || "unknown";
 
-              // Determine the battle result
-              if (playerData.thisPlayerWin === true) {
-                battleResult = "win";
-              } else if (enemyData.thisPlayerWin === true) {
-                battleResult = "lose";
-              } else {
-                battleResult = "draw";
-              }
+            // Determine the battle result
+            if (playerData.thisPlayerWin === true) {
+              battleResult = "win";
+            } else if (enemyData.thisPlayerWin === true) {
+              battleResult = "lose";
+            } else {
+              battleResult = "draw";
             }
 
+            // Update the state with player and enemy data
+            const state = ctx.agentMemory as GigaverseState;
+            
+            // Update player stats
+            state.currentHP = playerData.health.current.toString();
+            state.playerHealth = playerData.health.current.toString();
+            state.playerMaxHealth = playerData.health.currentMax.toString();
+            state.playerShield = playerData.shield.current.toString();
+            state.playerMaxShield = playerData.shield.currentMax.toString();
+            
+            // Update rock/paper/scissor stats
+            state.rockAttack = playerData.rock.currentATK.toString();
+            state.rockDefense = playerData.rock.currentDEF.toString();
+            state.rockCharges = playerData.rock.currentCharges.toString();
+            
+            state.paperAttack = playerData.paper.currentATK.toString();
+            state.paperDefense = playerData.paper.currentDEF.toString();
+            state.paperCharges = playerData.paper.currentCharges.toString();
+            
+            state.scissorAttack = playerData.scissor.currentATK.toString();
+            state.scissorDefense = playerData.scissor.currentDEF.toString();
+            state.scissorCharges = playerData.scissor.currentCharges.toString();
+            
+            // Update enemy stats
+            state.enemyHealth = enemyData.health.current.toString();
+            state.enemyMaxHealth = enemyData.health.currentMax.toString();
+            state.enemyShield = enemyData.shield.current.toString();
+            state.enemyMaxShield = enemyData.shield.currentMax.toString();
+            
+            // Update battle result and enemy move
+            state.lastBattleResult = battleResult;
+            state.lastEnemyMove = enemyMove;
+            
+            // Update loot phase status
+            state.lootPhase = (result.data.run.lootPhase || false).toString();
+            
+            // Update loot options if available
+            if (result.data.run.lootOptions && result.data.run.lootOptions.length > 0) {
+              state.lootOptions = result.data.run.lootOptions;
+              state.currentLoot = result.data.run.lootOptions.length.toString();
+            }
+            
+            // Update room information
+            if (result.data.entity) {
+              state.currentRoom = result.data.entity.ROOM_NUM_CID.toString();
+              state.currentDungeon = result.data.entity.DUNGEON_ID_CID.toString();
+              state.currentEnemy = result.data.entity.ENEMY_CID.toString();
+            }
+            
+      
+            
+            // Display the updated state to the user
+            simpleUI.printDetailedGameState(state);
+          }
+
+          if (["rock", "paper", "scissor"].includes(action)) {
             simpleUI.visualizeRPSMove(action, enemyMove, battleResult);
           }
 
@@ -396,12 +575,80 @@ const agent = createDreams({
 
           const result = await response.json();
 
-          // Update the player stats in the UI
-          simpleUI.printPlayerStats(result);
-
           // Update game state in the UI if available
           if (result.gameState) {
             simpleUI.printGameState(result.gameState);
+          }
+          
+          // Update the state with player data
+          if (result.data && result.data.run && result.data.run.players && result.data.run.players.length > 0) {
+            const state = ctx.agentMemory as GigaverseState;
+            const playerData = result.data.run.players[0]; // First player is the user
+            
+            // Update player stats
+            state.currentHP = playerData.health.current.toString();
+            state.playerHealth = playerData.health.current.toString();
+            state.playerMaxHealth = playerData.health.currentMax.toString();
+            state.playerShield = playerData.shield.current.toString();
+            state.playerMaxShield = playerData.shield.currentMax.toString();
+            
+            // Update rock/paper/scissor stats
+            state.rockAttack = playerData.rock.currentATK.toString();
+            state.rockDefense = playerData.rock.currentDEF.toString();
+            state.rockCharges = playerData.rock.currentCharges.toString();
+            
+            state.paperAttack = playerData.paper.currentATK.toString();
+            state.paperDefense = playerData.paper.currentDEF.toString();
+            state.paperCharges = playerData.paper.currentCharges.toString();
+            
+            state.scissorAttack = playerData.scissor.currentATK.toString();
+            state.scissorDefense = playerData.scissor.currentDEF.toString();
+            state.scissorCharges = playerData.scissor.currentCharges.toString();
+            
+            // Update loot phase status
+            state.lootPhase = (result.data.run.lootPhase || false).toString();
+            
+            // Update loot options if available
+            if (result.data.run.lootOptions && result.data.run.lootOptions.length > 0) {
+              state.lootOptions = result.data.run.lootOptions;
+              state.currentLoot = result.data.run.lootOptions.length.toString();
+            }
+            
+            // Update room information if available
+            if (result.data.entity) {
+              state.currentRoom = result.data.entity.ROOM_NUM_CID.toString();
+              state.currentDungeon = result.data.entity.DUNGEON_ID_CID.toString();
+              state.currentEnemy = result.data.entity.ENEMY_CID.toString();
+            }
+            
+            // Update enemy stats if available
+            if (result.data.run.players.length > 1) {
+              const enemyData = result.data.run.players[1]; // Second player is the enemy
+              state.enemyHealth = enemyData.health.current.toString();
+              state.enemyMaxHealth = enemyData.health.currentMax.toString();
+              state.enemyShield = enemyData.shield.current.toString();
+              state.enemyMaxShield = enemyData.shield.currentMax.toString();
+              
+              // Update battle result and enemy move if available
+              if (enemyData.lastMove) {
+                state.lastEnemyMove = enemyData.lastMove;
+                
+                // Determine battle result if not already set
+                if (!state.lastBattleResult && playerData.thisPlayerWin !== undefined) {
+                  if (playerData.thisPlayerWin === true) {
+                    state.lastBattleResult = "win";
+                  } else if (enemyData.thisPlayerWin === true) {
+                    state.lastBattleResult = "lose";
+                  } else {
+                    state.lastBattleResult = "draw";
+                  }
+                }
+              }
+            }
+            
+            
+            // Display the updated state to the user
+            simpleUI.printDetailedGameState(state);
           }
 
           // Log success to the UI
@@ -502,6 +749,52 @@ const agent = createDreams({
           if (result.playerState) {
             simpleUI.printPlayerStats(result.playerState);
           }
+          
+          // Update the state with the new run data
+          if (result.data && result.data.run && result.data.run.players && result.data.run.players.length > 0) {
+            const state = ctx.agentMemory as GigaverseState;
+            const playerData = result.data.run.players[0]; // First player is the user
+            
+            // Update player stats
+            state.currentHP = playerData.health.current.toString();
+            state.playerHealth = playerData.health.current.toString();
+            state.playerMaxHealth = playerData.health.currentMax.toString();
+            state.playerShield = playerData.shield.current.toString();
+            state.playerMaxShield = playerData.shield.currentMax.toString();
+            
+            // Update rock/paper/scissor stats
+            state.rockAttack = playerData.rock.currentATK.toString();
+            state.rockDefense = playerData.rock.currentDEF.toString();
+            state.rockCharges = playerData.rock.currentCharges.toString();
+            
+            state.paperAttack = playerData.paper.currentATK.toString();
+            state.paperDefense = playerData.paper.currentDEF.toString();
+            state.paperCharges = playerData.paper.currentCharges.toString();
+            
+            state.scissorAttack = playerData.scissor.currentATK.toString();
+            state.scissorDefense = playerData.scissor.currentDEF.toString();
+            state.scissorCharges = playerData.scissor.currentCharges.toString();
+            
+            // Update dungeon info
+            state.currentDungeon = dungeonId.toString();
+            state.currentRoom = "1"; // New runs start at room 1
+            state.lootPhase = "false";
+            state.lootOptions = [];
+            state.lastBattleResult = "";
+            state.lastEnemyMove = "";
+            
+            // Update enemy stats (reset them for new run)
+            state.enemyHealth = "0";
+            state.enemyMaxHealth = "0";
+            state.enemyShield = "0";
+            state.enemyMaxShield = "0";
+            state.currentEnemy = "0";
+            
+           
+            
+            // Display the updated state to the user
+            simpleUI.printDetailedGameState(state);
+          }
 
           // Log success to the UI
           const successResult = {
@@ -551,7 +844,7 @@ simpleUI.logMessage(LogLevel.INFO, "Starting agent with initial goals...");
 agent.start({
   id: "gigaverse-game",
   initialGoal:
-    "Progress as far as possible in the dungeon by making strategic rock-paper-scissors decisions",
+    "Progress as far as possible in the dungeon by making strategic rock-paper-scissors decisions. Don't ever stop. Just start a new run if you die.",
   initialTasks: [
     "Check player state to understand current situation",
     "Fetch information about upcoming enemies",
