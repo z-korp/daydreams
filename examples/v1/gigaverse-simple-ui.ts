@@ -14,6 +14,10 @@
  *
  * Authentication is handled via the GIGA_TOKEN environment variable,
  * which must be properly configured for API access. This is the Bearer token. You can copy this from your browser environment.
+ *
+ * DEBUGGING
+ * 1. Your GIGA token expires every 24hrs. Unsure exactly when. If you get an error about the token, just re-authenticate.
+ * 2. You can run out of Energy per day - so this will obviously affect your ability to play and throw errors.
  */
 
 import { anthropic } from "@ai-sdk/anthropic";
