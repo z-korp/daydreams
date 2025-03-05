@@ -1,5 +1,0 @@
-{
-  "buildCommand": "pnpm install --ignore-scripts --no-frozen-lockfile && pnpm run docs:build",
-  "installCommand": "pnpm install --ignore-scripts --filter=docs... --no-frozen-lockfile",
-  "outputDirectory": "docs/.next"
-} 
