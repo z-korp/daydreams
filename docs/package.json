@@ -32,6 +32,12 @@
     "neverBuiltDependencies": [
       "@jitsi/robotjs",
       "robotjs"
-    ]
+    ],
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "@jitsi/robotjs",
+        "robotjs"
+      ]
+    }
   }
 }

@@ -1,6 +1,5 @@
 {
-  "buildCommand": "cd docs && pnpm install --ignore-scripts && pnpm run docs:build",
-  "installCommand": "pnpm install --ignore-scripts --filter=docs...",
-  "outputDirectory": "docs/.next",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./docs/"
+  "buildCommand": "cd docs && pnpm install --ignore-scripts --no-frozen-lockfile && pnpm run docs:build",
+  "installCommand": "pnpm install --ignore-scripts --filter=docs... --no-frozen-lockfile",
+  "outputDirectory": "docs/.next"
 } 
