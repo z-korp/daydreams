@@ -24,6 +24,10 @@ const env = validateEnv(
 // 2. Select the loot -> takes to new phase -> take 1. again
 
 const template = `
+
+// inject more information about how you want it to play....
+
+
 Goal: {{goal}} 
 Tasks: {{tasks}}
 Current Task: {{currentTask}}
@@ -71,6 +75,8 @@ createDreams({
   extensions: [cli],
   context: goalContexts,
   actions: [
+    // start run (sends the starting 1-2 dungeon)
+    // collect loot (selects the loot from the resonse)
     /**
      * Action to attack in the rock-paper-scissors game
      */
