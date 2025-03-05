@@ -126,11 +126,6 @@ Enemy ID: {{currentEnemy}}
 HP: {{enemyHealth}}/{{enemyMaxHealth}}
 Shield: {{enemyShield}}/{{enemyMaxShield}}
 
-## Resources:
-Energy: {{currentEnergy}}
-Level: {{currentLevel}}
-XP: {{currentXP}}
-Gold: {{currentGold}}
 `;
 
 // Define an interface for the state
@@ -143,10 +138,6 @@ interface GigaverseState {
   currentEnemy: string;
   currentLoot: string;
   currentHP: string;
-  currentEnergy: string;
-  currentLevel: string;
-  currentXP: string;
-  currentGold: string;
   playerHealth: string;
   playerMaxHealth: string;
   playerShield: string;
@@ -193,10 +184,6 @@ const goalContexts = context({
       currentEnemy: "0",
       currentLoot: "0",
       currentHP: "0",
-      currentEnergy: "0",
-      currentLevel: "0",
-      currentXP: "0",
-      currentGold: "0",
       playerHealth: "0",
       playerMaxHealth: "0",
       playerShield: "0",
@@ -231,10 +218,6 @@ const goalContexts = context({
       currentEnemy: memory.currentEnemy ?? "0",
       currentLoot: memory.currentLoot ?? "0",
       currentHP: memory.currentHP ?? "0",
-      currentEnergy: memory.currentEnergy ?? "0",
-      currentLevel: memory.currentLevel ?? "0",
-      currentXP: memory.currentXP ?? "0",
-      currentGold: memory.currentGold ?? "0",
       playerHealth: memory.playerHealth ?? "0",
       playerMaxHealth: memory.playerMaxHealth ?? "0",
       playerShield: memory.playerShield ?? "0",
