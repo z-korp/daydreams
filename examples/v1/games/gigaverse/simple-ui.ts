@@ -270,6 +270,73 @@ export function initializeUI(): void {
   printDivider();
 }
 
+// Print detailed game state from GigaverseState
+export function printDetailedGameState(state: any): void {
+  printHeader("Current Game Status");
+
+  // Game location info
+  console.log(`${COLORS.bright}${COLORS.cyan}Location:${COLORS.reset}`);
+  console.log(`${COLORS.bright}Dungeon:${COLORS.reset} ${state.currentDungeon}`);
+  console.log(`${COLORS.bright}Room:${COLORS.reset} ${state.currentRoom}`);
+  console.log(`${COLORS.bright}Loot Phase:${COLORS.reset} ${state.lootPhase === "true" ? "Yes" : "No"}`);
+  
+  // Battle info
+  if (state.lastBattleResult) {
+    console.log(`\n${COLORS.bright}${COLORS.yellow}Last Battle:${COLORS.reset}`);
+    console.log(`${COLORS.bright}Result:${COLORS.reset} ${state.lastBattleResult}`);
+    console.log(`${COLORS.bright}Enemy Move:${COLORS.reset} ${state.lastEnemyMove}`);
+  }
+  
+  // Player stats
+  console.log(`\n${COLORS.bright}${COLORS.green}Player Stats:${COLORS.reset}`);
+  
+  // Health and shield
+  const healthPercentage = Math.floor((parseInt(state.playerHealth) / parseInt(state.playerMaxHealth)) * 100) || 0;
+  const healthBar = createProgressBar(healthPercentage, COLORS.red);
+  console.log(`${COLORS.bright}Health:${COLORS.reset} ${state.playerHealth}/${state.playerMaxHealth} ${healthBar}`);
+  
+  const shieldPercentage = Math.floor((parseInt(state.playerShield) / parseInt(state.playerMaxShield)) * 100) || 0;
+  const shieldBar = createProgressBar(shieldPercentage, COLORS.blue);
+  console.log(`${COLORS.bright}Shield:${COLORS.reset} ${state.playerShield}/${state.playerMaxShield} ${shieldBar}`);
+  
+  // Weapon stats
+  console.log(`\n${COLORS.bright}Weapon Stats:${COLORS.reset}`);
+  console.log(`${COLORS.red}Rock:${COLORS.reset} ATK ${state.rockAttack} | DEF ${state.rockDefense} | Charges ${state.rockCharges}`);
+  console.log(`${COLORS.green}Paper:${COLORS.reset} ATK ${state.paperAttack} | DEF ${state.paperDefense} | Charges ${state.paperCharges}`);
+  console.log(`${COLORS.blue}Scissor:${COLORS.reset} ATK ${state.scissorAttack} | DEF ${state.scissorDefense} | Charges ${state.scissorCharges}`);
+  
+  // Enemy stats if available
+  if (parseInt(state.enemyHealth) > 0 || state.currentEnemy !== "0") {
+    console.log(`\n${COLORS.bright}${COLORS.red}Enemy Stats:${COLORS.reset}`);
+    console.log(`${COLORS.bright}Enemy ID:${COLORS.reset} ${state.currentEnemy}`);
+    
+    const enemyHealthPercentage = Math.floor((parseInt(state.enemyHealth) / parseInt(state.enemyMaxHealth)) * 100) || 0;
+    const enemyHealthBar = createProgressBar(enemyHealthPercentage, COLORS.red);
+    console.log(`${COLORS.bright}Health:${COLORS.reset} ${state.enemyHealth}/${state.enemyMaxHealth} ${enemyHealthBar}`);
+    
+    const enemyShieldPercentage = Math.floor((parseInt(state.enemyShield) / parseInt(state.enemyMaxShield)) * 100) || 0;
+    const enemyShieldBar = createProgressBar(enemyShieldPercentage, COLORS.blue);
+    console.log(`${COLORS.bright}Shield:${COLORS.reset} ${state.enemyShield}/${state.enemyMaxShield} ${enemyShieldBar}`);
+  }
+  
+  // Loot options if available
+  if (state.lootPhase === "true" && state.lootOptions && state.lootOptions.length > 0) {
+    console.log(`\n${COLORS.bright}${COLORS.yellow}Loot Options:${COLORS.reset}`);
+    state.lootOptions.forEach((loot: any, index: number) => {
+      console.log(`${COLORS.bright}Option ${index + 1}:${COLORS.reset} ${loot.boonTypeString} (Rarity: ${loot.RARITY_CID})`);
+    });
+  }
+  
+  // Resources
+  console.log(`\n${COLORS.bright}${COLORS.yellow}Resources:${COLORS.reset}`);
+  console.log(`${COLORS.bright}Energy:${COLORS.reset} ${state.currentEnergy}`);
+  console.log(`${COLORS.bright}Level:${COLORS.reset} ${state.currentLevel}`);
+  console.log(`${COLORS.bright}XP:${COLORS.reset} ${state.currentXP}`);
+  console.log(`${COLORS.bright}Gold:${COLORS.reset} ${state.currentGold}`);
+  
+  printDivider();
+}
+
 // Export a simple UI object
 export const simpleUI = {
   clearScreen,
@@ -283,4 +350,5 @@ export const simpleUI = {
   printDivider,
   printHelp,
   initializeUI,
+  printDetailedGameState,
 };
