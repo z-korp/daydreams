@@ -1,0 +1,33 @@
+---
+description: This is for documentation 
+globs: .mdx
+alwaysApply: false
+---
+# LLM Rules for Writing Effective Documentation
+Always use the project name consistently
+
+Refer to the project explicitly as Daydreams.
+- Write clearly and concisely
+
+Use short, direct sentences to enhance readability.
+- Be specific and factual
+
+Avoid hyperboles, subjective claims, or vague descriptions.
+- Prioritize user-centric language
+
+Frame documentation from the perspective of a user interacting with Daydreams.
+- Maintain consistent formatting
+
+Stick to consistent headings, bullet points, and structured sections throughout.
+- Include practical examples
+
+Demonstrate key features and functionality clearly with realistic examples relevant to Daydreams.
+- Explicitly state prerequisites
+
+Clearly list any necessary tools, setups, or background knowledge users must have before using Daydreams.
+- Regularly update documentation
+
+Keep documentation current and aligned with the latest release or version of Daydreams.
+- Avoid jargon
+
+When specialized terms are necessary, clearly define them at first use.
