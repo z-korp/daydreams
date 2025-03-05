@@ -24,7 +24,7 @@
     "prettier": "pnpx prettier --write packages",
     "knip": "knip",
     "docs:dev": "cd docs && bun run dev",
-    "docs:build": "cd docs && bun run build",
+    "docs:build": "cd docs && bun run docs:build",
     "docs:start": "cd docs && bun run start"
   },
   "dependencies": {
