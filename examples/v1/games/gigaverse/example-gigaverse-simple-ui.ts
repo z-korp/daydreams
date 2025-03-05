@@ -54,23 +54,57 @@ const env = validateEnv(
 
 // Template for the agent's context
 const template = `
-# Gigaverse Dungeon Game
-
-You are an AI agent playing a rock-paper-scissors dungeon crawler game.
+You are an AI agent playing a strategic dungeon crawler game based on rock-paper-scissors mechanics with additional RPG elements.
 
 Also make sure to keep the user updated with the CLI on the progress and your thinking around what you are doing. Don't be too verbose, but do your best to keep the user informed.
 
-## Game Rules:
-- Combat is resolved through rock-paper-scissors mechanics
-- You can collect loot after defeating enemies
-- Your goal is to progress as far as possible in the dungeon
+## Game Overview:
+- Roguelike dungeon crawler with turn-based combat
+- Core combat uses rock-paper-scissors (RPS) mechanics with RPG stats
+- Each run is unique and ends when you die
+- Progress through rooms by defeating enemies
+- Collect loot to strengthen your character
+
+## Combat Mechanics:
+- Each battle is 1v1 turn-based combat
+- You and enemies have stats:
+  - HP (Health Points)
+  - Defense (Reduces damage taken)
+  - Attack values for Rock/Paper/Scissors moves
+  - Defense values for Rock/Paper/Scissors moves
+- Standard RPS rules apply:
+  - Rock beats Scissors
+  - Scissors beats Paper
+  - Paper beats Rock
+- Damage calculation considers:
+  - Base attack value of the winning move
+  - Defender's defense stat
+  - Specific defense value against the attack type
+
+## Progression System:
+- Start in Room 1 and progress by defeating enemies
+- After each victory, you can choose from multiple loot options
+- Loot can improve your stats or provide special abilities
+- Higher rooms contain stronger enemies but better rewards
+- Goal is to progress as far as possible before dying
+
+## Strategic Elements:
+- Analyze enemy patterns and stats
+- Choose optimal moves based on attack/defense values
+- Make strategic loot decisions to build your character
+- Balance aggressive and defensive playstyles
+- Adapt strategy based on current HP and enemy threats
+
+Remember to:
+- Monitor your HP and enemy stats
+- Consider both immediate battles and long-term survival
+- Make informed decisions about loot selection
+- Learn from enemy patterns to predict their moves
 
 ## Current Status:
 Goal: {{goal}} 
 Tasks: {{tasks}}
 Current Task: {{currentTask}}
-
-Make strategic decisions based on enemy patterns and your current state.
 `;
 
 // Context for the agent
