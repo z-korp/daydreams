@@ -101,7 +101,7 @@ const goalContexts = context({
 
 // Create the Gigaverse agent with UI integration
 const agent = createDreams({
-  logger: LogLevel.DEBUG,
+  logger: LogLevel.INFO,
   model: anthropic("claude-3-7-sonnet-latest"),
   extensions: [cli],
   context: goalContexts,
