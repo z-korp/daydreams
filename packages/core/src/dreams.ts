@@ -321,7 +321,6 @@ export function createDreams<
 
       const maxSteps = 100;
       let step = 1;
-      const minSteps = 1; // Minimum steps before considering early termination
 
       logger.debug("agent:run", "Preparing actions");
       const contextActions = await Promise.all(
@@ -437,136 +436,8 @@ export function createDreams<
           continue;
         }
 
-        // Only check for early termination if we've completed the minimum number of steps
-        if (step > minSteps) {
-          const pendingResults = workingMemory.results.filter(
-            (i) => i.processed === false
-          ).length;
-          logger.debug("agent:run", "Checking for pending results", {
-            pendingResults,
-          });
-
-          if (pendingResults === 0) {
-            const pendingOutputs = workingMemory.outputs.filter(
-              (o) => o.processed === false
-            ).length;
-            logger.debug("agent:run", "Checking for pending outputs", {
-              pendingOutputs,
-            });
-
-            // Check if there are any action calls that might need follow-up actions
-            const pendingActionCalls = workingMemory.calls.filter(
-              (c) => !workingMemory.results.some((r) => r.callId === c.id)
-            ).length;
-            logger.debug("agent:run", "Checking for pending action calls", {
-              pendingActionCalls,
-            });
-
-            // Check if there are recent action results that haven't been reasoned about yet
-            const recentResults = workingMemory.results
-              .sort((a, b) => b.timestamp - a.timestamp)
-              .slice(0, 5);
-
-            // Check if there's been a thought after the most recent action result
-            const mostRecentResultTime =
-              recentResults.length > 0 ? recentResults[0].timestamp : 0;
-            const hasReasonedAfterResults = workingMemory.thoughts.some(
-              (t) => t.timestamp > mostRecentResultTime
-            );
-
-            logger.debug(
-              "agent:run",
-              "Checking for reasoning after recent results",
-              {
-                hasReasonedAfterResults,
-                mostRecentResultTime,
-                recentThoughtTimes: workingMemory.thoughts
-                  .sort((a, b) => b.timestamp - a.timestamp)
-                  .slice(0, 5)
-                  .map((t) => t.timestamp),
-              }
-            );
-
-            // Check if there are recent outputs that haven't been reasoned about yet
-            const recentOutputs = workingMemory.outputs
-              .sort((a, b) => b.timestamp - a.timestamp)
-              .slice(0, 3);
-
-            // Check if there's been a thought after the most recent output
-            const mostRecentOutputTime =
-              recentOutputs.length > 0 ? recentOutputs[0].timestamp : 0;
-            const hasReasonedAfterOutputs = workingMemory.thoughts.some(
-              (t) => t.timestamp > mostRecentOutputTime
-            );
-
-            logger.debug(
-              "agent:run",
-              "Checking for reasoning after recent outputs",
-              {
-                hasReasonedAfterOutputs,
-                mostRecentOutputTime,
-                recentOutputsCount: recentOutputs.length,
-              }
-            );
-
-            // Only break if there are no pending outputs, no pending action calls,
-            // AND either there are no recent results/outputs or we've reasoned about them already
-
-            logger.debug("agent:run", "Checking if should continue", {
-              recentResultsCount: recentResults.length,
-              hasReasonedAfterResults,
-              recentOutputsCount: recentOutputs.length,
-              hasReasonedAfterOutputs,
-            });
-
-            // Add detailed condition evaluation logging
-            const condition1 = pendingActionCalls === 0;
-            const condition2 =
-              recentResults.length === 0 || hasReasonedAfterResults;
-            const condition3 =
-              recentOutputs.length === 0 || hasReasonedAfterOutputs;
-
-            logger.debug("agent:run", "Early termination condition details", {
-              condition1,
-              condition2,
-              condition3,
-              allConditionsMet: condition1 && condition2 && condition3,
-              step,
-              maxSteps,
-              pendingActionCalls,
-              recentResultsLength: recentResults.length,
-              hasReasonedAfterResults,
-              recentOutputsLength: recentOutputs.length,
-              hasReasonedAfterOutputs,
-            });
-
-            if (
-              pendingActionCalls === 0 &&
-              (recentResults.length === 0 || hasReasonedAfterResults) &&
-              (recentOutputs.length === 0 || hasReasonedAfterOutputs)
-            ) {
-              logger.info(
-                "agent:run",
-                "All results and outputs processed, breaking loop",
-                {
-                  step,
-                  pendingOutputs,
-                  pendingActionCalls,
-                  recentResultsCount: recentResults.length,
-                  hasReasonedAfterResults,
-                  recentOutputsCount: recentOutputs.length,
-                  hasReasonedAfterOutputs,
-                }
-              );
-              break;
-            }
-          }
-        } else {
-          logger.debug("agent:run", "Skipping early termination check", {
-            step,
-            minSteps,
-          });
-        }
+        // Early termination logic has been removed
+        logger.debug("agent:run", "Continuing to next step", { step });
       }
 
       logger.debug("agent:run", "Marking all inputs as processed");

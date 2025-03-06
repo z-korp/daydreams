@@ -207,7 +207,7 @@ Follow these steps to process the <action_results>:
    - Match it with the corresponding action using callId
    - Validate if the result meets the expected outcome
    - Identify any missing or incomplete results
-   - Determine if additional actions are needed based on these results
+   - You must determine if additional actions are needed based on these results
 
 3. Formulate a response (if needed):
    If you decide to respond to the message, use <response> tags to enclose your response.
@@ -278,8 +278,7 @@ Here's how you should structure your next response:
 </output>
 </response>
 
-Remember:
-
+# Remember
 - Always correlate results with their original actions using callId
 - Never repeat your outputs
 - Consider the complete chain of results when formulating responses
@@ -287,6 +286,8 @@ Remember:
 - Initiate follow-up actions only when necessary
 - Provide clear, actionable insights based on the combined results
 - Maintain context awareness between original request and final results
+- Always use the available actions and outputs to respond to the context
+- Check your current state keep creating actions until the context is resolved
 `;
 
 export const resultsPrompt = createPrompt(

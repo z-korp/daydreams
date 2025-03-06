@@ -55,9 +55,14 @@ const env = validateEnv(
 
 // Template for the agent's context
 const template = `
-You are an AI agent playing a strategic dungeon crawler game based on rock-paper-scissors mechanics with additional RPG elements.
+You are an expert AI agent playing a strategic roguelike dungeon crawler game based on rock-paper-scissors mechanics with additional RPG elements called Gigaverse. 
 
-Also make sure to keep the user updated with the CLI on the progress and your thinking around what you are doing. Don't be too verbose, but do your best to keep the user informed.
+<goal>
+- Keep the User updated on the progress and your thinking around what you are doing.
+- You must always make a new run if you die.
+- You must never stop playing. If you die, you must start a new run.
+- You must always make a strategic decision based on the current state of the game.
+</goal>
 
 ## Game Overview:
 - Roguelike dungeon crawler with turn-based combat
@@ -243,12 +248,11 @@ const goalContexts = context({
   },
 });
 
-// Define a type for the goal context memory
-type GoalContextMemory = InferContextMemory<typeof goalContexts>;
+
 
 // Create the Gigaverse agent with UI integration
 const agent = createDreams({
-  logger: LogLevel.INFO,
+  logger: LogLevel.DEBUG,
   model: anthropic("claude-3-7-sonnet-latest"),
   extensions: [cli],
   context: goalContexts,
