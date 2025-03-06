@@ -25,6 +25,7 @@ npm install @daydreamsai/core @ai-sdk/anthropic robotjs sharp screenshot-desktop
 - **takeScreenshot**: Capture the current screen state
 - **moveMouse**: Position the cursor at specific coordinates
 - **clickMouse**: Perform mouse clicks (left, right, or middle button)
+- **moveAndClick**: Move the cursor to specific coordinates and click in one operation
 - **dragMouse**: Click and drag from current position to target coordinates
 - **scrollMouse**: Scroll up, down, left, or right
 - **getCursorPosition**: Retrieve current mouse coordinates

@@ -3,6 +3,7 @@ import * as robot from "@jitsi/robotjs";
 import sharp from "sharp";
 import * as path from "path";
 import { promises as fs } from "fs";
+import * as os from "os";
 
 import screenshot from "screenshot-desktop";
 
@@ -145,6 +146,7 @@ const MAX_SCALING_TARGETS = {
   FWXGA: { width: 1366, height: 768 },
   UWQHD: { width: 3440, height: 1440 }, // Adding ultrawide resolution
   UW4K: { width: 3840, height: 1600 }, // Another common ultrawide resolution
+  MACBOOK: { width: 1728, height: 1117 }, // Adding user's MacBook resolution
 } as const;
 
 type Action =
@@ -237,43 +239,34 @@ export class ComputerTool extends BaseAnthropicTool {
 
   constructor() {
     super();
-
-    // Get screen size
-    const screen = robot.getScreenSize();
-    this.screenDimensions = {
-      width: screen.width,
-      height: screen.height,
-    };
-
-    // Check if scaling should be disabled via environment variable
-    if (process.env.DISABLE_SCREEN_SCALING === "true") {
-      this.scalingEnabled = false;
-      console.log("Screen coordinate scaling is disabled");
-    }
-
-    // Setup screenshots directory
-    const projectRoot = process.cwd();
-    this.screenshotsBaseDir = path.join(projectRoot, "screenshots");
-    this.screenshotMetadataFile = path.join(
-      this.screenshotsBaseDir,
-      "metadata.json"
-    );
-
-    // Initialize directories
-    this.initializeScreenshotDirectory();
-
-    console.log(
-      `Detected screen dimensions: ${this.screenDimensions.width}x${this.screenDimensions.height}`
-    );
-    console.log(
-      `Screen aspect ratio: ${(this.screenDimensions.width / this.screenDimensions.height).toFixed(2)}`
-    );
-    console.log(`Scaling enabled: ${this.scalingEnabled}`);
-    console.log(`Screenshots will be saved to: ${this.screenshotsBaseDir}`);
-
-    const displayNum = process.env.DISPLAY_NUM;
-    if (displayNum) {
-      this.displayNum = parseInt(displayNum, 10);
+    // Get screen dimensions
+    try {
+      const { width, height, displayNum } = this.getScreenDimensions();
+      this.screenDimensions = { width, height };
+      this.displayNum = displayNum;
+      
+      // Re-enable scaling now that we've added the user's screen resolution
+      this.scalingEnabled = true;
+      
+      console.log(
+        `Screen dimensions: ${width}x${height}${
+          displayNum !== undefined ? `, Display: ${displayNum}` : ""
+        }`
+      );
+      
+      // Check for UI elements that might affect coordinate system
+      this.checkForUIElements();
+      
+      // Initialize screenshot directory
+      this.screenshotsBaseDir = path.join(os.tmpdir(), "anthropic-screenshots");
+      this.screenshotMetadataFile = path.join(
+        this.screenshotsBaseDir,
+        "metadata.json"
+      );
+      this.initializeScreenshotDirectory();
+    } catch (error) {
+      console.error("Error initializing ComputerTool:", error);
+      throw error;
     }
 
     robot.setKeyboardDelay(TYPING_DELAY_MS);
@@ -852,9 +845,27 @@ export class ComputerTool extends BaseAnthropicTool {
     x: number,
     y: number
   ): [number, number] {
-    if (!this.scalingEnabled) return [x, y];
+    if (!this.scalingEnabled) {
+      console.log(`Scaling disabled, using raw coordinates: (${x}, ${y})`);
+      return [x, y];
+    }
+
+    console.log(`Scaling coordinates: source=${source}, input=(${x}, ${y})`);
+    console.log(`Current screen dimensions: ${this.screenDimensions.width}x${this.screenDimensions.height}`);
+
+    // Apply macOS-specific adjustments if needed
+    if (process.platform === 'darwin') {
+      const [adjustedX, adjustedY] = this.applyMacOSAdjustments(x, y, source);
+      if (adjustedX !== x || adjustedY !== y) {
+        console.log(`Applied macOS adjustments: (${x}, ${y}) -> (${adjustedX}, ${adjustedY})`);
+        x = adjustedX;
+        y = adjustedY;
+      }
+    }
 
     const ratio = this.screenDimensions.width / this.screenDimensions.height;
+    console.log(`Screen aspect ratio: ${ratio.toFixed(3)}`);
+    
     let targetDimension = null;
 
     // First try to find an exact match for the current screen resolution
@@ -872,9 +883,12 @@ export class ComputerTool extends BaseAnthropicTool {
     // If no exact match, try to find a resolution with a similar aspect ratio
     for (const [name, dimension] of Object.entries(MAX_SCALING_TARGETS)) {
       const dimensionRatio = dimension.width / dimension.height;
-      if (Math.abs(dimensionRatio - ratio) < 0.1) {
+      const ratioDifference = Math.abs(dimensionRatio - ratio);
+      console.log(`Checking ${name}: ratio=${dimensionRatio.toFixed(3)}, difference=${ratioDifference.toFixed(3)}`);
+      
+      if (ratioDifference < 0.1) {
         targetDimension = dimension;
-        console.log(`Using similar aspect ratio resolution: ${name}`);
+        console.log(`Using similar aspect ratio resolution: ${name} (${dimension.width}x${dimension.height})`);
         break;
       }
     }
@@ -886,8 +900,10 @@ export class ComputerTool extends BaseAnthropicTool {
     }
 
     const xScalingFactor = targetDimension.width / this.screenDimensions.width;
-    const yScalingFactor =
-      targetDimension.height / this.screenDimensions.height;
+    const yScalingFactor = targetDimension.height / this.screenDimensions.height;
+
+    console.log(`Scaling factors: x=${xScalingFactor.toFixed(3)}, y=${yScalingFactor.toFixed(3)}`);
+    console.log(`Target resolution: ${targetDimension.width}x${targetDimension.height}`);
 
     if (source === "api") {
       if (x > targetDimension.width || y > targetDimension.height) {
@@ -896,10 +912,75 @@ export class ComputerTool extends BaseAnthropicTool {
             `(${targetDimension.width}x${targetDimension.height})`
         );
       }
-      return [Math.round(x / xScalingFactor), Math.round(y / yScalingFactor)];
+      
+      // The issue might be in how we're scaling from API coordinates to screen coordinates
+      // Let's try a different approach for the Y-coordinate
+      const scaledX = Math.round(x / xScalingFactor);
+      
+      // For Y-coordinate, let's try a proportional approach
+      // This calculates what percentage of the target height the Y value is,
+      // then applies that percentage to the actual screen height
+      const yPercentage = y / targetDimension.height;
+      const scaledY = Math.round(yPercentage * this.screenDimensions.height);
+      
+      console.log(`Original scaling: y=${y} / ${yScalingFactor} = ${Math.round(y / yScalingFactor)}`);
+      console.log(`Proportional scaling: y=${y} / ${targetDimension.height} * ${this.screenDimensions.height} = ${scaledY}`);
+      console.log(`Final scaled coordinates: output=(${scaledX}, ${scaledY})`);
+      
+      return [scaledX, scaledY];
     }
 
-    return [Math.round(x * xScalingFactor), Math.round(y * yScalingFactor)];
+    const scaledX = Math.round(x * xScalingFactor);
+    
+    // Same proportional approach for the reverse direction
+    const yPercentage = y / this.screenDimensions.height;
+    const scaledY = Math.round(yPercentage * targetDimension.height);
+    
+    console.log(`Original scaling: y=${y} * ${yScalingFactor} = ${Math.round(y * yScalingFactor)}`);
+    console.log(`Proportional scaling: y=${y} / ${this.screenDimensions.height} * ${targetDimension.height} = ${scaledY}`);
+    console.log(`Final scaled coordinates: output=(${scaledX}, ${scaledY})`);
+    
+    return [scaledX, scaledY];
+  }
+
+  /**
+   * Apply macOS-specific coordinate adjustments
+   */
+  private applyMacOSAdjustments(
+    x: number, 
+    y: number, 
+    source: "api" | "computer"
+  ): [number, number] {
+    // No adjustments needed if we're not on macOS
+    if (process.platform !== 'darwin') {
+      return [x, y];
+    }
+
+    let adjustedX = x;
+    let adjustedY = y;
+
+    // Adjust for menu bar height (typically 24 pixels on macOS)
+    const menuBarHeight = 24;
+    
+    if (source === "api" && y < menuBarHeight) {
+      // If targeting the menu bar area, keep it as is
+      console.log(`Coordinate in menu bar area, no adjustment needed`);
+    } else if (source === "api") {
+      // For API coordinates, we need to account for the menu bar
+      // This helps prevent clicking too high on the screen
+      adjustedY = y + menuBarHeight;
+      console.log(`Adjusted Y coordinate for menu bar: ${y} -> ${adjustedY}`);
+    }
+
+    // Check if we're targeting the dock area at the bottom of the screen
+    // This is more complex and would require knowing the dock size
+    // For now, we'll just log a warning if we're near the bottom of the screen
+    const bottomMargin = 50; // Approximate dock height
+    if (source === "api" && y > this.screenDimensions.height - bottomMargin) {
+      console.log(`Warning: Targeting area near the bottom of the screen (possible dock area)`);
+    }
+
+    return [adjustedX, adjustedY];
   }
 
   private chunkString(str: string, size: number): string[] {
@@ -926,5 +1007,68 @@ export class ComputerTool extends BaseAnthropicTool {
 
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private getScreenDimensions(): { width: number; height: number; displayNum?: number } {
+    const screen = robot.getScreenSize();
+    const displayNum = process.env.DISPLAY_NUM ? parseInt(process.env.DISPLAY_NUM, 10) : undefined;
+    
+    console.log(`Robot detected screen size: ${screen.width}x${screen.height}`);
+    
+    // Try to detect if we're on macOS with a notch or other display anomalies
+    if (process.platform === 'darwin') {
+      try {
+        // On macOS, we can use the 'system_profiler' command to get more accurate display info
+        const { execSync } = require('child_process');
+        const displayInfo = execSync('system_profiler SPDisplaysDataType').toString();
+        console.log('Display information from system_profiler:');
+        console.log(displayInfo);
+        
+        // Check if this is a MacBook with a notch
+        const hasNotch = displayInfo.includes('MacBook') && 
+                         (displayInfo.includes('Retina') || displayInfo.includes('Liquid Retina'));
+        
+        if (hasNotch) {
+          console.log('Detected MacBook with potential notch - this may affect coordinate scaling');
+        }
+      } catch (error) {
+        console.error('Error detecting display information:', error);
+      }
+    }
+    
+    return {
+      width: screen.width,
+      height: screen.height,
+      displayNum,
+    };
+  }
+
+  /**
+   * Check for UI elements that might affect the coordinate system
+   */
+  private checkForUIElements() {
+    // Check for macOS dock position and size
+    if (process.platform === 'darwin') {
+      try {
+        const { execSync } = require('child_process');
+        
+        // Check dock position
+        const dockPosition = execSync('defaults read com.apple.dock orientation 2>/dev/null || echo "bottom"').toString().trim();
+        console.log(`macOS Dock position: ${dockPosition}`);
+        
+        // Check if dock is auto-hidden
+        const dockAutoHide = execSync('defaults read com.apple.dock autohide 2>/dev/null || echo "0"').toString().trim();
+        console.log(`macOS Dock auto-hide: ${dockAutoHide === "1" ? "enabled" : "disabled"}`);
+        
+        // Check for menu bar height (typically 22-24 pixels on macOS)
+        console.log(`Assuming macOS menu bar is present (typically 22-24 pixels high)`);
+        
+        if (dockPosition === "bottom" && dockAutoHide === "0") {
+          console.log(`Warning: Dock at bottom of screen may affect clicking on elements near the bottom`);
+        }
+      } catch (error) {
+        console.error('Error checking for UI elements:', error);
+      }
+    }
   }
 }
