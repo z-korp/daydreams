@@ -337,6 +337,9 @@ const agent = createDreams({
           let enemyMove = "unknown";
           let battleResult = "draw";
 
+            // Update the state with player and enemy data
+          const state = ctx.agentMemory as GigaverseState;
+
           // Extract data from the response structure
           if (
             result.data &&
@@ -359,8 +362,7 @@ const agent = createDreams({
               battleResult = "draw";
             }
 
-            // Update the state with player and enemy data
-            const state = ctx.agentMemory as GigaverseState;
+
             
             // Update player stats
             state.currentHP = playerData.health.current.toString();
@@ -407,16 +409,14 @@ const agent = createDreams({
               state.currentDungeon = result.data.entity.DUNGEON_ID_CID.toString();
               state.currentEnemy = result.data.entity.ENEMY_CID.toString();
             }
-            
-      
-            
-            // Display the updated state to the user
-            simpleUI.printDetailedGameState(state);
           }
 
           if (["rock", "paper", "scissor"].includes(action)) {
             simpleUI.visualizeRPSMove(action, enemyMove, battleResult);
           }
+
+          // Display the updated state to the user
+          simpleUI.printDetailedGameState(state);
 
           // Update game state in the UI
           if (result.gameState) {
@@ -431,7 +431,19 @@ const agent = createDreams({
           return {
             success: true,
             result,
-            message: `Successfully performed ${action} attack in dungeon ${dungeonId}`,
+            message: `
+            Successfully performed ${action} attack in dungeon ${dungeonId}
+
+            Enemy Move: ${enemyMove}
+            Battle Result: ${battleResult}
+
+            Player Health: ${state.playerHealth}
+            Player Max Health: ${state.playerMaxHealth}
+            Player Shield: ${state.playerShield}
+            Player Max Shield: ${state.playerMaxShield}
+            
+
+            `,
           };
         } catch (error: unknown) {
           const errorMessage =
@@ -453,6 +465,7 @@ const agent = createDreams({
             success: false,
             error: errorMessage,
             message: "Failed to perform attack action",
+          
           };
         }
       },
