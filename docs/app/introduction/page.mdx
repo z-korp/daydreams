@@ -15,40 +15,6 @@ into actions. The actions' results feed back as new inputs, creating a
 continuous loop of processing and execution - all orchestrated automatically by
 the LLM's reasoning capabilities.
 
-```mermaid
-graph TD;
-    subgraph Inputs
-        A[Twitter Stream]
-        B[Discord Stream]
-        C[Financial API]
-        D[Internal Consciousness]
-    end
-
-    subgraph Dreams[Dreams]
-        E[Agent Processing]
-    end
-
-    subgraph Outputs
-        F[Post to Twitter]
-        G[Send Email]
-    end
-
-    subgraph Actions
-        H[Call APIs]
-    end
-
-    A --> E
-    B --> E
-    C --> E
-    D --> E
-
-    E --> F
-    E --> G
-
-    E --> H
-    H --> E
-```
-
 ## Features
 
 ### 🔌 Any LLM Provider

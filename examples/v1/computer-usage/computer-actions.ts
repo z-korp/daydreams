@@ -3,6 +3,7 @@ import { action } from "@daydreamsai/core";
 import { ComputerTool } from "./base";
 import type { ToolResult } from "./base";
 import type { WorkingMemory } from "@daydreamsai/core";
+import { Client } from "@gradio/client";
 
 // Initialize the ComputerTool instance
 const computerTool = new ComputerTool();
@@ -82,12 +83,30 @@ export const takeScreenshotAction = action({
       // Store the screenshot in working memory
       storeScreenshotInMemory(ctx, result.base64Image, result.mediaType);
 
+      let parserResult: any;
+      
+      try {
+        // Convert base64 to Buffer for the image_input
+        const imageBuffer = Buffer.from(result.base64Image || '', 'base64');
+        
+        const client = await Client.connect("microsoft/OmniParser");
+        parserResult = await client.predict("/process", { 
+          image_input: imageBuffer,
+          box_threshold: 0.01,
+          iou_threshold: 0.01, 
+        });
+      } catch (error) {
+        console.error("Error parsing screenshot:", error);
+      }
+
+
       return {
         success: true,
         // Don't include the base64Image in the action result to avoid storing it in memory
         mediaType: result.mediaType,
-        message: "Screenshot captured successfully",
+        message: "Screenshot captured successfully. The parsed result is an interpretation of the screenshot with the detected elements and their coordinates. [x, y, width, height]",
         screenDimensions,
+        parserResult,
       };
     } catch (error) {
       return {
@@ -663,6 +682,89 @@ export const resizeWindowAction = action({
       return {
         success: true,
         message: `Resized window "${call.data.windowTitle}" to ${call.data.width}x${call.data.height}`,
+        screenDimensions,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        screenDimensions,
+      };
+    }
+  },
+});
+
+/**
+ * Action to move the mouse and click in a single operation
+ */
+export const moveAndClickAction = action({
+  name: "moveAndClick",
+  description: `Move the mouse cursor to specific X,Y coordinates and then click.
+
+  USE WHEN:
+  - You need to click on a specific UI element at known coordinates
+  - You want to ensure the cursor is in the exact position before clicking
+  - You want to combine movement and clicking in a single operation
+
+  BEHAVIOR:
+  - Moves the cursor to the exact X,Y position specified
+  - Immediately performs a click at that position
+  - Takes a screenshot after clicking to show the result
+  - Can perform left, right, middle, or double clicks
+
+  COORDINATES:
+  - X: Horizontal position (0 is left edge, increases moving right)
+  - Y: Vertical position (0 is top edge, increases moving down)
+  - Coordinates must be within screen bounds (see screenDimensions)
+
+  PARAMETERS:
+  - x, y: The coordinates to move to and click at
+  - button: Choose "left" for normal clicks, "right" for context menus, "middle" for special actions
+  - doubleClick: Set to true when you need to open files or perform double-click actions
+
+  BEST PRACTICE:
+  - Use this instead of separate moveMouse and clickMouse actions for more reliable clicking
+  - Especially useful for clicking on small UI elements where precision is important
+  `,
+  schema: z.object({
+    x: z.number().describe("X coordinate to move the mouse to and click"),
+    y: z.number().describe("Y coordinate to move the mouse to and click"),
+    button: z
+      .enum(["left", "right", "middle"])
+      .default("left")
+      .describe("Mouse button to click (left, right, or middle)"),
+    doubleClick: z
+      .boolean()
+      .default(false)
+      .describe("Whether to perform a double-click"),
+  }),
+  async handler(call, ctx) {
+    try {
+      // First move the mouse to the specified coordinates
+      const moveResult = await computerTool.execute({
+        action: "mouse_move",
+        coordinate: [call.data.x, call.data.y],
+      });
+
+      // Then perform the click
+      const clickAction = call.data.doubleClick
+        ? "double_click"
+        : call.data.button === "left"
+          ? "left_click"
+          : call.data.button === "right"
+            ? "right_click"
+            : "middle_click";
+
+      const clickResult = await computerTool.execute({ action: clickAction });
+
+      // Store the screenshot in working memory
+      storeScreenshotInMemory(ctx, clickResult.base64Image, clickResult.mediaType);
+
+      return {
+        success: true,
+        message: `Moved to (${call.data.x}, ${call.data.y}) and performed ${
+          call.data.doubleClick ? "double-" : ""
+        }${call.data.button} click`,
         screenDimensions,
       };
     } catch (error) {

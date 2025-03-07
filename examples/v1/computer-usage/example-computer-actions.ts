@@ -14,6 +14,7 @@ import {
   // Commenting out other actions that might depend on robotjs
   moveMouseAction,
   clickMouseAction,
+  moveAndClickAction,
   typeTextAction,
   pressKeyAction,
   scrollMouseAction,
@@ -215,6 +216,7 @@ async function main() {
       // Commenting out other actions
       moveMouseAction,
       clickMouseAction,
+      moveAndClickAction,
       typeTextAction,
       pressKeyAction,
       scrollMouseAction,
@@ -237,6 +239,7 @@ async function main() {
   console.log(
     "- clickMouse: Perform a mouse click at the current cursor position"
   );
+  console.log("- moveAndClick: Move and click the mouse at specific coordinates");
   console.log("- typeText: Type text at the current cursor position");
   console.log("- pressKey: Press a specific key or key combination");
   console.log("- scrollMouse: Scroll the mouse wheel");

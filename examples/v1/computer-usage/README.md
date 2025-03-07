@@ -1,18 +1,18 @@
-# Computer Automation Actions
+# Computer Automation with Daydreams
 
-This module provides a set of actions for automating computer interactions using
-the Daydreams AI framework. These actions allow you to control the mouse,
-keyboard, take screenshots, and manage windows programmatically.
+This module provides a set of actions for automating computer interactions using the Daydreams AI framework. You can control the mouse, keyboard, take screenshots, and manage windows programmatically.
 
 ## Prerequisites
 
-- Node.js 18+
-- Required environment variables:
-  - `ANTHROPIC_API_KEY`: API key for Anthropic's Claude model
+Before you begin, ensure you have:
+
+- Node.js 18 or newer
+- The following environment variables:
+  - `ANTHROPIC_API_KEY`: Your API key for Anthropic's Claude model
 
 ## Installation
 
-Make sure you have the required dependencies installed:
+Install the required dependencies:
 
 ```bash
 npm install @daydreamsai/core @ai-sdk/anthropic robotjs sharp screenshot-desktop uuid
@@ -20,25 +20,25 @@ npm install @daydreamsai/core @ai-sdk/anthropic robotjs sharp screenshot-desktop
 
 ## Available Actions
 
-### Mouse Actions
+### Mouse Control
 
-- **takeScreenshot**: Capture a screenshot of the current screen
-- **moveMouse**: Move the mouse cursor to specific coordinates
-- **clickMouse**: Perform a mouse click (left, right, or middle button)
-- **dragMouse**: Click and drag the mouse from current position to target
-  coordinates
-- **scrollMouse**: Scroll the mouse wheel in a specified direction
-- **getCursorPosition**: Get the current position of the mouse cursor
+- **takeScreenshot**: Capture the current screen state
+- **moveMouse**: Position the cursor at specific coordinates
+- **clickMouse**: Perform mouse clicks (left, right, or middle button)
+- **moveAndClick**: Move the cursor to specific coordinates and click in one operation
+- **dragMouse**: Click and drag from current position to target coordinates
+- **scrollMouse**: Scroll up, down, left, or right
+- **getCursorPosition**: Retrieve current mouse coordinates
 
-### Keyboard Actions
+### Keyboard Control
 
-- **typeText**: Type text at the current cursor position
-- **pressKey**: Press a specific key or key combination
+- **typeText**: Enter text at the current cursor position
+- **pressKey**: Execute specific key presses or combinations
 
-### Window Management Actions
+### Window Management
 
-- **focusWindow**: Focus a window by its title
-- **resizeWindow**: Resize a window by its title
+- **focusWindow**: Bring a specific window to the foreground
+- **resizeWindow**: Change window dimensions
 
 ## Usage Example
 
@@ -73,20 +73,21 @@ async function main() {
 main().catch(console.error);
 ```
 
-## Implementation Details
+## How It Works
 
-These actions are built on top of the `ComputerTool` class from `base.ts`, which
-provides the core functionality for interacting with the operating system. The
-actions are designed to be used with the Daydreams AI framework, making it easy
-to integrate computer automation into your AI agents.
+These actions build on the `ComputerTool` class from `base.ts`, which provides core functionality for operating system interaction. The actions integrate seamlessly with the Daydreams AI framework, making it easy to add computer automation to your AI agents.
 
-## Security Considerations
+## Security Notice
 
-These actions have direct control over your computer's mouse and keyboard, so
-use them with caution. Be careful when running scripts that use these actions,
-especially if they come from untrusted sources.
+**Warning:** These actions directly control your computer's mouse and keyboard. Use them cautiously, especially with scripts from untrusted sources. Always review automation code before execution.
+
+## Common Use Cases
+
+- Automating repetitive tasks
+- Creating AI assistants that can interact with desktop applications
+- Building testing frameworks for GUI applications
+- Developing accessibility tools
 
 ## License
 
-This project is licensed under the terms of the license included in the
-repository.
+This project is licensed under the terms included in the repository.
