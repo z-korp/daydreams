@@ -436,6 +436,12 @@ export function createDreams<
           continue;
         }
 
+        // Check if isFinal flag is set in working memory
+        if (workingMemory.isFinal === true) {
+          logger.debug("agent:run", "Stopping flow due to isFinal flag", { step });
+          break;
+        }
+
         // Early termination logic has been removed
         logger.debug("agent:run", "Continuing to next step", { step });
       }
@@ -1094,6 +1100,14 @@ function createContextStreamHandler({
           },
           el.done
         );
+        break;
+      }
+
+      case "finalize": {
+        if (el.done) {
+          logger.debug("agent:finalize", "Model requested to finalize flow");
+          workingMemory.isFinal = true;
+        }
         break;
       }
 
