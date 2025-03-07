@@ -31,10 +31,12 @@ import {
   type ActionCall,
   type Agent,
   type InferContextMemory,
+  createMemoryStore,
 } from "@daydreamsai/core";
-import { cli } from "@daydreamsai/core/extensions";
+import { cli, createChromaVectorStore } from "@daydreamsai/core/extensions";
 import { string, z } from "zod";
 import { simpleUI } from "./simple-ui";
+import { openai } from "@ai-sdk/openai";
 
 // Initialize the UI
 simpleUI.initializeUI();
@@ -716,8 +718,13 @@ const agent = createDreams({
 
           const payload = {
             action: "start_run",
-            actionToken: new Date().getTime().toString(),
+            actionToken: "",
             dungeonId: dungeonId,
+            data: {
+              "consumables": [],
+              "itemId": 0,
+              "index": 0
+            }
           };
 
           const response = await fetch(
@@ -836,6 +843,11 @@ const agent = createDreams({
       },
     }),
   ],
+  memory: {
+    store: createMemoryStore(),
+    vector: createChromaVectorStore("agent", "http://localhost:8000"),
+    vectorModel: openai("gpt-4-turbo"),
+  },
 });
 
 // Start the agent with initial goals

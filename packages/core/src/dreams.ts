@@ -1119,6 +1119,14 @@ function createContextStreamHandler({
         break;
       }
 
+      case "finalize": {
+        if (el.done) {
+          logger.debug("agent:finalize", "Model requested to finalize flow");
+          workingMemory.isFinal = true;
+        }
+        break;
+      }
+
       default:
         break;
     }

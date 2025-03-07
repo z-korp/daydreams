@@ -1,10 +1,10 @@
-import { createGroq } from "@ai-sdk/groq";
-import { createContainer, createDreams, validateEnv } from "@daydreamsai/core";
-import { discord } from "@daydreamsai/core/extensions";
+import { createContainer, createDreams, createMemoryStore, LogLevel, validateEnv } from "@daydreamsai/core";
+import { createChromaVectorStore, discord } from "@daydreamsai/core/extensions";
 import { deepResearch } from "./deep-research/research";
 import { z } from "zod";
 import { tavily } from "@tavily/core";
 import { anthropic } from "@ai-sdk/anthropic";
+import { openai } from "@ai-sdk/openai";
 
 // Validate environment before proceeding
 const env = validateEnv(
@@ -26,9 +26,15 @@ container.singleton("tavily", () =>
 );
 
 const agent = createDreams({
+  logger: LogLevel.DEBUG,
   model: anthropic("claude-3-7-sonnet-latest"),
   extensions: [discord, deepResearch],
   container,
+  memory: {
+    store: createMemoryStore(),
+    vector: createChromaVectorStore("agent", "http://localhost:8000"),
+    vectorModel: openai("gpt-4-turbo"),
+  },
 });
 
 console.log("Starting Daydreams Discord Bot...");
