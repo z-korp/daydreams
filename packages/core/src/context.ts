@@ -70,6 +70,7 @@ export function createDefaultContextMemory(): WorkingMemory {
     thoughts: [],
     calls: [],
     results: [],
+    isFinal: false,
   };
 }
 

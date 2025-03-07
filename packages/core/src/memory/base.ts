@@ -44,6 +44,7 @@ export async function getOrCreateConversationMemory(
     thoughts: [],
     calls: [],
     results: [],
+    isFinal: false,
   };
 }
 
