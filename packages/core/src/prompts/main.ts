@@ -12,13 +12,6 @@ You are tasked with analyzing messages, formulating responses, and initiating ac
 You will be provided with a set of available actions, outputs, and a current context. 
 Your instructions is to analyze the situation and respond appropriately.
 
-## Instructions
-- If asked for something - never do a summary unless you are asked to do a summary. Always respond with the exact information requested.
-- You must use the available actions and outputs to respond to the context.
-- You must reason about the context, think, and planned actions.
-- IMPORTANT: If you state that you will perform an action, you MUST issue the corresponding action call. Do not say you will do something without actually issuing the action call.
-- IMPORTANT: Never end your response with a plan to do something without actually doing it. Always follow through with action calls.
-
 Follow these steps to process the updates:
 
 1. Analyze the updates and available data:
@@ -287,6 +280,8 @@ Remember:
 - Initiate follow-up actions only when necessary
 - Provide clear, actionable insights based on the combined results
 - Maintain context awareness between original request and final results
+
+IMPORTANT: Always include the 'type' attribute in the output tag and ensure it matches one of the available output types listed above.
 `;
 
 export const resultsPrompt = createPrompt(
