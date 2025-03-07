@@ -135,7 +135,6 @@ export const runGenerate = task(
         }),
       }),
     });
-
     debug(contextId, ["prompt", callId], system);
 
     logger.debug("agent:system", system);
@@ -174,6 +173,9 @@ export const runGenerate = task(
       experimental_transform: smoothStream({
         chunking: "word",
       }),
+      onError: (error) => {
+        console.error(error);
+      },
     });
 
     // Clear the current image after using it
@@ -257,6 +259,7 @@ export const runGenerateResults = task(
       results: workingMemory.results.filter((i) => i.processed !== true),
     });
 
+    console.log("marking as processed");
     workingMemory.results.forEach((i) => {
       i.processed = true;
     });
@@ -302,6 +305,9 @@ export const runGenerateResults = task(
       experimental_transform: smoothStream({
         chunking: "word",
       }),
+      onError: (error) => {
+        console.error(error);
+      },
     });
 
     // Clear the current image after using it

@@ -319,10 +319,6 @@ export function createDreams<
         count: contextOuputs.length,
       });
 
-      const maxSteps = 100;
-      let step = 1;
-      const minSteps = 3; // Minimum steps before considering early termination
-
       logger.debug("agent:run", "Preparing actions");
       const contextActions = await Promise.all(
         actions.map(async (action) => {
@@ -384,192 +380,91 @@ export function createDreams<
         workingMemory,
       });
 
+      let step = 1;
+      const maxSteps = 5;
+
       while (maxSteps > step) {
         logger.info("agent:run", `Starting step ${step}/${maxSteps}`, {
           contextId: ctxState.id,
         });
 
-        const { stream, response } = await taskRunner.enqueueTask(
-          step > 1 ? runGenerateResults : runGenerate,
-          {
-            agent,
-            model: config.reasoningModel ?? config.model,
-            contexts: [agentCtxState, ctxState].filter((t) => !!t),
-            contextId: ctxState.id,
-            actions: contextActions,
-            outputs: contextOuputs,
-            workingMemory,
-            logger,
-            chain,
-          },
-          {
-            debug: agent.debugger,
-          }
-        );
+        try {
+          const { stream, response } = await taskRunner.enqueueTask(
+            step > 1 ? runGenerateResults : runGenerate,
+            {
+              agent,
+              model: config.reasoningModel ?? config.model,
+              contexts: [agentCtxState, ctxState].filter((t) => !!t),
+              contextId: ctxState.id,
+              actions: contextActions,
+              outputs: contextOuputs,
+              workingMemory,
+              logger,
+              chain,
+            },
+            {
+              debug: agent.debugger,
+            }
+          );
 
-        logger.debug("agent:run", "Processing stream", { step });
-        await handleStream(stream, state.index, handler);
+          logger.debug("agent:run", "Processing stream", { step });
+          await handleStream(stream, state.index, handler);
 
-        logger.debug("agent:run", "Waiting for action calls to complete", {
-          pendingCalls: actionCalls.length,
-        });
-        await Promise.allSettled(actionCalls);
-
-        actionCalls.length = 0;
-
-        logger.debug("agent:run", "Saving context state", { id: ctxState.id });
-        await agent.memory.store.set(ctxState.id, ctxState.memory);
-
-        if (agentCtxState) {
-          logger.debug("agent:run", "Saving agent context state", {
-            id: agentCtxState.id,
+          logger.debug("agent:run", "Waiting for action calls to complete", {
+            pendingCalls: actionCalls.length,
           });
-          await agent.memory.store.set(agentCtxState.id, agentCtxState.memory);
-        }
 
-        logger.debug("agent:run", "Saving working memory", { id: ctxState.id });
-        await saveContextWorkingMemory(agent, ctxState.id, workingMemory);
+          await Promise.allSettled(actionCalls);
 
-        step++;
+          actionCalls.length = 0;
 
-        if (hasError) {
-          logger.warn("agent:run", "Continuing despite error", { step });
-          continue;
-        }
+          logger.debug("agent:run", "Saving context state", {
+            id: ctxState.id,
+          });
 
-        // Only check for early termination if we've completed the minimum number of steps
-        if (step > minSteps) {
+          await agent.memory.store.set(ctxState.id, ctxState.memory);
+
+          if (agentCtxState) {
+            logger.debug("agent:run", "Saving agent context state", {
+              id: agentCtxState.id,
+            });
+
+            await agent.memory.store.set(
+              agentCtxState.id,
+              agentCtxState.memory
+            );
+          }
+
+          logger.debug("agent:run", "Saving working memory", {
+            id: ctxState.id,
+          });
+
+          await saveContextWorkingMemory(agent, ctxState.id, workingMemory);
+
+          step++;
+
+          if (hasError) {
+            logger.warn("agent:run", "Continuing despite error", { step });
+            continue;
+          }
+
           const pendingResults = workingMemory.results.filter(
             (i) => i.processed === false
-          ).length;
-          logger.debug("agent:run", "Checking for pending results", {
-            pendingResults,
-          });
+          );
 
-          if (pendingResults === 0) {
-            const pendingOutputs = workingMemory.outputs.filter(
-              (o) => o.processed === false
-            ).length;
-            logger.debug("agent:run", "Checking for pending outputs", {
-              pendingOutputs,
-            });
+          const pendingOutputs = workingMemory.outputs.filter(
+            (o) => o.processed === false
+          );
 
-            // Check if there are any action calls that might need follow-up actions
-            const pendingActionCalls = workingMemory.calls.filter(
-              (c) => !workingMemory.results.some((r) => r.callId === c.id)
-            ).length;
-            logger.debug("agent:run", "Checking for pending action calls", {
-              pendingActionCalls,
-            });
-
-            // Check if there are recent action results that haven't been reasoned about yet
-            const recentResults = workingMemory.results
-              .sort((a, b) => b.timestamp - a.timestamp)
-              .slice(0, 5);
-
-            // Check if there's been a thought after the most recent action result
-            const mostRecentResultTime =
-              recentResults.length > 0 ? recentResults[0].timestamp : 0;
-            const hasReasonedAfterResults = workingMemory.thoughts.some(
-              (t) => t.timestamp > mostRecentResultTime
-            );
-
-            logger.debug(
-              "agent:run",
-              "Checking for reasoning after recent results",
-              {
-                hasReasonedAfterResults,
-                mostRecentResultTime,
-                recentThoughtTimes: workingMemory.thoughts
-                  .sort((a, b) => b.timestamp - a.timestamp)
-                  .slice(0, 5)
-                  .map((t) => t.timestamp),
-              }
-            );
-
-            // Check if there are recent outputs that haven't been reasoned about yet
-            const recentOutputs = workingMemory.outputs
-              .sort((a, b) => b.timestamp - a.timestamp)
-              .slice(0, 3);
-
-            // Check if there's been a thought after the most recent output
-            const mostRecentOutputTime =
-              recentOutputs.length > 0 ? recentOutputs[0].timestamp : 0;
-            const hasReasonedAfterOutputs = workingMemory.thoughts.some(
-              (t) => t.timestamp > mostRecentOutputTime
-            );
-
-            logger.debug(
-              "agent:run",
-              "Checking for reasoning after recent outputs",
-              {
-                hasReasonedAfterOutputs,
-                mostRecentOutputTime,
-                recentOutputsCount: recentOutputs.length,
-              }
-            );
-
-            // Only break if there are no pending outputs, no pending action calls,
-            // AND either there are no recent results/outputs or we've reasoned about them already
-
-            logger.debug("agent:run", "Checking if should continue", {
-              recentResultsCount: recentResults.length,
-              hasReasonedAfterResults,
-              recentOutputsCount: recentOutputs.length,
-              hasReasonedAfterOutputs,
-            });
-
-            // Add detailed condition evaluation logging
-            const condition1 = pendingActionCalls === 0;
-            const condition2 =
-              recentResults.length === 0 || hasReasonedAfterResults;
-            const condition3 =
-              recentOutputs.length === 0 || hasReasonedAfterOutputs;
-
-            logger.debug("agent:run", "Early termination condition details", {
-              condition1,
-              condition2,
-              condition3,
-              allConditionsMet: condition1 && condition2 && condition3,
-              step,
-              maxSteps,
-              pendingActionCalls,
-              recentResultsLength: recentResults.length,
-              hasReasonedAfterResults,
-              recentOutputsLength: recentOutputs.length,
-              hasReasonedAfterOutputs,
-            });
-
-            if (
-              pendingActionCalls === 0 &&
-              (recentResults.length === 0 || hasReasonedAfterResults) &&
-              (recentOutputs.length === 0 || hasReasonedAfterOutputs)
-            ) {
-              logger.info(
-                "agent:run",
-                "All results and outputs processed, breaking loop",
-                {
-                  step,
-                  pendingOutputs,
-                  pendingActionCalls,
-                  recentResultsCount: recentResults.length,
-                  hasReasonedAfterResults,
-                  recentOutputsCount: recentOutputs.length,
-                  hasReasonedAfterOutputs,
-                }
-              );
-              break;
-            }
-          }
-        } else {
-          logger.debug("agent:run", "Skipping early termination check", {
-            step,
-            minSteps,
-          });
+          if (pendingResults.length === 0) break;
+        } catch (error) {
+          console.log({ error });
+          break;
         }
       }
 
       logger.debug("agent:run", "Marking all inputs as processed");
+
       workingMemory.inputs.forEach((i) => {
         i.processed = true;
       });
@@ -579,12 +474,14 @@ export function createDreams<
       logger.debug("agent:run", "Removing context from running set", {
         id: ctxState.id,
       });
+
       contextsRunning.delete(ctxState.id);
 
       logger.info("agent:run", "Run completed", {
         contextId: ctxState.id,
         chainLength: chain.length,
       });
+
       return chain;
     },
 
@@ -750,6 +647,7 @@ async function saveContextWorkingMemory(
   workingMemory: WorkingMemory
 ) {
   if (
+    agent.memory.vectorModel &&
     workingMemory.inputs.some((i) => i.processed) &&
     workingMemory.outputs.length > 0
   ) {
@@ -898,7 +796,7 @@ async function handleActionCall({
     data: resultData,
     name: call.name,
     timestamp: Date.now(),
-    processed: true,
+    processed: false,
   };
 
   if (action.format) result.formatted = action.format(result);
@@ -1074,19 +972,14 @@ function createContextStreamHandler({
     }
 
     if (log.ref === "output" && done) {
-      if ("processed" in log) {
-        log.processed = true;
-      }
       workingMemory.outputs.push(log);
     }
 
     if (log.ref === "action_call" && done) {
       workingMemory.calls.push(log);
     }
+
     if (log.ref === "action_result" && done) {
-      if ("processed" in log) {
-        log.processed = true;
-      }
       workingMemory.results.push(log);
     }
 
