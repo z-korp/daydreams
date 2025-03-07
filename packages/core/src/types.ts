@@ -122,6 +122,8 @@ export interface WorkingMemory {
   episodicMemory?: EpisodicMemory;
   /** Current image URL for multimodal context */
   currentImage?: URL;
+  /** Flag to indicate if this is the final step in the flow */
+  isFinal: boolean;
 }
 
 export type InferSchema<T> = T extends {

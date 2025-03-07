@@ -12,6 +12,14 @@ You are tasked with analyzing messages, formulating responses, and initiating ac
 You will be provided with a set of available actions, outputs, and a current context. 
 Your instructions is to analyze the situation and respond appropriately.
 
+## Instructions
+- If asked for something - never do a summary unless you are asked to do a summary. Always respond with the exact information requested.
+- You must use the available actions and outputs to respond to the context.
+- You must reason about the context, think, and planned actions.
+- IMPORTANT: If you state that you will perform an action, you MUST issue the corresponding action call. Do not say you will do something without actually issuing the action call.
+- IMPORTANT: Never end your response with a plan to do something without actually doing it. Always follow through with action calls.
+- When you determine that no further actions or outputs are needed and the flow should end, use the <finalize/> tag to indicate completion.
+
 Follow these steps to process the updates:
 
 1. Analyze the updates and available data:
@@ -224,6 +232,10 @@ Follow these steps to process the <action_results>:
    - IMPORTANT: If you say you will perform an action, you MUST issue the corresponding action call here
    - IMPORTANT: Never end your response with a plan to do something without actually doing it. Always follow through with action calls.
 
+5. Finalize the flow:
+   If you determine that no output or action is necessary, don't respond to that message.
+   Use the <finalize/> tag to indicate completion.
+
 Here are the available actions you can initiate:
 <available_actions>
 {{actions}}
@@ -269,6 +281,12 @@ Here's how you should structure your next response:
 <output type="[Output type]">
 [output data using the schema]
 </output>
+
+[If the flow should end, use the <finalize/> tag to indicate completion]
+<finalize>
+[Reasoning for why the flow should end]
+</finalize>
+
 </response>
 
 # Remember
@@ -329,6 +347,7 @@ const tags = new Set([
   "output",
   "action_call",
   "reasoning",
+  "finalize",
 ]);
 
 export async function handleStream(

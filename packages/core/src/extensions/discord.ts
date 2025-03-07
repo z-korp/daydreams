@@ -82,8 +82,8 @@ export const discord = extension({
                 id: message.channelId,
               },
               user: {
-                id: message.member!.id,
-                name: message.member!.displayName,
+                id: message.author.id,
+                name: message.author.displayName,
               },
               text: message.content,
             }
@@ -125,7 +125,7 @@ export const discord = extension({
         const channel = await container
           .resolve<DiscordClient>("discord")
           .client.channels.fetch(data.channelId);
-        if (channel && channel.isSendable()) {
+        if (channel && (channel.isTextBased() || channel.isDMBased())) {
           await container.resolve<DiscordClient>("discord").sendMessage(data);
           return {
             data,
