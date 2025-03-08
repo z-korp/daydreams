@@ -297,8 +297,8 @@ Here's how you should structure your next response:
 - Initiate follow-up actions only when necessary
 - Provide clear, actionable insights based on the combined results
 - Maintain context awareness between original request and final results
-- Always use the available actions and outputs to respond to the context
-- Check your current state keep creating actions until the context is resolved
+
+IMPORTANT: Always include the 'type' attribute in the output tag and ensure it matches one of the available output types listed above.
 `;
 
 export const resultsPrompt = createPrompt(

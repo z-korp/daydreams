@@ -1,5 +1,6 @@
 import {
   LogLevel,
+  type Action,
   type ActionCall,
   type ActionResult,
   type Agent,
@@ -15,6 +16,7 @@ import {
   type Output,
   type OutputRef,
   type Subscription,
+  type Thought,
   type WorkingMemory,
 } from "./types";
 import { Logger } from "./logger";
@@ -319,9 +321,6 @@ export function createDreams<
         count: contextOuputs.length,
       });
 
-      const maxSteps = 100;
-      let step = 1;
-
       logger.debug("agent:run", "Preparing actions");
       const contextActions = await Promise.all(
         actions.map(async (action) => {
@@ -383,85 +382,106 @@ export function createDreams<
         workingMemory,
       });
 
+      let step = 1;
+      const maxSteps = 100;
+
       while (maxSteps > step) {
         logger.info("agent:run", `Starting step ${step}/${maxSteps}`, {
           contextId: ctxState.id,
         });
 
-        const { stream, response } = await taskRunner.enqueueTask(
-          step > 1 ? runGenerateResults : runGenerate,
-          {
-            agent,
-            model: config.reasoningModel ?? config.model,
-            contexts: [agentCtxState, ctxState].filter((t) => !!t),
-            contextId: ctxState.id,
-            actions: contextActions,
-            outputs: contextOuputs,
-            workingMemory,
-            logger,
-            chain,
-          },
-          {
-            debug: agent.debugger,
-          }
-        );
+        try {
+          const { stream, response } = await taskRunner.enqueueTask(
+            step > 1 ? runGenerateResults : runGenerate,
+            {
+              agent,
+              model: config.reasoningModel ?? config.model,
+              contexts: [agentCtxState, ctxState].filter((t) => !!t),
+              contextId: ctxState.id,
+              actions: contextActions,
+              outputs: contextOuputs,
+              workingMemory,
+              logger,
+              chain,
+            },
+            {
+              debug: agent.debugger,
+            }
+          );
 
-        logger.debug("agent:run", "Processing stream", { step });
-        await handleStream(stream, state.index, handler);
+          logger.debug("agent:run", "Processing stream", { step });
+          await handleStream(stream, state.index, handler);
 
-        logger.debug("agent:run", "Waiting for action calls to complete", {
-          pendingCalls: actionCalls.length,
-        });
-        await Promise.allSettled(actionCalls);
-
-        actionCalls.length = 0;
-
-        logger.debug("agent:run", "Saving context state", { id: ctxState.id });
-        await agent.memory.store.set(ctxState.id, ctxState.memory);
-
-        if (agentCtxState) {
-          logger.debug("agent:run", "Saving agent context state", {
-            id: agentCtxState.id,
+          logger.debug("agent:run", "Waiting for action calls to complete", {
+            pendingCalls: actionCalls.length,
           });
-          await agent.memory.store.set(agentCtxState.id, agentCtxState.memory);
-        }
 
-        logger.debug("agent:run", "Saving working memory", { id: ctxState.id });
-        await saveContextWorkingMemory(agent, ctxState.id, workingMemory);
+          await Promise.allSettled(actionCalls);
 
-        step++;
+          actionCalls.length = 0;
 
-        if (hasError) {
-          logger.warn("agent:run", "Continuing despite error", { step });
-          continue;
-        }
+          // Trim working memory after processing each step
+          trimWorkingMemory(workingMemory);
 
-        // Check if isFinal flag is set in working memory
-        if (workingMemory.isFinal === true) {
-          logger.debug("agent:run", "Stopping flow due to isFinal flag", { step });
+          logger.debug("agent:run", "Saving context state", {
+            id: ctxState.id,
+          });
+
+          await agent.memory.store.set(ctxState.id, ctxState.memory);
+
+          if (agentCtxState) {
+            logger.debug("agent:run", "Saving agent context state", {
+              id: agentCtxState.id,
+            });
+
+            await agent.memory.store.set(
+              agentCtxState.id,
+              agentCtxState.memory
+            );
+          }
+
+          logger.debug("agent:run", "Saving working memory", {
+            id: ctxState.id,
+            workingMemory,
+          });
+
+          step++;
+
+          if (hasError) {
+            logger.warn("agent:run", "Continuing despite error", { step });
+            continue;
+          }
+
+          const pendingResults = workingMemory.results.filter(
+            (i) => i.processed === false
+          );
+
+          await saveContextWorkingMemory(agent, ctxState.id, workingMemory);
+
+          if (pendingResults.length === 0) break;
+        } catch (error) {
+          console.log({ error });
           break;
         }
-
-        // Early termination logic has been removed
-        logger.debug("agent:run", "Continuing to next step", { step });
       }
 
       logger.debug("agent:run", "Marking all inputs as processed");
+
       workingMemory.inputs.forEach((i) => {
         i.processed = true;
       });
 
-      await saveContextWorkingMemory(agent, ctxState.id, workingMemory);
-
       logger.debug("agent:run", "Removing context from running set", {
         id: ctxState.id,
       });
+
       contextsRunning.delete(ctxState.id);
 
       logger.info("agent:run", "Run completed", {
         contextId: ctxState.id,
         chainLength: chain.length,
       });
+
       return chain;
     },
 
@@ -626,41 +646,11 @@ async function saveContextWorkingMemory(
   contextId: string,
   workingMemory: WorkingMemory
 ) {
-  if (
-    workingMemory.inputs.some((i) => i.processed) &&
-    workingMemory.outputs.length > 0
-  ) {
-    const episode = await createEpisodeFromWorkingMemory(workingMemory, agent);
-
-    await agent.memory.vector.upsert(`${contextId}`, [
-      {
-        id: episode.id,
-        text: episode.observation,
-        metadata: episode,
-      },
-    ]);
-  }
-
-  // Store working memory as before
   return await agent.memory.store.set(
     [contextId, "working-memory"].join(":"),
     workingMemory
   );
 }
-
-const actionParseErrorPrompt = createPrompt(
-  `
-You are tasked with fixing an action call arguments parsing error!
-Here is the current context:
-{{context}}
-Here is the error:
-{{error}}
-`,
-  ({ context, error }: { context: string; error: string }) => ({
-    context,
-    error,
-  })
-);
 
 class ActionNotFoundError extends Error {
   constructor(public call: ActionCall) {
@@ -673,25 +663,6 @@ class ParsingError extends Error {
     super();
   }
 }
-
-// function handleActionCallParsingError() {
-//   const contexts: ContextState<AnyContext>[] = [agentCtxState, ctxState].filter(
-//     (t) => !!t
-//   );
-
-//   const response = await generateObject({
-//     model: agent.model,
-//     schema: action.schema,
-//     prompt: actionParseErrorPrompt({
-//       context: formatContexts(ctxState.id, contexts, workingMemory),
-//       error: JSON.stringify(error),
-//     }),
-//   });
-
-//   if (response.object) {
-//     data = response.object;
-//   }
-// }
 
 async function prepareActionCall({
   call,
@@ -775,7 +746,7 @@ async function handleActionCall({
     data: resultData,
     name: call.name,
     timestamp: Date.now(),
-    processed: true,
+    processed: false,
   };
 
   if (action.format) result.formatted = action.format(result);
@@ -895,6 +866,41 @@ async function handleOutput({
 
 type PartialLog = Partial<Log> & Pick<Log, "ref" | "id" | "timestamp">;
 
+async function generateEpisode(
+  thought: Thought,
+  actionCall: ActionCall,
+  result: ActionResult,
+  agent: AnyAgent,
+  contextId: string,
+  actions: AnyAction[]
+) {
+  // Find the corresponding Action for the ActionCall
+  const action = actions.find((a) => a.name === actionCall.name);
+
+  if (!action) {
+    return;
+  }
+
+  const thoughts = [thought];
+  const actionsArray = [action];
+  const results = [result];
+
+  const episode = await createEpisodeFromWorkingMemory(
+    thoughts,
+    actionsArray,
+    results,
+    agent
+  );
+
+  await agent.memory.vector.upsert(`${contextId}`, [
+    {
+      id: episode.id,
+      text: episode.observation,
+      metadata: episode,
+    },
+  ]);
+}
+
 function createContextStreamHandler({
   agent,
   chain,
@@ -950,21 +956,37 @@ function createContextStreamHandler({
       handlers?.onThinking?.(log);
     }
 
-    if (log.ref === "output" && done) {
-      if ("processed" in log) {
-        log.processed = true;
-      }
-      workingMemory.outputs.push(log);
-    }
-
     if (log.ref === "action_call" && done) {
       workingMemory.calls.push(log);
     }
+
     if (log.ref === "action_result" && done) {
-      if ("processed" in log) {
-        log.processed = true;
-      }
       workingMemory.results.push(log);
+
+      // Find the most recent thought and action call
+      const lastThought =
+        workingMemory.thoughts[workingMemory.thoughts.length - 1];
+      const lastActionCall =
+        workingMemory.calls[workingMemory.calls.length - 1];
+
+      // If we have a complete thought-action-result cycle, generate an episode
+      if (lastThought && lastActionCall) {
+        // Generate episode with the last thought, action call, and result
+        generateEpisode(
+          lastThought,
+          lastActionCall,
+          log,
+          agent,
+          ctxState.id,
+          actions
+        ).catch((error) => {
+          logger.error(
+            "agent:generateEpisode",
+            "Failed to generate episode",
+            error
+          );
+        });
+      }
     }
 
     handlers?.onLogStream?.(log, done);
@@ -1120,4 +1142,37 @@ function createContextStreamHandler({
     state,
     handler,
   };
+}
+
+function trimWorkingMemory(workingMemory: WorkingMemory) {
+  const MAX_MEMORY_ITEMS = 50; // Keep last 50 items of each type
+  const MAX_UNPROCESSED_ITEMS = 20; // Keep last 20 unprocessed items
+
+  // Keep all unprocessed items plus some history
+  workingMemory.results = [
+    ...workingMemory.results
+      .filter((r) => !r.processed)
+      .slice(-MAX_UNPROCESSED_ITEMS),
+    ...workingMemory.results
+      .filter((r) => r.processed)
+      .slice(-MAX_MEMORY_ITEMS),
+  ];
+
+  workingMemory.outputs = [
+    ...workingMemory.outputs
+      .filter((o) => !o.processed)
+      .slice(-MAX_UNPROCESSED_ITEMS),
+    ...workingMemory.outputs
+      .filter((o) => o.processed)
+      .slice(-MAX_MEMORY_ITEMS),
+  ];
+
+  // Keep recent history for context
+  workingMemory.thoughts = workingMemory.thoughts.slice(-MAX_MEMORY_ITEMS);
+  workingMemory.calls = workingMemory.calls.slice(-MAX_MEMORY_ITEMS);
+
+  // Also trim inputs once they're all processed
+  if (workingMemory.inputs.every((i) => i.processed)) {
+    workingMemory.inputs = workingMemory.inputs.slice(-MAX_MEMORY_ITEMS);
+  }
 }
