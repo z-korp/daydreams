@@ -94,15 +94,12 @@ export async function createEpisodeFromWorkingMemory(
   results: ActionResult[],
   agent: AnyAgent
 ): Promise<Episode> {
-
   const episodicMemory = await generateEpisodicMemory(
     agent,
     thoughts,
     actions,
     results
   );
-
-  console.log(episodicMemory);
 
   return {
     id: randomUUIDv7(),
