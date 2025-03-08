@@ -777,10 +777,8 @@ export interface Episode {
   id: string;
   timestamp: number;
   observation: string; // Context and setup
-  thoughts: string[]; // Internal reasoning process
-  actions: ActionCall[]; // What actions were taken
-  outputs: OutputRef[]; // What outputs were generated
   result: string; // Outcomes of actions
+  thoughts: string;
   metadata?: {
     success?: boolean;
     tags?: string[];

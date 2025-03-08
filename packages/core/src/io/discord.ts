@@ -97,13 +97,11 @@ export class DiscordClient {
         return;
       }
 
-    
-
       onData({
         userId: message.author?.displayName,
         platformId: "discord",
         threadId: message.channel.id,
-        isDM: message.channel.type === ChannelType.DM ,
+        isDM: message.channel.type === ChannelType.DM,
         contentId: message.id,
         data: {
           content: message.content,
@@ -133,8 +131,13 @@ export class DiscordClient {
     this.logger.info("DiscordClient", "Client destroyed");
   }
 
-  private getIsValidTextChannel(channel?: Channel): channel is TextChannel | DMChannel {
-    return channel?.type === ChannelType.GuildText || channel?.type === ChannelType.DM;
+  private getIsValidTextChannel(
+    channel?: Channel
+  ): channel is TextChannel | DMChannel {
+    return (
+      channel?.type === ChannelType.GuildText ||
+      channel?.type === ChannelType.DM
+    );
   }
 
   async sendMessage(data: MessageData): Promise<{
