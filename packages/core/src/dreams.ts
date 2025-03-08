@@ -456,9 +456,7 @@ export function createDreams<
             (i) => i.processed === false
           );
 
-          const pendingOutputs = workingMemory.outputs.filter(
-            (o) => o.processed === false
-          );
+          await saveContextWorkingMemory(agent, ctxState.id, workingMemory);
 
           if (pendingResults.length === 0) break;
         } catch (error) {
@@ -472,8 +470,6 @@ export function createDreams<
       workingMemory.inputs.forEach((i) => {
         i.processed = true;
       });
-
-      // await saveContextWorkingMemory(agent, ctxState.id, workingMemory);
 
       logger.debug("agent:run", "Removing context from running set", {
         id: ctxState.id,
@@ -656,20 +652,6 @@ async function saveContextWorkingMemory(
   );
 }
 
-const actionParseErrorPrompt = createPrompt(
-  `
-You are tasked with fixing an action call arguments parsing error!
-Here is the current context:
-{{context}}
-Here is the error:
-{{error}}
-`,
-  ({ context, error }: { context: string; error: string }) => ({
-    context,
-    error,
-  })
-);
-
 class ActionNotFoundError extends Error {
   constructor(public call: ActionCall) {
     super();
@@ -681,25 +663,6 @@ class ParsingError extends Error {
     super();
   }
 }
-
-// function handleActionCallParsingError() {
-//   const contexts: ContextState<AnyContext>[] = [agentCtxState, ctxState].filter(
-//     (t) => !!t
-//   );
-
-//   const response = await generateObject({
-//     model: agent.model,
-//     schema: action.schema,
-//     prompt: actionParseErrorPrompt({
-//       context: formatContexts(ctxState.id, contexts, workingMemory),
-//       error: JSON.stringify(error),
-//     }),
-//   });
-
-//   if (response.object) {
-//     data = response.object;
-//   }
-// }
 
 async function prepareActionCall({
   call,
