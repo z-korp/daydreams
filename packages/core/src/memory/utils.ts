@@ -1,21 +1,27 @@
 import { generateObject } from "ai";
 import { openai } from "@ai-sdk/openai";
-import type { AnyAgent, Episode, WorkingMemory, Log } from "../types";
+import type {
+  AnyAgent,
+  Episode,
+  WorkingMemory,
+  Log,
+  ActionResult,
+  Action,
+  Thought,
+} from "../types";
 import { z } from "zod";
 import { v7 as randomUUIDv7 } from "uuid";
 
 export const generateEpisodicMemory = async (
   agent: AnyAgent,
-  conversation: string[]
+  thoughts: Thought[],
+  actions: Action[],
+  results: ActionResult[]
 ): Promise<{
   observation: string;
   thoughts: string;
   result: string;
 }> => {
-  if (!conversation.length) {
-    throw new Error("Cannot generate episodic memory from empty conversation");
-  }
-
   const extractEpisode = await generateObject({
     model: agent.memory.vectorModel || openai("gpt-4-turbo"),
     schema: z.object({
@@ -32,14 +38,47 @@ export const generateEpisodicMemory = async (
         ),
     }),
     prompt: `
-    You are a helpful assistant that extracts the episode from the conversation.
+    You are creating an episodic memory for an AI agent to help it recall and learn from past experiences.
     
-    The conversation is a list of messages between a user and an assistant.
+    Your task is to analyze the agent's thoughts, actions, and the results of those actions to create a structured memory that can be used for future reference and learning.
 
-    Extract the key elements from this conversation:
-    ${conversation.join("\n")}
+    ## Context
+    <thoughts>
+    ${JSON.stringify(thoughts)}
+    </thoughts>
+
+    ## Actions Taken
+    <actions>
+    ${JSON.stringify(actions)}
+    </actions>
+
+    ## Results & Outcomes
+    <results>
+    ${JSON.stringify(results)}
+    </results>
     
-    Provide a concise summary of what happened, the agent's thought process, actions taken, and the final outcome.`,
+    ## Instructions
+    Create a comprehensive episodic memory with these components:
+    
+    1. OBSERVATION: Provide a clear, concise description of the situation, context, and key elements. Include:
+       - What was the environment or scenario?
+       - What was the agent trying to accomplish?
+       - What were the initial conditions or constraints?
+    
+    2. THOUGHTS: Capture the agent's internal reasoning process that led to its actions:
+       - What was the agent's understanding of the situation?
+       - What strategies or approaches did it consider?
+       - What key insights or realizations occurred during the process?
+       - Use first-person perspective ("I realized...", "I considered...")
+    
+    3. RESULT: Summarize the outcomes and provide a retrospective analysis:
+       - What was accomplished or not accomplished?
+       - What worked well and what didn't?
+       - What lessons can be learned for future similar situations?
+       - What would be done differently next time?
+       - Use first-person perspective ("I succeeded in...", "Next time I would...")
+    
+    Make the memory detailed enough to be useful for future recall, but concise enough to be quickly processed. Focus on capturing the essence of the experience, key decision points, and lessons learned.`,
   });
 
   return {
@@ -50,95 +89,26 @@ export const generateEpisodicMemory = async (
 };
 
 export async function createEpisodeFromWorkingMemory(
-  memory: WorkingMemory,
+  thoughts: Thought[],
+  actions: Action[],
+  results: ActionResult[],
   agent: AnyAgent
 ): Promise<Episode> {
-  // Convert working memory into conversation format for LLM
-  const conversation = formatConversation(memory);
 
-  // Generate episodic memory using LLM
-  const episodicMemory = await generateEpisodicMemory(agent, conversation);
+  const episodicMemory = await generateEpisodicMemory(
+    agent,
+    thoughts,
+    actions,
+    results
+  );
 
-  // Extract success status from results
-  const isSuccessful =
-    memory.results.length > 0
-      ? memory.results.every((r) => !r.processed)
-      : false;
+  console.log(episodicMemory);
 
   return {
     id: randomUUIDv7(),
     timestamp: Date.now(),
     observation: episodicMemory.observation,
-    thoughts: episodicMemory.thoughts
-      .split("\n")
-      .filter((thought) => thought.trim()), // Split into array and remove empty lines
-    actions: memory.calls,
-    outputs: memory.outputs,
     result: episodicMemory.result,
-    metadata: {
-      success: isSuccessful,
-      tags: extractTags(memory),
-    },
+    thoughts: episodicMemory.thoughts,
   };
-}
-
-function formatConversation(memory: WorkingMemory): string[] {
-  const conversation: string[] = [];
-
-  // Sort all logs by timestamp
-  const logs: Log[] = [
-    ...memory.inputs,
-    ...memory.outputs,
-    ...memory.thoughts,
-    ...memory.calls,
-    ...memory.results,
-  ].sort((a, b) => a.timestamp - b.timestamp);
-
-  // Convert each log into conversation format
-  for (const log of logs) {
-    switch (log.ref) {
-      case "input":
-        conversation.push(`User: ${log.formatted || JSON.stringify(log.data)}`);
-        break;
-      case "output":
-        conversation.push(
-          `Assistant: ${log.formatted || JSON.stringify(log.data)}`
-        );
-        break;
-      case "thought":
-        conversation.push(`Assistant thought: ${log.content}`);
-        break;
-      case "action_call":
-        conversation.push(`Assistant action: ${log.name}(${log.content})`);
-        break;
-      case "action_result":
-        conversation.push(
-          `Action result: ${log.formatted || JSON.stringify(log.data)}`
-        );
-        break;
-    }
-  }
-
-  return conversation;
-}
-
-function extractTags(memory: WorkingMemory): string[] {
-  const tags = new Set<string>();
-
-  // Extract tags from inputs
-  memory.inputs.forEach((input) => {
-    tags.add(input.type);
-  });
-
-  // Extract tags from outputs
-  memory.outputs.forEach((output) => {
-    tags.add(output.type);
-  });
-
-  // Extract tags from actions
-  memory.calls.forEach((call) => {
-    tags.add(call.name);
-  });
-
-  return Array.from(tags);
 }

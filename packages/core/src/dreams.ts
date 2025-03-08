@@ -1,5 +1,6 @@
 import {
   LogLevel,
+  type Action,
   type ActionCall,
   type ActionResult,
   type Agent,
@@ -15,6 +16,7 @@ import {
   type Output,
   type OutputRef,
   type Subscription,
+  type Thought,
   type WorkingMemory,
 } from "./types";
 import { Logger } from "./logger";
@@ -381,7 +383,7 @@ export function createDreams<
       });
 
       let step = 1;
-      const maxSteps = 5;
+      const maxSteps = 100;
 
       while (maxSteps > step) {
         logger.info("agent:run", `Starting step ${step}/${maxSteps}`, {
@@ -418,6 +420,9 @@ export function createDreams<
 
           actionCalls.length = 0;
 
+          // Trim working memory after processing each step
+          trimWorkingMemory(workingMemory);
+
           logger.debug("agent:run", "Saving context state", {
             id: ctxState.id,
           });
@@ -437,9 +442,8 @@ export function createDreams<
 
           logger.debug("agent:run", "Saving working memory", {
             id: ctxState.id,
+            workingMemory,
           });
-
-          await saveContextWorkingMemory(agent, ctxState.id, workingMemory);
 
           step++;
 
@@ -469,7 +473,7 @@ export function createDreams<
         i.processed = true;
       });
 
-      await saveContextWorkingMemory(agent, ctxState.id, workingMemory);
+      // await saveContextWorkingMemory(agent, ctxState.id, workingMemory);
 
       logger.debug("agent:run", "Removing context from running set", {
         id: ctxState.id,
@@ -646,23 +650,6 @@ async function saveContextWorkingMemory(
   contextId: string,
   workingMemory: WorkingMemory
 ) {
-  if (
-    agent.memory.vectorModel &&
-    workingMemory.inputs.some((i) => i.processed) &&
-    workingMemory.outputs.length > 0
-  ) {
-    const episode = await createEpisodeFromWorkingMemory(workingMemory, agent);
-
-    await agent.memory.vector.upsert(`${contextId}`, [
-      {
-        id: episode.id,
-        text: episode.observation,
-        metadata: episode,
-      },
-    ]);
-  }
-
-  // Store working memory as before
   return await agent.memory.store.set(
     [contextId, "working-memory"].join(":"),
     workingMemory
@@ -916,6 +903,41 @@ async function handleOutput({
 
 type PartialLog = Partial<Log> & Pick<Log, "ref" | "id" | "timestamp">;
 
+async function generateEpisode(
+  thought: Thought,
+  actionCall: ActionCall,
+  result: ActionResult,
+  agent: AnyAgent,
+  contextId: string,
+  actions: AnyAction[]
+) {
+  // Find the corresponding Action for the ActionCall
+  const action = actions.find((a) => a.name === actionCall.name);
+
+  if (!action) {
+    return;
+  }
+
+  const thoughts = [thought];
+  const actionsArray = [action];
+  const results = [result];
+
+  const episode = await createEpisodeFromWorkingMemory(
+    thoughts,
+    actionsArray,
+    results,
+    agent
+  );
+
+  await agent.memory.vector.upsert(`${contextId}`, [
+    {
+      id: episode.id,
+      text: episode.observation,
+      metadata: episode,
+    },
+  ]);
+}
+
 function createContextStreamHandler({
   agent,
   chain,
@@ -971,16 +993,37 @@ function createContextStreamHandler({
       handlers?.onThinking?.(log);
     }
 
-    if (log.ref === "output" && done) {
-      workingMemory.outputs.push(log);
-    }
-
     if (log.ref === "action_call" && done) {
       workingMemory.calls.push(log);
     }
 
     if (log.ref === "action_result" && done) {
       workingMemory.results.push(log);
+
+      // Find the most recent thought and action call
+      const lastThought =
+        workingMemory.thoughts[workingMemory.thoughts.length - 1];
+      const lastActionCall =
+        workingMemory.calls[workingMemory.calls.length - 1];
+
+      // If we have a complete thought-action-result cycle, generate an episode
+      if (lastThought && lastActionCall) {
+        // Generate episode with the last thought, action call, and result
+        generateEpisode(
+          lastThought,
+          lastActionCall,
+          log,
+          agent,
+          ctxState.id,
+          actions
+        ).catch((error) => {
+          logger.error(
+            "agent:generateEpisode",
+            "Failed to generate episode",
+            error
+          );
+        });
+      }
     }
 
     handlers?.onLogStream?.(log, done);
@@ -1136,4 +1179,37 @@ function createContextStreamHandler({
     state,
     handler,
   };
+}
+
+function trimWorkingMemory(workingMemory: WorkingMemory) {
+  const MAX_MEMORY_ITEMS = 50; // Keep last 50 items of each type
+  const MAX_UNPROCESSED_ITEMS = 20; // Keep last 20 unprocessed items
+
+  // Keep all unprocessed items plus some history
+  workingMemory.results = [
+    ...workingMemory.results
+      .filter((r) => !r.processed)
+      .slice(-MAX_UNPROCESSED_ITEMS),
+    ...workingMemory.results
+      .filter((r) => r.processed)
+      .slice(-MAX_MEMORY_ITEMS),
+  ];
+
+  workingMemory.outputs = [
+    ...workingMemory.outputs
+      .filter((o) => !o.processed)
+      .slice(-MAX_UNPROCESSED_ITEMS),
+    ...workingMemory.outputs
+      .filter((o) => o.processed)
+      .slice(-MAX_MEMORY_ITEMS),
+  ];
+
+  // Keep recent history for context
+  workingMemory.thoughts = workingMemory.thoughts.slice(-MAX_MEMORY_ITEMS);
+  workingMemory.calls = workingMemory.calls.slice(-MAX_MEMORY_ITEMS);
+
+  // Also trim inputs once they're all processed
+  if (workingMemory.inputs.every((i) => i.processed)) {
+    workingMemory.inputs = workingMemory.inputs.slice(-MAX_MEMORY_ITEMS);
+  }
 }
