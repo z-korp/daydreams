@@ -1,3 +1,4 @@
-export { StarknetChain } from "./starknet";
-export { SolanaChain } from "./solana";
-export { EvmChain } from "./evm";
+export * from "./starknet";
+export * from "./solana";
+export * from "./evm";
+export * from "./sui";
