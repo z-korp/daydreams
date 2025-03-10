@@ -27,6 +27,4 @@ jobs:
         run: bun install
 
       - name: Build core
-        run: bun run build:core
-      - name: Build create-agent
-        run: bun run build:create-agent
+        run: bun run build:packages
