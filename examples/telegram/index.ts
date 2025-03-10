@@ -3,11 +3,10 @@ import {
   createDreams,
   LogLevel,
   searchWebAction,
-  getWeatherAction,
   validateEnv,
 } from "@daydreamsai/core";
-import { telegram } from "@daydreamsai/core/extensions";
-import { deepResearch } from "./deep-research/research";
+import { telegram } from "@daydreamsai/telegram";
+import { deepResearch } from "../deep-research/research";
 import { z } from "zod";
 
 const env = validateEnv(
@@ -28,5 +27,5 @@ createDreams({
   logger: LogLevel.DEBUG,
   model: groq("deepseek-r1-distill-llama-70b"),
   extensions: [telegram, deepResearch],
-  actions: [searchWebAction, getWeatherAction],
+  actions: [searchWebAction],
 }).start();

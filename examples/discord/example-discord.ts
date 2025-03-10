@@ -1,11 +1,17 @@
-import { createContainer, createDreams, createMemoryStore, LogLevel, validateEnv } from "@daydreamsai/core";
-import { createChromaVectorStore, discord } from "@daydreamsai/core/extensions";
-import { deepResearch } from "./deep-research/research";
+import {
+  createContainer,
+  createDreams,
+  createMemoryStore,
+  LogLevel,
+  validateEnv,
+} from "@daydreamsai/core";
+import { createChromaVectorStore } from "@daydreamsai/core/extensions";
+import { deepResearch } from "../deep-research/research";
 import { z } from "zod";
 import { tavily } from "@tavily/core";
 import { anthropic } from "@ai-sdk/anthropic";
 import { openai } from "@ai-sdk/openai";
-
+import { discord } from "@daydreamsai/discord";
 // Validate environment before proceeding
 const env = validateEnv(
   z.object({
