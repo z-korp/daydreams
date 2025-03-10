@@ -1,5 +1,5 @@
 {
-  "name": "chains",
+  "name": "games",
   "module": "index.ts",
   "type": "module",
   "private": true,

@@ -38,9 +38,6 @@
     "test": "vitest",
     "build": "tsup --dts-resolve"
   },
-  "peerDependencies": {
-    "typescript": "^5.6.3"
-  },
   "dependencies": {
     "@ai-sdk/openai": "^1.1.14",
     "@langchain/core": "^0.3.39",
@@ -48,17 +45,11 @@
     "@modelcontextprotocol/sdk": "^1.6.1",
     "ai": "^4.1.46",
     "@tavily/core": "^0.3.1",
-    "bignumber.js": "9.1.2",
-    "bs58": "^6.0.0",
     "chromadb-default-embed": "^2.13.2",
-    "cohere-ai": "^7.15.4",
     "dotenv": "^16.4.7",
-    "ethers": "^6.13.5",
     "js-tiktoken": "^1.0.18",
-    "mongodb": "^6.13.0",
     "openai": "^4.83.0",
     "p-defer": "^4.0.1",
-    "starknet": "^6.23.1",
     "uuid": "^11.1.0",
     "zod": "^3.24.2",
     "zod-to-json-schema": "^3.24.1"

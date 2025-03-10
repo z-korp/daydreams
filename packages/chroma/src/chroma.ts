@@ -8,7 +8,7 @@ import {
   type IEmbeddingFunction,
 } from "chromadb";
 import { DefaultEmbeddingFunction } from "chromadb";
-import type { InferContextMemory, VectorStore } from "../../types";
+import type { InferContextMemory, VectorStore } from "@daydreamsai/core";
 
 /**
  * Implementation of VectorStore using ChromaDB as the backend
