@@ -2,7 +2,6 @@
  * Basic example demonstrating a simple chat interface using Dreams
  * with a command line interface and Groq's LLM.
  */
-import { createGroq } from "@ai-sdk/groq";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import {
   createDreams,

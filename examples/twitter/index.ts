@@ -1,5 +1,5 @@
 import { createGroq } from "@ai-sdk/groq";
-import { twitter } from "@daydreamsai/core/extensions";
+import { twitter } from "@daydreamsai/twitter";
 import { createDreams, LogLevel, memory, validateEnv } from "@daydreamsai/core";
 import { z } from "zod";
 

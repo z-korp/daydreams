@@ -25,10 +25,10 @@ import {
   validateEnv,
 } from "@daydreamsai/core";
 import { cli } from "@daydreamsai/core/extensions";
-import { deepResearch } from "./deep-research/research";
+import { deepResearch } from "../deep-research/research";
 import { string, z } from "zod";
 import { tavily } from "@tavily/core";
-import { ETERNUM_CONTEXT } from "../v0/eternum-context";
+import { ETERNUM_CONTEXT } from "./eternum";
 import { anthropic } from "@ai-sdk/anthropic";
 
 validateEnv(
