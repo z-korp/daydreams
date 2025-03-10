@@ -506,6 +506,9 @@ importers:
       p-defer:
         specifier: ^4.0.1
         version: 4.0.1
+      typescript:
+        specifier: ^5.8.2
+        version: 5.8.2
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
