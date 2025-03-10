@@ -25,10 +25,20 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}Building packages...${NC}"
 
-# Get all package directories
-PACKAGES=$(find packages -maxdepth 1 -mindepth 1 -type d | sort)
+# Build core package first
+echo -e "${GREEN}Building core package first...${NC}"
+if [ "$WATCH_MODE" = true ]; then
+  # Run build in watch mode
+  (cd "packages/core" && pnpm run build --watch) &
+else
+  # Run build normally
+  (cd "packages/core" && pnpm run build)
+fi
 
-# Build each package
+# Get all package directories except core
+PACKAGES=$(find packages -maxdepth 1 -mindepth 1 -type d -not -name "core" | sort)
+
+# Build each remaining package
 for package in $PACKAGES; do
   package_name=$(basename "$package")
   echo -e "${GREEN}Building $package_name...${NC}"
