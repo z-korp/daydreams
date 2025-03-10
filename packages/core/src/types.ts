@@ -483,6 +483,22 @@ export interface Agent<
   >[];
 
   /**
+   * Whether to export training data for episodes
+   */
+  exportTrainingData?: boolean;
+
+  /**
+   * Path to save training data
+   */
+  trainingDataPath?: string;
+
+  /**
+   * Exports all episodes as training data
+   * @param filePath Optional path to save the training data
+   */
+  exportAllTrainingData?: (filePath?: string) => Promise<void>;
+
+  /**
    * Emits an event with the provided arguments.
    * @param args - Arguments to pass to the event handler.
    */
@@ -584,6 +600,10 @@ export type Config<
   logger?: LogLevel;
   services?: ServiceProvider[];
   extensions?: Extension<TContext>[];
+  /** Whether to export training data for episodes */
+  exportTrainingData?: boolean;
+  /** Path to save training data */
+  trainingDataPath?: string;
 };
 
 /** Configuration type for inputs without type field */

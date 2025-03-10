@@ -32,7 +32,11 @@ import { createMemory } from "./memory";
 import { createVectorStore } from "./memory/base";
 import { v7 as randomUUIDv7 } from "uuid";
 import { runAction, runGenerate, runGenerateResults } from "./tasks";
-import { createEpisodeFromWorkingMemory } from "./memory/utils";
+import {
+  createEpisodeFromWorkingMemory,
+  exportEpisodesAsTrainingData,
+} from "./memory/utils";
+import type { Episode } from "./types";
 
 export function createDreams<
   Memory = any,
@@ -59,6 +63,8 @@ export function createDreams<
     extensions = [],
     model,
     reasoningModel,
+    exportTrainingData,
+    trainingDataPath,
   } = config;
 
   const container = config.container ?? createContainer();
@@ -124,6 +130,8 @@ export function createDreams<
     taskRunner,
     debugger: debug,
     context: config.context ?? undefined,
+    exportTrainingData,
+    trainingDataPath,
     emit: (event: string, data: any) => {
       logger.debug("agent:event", event, data);
     },
@@ -592,6 +600,49 @@ export function createDreams<
       const { id, memory } = ctx;
       logger.debug("agent:evaluator", "memory", memory);
     },
+
+    /**
+     * Exports all episodes as training data
+     * @param filePath Optional path to save the training data
+     */
+    async exportAllTrainingData(filePath?: string) {
+      logger.info(
+        "agent:exportTrainingData",
+        "Exporting episodes as training data"
+      );
+
+      // Get all contexts
+      const contexts = await agent.getContexts();
+
+      // Collect all episodes from all contexts
+      const allEpisodes: Episode[] = [];
+
+      for (const { id } of contexts) {
+        const episodes = await agent.memory.vector.query(id, "");
+        if (episodes.length > 0) {
+          allEpisodes.push(...episodes);
+        }
+      }
+
+      logger.info(
+        "agent:exportTrainingData",
+        `Found ${allEpisodes.length} episodes to export`
+      );
+
+      // Export episodes as training data
+      if (allEpisodes.length > 0) {
+        await exportEpisodesAsTrainingData(
+          allEpisodes,
+          filePath || agent.trainingDataPath || "./training-data.jsonl"
+        );
+        logger.info(
+          "agent:exportTrainingData",
+          "Episodes exported successfully"
+        );
+      } else {
+        logger.warn("agent:exportTrainingData", "No episodes found to export");
+      }
+    },
   };
 
   container.instance("agent", agent);
@@ -889,7 +940,11 @@ async function generateEpisode(
     thoughts,
     actionsArray,
     results,
-    agent
+    agent,
+    {
+      exportTrainingData: agent.exportTrainingData === true,
+      trainingDataPath: agent.trainingDataPath || "./training-data.jsonl",
+    }
   );
 
   await agent.memory.vector.upsert(`${contextId}`, [

@@ -3,14 +3,31 @@ import { openai } from "@ai-sdk/openai";
 import type {
   AnyAgent,
   Episode,
-  WorkingMemory,
-  Log,
   ActionResult,
   Action,
   Thought,
 } from "../types";
 import { z } from "zod";
 import { v7 as randomUUIDv7 } from "uuid";
+
+// Check if we're in a browser environment
+const isBrowser =
+  typeof window !== "undefined" && typeof window.document !== "undefined";
+
+// Conditionally import Node.js modules
+let fs: any;
+let path: any;
+
+if (!isBrowser) {
+  // Only import in Node.js environment
+  // Using dynamic import to avoid browser errors
+  try {
+    fs = require("fs");
+    path = require("path");
+  } catch (e) {
+    console.warn("File system modules not available in this environment");
+  }
+}
 
 export const generateEpisodicMemory = async (
   agent: AnyAgent,
@@ -88,11 +105,92 @@ export const generateEpisodicMemory = async (
   };
 };
 
+/**
+ * Creates a training data pair from episodic memory
+ * @param episodicMemory The episodic memory generated
+ * @returns A prompt-completion pair for training data
+ */
+export function createTrainingDataPair(episodicMemory: {
+  observation: string;
+  thoughts: string;
+  result: string;
+}): {
+  prompt: string;
+  completion: string;
+} {
+  // Create a simple prompt with the observation
+  const prompt = episodicMemory.observation;
+
+  // Create a simple completion with thoughts and result
+  const completion = `${episodicMemory.thoughts}\n\n${episodicMemory.result}`;
+
+  return {
+    prompt,
+    completion,
+  };
+}
+
+/**
+ * Saves training data to a JSON lines file
+ * @param trainingData Array of prompt-completion pairs
+ * @param filePath Path to save the file
+ */
+export async function saveTrainingData(
+  trainingData: Array<{ prompt: string; completion: string }>,
+  filePath: string
+): Promise<void> {
+  // Skip in browser environment
+  if (isBrowser) {
+    console.warn("saveTrainingData is not supported in browser environments");
+    return;
+  }
+
+  try {
+    // Ensure fs is available
+    if (!fs) {
+      console.warn("File system module not available");
+      return;
+    }
+
+    // Ensure directory exists
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    // Convert each object to a JSON string and join with newlines
+    const jsonLines = trainingData
+      .map((item) => JSON.stringify(item))
+      .join("\n");
+
+    // Write to file
+    fs.writeFileSync(filePath, jsonLines, "utf8");
+  } catch (error) {
+    console.error("Error saving training data:", error);
+    throw error;
+  }
+}
+
+/**
+ * Creates an episode from working memory components
+ * @param thoughts The thoughts that led to the actions
+ * @param actions The actions taken
+ * @param results The results of the actions
+ * @param agent The agent that generated the episode
+ * @param options Optional configuration for exporting training data
+ * @param options.exportTrainingData Whether to export this episode as training data
+ * @param options.trainingDataPath Path to save the training data
+ * @returns A new Episode object
+ */
 export async function createEpisodeFromWorkingMemory(
   thoughts: Thought[],
   actions: Action[],
   results: ActionResult[],
-  agent: AnyAgent
+  agent: AnyAgent,
+  options?: {
+    exportTrainingData?: boolean;
+    trainingDataPath?: string;
+  }
 ): Promise<Episode> {
   const episodicMemory = await generateEpisodicMemory(
     agent,
@@ -101,6 +199,30 @@ export async function createEpisodeFromWorkingMemory(
     results
   );
 
+  // If exportTrainingData is true and not in browser, create and save training data
+  if (options?.exportTrainingData && !isBrowser && fs) {
+    const trainingDataPair = createTrainingDataPair(episodicMemory);
+
+    // Default path if not provided
+    const filePath = options.trainingDataPath || "./training-data.jsonl";
+
+    // Check if file exists to append or create new
+    let existingData: Array<{ prompt: string; completion: string }> = [];
+    if (fs.existsSync(filePath)) {
+      const fileContent = fs.readFileSync(filePath, "utf8");
+      existingData = fileContent
+        .split("\n")
+        .filter((line: string) => line.trim() !== "")
+        .map((line: string) => JSON.parse(line));
+    }
+
+    // Add new training data pair
+    existingData.push(trainingDataPair);
+
+    // Save updated training data
+    await saveTrainingData(existingData, filePath);
+  }
+
   return {
     id: randomUUIDv7(),
     timestamp: Date.now(),
@@ -108,4 +230,35 @@ export async function createEpisodeFromWorkingMemory(
     result: episodicMemory.result,
     thoughts: episodicMemory.thoughts,
   };
+}
+
+/**
+ * Exports all episodes as training data
+ * @param episodes Array of episodes to export
+ * @param filePath Path to save the training data
+ */
+export async function exportEpisodesAsTrainingData(
+  episodes: Episode[],
+  filePath: string = "./training-data.jsonl"
+): Promise<void> {
+  // Skip in browser environment
+  if (isBrowser) {
+    console.warn(
+      "exportEpisodesAsTrainingData is not supported in browser environments"
+    );
+    return;
+  }
+
+  // Ensure fs is available
+  if (!fs) {
+    console.warn("File system module not available");
+    return;
+  }
+
+  const trainingData = episodes.map((episode) => ({
+    prompt: episode.observation,
+    completion: `${episode.thoughts}\n\n${episode.result}`,
+  }));
+
+  await saveTrainingData(trainingData, filePath);
 }

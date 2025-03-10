@@ -250,14 +250,14 @@ const goalContexts = context({
   },
 });
 
-
-
 // Create the Gigaverse agent with UI integration
 const agent = createDreams({
   logger: LogLevel.INFO,
   model: anthropic("claude-3-7-sonnet-latest"),
   extensions: [cli],
   context: goalContexts,
+  exportTrainingData: true,
+  trainingDataPath: "./training-data.jsonl",
   actions: [
     /**
      * Action to attack in the rock-paper-scissors game
@@ -343,7 +343,7 @@ const agent = createDreams({
           let enemyMove = "unknown";
           let battleResult = "draw";
 
-            // Update the state with player and enemy data
+          // Update the state with player and enemy data
           const state = ctx.agentMemory as GigaverseState;
 
           // Extract data from the response structure
@@ -368,51 +368,53 @@ const agent = createDreams({
               battleResult = "draw";
             }
 
-
-            
             // Update player stats
             state.currentHP = playerData.health.current.toString();
             state.playerHealth = playerData.health.current.toString();
             state.playerMaxHealth = playerData.health.currentMax.toString();
             state.playerShield = playerData.shield.current.toString();
             state.playerMaxShield = playerData.shield.currentMax.toString();
-            
+
             // Update rock/paper/scissor stats
             state.rockAttack = playerData.rock.currentATK.toString();
             state.rockDefense = playerData.rock.currentDEF.toString();
             state.rockCharges = playerData.rock.currentCharges.toString();
-            
+
             state.paperAttack = playerData.paper.currentATK.toString();
             state.paperDefense = playerData.paper.currentDEF.toString();
             state.paperCharges = playerData.paper.currentCharges.toString();
-            
+
             state.scissorAttack = playerData.scissor.currentATK.toString();
             state.scissorDefense = playerData.scissor.currentDEF.toString();
             state.scissorCharges = playerData.scissor.currentCharges.toString();
-            
+
             // Update enemy stats
             state.enemyHealth = enemyData.health.current.toString();
             state.enemyMaxHealth = enemyData.health.currentMax.toString();
             state.enemyShield = enemyData.shield.current.toString();
             state.enemyMaxShield = enemyData.shield.currentMax.toString();
-            
+
             // Update battle result and enemy move
             state.lastBattleResult = battleResult;
             state.lastEnemyMove = enemyMove;
-            
+
             // Update loot phase status
             state.lootPhase = (result.data.run.lootPhase || false).toString();
-            
+
             // Update loot options if available
-            if (result.data.run.lootOptions && result.data.run.lootOptions.length > 0) {
+            if (
+              result.data.run.lootOptions &&
+              result.data.run.lootOptions.length > 0
+            ) {
               state.lootOptions = result.data.run.lootOptions;
               state.currentLoot = result.data.run.lootOptions.length.toString();
             }
-            
+
             // Update room information
             if (result.data.entity) {
               state.currentRoom = result.data.entity.ROOM_NUM_CID.toString();
-              state.currentDungeon = result.data.entity.DUNGEON_ID_CID.toString();
+              state.currentDungeon =
+                result.data.entity.DUNGEON_ID_CID.toString();
               state.currentEnemy = result.data.entity.ENEMY_CID.toString();
             }
           }
@@ -471,7 +473,6 @@ const agent = createDreams({
             success: false,
             error: errorMessage,
             message: "Failed to perform attack action",
-          
           };
         }
       },
@@ -581,48 +582,57 @@ const agent = createDreams({
           if (result.gameState) {
             simpleUI.printGameState(result.gameState);
           }
-          
+
           // Update the state with player data
-          if (result.data && result.data.run && result.data.run.players && result.data.run.players.length > 0) {
+          if (
+            result.data &&
+            result.data.run &&
+            result.data.run.players &&
+            result.data.run.players.length > 0
+          ) {
             const state = ctx.agentMemory as GigaverseState;
             const playerData = result.data.run.players[0]; // First player is the user
-            
+
             // Update player stats
             state.currentHP = playerData.health.current.toString();
             state.playerHealth = playerData.health.current.toString();
             state.playerMaxHealth = playerData.health.currentMax.toString();
             state.playerShield = playerData.shield.current.toString();
             state.playerMaxShield = playerData.shield.currentMax.toString();
-            
+
             // Update rock/paper/scissor stats
             state.rockAttack = playerData.rock.currentATK.toString();
             state.rockDefense = playerData.rock.currentDEF.toString();
             state.rockCharges = playerData.rock.currentCharges.toString();
-            
+
             state.paperAttack = playerData.paper.currentATK.toString();
             state.paperDefense = playerData.paper.currentDEF.toString();
             state.paperCharges = playerData.paper.currentCharges.toString();
-            
+
             state.scissorAttack = playerData.scissor.currentATK.toString();
             state.scissorDefense = playerData.scissor.currentDEF.toString();
             state.scissorCharges = playerData.scissor.currentCharges.toString();
-            
+
             // Update loot phase status
             state.lootPhase = (result.data.run.lootPhase || false).toString();
-            
+
             // Update loot options if available
-            if (result.data.run.lootOptions && result.data.run.lootOptions.length > 0) {
+            if (
+              result.data.run.lootOptions &&
+              result.data.run.lootOptions.length > 0
+            ) {
               state.lootOptions = result.data.run.lootOptions;
               state.currentLoot = result.data.run.lootOptions.length.toString();
             }
-            
+
             // Update room information if available
             if (result.data.entity) {
               state.currentRoom = result.data.entity.ROOM_NUM_CID.toString();
-              state.currentDungeon = result.data.entity.DUNGEON_ID_CID.toString();
+              state.currentDungeon =
+                result.data.entity.DUNGEON_ID_CID.toString();
               state.currentEnemy = result.data.entity.ENEMY_CID.toString();
             }
-            
+
             // Update enemy stats if available
             if (result.data.run.players.length > 1) {
               const enemyData = result.data.run.players[1]; // Second player is the enemy
@@ -630,13 +640,16 @@ const agent = createDreams({
               state.enemyMaxHealth = enemyData.health.currentMax.toString();
               state.enemyShield = enemyData.shield.current.toString();
               state.enemyMaxShield = enemyData.shield.currentMax.toString();
-              
+
               // Update battle result and enemy move if available
               if (enemyData.lastMove) {
                 state.lastEnemyMove = enemyData.lastMove;
-                
+
                 // Determine battle result if not already set
-                if (!state.lastBattleResult && playerData.thisPlayerWin !== undefined) {
+                if (
+                  !state.lastBattleResult &&
+                  playerData.thisPlayerWin !== undefined
+                ) {
                   if (playerData.thisPlayerWin === true) {
                     state.lastBattleResult = "win";
                   } else if (enemyData.thisPlayerWin === true) {
@@ -647,8 +660,7 @@ const agent = createDreams({
                 }
               }
             }
-            
-            
+
             // Display the updated state to the user
             simpleUI.printDetailedGameState(state);
           }
@@ -721,10 +733,10 @@ const agent = createDreams({
             actionToken: "",
             dungeonId: dungeonId,
             data: {
-              "consumables": [],
-              "itemId": 0,
-              "index": 0
-            }
+              consumables: [],
+              itemId: 0,
+              index: 0,
+            },
           };
 
           const response = await fetch(
@@ -756,32 +768,37 @@ const agent = createDreams({
           if (result.playerState) {
             simpleUI.printPlayerStats(result.playerState);
           }
-          
+
           // Update the state with the new run data
-          if (result.data && result.data.run && result.data.run.players && result.data.run.players.length > 0) {
+          if (
+            result.data &&
+            result.data.run &&
+            result.data.run.players &&
+            result.data.run.players.length > 0
+          ) {
             const state = ctx.agentMemory as GigaverseState;
             const playerData = result.data.run.players[0]; // First player is the user
-            
+
             // Update player stats
             state.currentHP = playerData.health.current.toString();
             state.playerHealth = playerData.health.current.toString();
             state.playerMaxHealth = playerData.health.currentMax.toString();
             state.playerShield = playerData.shield.current.toString();
             state.playerMaxShield = playerData.shield.currentMax.toString();
-            
+
             // Update rock/paper/scissor stats
             state.rockAttack = playerData.rock.currentATK.toString();
             state.rockDefense = playerData.rock.currentDEF.toString();
             state.rockCharges = playerData.rock.currentCharges.toString();
-            
+
             state.paperAttack = playerData.paper.currentATK.toString();
             state.paperDefense = playerData.paper.currentDEF.toString();
             state.paperCharges = playerData.paper.currentCharges.toString();
-            
+
             state.scissorAttack = playerData.scissor.currentATK.toString();
             state.scissorDefense = playerData.scissor.currentDEF.toString();
             state.scissorCharges = playerData.scissor.currentCharges.toString();
-            
+
             // Update dungeon info
             state.currentDungeon = dungeonId.toString();
             state.currentRoom = "1"; // New runs start at room 1
@@ -789,16 +806,14 @@ const agent = createDreams({
             state.lootOptions = [];
             state.lastBattleResult = "";
             state.lastEnemyMove = "";
-            
+
             // Update enemy stats (reset them for new run)
             state.enemyHealth = "0";
             state.enemyMaxHealth = "0";
             state.enemyShield = "0";
             state.enemyMaxShield = "0";
             state.currentEnemy = "0";
-            
-           
-            
+
             // Display the updated state to the user
             simpleUI.printDetailedGameState(state);
           }

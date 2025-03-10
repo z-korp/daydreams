@@ -200,3 +200,10 @@ logs/app-*.log
 !.env.example
 
 screenshots/
+
+*.jsonl
+*.json
+*.jsonl.gz
+*.json.gz
+*.jsonl.tar
+*.json.tar
