@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { extension, input, output } from "../utils";
-import { formatMsg } from "../formatters";
-import { ChannelType, Events, type Message } from "discord.js";
-import { DiscordClient } from "../io/discord";
-import { context } from "../context";
-import { service } from "../serviceProvider";
-import { LogLevel } from "../types";
+import { extension, input, output } from "@daydreamsai/core";
+import { formatMsg } from "@daydreamsai/core";
+import { Events, type Message } from "discord.js";
+import { DiscordClient } from "./io";
+import { context } from "@daydreamsai/core";
+import { service } from "@daydreamsai/core";
+import { LogLevel } from "@daydreamsai/core";
 
 const discordService = service({
   register(container) {

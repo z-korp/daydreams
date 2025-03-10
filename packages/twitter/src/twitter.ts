@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { context } from "../context";
-import { service } from "../serviceProvider";
-import { TwitterClient } from "../io/twitter";
-import { extension, input, output } from "../utils";
-import { formatXml } from "../xml";
+import { context } from "@daydreamsai/core";
+import { service } from "@daydreamsai/core";
+import { TwitterClient } from "./io";
+import { extension, input, output } from "@daydreamsai/core";
+import { formatXml } from "@daydreamsai/core";
 
 // Define Twitter context
 const twitterContext = context({

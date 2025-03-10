@@ -1,7 +1,6 @@
 import { Scraper, SearchMode, type Tweet } from "agent-twitter-client";
-import type { JSONSchemaType } from "ajv";
-import { Logger } from "../logger";
-import { LogLevel } from "../types";
+import { Logger } from "@daydreamsai/core";
+import { LogLevel } from "@daydreamsai/core";
 import { z } from "zod";
 
 const envSchema = z.object({
@@ -24,18 +23,6 @@ export interface TweetData {
   inReplyTo?: string;
   conversationId?: string;
 }
-
-// Schema for tweet output validation
-export const tweetSchema: JSONSchemaType<TweetData> = {
-  type: "object",
-  properties: {
-    content: { type: "string" },
-    inReplyTo: { type: "string", nullable: true },
-    conversationId: { type: "string", nullable: true },
-  },
-  required: ["content"],
-  additionalProperties: false,
-};
 
 export class TwitterClient {
   private scraper: Scraper;
