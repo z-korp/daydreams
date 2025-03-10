@@ -1,5 +1,5 @@
 import { RpcProvider, Account, type Call, CallData } from "starknet";
-import type { IChain } from "../types";
+import type { IChain } from "@daydreamsai/core";
 
 /**
  * Configuration options for initializing a Starknet chain connection

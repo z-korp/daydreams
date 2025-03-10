@@ -1,6 +1,6 @@
 import { Hyperliquid } from "hyperliquid";
-import { Logger } from "../logger";
-import { LogLevel } from "../types";
+import { Logger } from "@daydreamsai/core";
+import { LogLevel } from "@daydreamsai/core";
 import { z } from "zod";
 
 const envSchema = z.object({
@@ -274,24 +274,3 @@ export class HyperliquidClient {
     }
   }
 }
-
-// Example usage:
-/*
-const hyperliquid = new HyperliquidClient(
-    {
-        mainAddress: env.HYPERLIQUID_MAIN_ADDRESS,
-        walletAddress: env.HYPERLIQUID_WALLET_ADDRESS,
-        privateKey: env.HYPERLIQUID_PRIVATE_KEY,
-    },
-    loglevel
-);
-
-await hyperliquid.placeLimitOrderGoodTilCancel("BTC", 0.1, 60000, true);
-await hyperliquid.getAccountBalancesAndPositions();
-await hyperliquid.placeLimitOrderInstantOrCancel("ETH", 1, 3000, false);
-await hyperliquid.getOpenOrders();
-await hyperliquid.placeMarketOrder("BTC", 0.1, true);
-await hyperliquid.marketSellPositions(["BTC", "ETH"]);
-await hyperliquid.placeMarketOrderUSD("ETH", 5000, true);
-await hyperliquid.cancelOrder("BTC", 1234);
-*/

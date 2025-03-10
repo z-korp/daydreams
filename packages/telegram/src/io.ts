@@ -1,10 +1,15 @@
 import { z } from "zod";
-import { context } from "../context";
-import { service } from "../serviceProvider";
+import { context } from "@daydreamsai/core";
+import { service } from "@daydreamsai/core";
 import { Telegraf } from "telegraf";
 import type { Chat } from "@telegraf/types";
-import { extension, input, output, splitTextIntoChunks } from "../utils";
-import { formatMsg } from "../formatters";
+import {
+  extension,
+  input,
+  output,
+  splitTextIntoChunks,
+} from "@daydreamsai/core";
+import { formatMsg } from "@daydreamsai/core";
 
 const telegramService = service({
   register(container) {
@@ -41,7 +46,7 @@ const telegramChat = context({
   },
 });
 
-export const telegram = extension({
+export const telegramExtension = extension({
   name: "telegram",
   services: [telegramService],
   contexts: {

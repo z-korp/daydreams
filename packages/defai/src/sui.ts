@@ -15,7 +15,7 @@ import {
 import { SUI_DECIMALS } from "@mysten/sui/utils";
 import { AggregatorClient, Env } from "@cetusprotocol/aggregator-sdk";
 import BN from "bignumber.js";
-import type { IChain } from "../types";
+import type { IChain } from "@daydreamsai/core";
 
 interface SwapResult {
   success: boolean;
