@@ -201,9 +201,4 @@ logs/app-*.log
 
 screenshots/
 
-*.jsonl
-*.json
-*.jsonl.gz
-*.json.gz
-*.jsonl.tar
-*.json.tar
+
