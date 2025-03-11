@@ -65,7 +65,7 @@ We use [ai-sdk](https://sdk.vercel.ai/docs/introduction) to support multiple
 LLMs. You will need to install the ai-sdk for the LLM you want to use.
 
 ```bash
-npm i @daydreamsai/core @ai-sdk/groq discord.js @tavily/core
+npm i @daydreamsai/core @ai-sdk/groq
 ```
 
 Dreams agents are all functional. `createDreams` is a function that returns an
