@@ -1,6 +1,6 @@
 {
   "name": "@daydreamsai/telegram",
-  "version": "0.2.11",
+  "version": "0.2.12",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -29,8 +29,8 @@
   },
   "dependencies": {
     "@daydreamsai/core": "workspace:*",
-    "telegraf": "^4.16.3",
     "@telegraf/types": "^8.3.1",
+    "telegraf": "^4.16.3",
     "zod": "^3.24.2"
   }
 }
