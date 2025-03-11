@@ -35,12 +35,19 @@ const parseAccount = (privateKey: string): Signer => {
   }
   return loadFromMnemonics(privateKey);
 };
-
 const loadFromSecretKey = (privateKey: string) => {
+  // Remove the "suiprivkey" prefix if present
+  const cleanedKey = privateKey.startsWith("suiprivkey")
+    ? privateKey.substring("suiprivkey".length)
+    : privateKey;
+
+  // Convert the string to Uint8Array as required by the keypair classes
+  const privateKeyBytes = new Uint8Array(Buffer.from(cleanedKey, "base64"));
+
   const keypairClasses = [Ed25519Keypair, Secp256k1Keypair, Secp256r1Keypair];
   for (const KeypairClass of keypairClasses) {
     try {
-      return KeypairClass.fromSecretKey(privateKey);
+      return KeypairClass.fromSecretKey(privateKeyBytes);
     } catch {}
   }
   throw new Error("Failed to initialize keypair from secret key");
