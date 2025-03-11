@@ -212,10 +212,12 @@ export class SuiChain implements IChain {
       const aggregatorURL = "https://api-sui.cetus.zone/router_v2/find_routes";
       const fromMeta = getTokenMetadata(fromToken);
       const toMeta = getTokenMetadata(targetToken);
+
+      // Cast the client to any to avoid type incompatibilities
       const client = new AggregatorClient(
         aggregatorURL,
         this.wallet.toSuiAddress(),
-        this.client,
+        this.client as any,
         Env.Mainnet
       );
       // provider list : https://api-sui.cetus.zone/router_v2/status
@@ -296,19 +298,22 @@ export class SuiChain implements IChain {
         coin = routerTx.splitCoins(allCoins.data[0].coinObjectId, [amount]);
       }
 
+      // Cast the transaction to any to avoid type incompatibilities
       const targetCoin = await client.routerSwap({
         routers: routerRes!.routes,
         byAmountIn: true,
-        txb: routerTx,
-        inputCoin: coin,
+        txb: routerTx as any,
+        inputCoin: coin as any,
         slippage: 0.5,
       });
 
       routerTx.transferObjects([targetCoin], this.wallet.toSuiAddress());
       routerTx.setSender(this.wallet.toSuiAddress());
+
+      // Cast the transaction and wallet to any to avoid type incompatibilities
       const result = await client.signAndExecuteTransaction(
-        routerTx,
-        this.wallet
+        routerTx as any,
+        this.wallet as any
       );
 
       await this.client.waitForTransaction({
