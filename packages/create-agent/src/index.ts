@@ -158,7 +158,6 @@ export async function main(
       "@tailwindcss/postcss": "^4.0.6",
       "@tavily/core": "^0.3.1",
       ai: "^4.1.25",
-      ajv: "^8.17.1",
       chalk: "^5.4.1",
       chromadb: "^1.5.5",
       cors: "^2.8.5",

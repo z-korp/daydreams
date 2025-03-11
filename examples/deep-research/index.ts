@@ -1,4 +1,3 @@
-import { createGroq } from "@ai-sdk/groq";
 import { createContainer, createDreams, LogLevel } from "@daydreamsai/core";
 import { cli } from "@daydreamsai/core/extensions";
 import { deepResearch } from "./research";

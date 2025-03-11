@@ -16,8 +16,8 @@ import {
 import { cli } from "@daydreamsai/core/extensions";
 import { z } from "zod";
 import chalk from "chalk";
-import { SuiChain, supportedSuiTokens } from "@daydreamsai/core";
-import type { FaucetNetwork, SuiNetwork } from "@daydreamsai/core";
+import { SuiChain, supportedSuiTokens } from "@daydreamsai/defai";
+import type { FaucetNetwork, SuiNetwork } from "@daydreamsai/defai";
 
 // Validate environment variables
 const env = validateEnv(

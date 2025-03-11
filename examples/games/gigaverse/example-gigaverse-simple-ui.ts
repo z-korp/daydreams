@@ -30,7 +30,6 @@ import {
   LogLevel,
   type ActionCall,
   type Agent,
-  type InferContextMemory,
   createMemoryStore,
 } from "@daydreamsai/core";
 import { cli, createChromaVectorStore } from "@daydreamsai/core/extensions";
