@@ -25,7 +25,7 @@ import {
 import { cli } from "@daydreamsai/core/extensions";
 import { z } from "zod";
 import chalk from "chalk";
-import { HyperliquidClient } from "@daydreamsai/core";
+import { HyperliquidClient } from "@daydreamsai/hyperliquid";
 
 // Validate environment variables
 const env = validateEnv(
