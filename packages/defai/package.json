@@ -38,8 +38,5 @@
     "bignumber.js": "^9.1.2",
     "bs58": "^6.0.0",
     "zod": "^3.24.2"
-  },
-  "resolutions": {
-    "@mysten/sui": "1.7.0"
   }
 }
