@@ -217,6 +217,25 @@ export function formatContexts(
   contexts: ContextState[],
   workingMemory: WorkingMemory
 ) {
+  // Limit the number of processed items to include in the context
+  const MAX_PROCESSED_ITEMS = 15;
+
+  // Create a trimmed version of working memory for the context
+  const trimmedWorkingMemory = {
+    ...workingMemory,
+    inputs: workingMemory.inputs
+      .filter((i) => i.processed === true)
+      .slice(-MAX_PROCESSED_ITEMS),
+    results: workingMemory.results
+      .filter((i) => i.processed === true)
+      .slice(-MAX_PROCESSED_ITEMS),
+    outputs: workingMemory.outputs
+      .filter((o) => o.processed === true)
+      .slice(-MAX_PROCESSED_ITEMS),
+    thoughts: workingMemory.thoughts.slice(-MAX_PROCESSED_ITEMS),
+    calls: workingMemory.calls.slice(-MAX_PROCESSED_ITEMS),
+  };
+
   return contexts
     .map(({ id, context, key, args, memory, options }) =>
       formatContext({
@@ -250,15 +269,7 @@ export function formatContexts(
             : "",
           mainContextId === id
             ? defaultContextRender({
-                memory: {
-                  ...workingMemory,
-                  inputs: workingMemory.inputs.filter(
-                    (i) => i.processed === true
-                  ),
-                  results: workingMemory.results.filter(
-                    (i) => i.processed === true
-                  ),
-                },
+                memory: trimmedWorkingMemory,
               })
             : "",
         ]

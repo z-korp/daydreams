@@ -1200,8 +1200,10 @@ function createContextStreamHandler({
 }
 
 function trimWorkingMemory(workingMemory: WorkingMemory) {
-  const MAX_MEMORY_ITEMS = 50; // Keep last 50 items of each type
-  const MAX_UNPROCESSED_ITEMS = 20; // Keep last 20 unprocessed items
+  // Reduce the maximum number of items to keep
+  const MAX_MEMORY_ITEMS = 15; // Reduced from 50 to 20
+  const MAX_UNPROCESSED_ITEMS = 10; // Reduced from 20 to 10
+  const MAX_CHAIN_LENGTH = 30; // New limit for overall chain length
 
   // Keep all unprocessed items plus some history
   workingMemory.results = [
@@ -1229,5 +1231,39 @@ function trimWorkingMemory(workingMemory: WorkingMemory) {
   // Also trim inputs once they're all processed
   if (workingMemory.inputs.every((i) => i.processed)) {
     workingMemory.inputs = workingMemory.inputs.slice(-MAX_MEMORY_ITEMS);
+  }
+
+  // Ensure the total number of items across all categories doesn't exceed a reasonable limit
+  const totalItems =
+    workingMemory.inputs.length +
+    workingMemory.outputs.length +
+    workingMemory.thoughts.length +
+    workingMemory.calls.length +
+    workingMemory.results.length;
+
+  // If we still have too many items, trim more aggressively
+  if (totalItems > MAX_CHAIN_LENGTH * 2) {
+    const trimFactor = (MAX_CHAIN_LENGTH * 2) / totalItems;
+    const newMaxItems = Math.floor(MAX_MEMORY_ITEMS * trimFactor);
+    const newMaxUnprocessed = Math.floor(MAX_UNPROCESSED_ITEMS * trimFactor);
+
+    // Re-trim everything more aggressively
+    workingMemory.results = [
+      ...workingMemory.results
+        .filter((r) => !r.processed)
+        .slice(-newMaxUnprocessed),
+      ...workingMemory.results.filter((r) => r.processed).slice(-newMaxItems),
+    ];
+
+    workingMemory.outputs = [
+      ...workingMemory.outputs
+        .filter((o) => !o.processed)
+        .slice(-newMaxUnprocessed),
+      ...workingMemory.outputs.filter((o) => o.processed).slice(-newMaxItems),
+    ];
+
+    workingMemory.thoughts = workingMemory.thoughts.slice(-newMaxItems);
+    workingMemory.calls = workingMemory.calls.slice(-newMaxItems);
+    workingMemory.inputs = workingMemory.inputs.slice(-newMaxItems);
   }
 }
