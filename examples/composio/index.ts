@@ -11,8 +11,9 @@ import {
   action,
   validateEnv,
 } from "@daydreamsai/core";
-import { cli, composio } from "@daydreamsai/core/extensions";
+import { cli } from "@daydreamsai/core/extensions";
 import { string, z } from "zod";
+import { composio } from "./composio";
 
 const env = validateEnv(
   z.object({
