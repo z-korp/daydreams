@@ -253,9 +253,11 @@ export const runGenerateResults = task(
           },
         }),
       }),
-      logs: chain.filter((i) =>
-        i.ref === "action_result" ? i.processed === true : true
-      ),
+      logs: chain
+        .filter((i) =>
+          i.ref === "action_result" ? i.processed === true : true
+        )
+        .slice(-30),
       results: workingMemory.results.filter((i) => i.processed !== true),
     });
 
