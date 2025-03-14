@@ -2,6 +2,7 @@
  * Basic example demonstrating a simple chat interface using Dreams
  * with a command line interface and Groq's LLM.
  */
+import { anthropic } from "@ai-sdk/anthropic";
 import { createGroq } from "@ai-sdk/groq";
 import {
   createDreams,
@@ -143,7 +144,7 @@ const goalContexts = context({
 });
 
 createDreams({
-  model: groq("deepseek-r1-distill-llama-70b"),
+  model: anthropic("claude-3-7-sonnet-latest"),
   extensions: [cli],
   context: goalContexts,
   actions: [
