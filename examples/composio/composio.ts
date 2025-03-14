@@ -1,6 +1,6 @@
 import OpenAI from "openai/index.mjs";
 import { OpenAIToolSet } from "composio-core";
-import { extension } from "../utils";
+import { extension } from "@daydreamsai/core";
 import { z } from "zod";
 
 const openai_client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -110,6 +110,24 @@ export const composio = extension({
   inputs: {},
   outputs: {},
   actions: [
+    {
+      name: "composio.getTodaysDate",
+      description:
+        "Get the current date and hour. You must call that whenever there is a mention to today or tomorrow or any kind of temporal position based on today's date.",
+      schema: z.object({}),
+      async handler(call: { data: {} }, ctx, agent) {
+        const date = new Date();
+        const formattedDate = date.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "numeric",
+          minute: "numeric",
+          second: "numeric",
+        });
+        return formattedDate;
+      },
+    },
     {
       name: "composio.checkActiveConnection",
       description: "Check if there's an active connection for a specific tool",
