@@ -32,7 +32,8 @@ import {
   type Agent,
   createMemoryStore,
 } from "@daydreamsai/core";
-import { cli, createChromaVectorStore } from "@daydreamsai/core/extensions";
+import { cli } from "@daydreamsai/core/extensions";
+import { createChromaVectorStore } from "@daydreamsai/chromadb";
 import { string, z } from "zod";
 import { simpleUI } from "./simple-ui";
 import { openai } from "@ai-sdk/openai";
