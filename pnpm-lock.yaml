@@ -310,9 +310,18 @@ importers:
 
   examples/discord:
     dependencies:
+      '@ai-sdk/anthropic':
+        specifier: ^1.1.17
+        version: 1.1.17(zod@3.24.2)
       '@ai-sdk/groq':
         specifier: ^1.1.12
         version: 1.1.12(zod@3.24.2)
+      '@ai-sdk/openai':
+        specifier: ^1.1.17
+        version: 1.2.1(zod@3.24.2)
+      '@daydreamsai/chromadb':
+        specifier: workspace:*
+        version: link:../../packages/chroma
       '@daydreamsai/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -783,6 +792,12 @@ packages:
     peerDependencies:
       zod: ^3.0.0
 
+  '@ai-sdk/anthropic@1.1.17':
+    resolution: {integrity: sha512-t4ipxope34TFvWa4SrFsg2//aAFk3hUv2gxlM5W39IdsT7Hq2nMxJIcXE6C19YdhE/0Kep32iv38BgPaDZet6A==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
+
   '@ai-sdk/groq@1.1.12':
     resolution: {integrity: sha512-Cjvqrd1RLpdo6k7KQCENLiEDIYjXQdkfWcsBWn9WiGkiXgLyOwBZhxV0HK1jJKl17zO2AU4+QJODaqR9rQkLRA==}
     engines: {node: '>=18'}
@@ -804,8 +819,21 @@ packages:
       zod:
         optional: true
 
+  '@ai-sdk/provider-utils@2.1.13':
+    resolution: {integrity: sha512-kLjqsfOdONr6DGcGEntFYM1niXz1H05vyZNf9OAzK+KKKc64izyP4/q/9HX7W4+6g8hm6BnmKxu8vkr6FSOqDg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
+
   '@ai-sdk/provider@1.0.10':
     resolution: {integrity: sha512-pco8Zl9U0xwXI+nCLc0woMtxbvjU8hRmGTseAUiPHFLYAAL8trRPCukg69IDeinOvIeo1SmXxAIdWWPZOLb4Cg==}
+    engines: {node: '>=18'}
+
+  '@ai-sdk/provider@1.0.11':
+    resolution: {integrity: sha512-CPyImHGiT3svyfmvPvAFTianZzWFtm0qK82XjwlQIA1C3IQ2iku/PMQXi7aFyrX0TyMh3VTkJPB03tjU2VXVrw==}
     engines: {node: '>=18'}
 
   '@ai-sdk/react@1.1.21':
@@ -7264,6 +7292,12 @@ snapshots:
       '@ai-sdk/provider-utils': 2.1.11(zod@3.24.2)
       zod: 3.24.2
 
+  '@ai-sdk/anthropic@1.1.17(zod@3.24.2)':
+    dependencies:
+      '@ai-sdk/provider': 1.0.11
+      '@ai-sdk/provider-utils': 2.1.13(zod@3.24.2)
+      zod: 3.24.2
+
   '@ai-sdk/groq@1.1.12(zod@3.24.2)':
     dependencies:
       '@ai-sdk/provider': 1.0.10
@@ -7285,7 +7319,20 @@ snapshots:
     optionalDependencies:
       zod: 3.24.2
 
+  '@ai-sdk/provider-utils@2.1.13(zod@3.24.2)':
+    dependencies:
+      '@ai-sdk/provider': 1.0.11
+      eventsource-parser: 3.0.0
+      nanoid: 3.3.9
+      secure-json-parse: 2.7.0
+    optionalDependencies:
+      zod: 3.24.2
+
   '@ai-sdk/provider@1.0.10':
+    dependencies:
+      json-schema: 0.4.0
+
+  '@ai-sdk/provider@1.0.11':
     dependencies:
       json-schema: 0.4.0
 
