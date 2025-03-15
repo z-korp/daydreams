@@ -10,22 +10,13 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": {
-        "development": "./src/index.ts",
         "default": "./dist/index.js"
       }
     },
     "./extensions": {
       "types": "./dist/extensions/index.d.ts",
       "import": {
-        "development": "./src/extensions/index.ts",
         "default": "./dist/extensions/index.js"
-      }
-    },
-    "./io/*": {
-      "types": "./dist/io/*.d.ts",
-      "import": {
-        "development": "./src/io/*.ts",
-        "default": "./dist/io/*.js"
       }
     }
   },
