@@ -210,7 +210,7 @@ export const goalContexts = context({
     return "1";
   },
 
-  create(state): GigaverseState {
+  create(_state): GigaverseState {
     return {
       goal: "Progress in the dungeon",
       tasks: ["Make strategic decisions"],
@@ -325,7 +325,7 @@ export const giga = extension({
           dungeonId: number;
         }>,
         ctx: any,
-        agent: Agent
+        _agent: Agent
       ) {
         try {
           const { action, dungeonId } = call.data;
@@ -355,12 +355,6 @@ export const giga = extension({
           }
 
           const result = await response.json();
-
-          // Update the UI with the result
-          const successResult = {
-            success: true,
-            message: `Successfully performed ${action} attack in dungeon ${dungeonId}`,
-          };
 
           // If this was a combat action, visualize the RPS result
           let enemyMove = "unknown";
@@ -481,17 +475,6 @@ export const giga = extension({
             error instanceof Error ? error.message : String(error);
           console.error("Error performing attack action:", error);
 
-          // Log the error to the UI
-          const failureResult = {
-            success: false,
-            error: errorMessage,
-            message: "Failed to perform attack action",
-          };
-          // simpleUI.logAgentAction(
-          //   `Attack with ${call.data.action}`,
-          //   failureResult
-          // );
-
           return {
             success: false,
             error: errorMessage,
@@ -509,7 +492,7 @@ export const giga = extension({
       description:
         "Fetch information about all upcoming enemies in the dungeon",
       schema: z.object({}), // No parameters needed for this GET request
-      async handler(call: ActionCall<{}>, ctx: any, agent: Agent) {
+      async handler(_call: ActionCall<{}>, _ctx: any, _agent: Agent) {
         try {
           // Log the action to the UI
           // simpleUI.logAgentAction("Fetching upcoming enemies", null);
@@ -530,16 +513,6 @@ export const giga = extension({
 
           const result = await response.json();
 
-          // Update the enemy info in the UI
-          // simpleUI.printEnemyInfo(result);
-
-          // Log success to the UI
-          const successResult = {
-            success: true,
-            message: "Successfully fetched upcoming enemies data",
-          };
-          // simpleUI.logAgentAction("Fetching upcoming enemies", successResult);
-
           return {
             success: true,
             enemies: result,
@@ -549,14 +522,6 @@ export const giga = extension({
           const errorMessage =
             error instanceof Error ? error.message : String(error);
           console.error("Error fetching enemies data:", error);
-
-          // Log the error to the UI
-          const failureResult = {
-            success: false,
-            error: errorMessage,
-            message: "Failed to fetch upcoming enemies data",
-          };
-          // simpleUI.logAgentAction("Fetching upcoming enemies", failureResult);
 
           return {
             success: false,
@@ -574,7 +539,7 @@ export const giga = extension({
       name: "getPlayerState",
       description: "Fetch the current state of the player in the dungeon",
       schema: z.object({}), // No parameters needed for this GET request
-      async handler(call: ActionCall<{}>, ctx: any, agent: Agent) {
+      async handler(_call: ActionCall<{}>, ctx: any, _agent: Agent) {
         try {
           // Log the action to the UI
           // simpleUI.logAgentAction("Fetching player state", null);
@@ -682,13 +647,6 @@ export const giga = extension({
             // simpleUI.printDetailedGameState(state);
           }
 
-          // Log success to the UI
-          const successResult = {
-            success: true,
-            message: "Successfully fetched player's dungeon state",
-          };
-          // simpleUI.logAgentAction("Fetching player state", successResult);
-
           return {
             success: true,
             playerState: result,
@@ -698,14 +656,6 @@ export const giga = extension({
           const errorMessage =
             error instanceof Error ? error.message : String(error);
           console.error("Error fetching player state:", error);
-
-          // Log the error to the UI
-          const failureResult = {
-            success: false,
-            error: errorMessage,
-            message: "Failed to fetch player's dungeon state",
-          };
-          // simpleUI.logAgentAction("Fetching player state", failureResult);
 
           return {
             success: false,
@@ -734,7 +684,7 @@ export const giga = extension({
           dungeonId: number;
         }>,
         ctx: any,
-        agent: Agent
+        _agent: Agent
       ) {
         try {
           // Log the action to the UI
@@ -830,20 +780,7 @@ export const giga = extension({
             state.enemyShield = "0";
             state.enemyMaxShield = "0";
             state.currentEnemy = "0";
-
-            // Display the updated state to the user
-            // simpleUI.printDetailedGameState(state);
           }
-
-          // Log success to the UI
-          const successResult = {
-            success: true,
-            message: `Successfully started a new run in dungeon ${dungeonId}`,
-          };
-          // simpleUI.logAgentAction(
-          //   `Starting new run in dungeon ${dungeonId}`,
-          //   successResult
-          // );
 
           return {
             success: true,
@@ -854,17 +791,6 @@ export const giga = extension({
           const errorMessage =
             error instanceof Error ? error.message : String(error);
           console.error("Error starting new run:", error);
-
-          // Log the error to the UI
-          const failureResult = {
-            success: false,
-            error: errorMessage,
-            message: "Failed to start a new dungeon run",
-          };
-          // simpleUI.logAgentAction(
-          //   `Starting new run in dungeon ${call.data.dungeonId}`,
-          //   failureResult
-          // );
 
           return {
             success: false,
@@ -890,7 +816,7 @@ export const giga = extension({
           stateData?: any;
         }>,
         ctx: any,
-        agent: Agent
+        _agent: Agent
       ) {
         try {
           const { stateData } = call.data;
