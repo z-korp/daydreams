@@ -261,7 +261,6 @@ export const runGenerateResults = task(
       results: workingMemory.results.filter((i) => i.processed !== true),
     });
 
-    console.log("marking as processed");
     workingMemory.results.forEach((i) => {
       i.processed = true;
     });

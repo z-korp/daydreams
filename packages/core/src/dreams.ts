@@ -173,6 +173,7 @@ export function createDreams<
       logger.debug("agent:start", "Installing extensions", {
         count: extensions.length,
       });
+
       for (const extension of extensions) {
         if (extension.install) await extension.install(agent);
       }
@@ -437,10 +438,15 @@ export function createDreams<
 
           await agent.memory.store.set(ctxState.id, ctxState.memory);
 
+          console.log("agentCtxState", agentCtxState);
+          console.log("ctxState", ctxState);
+
           if (agentCtxState) {
             logger.debug("agent:run", "Saving agent context state", {
               id: agentCtxState.id,
             });
+
+            console.log("agentCtxState.memory", agentCtxState.context);
 
             await agent.memory.store.set(
               agentCtxState.id,

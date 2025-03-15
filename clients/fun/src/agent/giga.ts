@@ -20,45 +20,105 @@
  * 2. You can run out of Energy per day - so this will obviously affect your ability to play and throw errors.
  */
 
-import { anthropic } from "@ai-sdk/anthropic";
 import {
-  createDreams,
   context,
   render,
   action,
-  validateEnv,
-  LogLevel,
   type ActionCall,
   type Agent,
-  createMemoryStore,
-  createVectorStore,
   extension,
 } from "@daydreamsai/core";
-import { cli } from "@daydreamsai/core/extensions";
-import { createChromaVectorStore } from "@daydreamsai/chromadb";
+
 import { string, z } from "zod";
-import { simpleUI } from "./simple-ui";
-import { openai } from "@ai-sdk/openai";
 
-// Initialize the UI
-simpleUI.initializeUI();
+import { getUserSettings } from "@/utils/settings";
 
-// Log startup message
-simpleUI.logMessage(
-  LogLevel.INFO,
-  "Starting Gigaverse Dream Agent with Simple Terminal UI..."
-);
+export const GIGA_TOKEN =
+  getUserSettings()?.gigaverseToken || import.meta.env.VITE_PUBLIC_GIGA_TOKEN;
 
-// Validate environment variables
-const env = validateEnv(
-  z.object({
-    ANTHROPIC_API_KEY: z.string().min(1, "ANTHROPIC_API_KEY is required"),
-    GIGA_TOKEN: z.string().min(1, "GIGA_TOKEN is required"),
-  })
-);
+// Add a helper function to get the API base URL
+export const getApiBaseUrl = () => {
+  // In development, use the Vite proxy
+  if (import.meta.env.DEV) {
+    return "/gigaverse-api";
+  }
+  // In production, use the direct URL
+  return "https://gigaverse.io/api";
+};
+
+// Define an interface for the state
+interface GigaverseState {
+  goal: string;
+  tasks: string[];
+  currentTask: string | null;
+  currentDungeon: string;
+  currentRoom: string;
+  currentEnemy: string;
+  currentLoot: string;
+  currentHP: string;
+  playerHealth: string;
+  playerMaxHealth: string;
+  playerShield: string;
+  playerMaxShield: string;
+  rockAttack: string;
+  rockDefense: string;
+  rockCharges: string;
+  paperAttack: string;
+  paperDefense: string;
+  paperCharges: string;
+  scissorAttack: string;
+  scissorDefense: string;
+  scissorCharges: string;
+  enemyHealth: string;
+  enemyMaxHealth: string;
+  enemyShield: string;
+  enemyMaxShield: string;
+  lootPhase: string;
+  lootOptions: any[];
+  lastBattleResult: string;
+  lastEnemyMove: string;
+}
+
+// Helper function to initialize agent memory if it doesn't exist
+export function initializeAgentMemory(ctx: any): GigaverseState {
+  if (!ctx.agentMemory) {
+    ctx.agentMemory = {
+      goal: "Progress in the dungeon",
+      tasks: ["Make strategic decisions"],
+      currentTask: "Make strategic decisions",
+      currentDungeon: "0",
+      currentRoom: "0",
+      currentEnemy: "0",
+      currentLoot: "0",
+      currentHP: "0",
+      playerHealth: "0",
+      playerMaxHealth: "0",
+      playerShield: "0",
+      playerMaxShield: "0",
+      rockAttack: "0",
+      rockDefense: "0",
+      rockCharges: "0",
+      paperAttack: "0",
+      paperDefense: "0",
+      paperCharges: "0",
+      scissorAttack: "0",
+      scissorDefense: "0",
+      scissorCharges: "0",
+      enemyHealth: "0",
+      enemyMaxHealth: "0",
+      enemyShield: "0",
+      enemyMaxShield: "0",
+      lootPhase: "false",
+      lootOptions: [],
+      lastBattleResult: "",
+      lastEnemyMove: "",
+    };
+  }
+  return ctx.agentMemory as GigaverseState;
+}
 
 // Template for the agent's context
-const template = `
+export const template = `
 You are an expert AI agent playing a strategic roguelike dungeon crawler game based on rock-paper-scissors mechanics with additional RPG elements called Gigaverse. 
 
 <goal>
@@ -137,57 +197,24 @@ Shield: {{enemyShield}}/{{enemyMaxShield}}
 
 `;
 
-// Define an interface for the state
-interface GigaverseState {
-  goal: string;
-  tasks: string[];
-  currentTask: string | null;
-  currentDungeon: string;
-  currentRoom: string;
-  currentEnemy: string;
-  currentLoot: string;
-  currentHP: string;
-  playerHealth: string;
-  playerMaxHealth: string;
-  playerShield: string;
-  playerMaxShield: string;
-  rockAttack: string;
-  rockDefense: string;
-  rockCharges: string;
-  paperAttack: string;
-  paperDefense: string;
-  paperCharges: string;
-  scissorAttack: string;
-  scissorDefense: string;
-  scissorCharges: string;
-  enemyHealth: string;
-  enemyMaxHealth: string;
-  enemyShield: string;
-  enemyMaxShield: string;
-  lootPhase: string;
-  lootOptions: any[];
-  lastBattleResult: string;
-  lastEnemyMove: string;
-}
-
 // Context for the agent
-const goalContexts = context({
+export const goalContexts = context({
   type: "goal",
   schema: z.object({
     id: string(),
-    initialGoal: z.string(),
-    initialTasks: z.array(z.string()),
+    initialGoal: z.string().default("Progress in the dungeon"),
+    initialTasks: z.array(z.string()).default(["Make strategic decisions"]),
   }),
 
-  key({ id }) {
-    return id;
+  key() {
+    return "1";
   },
 
   create(state): GigaverseState {
     return {
-      goal: state.args.initialGoal,
-      tasks: state.args.initialTasks ?? [],
-      currentTask: state.args.initialTasks?.[0],
+      goal: "Progress in the dungeon",
+      tasks: ["Make strategic decisions"],
+      currentTask: "Make strategic decisions",
       currentDungeon: "0",
       currentRoom: "0",
       currentEnemy: "0",
@@ -252,7 +279,8 @@ const goalContexts = context({
   },
 });
 
-const gigaExtension = extension({
+// Create the Gigaverse agent with UI integration
+export const giga = extension({
   name: "giga",
   contexts: {
     goal: goalContexts,
@@ -300,9 +328,6 @@ const gigaExtension = extension({
         agent: Agent
       ) {
         try {
-          // Log the action to the UI
-          simpleUI.logAgentAction(`Attack with ${call.data.action}`, null);
-
           const { action, dungeonId } = call.data;
 
           const payload = {
@@ -312,12 +337,12 @@ const gigaExtension = extension({
           };
 
           const response = await fetch(
-            "https://gigaverse.io/api/game/dungeon/action",
+            `${getApiBaseUrl()}/game/dungeon/action`,
             {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${env.GIGA_TOKEN}`,
+                Authorization: `Bearer ${GIGA_TOKEN}`,
               },
               body: JSON.stringify(payload),
             }
@@ -336,14 +361,13 @@ const gigaExtension = extension({
             success: true,
             message: `Successfully performed ${action} attack in dungeon ${dungeonId}`,
           };
-          simpleUI.logAgentAction(`Attack with ${action}`, successResult);
 
           // If this was a combat action, visualize the RPS result
           let enemyMove = "unknown";
           let battleResult = "draw";
 
           // Update the state with player and enemy data
-          const state = ctx.agentMemory as GigaverseState;
+          const state = initializeAgentMemory(ctx);
 
           // Extract data from the response structure
           if (
@@ -418,22 +442,22 @@ const gigaExtension = extension({
             }
           }
 
-          if (["rock", "paper", "scissor"].includes(action)) {
-            simpleUI.visualizeRPSMove(action, enemyMove, battleResult);
-          }
+          // if (["rock", "paper", "scissor"].includes(action)) {
+          //   simpleUI.visualizeRPSMove(action, enemyMove, battleResult);
+          // }
 
-          // Display the updated state to the user
-          simpleUI.printDetailedGameState(state);
+          // // Display the updated state to the user
+          // simpleUI.printDetailedGameState(state);
 
-          // Update game state in the UI
-          if (result.gameState) {
-            simpleUI.printGameState(result.gameState);
-          }
+          // // Update game state in the UI
+          // if (result.gameState) {
+          //   simpleUI.printGameState(result.gameState);
+          // }
 
-          // Update player stats in the UI
-          if (result.playerState) {
-            simpleUI.printPlayerStats(result.playerState);
-          }
+          // // Update player stats in the UI
+          // if (result.playerState) {
+          //   simpleUI.printPlayerStats(result.playerState);
+          // }
 
           return {
             success: true,
@@ -463,10 +487,10 @@ const gigaExtension = extension({
             error: errorMessage,
             message: "Failed to perform attack action",
           };
-          simpleUI.logAgentAction(
-            `Attack with ${call.data.action}`,
-            failureResult
-          );
+          // simpleUI.logAgentAction(
+          //   `Attack with ${call.data.action}`,
+          //   failureResult
+          // );
 
           return {
             success: false,
@@ -488,18 +512,15 @@ const gigaExtension = extension({
       async handler(call: ActionCall<{}>, ctx: any, agent: Agent) {
         try {
           // Log the action to the UI
-          simpleUI.logAgentAction("Fetching upcoming enemies", null);
+          // simpleUI.logAgentAction("Fetching upcoming enemies", null);
 
-          const response = await fetch(
-            "https://gigaverse.io/api/indexer/enemies",
-            {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${env.GIGA_TOKEN}`,
-              },
-            }
-          );
+          const response = await fetch(`${getApiBaseUrl()}/indexer/enemies`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${GIGA_TOKEN}`,
+            },
+          });
 
           if (!response.ok) {
             throw new Error(
@@ -510,14 +531,14 @@ const gigaExtension = extension({
           const result = await response.json();
 
           // Update the enemy info in the UI
-          simpleUI.printEnemyInfo(result);
+          // simpleUI.printEnemyInfo(result);
 
           // Log success to the UI
           const successResult = {
             success: true,
             message: "Successfully fetched upcoming enemies data",
           };
-          simpleUI.logAgentAction("Fetching upcoming enemies", successResult);
+          // simpleUI.logAgentAction("Fetching upcoming enemies", successResult);
 
           return {
             success: true,
@@ -535,7 +556,7 @@ const gigaExtension = extension({
             error: errorMessage,
             message: "Failed to fetch upcoming enemies data",
           };
-          simpleUI.logAgentAction("Fetching upcoming enemies", failureResult);
+          // simpleUI.logAgentAction("Fetching upcoming enemies", failureResult);
 
           return {
             success: false,
@@ -556,15 +577,15 @@ const gigaExtension = extension({
       async handler(call: ActionCall<{}>, ctx: any, agent: Agent) {
         try {
           // Log the action to the UI
-          simpleUI.logAgentAction("Fetching player state", null);
+          // simpleUI.logAgentAction("Fetching player state", null);
 
           const response = await fetch(
-            "https://gigaverse.io/api/game/dungeon/state",
+            `${getApiBaseUrl()}/game/dungeon/state`,
             {
               method: "GET",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${env.GIGA_TOKEN}`,
+                Authorization: `Bearer ${GIGA_TOKEN}`,
               },
             }
           );
@@ -577,9 +598,11 @@ const gigaExtension = extension({
 
           const result = await response.json();
 
+          console.log("result", result);
+
           // Update game state in the UI if available
           if (result.gameState) {
-            simpleUI.printGameState(result.gameState);
+            // simpleUI.printGameState(result.gameState);
           }
 
           // Update the state with player data
@@ -589,7 +612,7 @@ const gigaExtension = extension({
             result.data.run.players &&
             result.data.run.players.length > 0
           ) {
-            const state = ctx.agentMemory as GigaverseState;
+            const state = initializeAgentMemory(ctx);
             const playerData = result.data.run.players[0]; // First player is the user
 
             // Update player stats
@@ -644,24 +667,19 @@ const gigaExtension = extension({
               if (enemyData.lastMove) {
                 state.lastEnemyMove = enemyData.lastMove;
 
-                // Determine battle result if not already set
-                if (
-                  !state.lastBattleResult &&
-                  playerData.thisPlayerWin !== undefined
-                ) {
-                  if (playerData.thisPlayerWin === true) {
-                    state.lastBattleResult = "win";
-                  } else if (enemyData.thisPlayerWin === true) {
-                    state.lastBattleResult = "lose";
-                  } else {
-                    state.lastBattleResult = "draw";
-                  }
+                // Determine battle result based on thisPlayerWin and otherPlayerWin properties
+                if (playerData.thisPlayerWin === true) {
+                  state.lastBattleResult = "win";
+                } else if (enemyData.thisPlayerWin === true) {
+                  state.lastBattleResult = "lose";
+                } else {
+                  state.lastBattleResult = "draw";
                 }
               }
             }
 
             // Display the updated state to the user
-            simpleUI.printDetailedGameState(state);
+            // simpleUI.printDetailedGameState(state);
           }
 
           // Log success to the UI
@@ -669,7 +687,7 @@ const gigaExtension = extension({
             success: true,
             message: "Successfully fetched player's dungeon state",
           };
-          simpleUI.logAgentAction("Fetching player state", successResult);
+          // simpleUI.logAgentAction("Fetching player state", successResult);
 
           return {
             success: true,
@@ -687,7 +705,7 @@ const gigaExtension = extension({
             error: errorMessage,
             message: "Failed to fetch player's dungeon state",
           };
-          simpleUI.logAgentAction("Fetching player state", failureResult);
+          // simpleUI.logAgentAction("Fetching player state", failureResult);
 
           return {
             success: false,
@@ -720,10 +738,10 @@ const gigaExtension = extension({
       ) {
         try {
           // Log the action to the UI
-          simpleUI.logAgentAction(
-            `Starting new run in dungeon ${call.data.dungeonId}`,
-            null
-          );
+          // simpleUI.logAgentAction(
+          //   `Starting new run in dungeon ${call.data.dungeonId}`,
+          //   null
+          // );
 
           const { dungeonId } = call.data;
 
@@ -739,12 +757,12 @@ const gigaExtension = extension({
           };
 
           const response = await fetch(
-            "https://gigaverse.io/api/game/dungeon/action",
+            `${getApiBaseUrl()}/game/dungeon/action`,
             {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${env.GIGA_TOKEN}`,
+                Authorization: `Bearer ${GIGA_TOKEN}`,
               },
               body: JSON.stringify(payload),
             }
@@ -758,15 +776,15 @@ const gigaExtension = extension({
 
           const result = await response.json();
 
-          // Update game state in the UI
-          if (result.gameState) {
-            simpleUI.printGameState(result.gameState);
-          }
+          // // Update game state in the UI
+          // if (result.gameState) {
+          //   simpleUI.printGameState(result.gameState);
+          // }
 
-          // Update player stats in the UI
-          if (result.playerState) {
-            simpleUI.printPlayerStats(result.playerState);
-          }
+          // // Update player stats in the UI
+          // if (result.playerState) {
+          //   simpleUI.printPlayerStats(result.playerState);
+          // }
 
           // Update the state with the new run data
           if (
@@ -775,7 +793,7 @@ const gigaExtension = extension({
             result.data.run.players &&
             result.data.run.players.length > 0
           ) {
-            const state = ctx.agentMemory as GigaverseState;
+            const state = initializeAgentMemory(ctx);
             const playerData = result.data.run.players[0]; // First player is the user
 
             // Update player stats
@@ -814,7 +832,7 @@ const gigaExtension = extension({
             state.currentEnemy = "0";
 
             // Display the updated state to the user
-            simpleUI.printDetailedGameState(state);
+            // simpleUI.printDetailedGameState(state);
           }
 
           // Log success to the UI
@@ -822,10 +840,10 @@ const gigaExtension = extension({
             success: true,
             message: `Successfully started a new run in dungeon ${dungeonId}`,
           };
-          simpleUI.logAgentAction(
-            `Starting new run in dungeon ${dungeonId}`,
-            successResult
-          );
+          // simpleUI.logAgentAction(
+          //   `Starting new run in dungeon ${dungeonId}`,
+          //   successResult
+          // );
 
           return {
             success: true,
@@ -843,10 +861,10 @@ const gigaExtension = extension({
             error: errorMessage,
             message: "Failed to start a new dungeon run",
           };
-          simpleUI.logAgentAction(
-            `Starting new run in dungeon ${call.data.dungeonId}`,
-            failureResult
-          );
+          // simpleUI.logAgentAction(
+          //   `Starting new run in dungeon ${call.data.dungeonId}`,
+          //   failureResult
+          // );
 
           return {
             success: false,
@@ -856,47 +874,169 @@ const gigaExtension = extension({
         }
       },
     }),
-  ],
-});
 
-// Create the Gigaverse agent with UI integration
-const agent = createDreams({
-  logger: LogLevel.DEBUG,
-  model: anthropic("claude-3-7-sonnet-latest"),
-  extensions: [cli, gigaExtension],
-  exportTrainingData: true,
-  trainingDataPath: "./training-data.jsonl",
-  memory: {
-    store: createMemoryStore(),
-    vector: createVectorStore(),
-    vectorModel: openai("gpt-4-turbo"),
-  },
+    /**
+     * Action to manually update the state with provided data
+     * This is useful for debugging or when there's a conflict in state
+     */
+    action({
+      name: "manuallyUpdateState",
+      description: "Manually update the state with provided data",
+      schema: z.object({
+        stateData: z.any().optional().describe("The state data to update with"),
+      }),
+      async handler(
+        call: ActionCall<{
+          stateData?: any;
+        }>,
+        ctx: any,
+        agent: Agent
+      ) {
+        try {
+          const { stateData } = call.data;
+
+          if (!stateData) {
+            return {
+              success: false,
+              error: "No state data provided",
+              message: "Failed to manually update state: No data provided",
+            };
+          }
+
+          const state = initializeAgentMemory(ctx);
+
+          if (
+            stateData.data &&
+            stateData.data.run &&
+            stateData.data.run.players &&
+            stateData.data.run.players.length > 0
+          ) {
+            const playerData = stateData.data.run.players[0]; // First player is the user
+
+            // Update player stats
+            state.currentHP = playerData.health.current.toString();
+            state.playerHealth = playerData.health.current.toString();
+            state.playerMaxHealth = playerData.health.currentMax.toString();
+            state.playerShield = playerData.shield.current.toString();
+            state.playerMaxShield = playerData.shield.currentMax.toString();
+
+            // Update rock/paper/scissor stats
+            state.rockAttack = playerData.rock.currentATK.toString();
+            state.rockDefense = playerData.rock.currentDEF.toString();
+            state.rockCharges = playerData.rock.currentCharges.toString();
+
+            state.paperAttack = playerData.paper.currentATK.toString();
+            state.paperDefense = playerData.paper.currentDEF.toString();
+            state.paperCharges = playerData.paper.currentCharges.toString();
+
+            state.scissorAttack = playerData.scissor.currentATK.toString();
+            state.scissorDefense = playerData.scissor.currentDEF.toString();
+            state.scissorCharges = playerData.scissor.currentCharges.toString();
+
+            // Update loot phase status
+            state.lootPhase = (
+              stateData.data.run.lootPhase || false
+            ).toString();
+
+            // Update loot options if available
+            if (
+              stateData.data.run.lootOptions &&
+              stateData.data.run.lootOptions.length > 0
+            ) {
+              state.lootOptions = stateData.data.run.lootOptions;
+              state.currentLoot =
+                stateData.data.run.lootOptions.length.toString();
+            }
+
+            // Update room information if available
+            if (stateData.data.entity) {
+              state.currentRoom = stateData.data.entity.ROOM_NUM_CID.toString();
+              state.currentDungeon =
+                stateData.data.entity.DUNGEON_ID_CID.toString();
+              state.currentEnemy = stateData.data.entity.ENEMY_CID.toString();
+            }
+
+            // Update enemy stats if available
+            if (stateData.data.run.players.length > 1) {
+              const enemyData = stateData.data.run.players[1]; // Second player is the enemy
+              state.enemyHealth = enemyData.health.current.toString();
+              state.enemyMaxHealth = enemyData.health.currentMax.toString();
+              state.enemyShield = enemyData.shield.current.toString();
+              state.enemyMaxShield = enemyData.shield.currentMax.toString();
+
+              // Update battle result and enemy move if available
+              if (enemyData.lastMove) {
+                state.lastEnemyMove = enemyData.lastMove;
+
+                // Determine battle result based on thisPlayerWin and otherPlayerWin properties
+                if (playerData.thisPlayerWin === true) {
+                  state.lastBattleResult = "win";
+                } else if (enemyData.thisPlayerWin === true) {
+                  state.lastBattleResult = "lose";
+                } else {
+                  state.lastBattleResult = "draw";
+                }
+              }
+            }
+
+            return {
+              success: true,
+              message: "Successfully updated state with provided data",
+              updatedState: state,
+            };
+          }
+
+          return {
+            success: false,
+            error: "No valid state data provided",
+            message:
+              "Failed to manually update state: No valid state data provided",
+          };
+        } catch (error: unknown) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          console.error("Error manually updating state:", error);
+
+          return {
+            success: false,
+            error: errorMessage,
+            message: "Failed to manually update state",
+          };
+        }
+      },
+    }),
+  ],
+  // memory: {
+  //   store: createMemoryStore(),
+  //   vector: createChromaVectorStore("agent", "http://localhost:8000"),
+  //   vectorModel: openai("gpt-4-turbo"),
+  // },
 });
 
 // Start the agent with initial goals
-simpleUI.logMessage(LogLevel.INFO, "Starting agent with initial goals...");
+// simpleUI.logMessage(LogLevel.INFO, "Starting agent with initial goals...");
 
-agent.start({
-  id: "gigaverse-game",
-  initialGoal:
-    "Progress as far as possible in the dungeon by making strategic rock-paper-scissors decisions. Don't ever stop. Just start a new run if you die.",
-  initialTasks: [
-    "Check player state to understand current situation",
-    "Fetch information about upcoming enemies",
-    "Start a new run if not already in a dungeon",
-    "Make strategic combat decisions based on enemy patterns",
-    "Select optimal loot to improve chances of survival",
-  ],
-});
+// agent.start({
+//   id: "gigaverse-game",
+//   initialGoal:
+//     "Progress as far as possible in the dungeon by making strategic rock-paper-scissors decisions. Don't ever stop. Just start a new run if you die.",
+//   initialTasks: [
+//     "Check player state to understand current situation",
+//     "Fetch information about upcoming enemies",
+//     "Start a new run if not already in a dungeon",
+//     "Make strategic combat decisions based on enemy patterns",
+//     "Select optimal loot to improve chances of survival",
+//   ],
+// });
 
 // Display welcome message
-simpleUI.logMessage(
-  LogLevel.INFO,
-  "Gigaverse Dream Agent is now running! The agent will automatically play the game."
-);
+// simpleUI.logMessage(
+//   LogLevel.INFO,
+//   "Gigaverse Dream Agent is now running! The agent will automatically play the game."
+// );
 
-// Handle exit
-process.on("SIGINT", () => {
-  simpleUI.logMessage(LogLevel.INFO, "Shutting down agent...");
-  process.exit(0);
-});
+// // Handle exit
+// process.on("SIGINT", () => {
+//   simpleUI.logMessage(LogLevel.INFO, "Shutting down agent...");
+//   process.exit(0);
+// });
