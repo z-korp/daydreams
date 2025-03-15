@@ -1,5 +1,4 @@
 import {
-  action,
   context,
   extension,
   formatMsg,

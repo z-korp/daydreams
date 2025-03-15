@@ -5,7 +5,6 @@ import {
   History,
   Bookmark,
   Settings,
-  Wrench,
   Twitter,
   Github,
 } from "lucide-react";
@@ -22,7 +21,7 @@ import {
 import { Link } from "@tanstack/react-router";
 import { useAgent } from "@/hooks/use-agent";
 import { useQuery } from "@tanstack/react-query";
-import { NavUser } from "./nav-user";
+
 // This is sample data.
 const data = {
   user: {
