@@ -1031,7 +1031,7 @@ function createContextStreamHandler({
         workingMemory.calls[workingMemory.calls.length - 1];
 
       // If we have a complete thought-action-result cycle, generate an episode
-      if (lastThought && lastActionCall) {
+      if (lastThought && lastActionCall && agent.memory.generateMemories) {
         // Generate episode with the last thought, action call, and result
         generateEpisode(
           lastThought,
