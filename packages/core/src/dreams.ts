@@ -250,7 +250,7 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
       logger.info("agent:stop", "Stopping agent");
     },
 
-    run: async ({ context, args, outputs, handlers, abortSignal }) => {
+    run: async ({ context, args, outputs, handlers, abortSignal, model }) => {
       if (!booted) {
         logger.error("agent:run", "Agent not booted");
         throw new Error("Not booted");
@@ -395,7 +395,8 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
             step > 1 ? runGenerateResults : runGenerate,
             {
               agent,
-              model: config.reasoningModel ?? config.model,
+              model:
+                model ?? context.model ?? config.reasoningModel ?? config.model,
               contexts: [agentCtxState, ctxState].filter((t) => !!t),
               contextId: ctxState.id,
               actions: contextActions,

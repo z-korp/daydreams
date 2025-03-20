@@ -510,6 +510,7 @@ export interface Agent<TContext extends AnyContext = AnyContext> {
   run: <TContext extends AnyContext>(opts: {
     context: TContext;
     args: z.infer<TContext["schema"]>;
+    model?: LanguageModelV1;
     outputs?: Record<
       string,
       Omit<Output<any, AgentContext<TContext>, any, any>, "type">
@@ -527,6 +528,7 @@ export interface Agent<TContext extends AnyContext = AnyContext> {
     context: SContext;
     args: z.infer<NonNullable<SContext["schema"]>>;
     input: { type: string; data: any };
+    model?: LanguageModelV1;
     outputs?: Record<
       string,
       Omit<Output<any, AgentContext<SContext>, any, any>, "type">
@@ -758,6 +760,8 @@ export interface Context<
 
   /** Optional function to render memory state */
   render?: (state: ContextState<this>) => string | string[];
+
+  model?: LanguageModelV1;
 
   onStep?: (ctx: AgentContext<this>) => Promise<void>;
 
