@@ -6,23 +6,23 @@ import {
   type StreamTextResult,
   type ToolSet,
 } from "ai";
-import { parse, prompt, resultsPrompt, wrapStream } from "../prompts/main";
+import { parse, prompt, resultsPrompt } from "../prompts/main";
 import { task, type TaskContext } from "../task";
 import { formatContext, formatContexts } from "../formatters";
-import { defaultContextRender } from "../context";
+import { getWorkingMemoryLogs, renderWorkingMemory } from "../context";
 import type {
   ActionCall,
-  AgentContext,
+  ActionContext,
   AnyAction,
   AnyAgent,
   AnyContext,
   ContextState,
-  InferContextMemory,
   Log,
   Output,
   WorkingMemory,
 } from "../types";
 import type { Logger } from "../logger";
+import { wrapStream } from "../streaming";
 
 /**
  * Prepares a stream response by handling the stream result and parsing it.
@@ -100,6 +100,7 @@ export const runGenerate = task(
       logger,
       model,
       contextId,
+      abortSignal,
     }: {
       agent: AnyAgent;
       contexts: ContextState<AnyContext>[];
@@ -109,6 +110,7 @@ export const runGenerate = task(
       actions: AnyAction[];
       logger: Logger;
       model: LanguageModelV1;
+      abortSignal?: AbortSignal;
     },
     { callId, debug }: TaskContext
   ) => {
@@ -127,14 +129,16 @@ export const runGenerate = task(
       updates: formatContext({
         type: mainContext.context.type,
         key: mainContext.key,
-        content: defaultContextRender({
+        content: renderWorkingMemory({
           memory: {
-            inputs: workingMemory.inputs.filter((i) => i.processed !== true),
-            results: workingMemory.results.filter((i) => i.processed !== true),
+            inputs: workingMemory.inputs,
+            results: workingMemory.results,
           },
+          processed: false,
         }),
       }),
     });
+
     debug(contextId, ["prompt", callId], system);
 
     logger.debug("agent:system", system);
@@ -170,6 +174,7 @@ export const runGenerate = task(
       messages,
       stopSequences: ["</response>"],
       temperature: 0.6,
+      abortSignal,
       experimental_transform: smoothStream({
         chunking: "word",
       }),
@@ -219,6 +224,7 @@ export const runGenerateResults = task(
       model,
       contextId,
       chain,
+      abortSignal,
     }: {
       agent: AnyAgent;
       contexts: ContextState<AnyContext>[];
@@ -229,6 +235,7 @@ export const runGenerateResults = task(
       logger: Logger;
       model: LanguageModelV1;
       chain: Log[];
+      abortSignal?: AbortSignal;
     },
     { callId, debug }: TaskContext
   ) => {
@@ -247,22 +254,21 @@ export const runGenerateResults = task(
       updates: formatContext({
         type: mainContext.context.type,
         key: mainContext.key,
-        content: defaultContextRender({
+        content: renderWorkingMemory({
           memory: {
-            inputs: workingMemory.inputs.filter((i) => i.processed !== true),
+            inputs: workingMemory.inputs,
           },
+          processed: false,
         }),
       }),
-      logs: chain
-        .filter((i) =>
-          i.ref === "action_result" ? i.processed === true : true
-        )
-        .slice(-30),
+      logs: chain.filter((i) =>
+        i.ref === "action_result" ? false : i.processed !== true
+      ),
       results: workingMemory.results.filter((i) => i.processed !== true),
     });
 
-    workingMemory.results.forEach((i) => {
-      i.processed = true;
+    getWorkingMemoryLogs(workingMemory).forEach((i) => {
+      if (i.ref !== "input") i.processed = true;
     });
 
     debug(contextId, ["prompt-results", callId], system);
@@ -303,6 +309,7 @@ export const runGenerateResults = task(
       messages: messages,
       stopSequences: ["</response>"],
       temperature: 0.6,
+      abortSignal,
       experimental_transform: smoothStream({
         chunking: "word",
       }),
@@ -345,10 +352,7 @@ export const runAction = task(
     agent,
     logger,
   }: {
-    ctx: AgentContext<InferContextMemory<TContext>, TContext> & {
-      actionMemory: unknown;
-      agentMemory?: unknown;
-    };
+    ctx: ActionContext<TContext>;
     action: AnyAction;
     call: ActionCall;
     agent: AnyAgent;
