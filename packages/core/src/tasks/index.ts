@@ -24,6 +24,12 @@ import type {
 import type { Logger } from "../logger";
 import { wrapStream } from "../streaming";
 
+const customModelsConfig: Record<string, any> = {
+  "qwen-qwq-32b": {
+    prefix: "",
+  },
+};
+
 /**
  * Prepares a stream response by handling the stream result and parsing it.
  *
@@ -36,23 +42,28 @@ import { wrapStream } from "../streaming";
  * @returns An object containing the parsed response promise and wrapped text stream
  */
 function prepareStreamResponse({
+  model,
   stream,
   logger,
   contextId,
   step,
   task: { callId, debug },
 }: {
+  model: LanguageModelV1;
   contextId: string;
   step: string;
   stream: StreamTextResult<ToolSet, never>;
   logger: Logger;
   task: TaskContext;
 }) {
+  const prefix = customModelsConfig[model.modelId]?.prefix ?? "<think>";
+  const suffix = "</response>";
+
   const response = new Promise<ReturnType<typeof parse>>(
     async (resolve, reject) => {
       try {
         const result = await stream.text;
-        const text = "<think>" + result + "</response>";
+        const text = prefix + result + suffix;
 
         debug(contextId, [step, callId], text);
 
@@ -70,7 +81,7 @@ function prepareStreamResponse({
 
   return {
     response,
-    stream: wrapStream(stream.textStream, "<think>", "</response>"),
+    stream: wrapStream(stream.textStream, prefix, suffix),
   };
 }
 
@@ -187,6 +198,7 @@ export const runGenerate = task(
     workingMemory.currentImage = undefined;
 
     return prepareStreamResponse({
+      model,
       step: "response",
       contextId,
       logger,
@@ -322,6 +334,7 @@ export const runGenerateResults = task(
     workingMemory.currentImage = undefined;
 
     return prepareStreamResponse({
+      model,
       step: "results-response",
       contextId,
       logger,
