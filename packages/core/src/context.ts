@@ -1,5 +1,12 @@
 import { z } from "zod";
-import type { Context, WorkingMemory } from "./types";
+import type {
+  AnyAgent,
+  AnyContext,
+  Context,
+  ContextState,
+  Log,
+  WorkingMemory,
+} from "./types";
 import { formatContextLog } from "./formatters";
 import { memory } from "./utils";
 
@@ -17,10 +24,7 @@ export function context<
   Memory = any,
   Args extends z.ZodTypeAny = z.ZodTypeAny,
   Ctx = any,
-  Exports = any,
->(
-  ctx: Context<Memory, Args, Ctx, Exports>
-): Context<Memory, Args, Ctx, Exports> {
+>(ctx: Context<Memory, Args, Ctx>): Context<Memory, Args, Ctx> {
   return ctx;
 }
 
@@ -33,7 +37,7 @@ export function context<
 export function getWorkingMemoryLogs(
   memory: Partial<WorkingMemory>,
   includeThoughts = true
-) {
+): Log[] {
   return [
     ...(memory.inputs ?? []),
     ...(memory.outputs ?? []),
@@ -43,18 +47,15 @@ export function getWorkingMemoryLogs(
   ].sort((a, b) => (a.timestamp > b.timestamp ? 1 : -1));
 }
 
-/**
- * Default renderer for context logs
- * @param options - Options containing the working memory
- * @param options.memory - Working memory to render
- * @returns Formatted context logs
- */
-export function defaultContextRender({
+export function renderWorkingMemory({
   memory,
+  processed,
 }: {
   memory: Partial<WorkingMemory>;
+  processed: boolean;
 }) {
   return getWorkingMemoryLogs(memory, false)
+    .filter((i) => i.processed === processed)
     .map((i) => formatContextLog(i))
     .flat();
 }
@@ -63,24 +64,23 @@ export function defaultContextRender({
  * Creates a default working memory object
  * @returns Empty working memory with initialized arrays
  */
-export function createDefaultContextMemory(): WorkingMemory {
+export function createWorkingMemory(): WorkingMemory {
   return {
     inputs: [],
     outputs: [],
     thoughts: [],
     calls: [],
     results: [],
-    isFinal: false,
   };
 }
 
 /**
- * Default working memory instance
+ * Default working memory config
  * Provides a memory container with standard working memory structure
  */
 export const defaultWorkingMemory = memory<WorkingMemory>({
   key: "working-memory",
-  create: createDefaultContextMemory,
+  create: createWorkingMemory,
 });
 
 /**
@@ -96,5 +96,60 @@ export const defaultContext = context({
       test: true,
     };
   },
-  // render: defaultContextRender,
 });
+
+export function getContextId<TContext extends AnyContext>(
+  context: TContext,
+  args: z.infer<TContext["schema"]>
+) {
+  const key = context.key ? context.key(args) : context.type;
+  return context.key ? [context.type, key].join(":") : context.type;
+}
+
+export async function getContextState<TContext extends AnyContext>(
+  agent: AnyAgent,
+  context: TContext,
+  args: z.infer<TContext["schema"]>
+): Promise<ContextState<TContext>> {
+  const key = context.key ? context.key(args) : context.type;
+  const id = context.key ? [context.type, key].join(":") : context.type;
+
+  const options = context.setup ? await context.setup(args, agent) : {};
+
+  const memory =
+    (await agent.memory.store.get(id)) ??
+    (context.create
+      ? context.create({ key, args, context, id: id, options })
+      : {});
+
+  return {
+    id,
+    key,
+    args,
+    options,
+    context,
+    memory,
+  };
+}
+
+export async function getContextWorkingMemory(
+  agent: AnyAgent,
+  contextId: string
+) {
+  return (
+    (await agent.memory.store.get<WorkingMemory>(
+      [contextId, "working-memory"].join(":")
+    )) ?? (await defaultWorkingMemory.create())
+  );
+}
+
+export async function saveContextWorkingMemory(
+  agent: AnyAgent,
+  contextId: string,
+  workingMemory: WorkingMemory
+) {
+  return await agent.memory.store.set(
+    [contextId, "working-memory"].join(":"),
+    workingMemory
+  );
+}

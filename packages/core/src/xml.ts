@@ -50,7 +50,6 @@ export function createTagParser<T = string>(
           : t[2]?.trim()) as T extends string ? string : T,
       }));
     } catch (error) {
-      console.log({ content, matches });
       throw error;
     }
   };
@@ -240,8 +239,6 @@ export function* xmlStreamParser(
 
       const tagEnd = buffer.indexOf(">", tagStart);
       if (tagEnd === -1) {
-        // textContent += buffer;
-        // buffer = "";
         break;
       }
 
