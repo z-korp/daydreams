@@ -11,7 +11,7 @@ import type {
 } from "./types";
 import { formatXml } from "./xml";
 import { formatValue } from "./utils";
-import { defaultContextRender } from "./context";
+import { renderWorkingMemory } from "./context";
 
 /**
  * Formats an input reference into XML format
@@ -217,25 +217,6 @@ export function formatContexts(
   contexts: ContextState[],
   workingMemory: WorkingMemory
 ) {
-  // Limit the number of processed items to include in the context
-  const MAX_PROCESSED_ITEMS = 15;
-
-  // Create a trimmed version of working memory for the context
-  const trimmedWorkingMemory = {
-    ...workingMemory,
-    inputs: workingMemory.inputs
-      .filter((i) => i.processed === true)
-      .slice(-MAX_PROCESSED_ITEMS),
-    results: workingMemory.results
-      .filter((i) => i.processed === true)
-      .slice(-MAX_PROCESSED_ITEMS),
-    outputs: workingMemory.outputs
-      .filter((o) => o.processed === true)
-      .slice(-MAX_PROCESSED_ITEMS),
-    thoughts: workingMemory.thoughts.slice(-MAX_PROCESSED_ITEMS),
-    calls: workingMemory.calls.slice(-MAX_PROCESSED_ITEMS),
-  };
-
   return contexts
     .map(({ id, context, key, args, memory, options }) =>
       formatContext({
@@ -268,8 +249,9 @@ export function formatContexts(
             ? context.render({ id, context, key, args, memory, options })
             : "",
           mainContextId === id
-            ? defaultContextRender({
-                memory: trimmedWorkingMemory,
+            ? renderWorkingMemory({
+                memory: workingMemory,
+                processed: true,
               })
             : "",
         ]

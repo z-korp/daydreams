@@ -15,6 +15,7 @@ import type {
   TemplateVariables,
   WorkingMemory,
 } from "./types";
+export { v7 as randomUUIDv7 } from "uuid";
 
 /**
  * Renders a template string by replacing variables with provided values
@@ -41,7 +42,11 @@ export function render<Template extends string>(
  */
 export function formatValue(value: any): string {
   if (Array.isArray(value)) return value.map((t) => formatValue(t)).join("\n");
-  if (typeof value !== "string") return JSON.stringify(value);
+  if (typeof value !== "string")
+    return JSON.stringify(value, (_, value) => {
+      if (typeof value === "bigint") return value.toString();
+      return value;
+    });
   return value.trim();
 }
 
@@ -54,12 +59,8 @@ export function formatValue(value: any): string {
  */
 export function input<
   Schema extends z.AnyZodObject = z.AnyZodObject,
-  Context extends AgentContext<WorkingMemory, AnyContext> = AgentContext<
-    WorkingMemory,
-    AnyContext
-  >,
-  TAgent extends Agent<any, any> = Agent<any, any>,
->(config: InputConfig<Schema, Context, TAgent>) {
+  TAgent extends AnyAgent = AnyAgent,
+>(config: InputConfig<Schema, TAgent>) {
   return config;
 }
 
@@ -74,10 +75,10 @@ export function input<
 export function action<
   Schema extends z.AnyZodObject = z.AnyZodObject,
   Result = any,
-  Context extends AgentContext<any, AnyContext> = AgentContext<any, AnyContext>,
+  TContext extends AnyContext = AnyContext,
   TAgent extends AnyAgent = AnyAgent,
-  TMemory extends Memory<any> = never,
->(action: Action<Schema, Result, Context, TAgent, TMemory>) {
+  TMemory extends Memory<any> = Memory<any>,
+>(action: Action<Schema, Result, TContext, TAgent, TMemory>) {
   return action;
 }
 
@@ -90,7 +91,7 @@ export function action<
  */
 export function output<
   Schema extends OutputSchema = OutputSchema,
-  Context extends AgentContext<any, any> = AgentContext<any, any>,
+  Context extends AgentContext<any> = AgentContext<any>,
   TResponse extends OutputResponse = OutputResponse,
 >(config: OutputConfig<Schema, Context, TResponse>) {
   return config;
@@ -187,4 +188,29 @@ export function validateEnv<T extends z.ZodTypeAny>(
     }
     throw error;
   }
+}
+
+type TrimWorkingMemoryOptions = {
+  thoughts: number;
+  inputs: number;
+  outputs: number;
+  actions: number;
+};
+
+const defaultTrimOptions: TrimWorkingMemoryOptions = {
+  thoughts: 6,
+  inputs: 20,
+  outputs: 20,
+  actions: 20,
+};
+
+export function trimWorkingMemory(
+  workingMemory: WorkingMemory,
+  options: TrimWorkingMemoryOptions = defaultTrimOptions
+) {
+  workingMemory.thoughts = workingMemory.thoughts.slice(-options.thoughts);
+  workingMemory.inputs = workingMemory.inputs.slice(-options.inputs);
+  workingMemory.outputs = workingMemory.outputs.slice(-options.outputs);
+  workingMemory.calls = workingMemory.calls.slice(-options.actions);
+  workingMemory.results = workingMemory.results.slice(-options.actions);
 }
