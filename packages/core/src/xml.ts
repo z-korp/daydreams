@@ -209,6 +209,8 @@ type SelfClosingTag = {
 
 type XMLToken = StartTag | EndTag | TextContent | SelfClosingTag;
 
+const alphaSlashRegex = /[a-zA-Z\/]/;
+
 export function* xmlStreamParser(
   parseTags: Set<string>
 ): Generator<XMLToken | void, void, string> {
@@ -231,7 +233,11 @@ export function* xmlStreamParser(
         break;
       }
 
-      if (tagStart === -1) {
+      // todo: regex performance
+      if (
+        tagStart === -1 ||
+        (buffer.length > 1 && !alphaSlashRegex.test(buffer[tagStart + 1]))
+      ) {
         textContent += buffer;
         buffer = "";
         break;

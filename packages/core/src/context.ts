@@ -1,14 +1,25 @@
-import { z } from "zod";
+import { z, type ZodRawShape } from "zod";
 import type {
+  AnyAction,
   AnyAgent,
   AnyContext,
   Context,
+  ContextSettings,
   ContextState,
+  InferSchemaArguments,
   Log,
+  Optional,
   WorkingMemory,
 } from "./types";
 import { formatContextLog } from "./formatters";
 import { memory } from "./utils";
+
+type ContextConfig<
+  TMemory = any,
+  Args extends z.ZodTypeAny | ZodRawShape = any,
+  Ctx = any,
+  T extends AnyAction[] = AnyAction[],
+> = Optional<Omit<Context<TMemory, Args, Ctx, T>, "setActions">, "actions">;
 
 /**
  * Creates a context configuration
@@ -21,11 +32,21 @@ import { memory } from "./utils";
  */
 
 export function context<
-  Memory = any,
-  Args extends z.ZodTypeAny = z.ZodTypeAny,
+  TMemory = any,
+  Args extends z.ZodTypeAny | ZodRawShape = any,
   Ctx = any,
->(ctx: Context<Memory, Args, Ctx>): Context<Memory, Args, Ctx> {
-  return ctx;
+  T extends AnyAction[] = AnyAction[],
+>(ctx: ContextConfig<TMemory, Args, Ctx, T>): Context<TMemory, Args, Ctx, T> {
+  return {
+    ...ctx,
+    actions: (ctx.actions ?? []) as T,
+    setActions(actions) {
+      return context<TMemory, Args, Ctx, any>({
+        ...ctx,
+        actions,
+      });
+    },
+  };
 }
 
 /**
@@ -50,14 +71,21 @@ export function getWorkingMemoryLogs(
 export function renderWorkingMemory({
   memory,
   processed,
+  size,
 }: {
   memory: Partial<WorkingMemory>;
   processed: boolean;
+  size?: number;
 }) {
-  return getWorkingMemoryLogs(memory, false)
-    .filter((i) => i.processed === processed)
-    .map((i) => formatContextLog(i))
-    .flat();
+  let logs = getWorkingMemoryLogs(memory, false).filter(
+    (i) => i.processed === processed
+  );
+
+  if (size) {
+    logs = logs.slice(-size);
+  }
+
+  return logs.map((i) => formatContextLog(i)).flat();
 }
 
 /**
@@ -83,21 +111,6 @@ export const defaultWorkingMemory = memory<WorkingMemory>({
   create: createWorkingMemory,
 });
 
-/**
- * Default context configuration
- * Provides a basic context with string schema and test property
- */
-export const defaultContext = context({
-  type: "default",
-  schema: z.string(),
-  key: (key) => key,
-  create(state) {
-    return {
-      test: true,
-    };
-  },
-});
-
 export function getContextId<TContext extends AnyContext>(
   context: TContext,
   args: z.infer<TContext["schema"]>
@@ -106,20 +119,30 @@ export function getContextId<TContext extends AnyContext>(
   return context.key ? [context.type, key].join(":") : context.type;
 }
 
-export async function getContextState<TContext extends AnyContext>(
+export async function createContextState<TContext extends AnyContext>(
   agent: AnyAgent,
   context: TContext,
-  args: z.infer<TContext["schema"]>
+  args: InferSchemaArguments<TContext["schema"]>,
+  initialSettings: ContextSettings = {}
 ): Promise<ContextState<TContext>> {
   const key = context.key ? context.key(args) : context.type;
   const id = context.key ? [context.type, key].join(":") : context.type;
 
-  const options = context.setup ? await context.setup(args, agent) : {};
+  const settings: ContextSettings = {
+    model: context.model,
+    maxSteps: context.maxSteps,
+    maxWorkingMemorySize: context.maxWorkingMemorySize,
+    ...initialSettings,
+  };
+
+  const options = context.setup
+    ? await context.setup(args, settings, agent)
+    : {};
 
   const memory =
-    (await agent.memory.store.get(id)) ??
+    (await agent.memory.store.get(`memory:${id}`)) ??
     (context.create
-      ? context.create({ key, args, context, id: id, options })
+      ? context.create({ key, args, context, id, options, settings })
       : {});
 
   return {
@@ -129,6 +152,8 @@ export async function getContextState<TContext extends AnyContext>(
     options,
     context,
     memory,
+    settings,
+    contexts: [],
   };
 }
 
@@ -138,7 +163,7 @@ export async function getContextWorkingMemory(
 ) {
   return (
     (await agent.memory.store.get<WorkingMemory>(
-      [contextId, "working-memory"].join(":")
+      ["working-memory", contextId].join(":")
     )) ?? (await defaultWorkingMemory.create())
   );
 }
@@ -149,7 +174,102 @@ export async function saveContextWorkingMemory(
   workingMemory: WorkingMemory
 ) {
   return await agent.memory.store.set(
-    [contextId, "working-memory"].join(":"),
+    ["working-memory", contextId].join(":"),
     workingMemory
+  );
+}
+
+type ContextStateSnapshot = {
+  id: string;
+  type: string;
+  args: any;
+  key: string;
+  settings: Omit<ContextSettings, "model"> & { model?: string };
+};
+
+export async function saveContextState(agent: AnyAgent, state: ContextState) {
+  const { id, context, key, args, settings } = state;
+  await agent.memory.store.set<ContextStateSnapshot>(`context:${id}`, {
+    id,
+    type: context.type,
+    key,
+    args,
+    settings: {
+      ...settings,
+      model: settings.model?.modelId,
+    },
+  });
+
+  if (state.context.save) {
+    await state.context.save(state);
+  } else {
+    await agent.memory.store.set<any>(`memory:${id}`, state.memory);
+  }
+}
+export async function loadContextState(
+  agent: AnyAgent,
+  context: AnyContext,
+  contextId: string
+): Promise<Omit<ContextState, "options" | "memory"> | null> {
+  const state = await agent.memory.store.get<ContextStateSnapshot>(
+    `context:${contextId}`
+  );
+
+  if (!state) return null;
+
+  return {
+    ...state,
+    context,
+    contexts: [],
+    settings: {
+      ...state?.settings,
+      // todo: agent resolve model?
+      model: undefined,
+    },
+  };
+}
+
+export async function saveContextsIndex(
+  agent: AnyAgent,
+  contextIds: Set<string>
+) {
+  await agent.memory.store.set<string[]>(
+    "contexts",
+    Array.from(contextIds.values()).map((id) => id)
+  );
+}
+
+function getContextData(
+  contexts: Map<string, ContextState>,
+  contextId: string
+) {
+  // todo: verify type?
+
+  if (contexts.has(contextId)) {
+    const state = contexts.get(contextId)!;
+    return {
+      id: contextId,
+      type: state.context.type,
+      key: state.key,
+      args: state.args,
+      settings: state.settings,
+    };
+  }
+
+  const [type, key] = contextId.split(":");
+
+  return {
+    id: contextId,
+    type,
+    key,
+  };
+}
+
+export function getContexts(
+  contextIds: Set<string>,
+  contexts: Map<string, ContextState>
+) {
+  return Array.from(contextIds.values()).map((id) =>
+    getContextData(contexts, id)
   );
 }
