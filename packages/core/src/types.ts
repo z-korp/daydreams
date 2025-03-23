@@ -852,12 +852,27 @@ type ActionArray<T extends AnyAction[]> = {
   [K in keyof T]: T[K];
 };
 
+interface ContextApi<
+  TMemory = any,
+  Schema extends z.ZodTypeAny | ZodRawShape = z.ZodTypeAny,
+  Ctx = any,
+  Actions extends AnyAction[] = AnyAction[],
+> {
+  setActions<
+    TActions extends AnyActionWithContext<
+      Context<TMemory, Schema, Ctx, any>
+    >[] = AnyActionWithContext<Context<TMemory, Schema, Ctx, any>>[],
+  >(
+    actions: TActions
+  ): Context<TMemory, Schema, Ctx, TActions>;
+}
+
 export interface Context<
   TMemory = any,
   Schema extends z.ZodTypeAny | ZodRawShape = z.ZodTypeAny,
   Ctx = any,
-  T extends AnyAction[] = AnyAction[],
-> {
+  Actions extends AnyAction[] = AnyAction[],
+> extends ContextApi<TMemory, Schema, Ctx, Actions> {
   /** Unique type identifier for this context */
   type: string;
   /** Zod schema for validating context arguments */
@@ -872,10 +887,11 @@ export interface Context<
     agent: AnyAgent
   ) => Promise<Ctx> | Ctx;
 
-  /** Optional instructions for this context */
-
   /** Optional function to create new memory for this context */
   create?: (state: any) => TMemory | Promise<TMemory>;
+
+  /** Optional instructions for this context */
+  instructions?: Instruction | ((state: ContextState<this>) => Instruction);
 
   /** Optional description of this context */
   description?:
@@ -883,14 +899,12 @@ export interface Context<
     | string[]
     | ((state: ContextState<this>) => string | string[]);
 
-  instructions?: Instruction | ((state: ContextState<this>) => Instruction);
-
   /** Optional function to load existing memory */
   load?: (state: Omit<ContextState<this>, "memory">) => Promise<TMemory>;
-  // /** Optional function to save memory state */
+  /** Optional function to save memory state */
   save?: (state: ContextState<this>) => Promise<void>;
 
-  // /** Optional function to render memory state */
+  /** Optional function to render memory state */
   render?: (state: ContextState<this>) => string | string[];
 
   model?: LanguageModelV1;
@@ -899,19 +913,20 @@ export interface Context<
 
   onStep?: (ctx: AgentContext<this>, agent: AnyAgent) => Promise<void>;
 
+  onError?: (
+    error: unknown,
+    ctx: AgentContext<this>,
+    agent: AnyAgent
+  ) => Promise<void>;
+
+  //wip?
+  loader?: (state: ContextState<this>) => Promise<void>;
+
   maxSteps?: number;
 
   maxWorkingMemorySize?: number;
 
-  actions: T;
-
-  setActions<
-    Actions extends AnyActionWithContext<
-      Context<TMemory, Schema, Ctx, any>
-    >[] = AnyActionWithContext<Context<TMemory, Schema, Ctx, any>>[],
-  >(
-    actions: Actions
-  ): Context<TMemory, Schema, Ctx, Actions>;
+  actions: Actions;
 }
 
 export type ContextSettings = {
