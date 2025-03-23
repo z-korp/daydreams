@@ -9,8 +9,9 @@ import {
 import { parse, prompt, resultsPrompt } from "../prompts/main";
 import { task, type TaskContext } from "../task";
 import { formatContext, formatContexts } from "../formatters";
-import { getWorkingMemoryLogs, renderWorkingMemory } from "../context";
+import { renderWorkingMemory } from "../context";
 import type {
+  Action,
   ActionCall,
   ActionContext,
   AnyAction,
@@ -24,11 +25,38 @@ import type {
 import type { Logger } from "../logger";
 import { wrapStream } from "../streaming";
 
-const customModelsConfig: Record<string, any> = {
+type ModelConfig = {
+  assist?: boolean;
+  prefix?: string;
+  thinkTag?: string;
+};
+
+// TODO: move this
+export const modelsResponseConfig: Record<string, ModelConfig> = {
+  "o3-mini": {
+    assist: false,
+    prefix: "",
+  },
+  "claude-3-7-sonnet-20250219": {
+    // assist: true,
+    // prefix: "<thinking>",
+    // thinkTag: "<thinking>",
+  },
   "qwen-qwq-32b": {
     prefix: "",
   },
+  "deepseek-r1-distill-llama-70b": {
+    prefix: "",
+    assist: false,
+  },
 };
+
+export const reasoningModels = [
+  "claude-3-7-sonnet-20250219",
+  "qwen-qwq-32b",
+  "deepseek-r1-distill-llama-70b",
+  "o3-mini",
+];
 
 /**
  * Prepares a stream response by handling the stream result and parsing it.
@@ -48,6 +76,7 @@ function prepareStreamResponse({
   contextId,
   step,
   task: { callId, debug },
+  isReasoningModel,
 }: {
   model: LanguageModelV1;
   contextId: string;
@@ -55,8 +84,13 @@ function prepareStreamResponse({
   stream: StreamTextResult<ToolSet, never>;
   logger: Logger;
   task: TaskContext;
+  isReasoningModel: boolean;
 }) {
-  const prefix = customModelsConfig[model.modelId]?.prefix ?? "<think>";
+  const prefix =
+    modelsResponseConfig[model.modelId]?.prefix ??
+    (isReasoningModel
+      ? (modelsResponseConfig[model.modelId]?.thinkTag ?? "<think>")
+      : "<response>");
   const suffix = "</response>";
 
   const response = new Promise<ReturnType<typeof parse>>(
@@ -85,6 +119,19 @@ function prepareStreamResponse({
   };
 }
 
+type GenerateOptions = {
+  agent: AnyAgent;
+  contexts: ContextState<AnyContext>[];
+  contextId: string;
+  workingMemory: WorkingMemory;
+  outputs: Output[];
+  actions: AnyAction[];
+  logger: Logger;
+  model: LanguageModelV1;
+  chain: Log[];
+  abortSignal?: AbortSignal;
+};
+
 /**
  * Task that generates a response from the agent based on the current context and working memory.
  *
@@ -112,18 +159,8 @@ export const runGenerate = task(
       model,
       contextId,
       abortSignal,
-    }: {
-      agent: AnyAgent;
-      contexts: ContextState<AnyContext>[];
-      contextId: string;
-      workingMemory: WorkingMemory;
-      outputs: Output[];
-      actions: AnyAction[];
-      logger: Logger;
-      model: LanguageModelV1;
-      abortSignal?: AbortSignal;
-    },
-    { callId, debug }: TaskContext
+    }: GenerateOptions,
+    { callId, debug }
   ) => {
     debug(
       contextId,
@@ -154,7 +191,9 @@ export const runGenerate = task(
 
     logger.debug("agent:system", system);
 
-    const messages = [
+    const isReasoningModel = reasoningModels.includes(model.modelId);
+
+    const messages: CoreMessage[] = [
       {
         role: "user",
         content: [
@@ -164,11 +203,15 @@ export const runGenerate = task(
           },
         ],
       },
-      {
+    ];
+
+    if (modelsResponseConfig[model.modelId]?.assist !== false)
+      messages.push({
         role: "assistant",
-        content: "<think>",
-      },
-    ] as CoreMessage[];
+        content: isReasoningModel
+          ? (modelsResponseConfig[model.modelId]?.thinkTag ?? "<think>")
+          : "<response>",
+      });
 
     if (workingMemory.currentImage) {
       messages[0].content = [
@@ -192,10 +235,21 @@ export const runGenerate = task(
       onError: (error) => {
         console.error(error);
       },
+      providerOptions: {
+        // TODO: providerOptions
+        // openai: isReasoningModel
+        //   ? {
+        //       reasoningEffort: "low",
+        //     }
+        //   : {},
+        // anthropic: {
+        //   thinking: {
+        //     type: isReasoningModel ? "enabled" : "disabled",
+        //     budgetTokens: 12000,
+        //   },
+        // },
+      },
     });
-
-    // Clear the current image after using it
-    workingMemory.currentImage = undefined;
 
     return prepareStreamResponse({
       model,
@@ -204,6 +258,7 @@ export const runGenerate = task(
       logger,
       stream,
       task: { callId, debug },
+      isReasoningModel,
     });
   }
 );
@@ -237,19 +292,8 @@ export const runGenerateResults = task(
       contextId,
       chain,
       abortSignal,
-    }: {
-      agent: AnyAgent;
-      contexts: ContextState<AnyContext>[];
-      contextId: string;
-      workingMemory: WorkingMemory;
-      outputs: Output[];
-      actions: AnyAction[];
-      logger: Logger;
-      model: LanguageModelV1;
-      chain: Log[];
-      abortSignal?: AbortSignal;
-    },
-    { callId, debug }: TaskContext
+    }: GenerateOptions,
+    { callId, debug }
   ) => {
     debug(
       contextId,
@@ -279,10 +323,6 @@ export const runGenerateResults = task(
       results: workingMemory.results.filter((i) => i.processed !== true),
     });
 
-    getWorkingMemoryLogs(workingMemory).forEach((i) => {
-      if (i.ref !== "input") i.processed = true;
-    });
-
     debug(contextId, ["prompt-results", callId], system);
 
     logger.debug("agent:system", system, {
@@ -290,7 +330,9 @@ export const runGenerateResults = task(
       callId,
     });
 
-    const messages = [
+    const isReasoningModel = reasoningModels.includes(model.modelId);
+
+    const messages: CoreMessage[] = [
       {
         role: "user",
         content: [
@@ -300,11 +342,15 @@ export const runGenerateResults = task(
           },
         ],
       },
-      {
+    ];
+
+    if (modelsResponseConfig[model.modelId]?.assist !== false)
+      messages.push({
         role: "assistant",
-        content: "<think>",
-      },
-    ] as CoreMessage[];
+        content: isReasoningModel
+          ? (modelsResponseConfig[model.modelId]?.thinkTag ?? "<think>")
+          : "<response>",
+      });
 
     if (workingMemory.currentImage) {
       messages[0].content = [
@@ -318,7 +364,7 @@ export const runGenerateResults = task(
 
     const stream = streamText({
       model,
-      messages: messages,
+      messages,
       stopSequences: ["</response>"],
       temperature: 0.6,
       abortSignal,
@@ -330,9 +376,6 @@ export const runGenerateResults = task(
       },
     });
 
-    // Clear the current image after using it
-    workingMemory.currentImage = undefined;
-
     return prepareStreamResponse({
       model,
       step: "results-response",
@@ -340,6 +383,7 @@ export const runGenerateResults = task(
       logger,
       stream,
       task: { callId, debug },
+      isReasoningModel,
     });
   }
 );
@@ -377,12 +421,45 @@ export const runAction = task(
         call.name,
         JSON.stringify(call.data)
       );
-      const result = await action.handler(call, ctx, agent);
+
+      const result =
+        action.schema === undefined
+          ? await (action as Action<undefined>).handler(
+              {
+                ...ctx,
+                call,
+              },
+              agent
+            )
+          : await action.handler(
+              call.data,
+              {
+                ...ctx,
+                call,
+              },
+              agent
+            );
+
       logger.debug("agent:action_result:" + call.id, call.name, result);
       return result;
     } catch (error) {
       logger.error("agent:action", "ACTION_FAILED", { error });
-      throw error;
+
+      if (action.onError) {
+        await Promise.resolve(
+          action.onError(
+            error,
+            action.schema === undefined ? undefined : call.data,
+            {
+              ...ctx,
+              call,
+            },
+            agent
+          )
+        );
+      } else {
+        throw error;
+      }
     }
   }
 );

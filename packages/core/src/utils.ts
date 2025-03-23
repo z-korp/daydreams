@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type {
   Action,
-  Agent,
+  ActionSchema,
   AgentContext,
   AnyAgent,
   AnyContext,
@@ -9,6 +9,7 @@ import type {
   Extension,
   InputConfig,
   Memory,
+  Optional,
   OutputConfig,
   OutputResponse,
   OutputSchema,
@@ -73,13 +74,22 @@ export function input<
  * @returns Typed action configuration
  */
 export function action<
-  Schema extends z.AnyZodObject = z.AnyZodObject,
+  TSchema extends ActionSchema = undefined,
   Result = any,
+  TError = any,
   TContext extends AnyContext = AnyContext,
   TAgent extends AnyAgent = AnyAgent,
   TMemory extends Memory<any> = Memory<any>,
->(action: Action<Schema, Result, TContext, TAgent, TMemory>) {
-  return action;
+>(
+  action: Optional<
+    Action<TSchema, Result, TError, TContext, TAgent, TMemory>,
+    "schema"
+  >
+): Action<TSchema, Result, TError, TContext, TAgent, TMemory> {
+  return {
+    ...action,
+    schema: action.schema ?? (undefined as TSchema),
+  };
 }
 
 /**
@@ -162,8 +172,17 @@ export function memory<Data = any>(memory: Memory<Data>) {
 
 export function extension<
   Contexts extends Record<string, AnyContext> = Record<string, AnyContext>,
->(config: Extension<AnyContext, Contexts>) {
-  return config;
+  Inputs extends Record<string, InputConfig<any, any>> = Record<
+    string,
+    InputConfig<any, any>
+  >,
+>(
+  config: Optional<Extension<AnyContext, Contexts, Inputs>, "inputs">
+): Extension<AnyContext, Contexts, Inputs> {
+  return {
+    ...config,
+    inputs: config.inputs ?? ({} as Inputs),
+  };
 }
 
 /**

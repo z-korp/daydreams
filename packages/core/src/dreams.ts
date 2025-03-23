@@ -1,32 +1,40 @@
-import {
-  LogLevel,
-  type Agent,
-  type AnyContext,
-  type Config,
-  type Debugger,
-  type Log,
-  type Output,
-  type Subscription,
+import { z } from "zod";
+import type {
+  Agent,
+  AnyContext,
+  Config,
+  Debugger,
+  Log,
+  Output,
+  Subscription,
+  AnyAction,
+  ContextState,
+  Episode,
 } from "./types";
 import { Logger } from "./logger";
-import createContainer from "./container";
+import { createContainer } from "./container";
 import { createServiceManager } from "./serviceProvider";
 import { TaskRunner } from "./task";
 import {
   getContextId,
-  getContextState,
+  createContextState,
   getContextWorkingMemory,
   getWorkingMemoryLogs,
   saveContextWorkingMemory,
+  saveContextState,
+  saveContextsIndex,
+  loadContextState,
+  getContexts,
 } from "./context";
 import { createMemoryStore } from "./memory";
 import { createMemory } from "./memory";
 import { createVectorStore } from "./memory/base";
 import { runGenerate, runGenerateResults } from "./tasks";
 import { exportEpisodesAsTrainingData } from "./memory/utils";
-import type { Episode, Memory } from "./types";
+import { LogLevel } from "./types";
 import { randomUUIDv7 } from "./utils";
 import { createContextStreamHandler, handleStream } from "./streaming";
+import { prepareAction } from "./handlers";
 
 export function createDreams<TContext extends AnyContext = AnyContext>(
   config: Config<TContext>
@@ -34,7 +42,9 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
   let booted = false;
 
   const inputSubscriptions = new Map<string, Subscription>();
-  const contexts = new Map<string, { type: string; args?: any }>();
+
+  const contextIds = new Set<string>();
+  const contexts = new Map<string, ContextState>();
   const contextsRunning = new Set<string>();
 
   const {
@@ -121,16 +131,50 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
     },
 
     async getContexts() {
-      return Array.from(contexts.entries()).map(([id, { type, args }]) => ({
-        id,
-        type,
-        args,
-      }));
+      return getContexts(contextIds, contexts);
     },
 
-    getContext(params) {
+    async getContext(params) {
       logger.trace("agent:getContext", "Getting context state", params);
-      return getContextState(agent, params.context, params.args);
+      const id = getContextId(params.context, params.args);
+
+      if (!contexts.has(id) && contextIds.has(id)) {
+        const state = await loadContextState(agent, params.context, id);
+
+        if (state) {
+          await this.saveContext(
+            await createContextState(
+              agent,
+              params.context,
+              params.args,
+              state.settings
+            )
+          );
+        }
+      }
+
+      if (!contexts.has(id)) {
+        await this.saveContext(
+          await createContextState(agent, params.context, params.args)
+        );
+      }
+
+      return contexts.get(id)! as ContextState<typeof params.context>;
+    },
+
+    async saveContext(ctxState, workingMemory) {
+      contextIds.add(ctxState.id);
+      contexts.set(ctxState.id, ctxState);
+
+      await saveContextState(agent, ctxState);
+
+      if (workingMemory) {
+        await saveContextWorkingMemory(agent, ctxState.id, workingMemory);
+      }
+
+      await saveContextsIndex(agent, contextIds);
+
+      return true;
     },
 
     getContextId(params) {
@@ -138,7 +182,7 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
       return getContextId(params.context, params.args);
     },
 
-    getWorkingMemory(contextId) {
+    async getWorkingMemory(contextId) {
       logger.trace("agent:getWorkingMemory", "Getting working memory", {
         contextId,
       });
@@ -198,6 +242,7 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
       logger.debug("agent:start", "Setting up outputs", {
         count: Object.keys(outputs).length,
       });
+
       for (const [type, output] of Object.entries(outputs)) {
         if (output.install) {
           logger.trace("agent:start", "Installing output", { type });
@@ -218,28 +263,29 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
         }
       }
 
-      if (agent.context) {
-        logger.debug("agent:start", "Setting up agent context", {
-          type: agent.context.type,
-        });
-        const { id } = await getContextState(agent, agent.context, args);
-        contexts.set(id, { type: agent.context.type, args });
-        contexts.set("agent:context", { type: agent.context.type, args });
-      }
-
       logger.debug("agent:start", "Loading saved contexts");
-      const savedContexts =
-        await agent.memory.store.get<[string, { type: string; args?: any }][]>(
-          "contexts"
-        );
+      const savedContexts = await agent.memory.store.get<string[]>("contexts");
 
       if (savedContexts) {
         logger.trace("agent:start", "Restoring saved contexts", {
           count: savedContexts.length,
         });
-        for (const [id, { type, args }] of savedContexts) {
-          contexts.set(id, { type, args });
+
+        for (const id of savedContexts) {
+          // const [type, key] = id.split(":");
+          contextIds.add(id);
         }
+      }
+
+      if (agent.context) {
+        logger.debug("agent:start", "Setting up agent context", {
+          type: agent.context.type,
+        });
+
+        await agent.getContext({
+          context: agent.context,
+          args: args!,
+        });
       }
 
       logger.info("agent:start", "Agent started successfully");
@@ -250,7 +296,9 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
       logger.info("agent:stop", "Stopping agent");
     },
 
-    run: async ({ context, args, outputs, handlers, abortSignal, model }) => {
+    async run(params) {
+      const { context, args, outputs, handlers, abortSignal, model } = params;
+
       if (!booted) {
         logger.error("agent:run", "Agent not booted");
         throw new Error("Not booted");
@@ -263,15 +311,8 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
         hasHandlers: !!handlers,
       });
 
-      const ctxState = await getContextState(agent, context, args);
+      const ctxState = await agent.getContext({ context, args });
       logger.debug("agent:run", "Context state retrieved", { id: ctxState.id });
-
-      contexts.set(ctxState.id, { type: context.type, args });
-
-      await agent.memory.store.set<[string, { args?: any }][]>(
-        "contexts",
-        Array.from(contexts.entries())
-      );
 
       if (contextsRunning.has(ctxState.id)) {
         logger.debug("agent:run", "Context already running", {
@@ -281,6 +322,7 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
       }
 
       contextsRunning.add(ctxState.id);
+
       logger.debug("agent:run", "Added context to running set", {
         id: ctxState.id,
       });
@@ -317,41 +359,55 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
       });
 
       const agentCtxState = agent.context
-        ? await getContextState(
-            agent,
-            agent.context,
-            contexts.get("agent:context")!.args
-          )
+        ? await agent.getContext({
+            context: agent.context,
+            args: contexts.get("agent:context")!.args,
+          })
         : undefined;
 
       logger.debug("agent:run", "Preparing actions");
 
       const contextActions = await Promise.all(
-        actions.map(async (action) => {
-          if (action.context && action.context.type !== context.type)
-            return undefined;
-
-          let actionMemory: Memory | undefined = undefined;
-
-          if (action.memory) {
-            actionMemory =
-              (await agent.memory.store.get(action.memory.key)) ??
-              action.memory.create();
-          }
-
-          const enabled = action.enabled
-            ? action.enabled({
-                ...ctxState,
-                context,
-                workingMemory,
-                actionMemory,
-                agentMemory: agentCtxState?.memory,
-              })
-            : true;
-
-          return enabled ? action : undefined;
-        })
+        [actions, params.actions, context.actions]
+          .filter((t) => !!t)
+          .flat()
+          .map((action: AnyAction) =>
+            prepareAction({
+              action,
+              agent,
+              agentCtxState,
+              context,
+              state: ctxState,
+              workingMemory,
+            })
+          )
       ).then((r) => r.filter((a) => !!a));
+
+      const subCtxsStates = await Promise.all(
+        (params.contexts ?? []).map(async (ref) => {
+          return await agent.getContext(ref);
+        })
+      );
+
+      // todo: rename actions or include params/extend schema to run actions in specific context
+      const subCtxsActions = await Promise.all(
+        subCtxsStates
+          .map((ctxState) =>
+            (ctxState.context.actions ?? []).map((action: AnyAction) =>
+              prepareAction({
+                action,
+                agent,
+                agentCtxState,
+                context: ctxState.context,
+                state: ctxState,
+                workingMemory,
+              })
+            )
+          )
+          .flat()
+      ).then((r) => r.filter((a) => !!a));
+
+      contextActions.push(...subCtxsActions);
 
       logger.debug("agent:run", "Enabled actions", {
         count: contextActions.length,
@@ -367,7 +423,7 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
       let hasError = false;
       let actionCalls: Promise<any>[] = [];
 
-      const { state, handler, tags } = createContextStreamHandler({
+      const { state, handler, push, tags } = createContextStreamHandler({
         agent,
         chain,
         actions: contextActions,
@@ -380,24 +436,35 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
         taskRunner,
         workingMemory,
         abortSignal,
+        subCtxsStates,
       });
 
-      let step = 1;
-      const maxSteps = context.maxSteps ?? 5;
+      if (params.chain) {
+        await Promise.all(params.chain.map((log) => push(log, true)));
+      }
 
-      while (maxSteps > step) {
+      let step = 1;
+      let maxSteps = 0;
+
+      function getMaxSteps() {
+        return ctxState.settings.maxSteps ?? 5;
+      }
+
+      while ((maxSteps = getMaxSteps()) > step) {
         logger.info("agent:run", `Starting step ${step}/${maxSteps}`, {
           contextId: ctxState.id,
         });
 
         try {
-          const { stream, response } = await taskRunner.enqueueTask(
-            step > 1 ? runGenerateResults : runGenerate,
+          const { stream } = await taskRunner.enqueueTask(
+            chain.length > 0 ? runGenerateResults : runGenerate,
             {
               agent,
               model:
                 model ?? context.model ?? config.reasoningModel ?? config.model,
-              contexts: [agentCtxState, ctxState].filter((t) => !!t),
+              contexts: [agentCtxState, ctxState, ...subCtxsStates].filter(
+                (t) => !!t
+              ),
               contextId: ctxState.id,
               actions: contextActions,
               outputs: contextOuputs,
@@ -408,6 +475,7 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
             },
             {
               debug: agent.debugger,
+              abortSignal,
             }
           );
 
@@ -425,35 +493,16 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
 
           actionCalls.length = 0;
 
-          logger.debug("agent:run", "Saving context state", {
-            id: ctxState.id,
-          });
-
-          await agent.memory.store.set(ctxState.id, ctxState.memory);
-
-          if (agentCtxState) {
-            logger.debug("agent:run", "Saving agent context state", {
-              id: agentCtxState.id,
-            });
-
-            await agent.memory.store.set(
-              agentCtxState.id,
-              agentCtxState.memory
-            );
-          }
-
-          logger.debug("agent:run", "Saving working memory", {
-            id: ctxState.id,
-            workingMemory,
-          });
-
           step++;
 
           if (context.onStep) {
-            await context.onStep({
-              ...ctxState,
-              workingMemory,
-            });
+            await context.onStep(
+              {
+                ...ctxState,
+                workingMemory,
+              },
+              agent
+            );
           }
 
           if (hasError) {
@@ -461,10 +510,13 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
             continue;
           }
 
-          await saveContextWorkingMemory(agent, ctxState.id, workingMemory);
+          await agent.saveContext(ctxState);
 
-          const pendingResults = workingMemory.results.filter(
-            (i) => i.processed === false
+          const pendingResults = getWorkingMemoryLogs(workingMemory).filter(
+            (i) =>
+              i.ref === "input" || i.ref === "thought"
+                ? false
+                : i.processed === false
           );
 
           if (pendingResults.length === 0 || abortSignal?.aborted) break;
@@ -474,11 +526,26 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
         }
       }
 
-      logger.debug("agent:run", "Marking all working memory as processed");
+      logger.debug(
+        "agent:run",
+        "Marking all working memory chain as processed"
+      );
 
-      getWorkingMemoryLogs(workingMemory).forEach((i) => {
+      chain.forEach((i) => {
         i.processed = true;
       });
+
+      if (context.onRun) {
+        await context.onRun(
+          {
+            ...ctxState,
+            workingMemory,
+          },
+          agent
+        );
+      }
+
+      await agent.saveContext(ctxState, workingMemory);
 
       logger.debug("agent:run", "Removing context from running set", {
         id: ctxState.id,
@@ -494,7 +561,7 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
       return chain;
     },
 
-    send: async (params) => {
+    async send(params) {
       logger.info("agent:send", "Sending input", {
         inputType: params.input.type,
         contextType: params.context.type,
@@ -507,24 +574,27 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
         throw new Error("invalid input");
       }
 
-      const args = params.context.schema.parse(params.args);
+      const ctxSchema =
+        "parse" in params.context.schema
+          ? params.context.schema
+          : z.object(params.context.schema);
 
-      const {
-        key,
-        id: contextId,
-        options,
-        memory,
-      } = await getContextState(agent, params.context, args);
+      const args = ctxSchema.parse(params.args);
 
-      logger.debug("agent:send", "Context state retrieved", {
-        id: contextId,
-        key,
+      const ctxState = await agent.getContext({
+        context: params.context,
+        args,
       });
 
-      const workingMemory = await getContextWorkingMemory(agent, contextId);
+      logger.debug("agent:send", "Context state retrieved", {
+        id: ctxState.id,
+        key: ctxState.key,
+      });
+
+      const workingMemory = await getContextWorkingMemory(agent, ctxState.id);
 
       logger.trace("agent:send", "Working memory retrieved", {
-        id: contextId,
+        id: ctxState.id,
         inputsCount: workingMemory.inputs.length,
       });
 
@@ -538,7 +608,7 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
       logger.debug("agent:send", "Querying episodic memory");
 
       const episodicMemory = await agent.memory.vector.query(
-        `${contextId}`,
+        `${ctxState.id}`,
         JSON.stringify(data)
       );
 
@@ -558,14 +628,8 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
         await input.handler(
           data,
           {
-            id: contextId,
-            context: params.context,
-            args,
-            type: params.context.type,
-            key,
-            memory,
+            ...ctxState,
             workingMemory,
-            options,
           },
           agent
         );
@@ -586,24 +650,19 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
       }
 
       logger.debug("agent:send", "Running evaluator");
+
       await agent.evaluator({
-        type: params.context.type,
-        key,
-        memory,
-        options,
-      } as any);
+        ...ctxState,
+        workingMemory,
+      });
 
-      logger.debug("agent:send", "Saving context memory", { id: contextId });
-      await agent.memory.store.set(contextId, memory);
-
-      logger.debug("agent:send", "Saving working memory");
-      await saveContextWorkingMemory(agent, contextId, workingMemory);
+      await agent.saveContext(ctxState, workingMemory);
 
       logger.debug("agent:send", "Running run method");
       return await agent.run(params);
     },
 
-    evaluator: async (ctx) => {
+    async evaluator(ctx) {
       const { id, memory } = ctx;
       logger.debug("agent:evaluator", "memory", memory);
     },
