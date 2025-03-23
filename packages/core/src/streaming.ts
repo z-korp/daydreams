@@ -312,6 +312,7 @@ export function createContextStreamHandler({
             name: el.attributes.name,
             content: el.content.join(""),
             data: undefined,
+            processed: false,
           },
           el.done
         );

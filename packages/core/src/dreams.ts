@@ -282,10 +282,12 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
           type: agent.context.type,
         });
 
-        await agent.getContext({
+        const state = await agent.getContext({
           context: agent.context,
           args: args!,
         });
+
+        contexts.set("agent:context", state);
       }
 
       logger.info("agent:start", "Agent started successfully");
@@ -479,6 +481,10 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
             }
           );
 
+          chain.forEach((i) => {
+            if (i.ref !== "input") i.processed = true;
+          });
+
           logger.debug("agent:run", "Processing stream", { step });
 
           await handleStream(stream, state.index, handler, tags);
@@ -519,10 +525,34 @@ export function createDreams<TContext extends AnyContext = AnyContext>(
                 : i.processed === false
           );
 
+          console.log({ pendingResults });
+
           if (pendingResults.length === 0 || abortSignal?.aborted) break;
+
+          await new Promise((resolve) => {
+            setTimeout(resolve, 3000);
+          });
         } catch (error) {
+          await agent.saveContext(ctxState);
+
           console.error(error);
-          break;
+
+          if (context.onError) {
+            try {
+              context.onError(
+                error,
+                {
+                  ...ctxState,
+                  workingMemory,
+                },
+                agent
+              );
+            } catch (error) {
+              break;
+            }
+          } else {
+            break;
+          }
         }
       }
 

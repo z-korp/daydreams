@@ -422,6 +422,8 @@ export const runAction = task(
         JSON.stringify(call.data)
       );
 
+      call.processed = true;
+
       const result =
         action.schema === undefined
           ? await (action as Action<undefined>).handler(

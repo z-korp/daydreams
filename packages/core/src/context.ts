@@ -142,7 +142,9 @@ export async function createContextState<TContext extends AnyContext>(
   const memory =
     (await agent.memory.store.get(`memory:${id}`)) ??
     (context.create
-      ? context.create({ key, args, context, id, options, settings })
+      ? await Promise.resolve(
+          context.create({ key, args, context, id, options, settings })
+        )
       : {});
 
   return {
