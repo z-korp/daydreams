@@ -464,7 +464,7 @@ async function getAdventurerState(contractAddress: string, adventurerId: string)
 
         // Calculate level
         const xpNumber = parseInt(adventurerData.xp);
-        const level = Math.floor(Math.sqrt(xpNumber / 100)) + 1;
+        const level = Math.floor(Math.sqrt(xpNumber));
 
         // Check if in battle
         const inBattle = parseInt(adventurerData.beast_health) > 0;
@@ -583,11 +583,16 @@ async function getAdventurerState(contractAddress: string, adventurerId: string)
             return itemTypes[id] || `Item #${id}`;
         };
 
+        // Calculate max health based on game constants
+        const baseHealth = 100; // STARTING_HEALTH from constants
+        const vitalityBonus = parseInt(adventurerData.stats.vitality) * 15; // HEALTH_INCREASE_PER_VITALITY is 15
+        const maxHealth = Math.min(baseHealth + vitalityBonus, 1023); // MAX_ADVENTURER_HEALTH is 1023
+
         // Create state object
         const state: LootSurvivorState = {
             adventurerId,
             adventurerHealth: adventurerData.health,
-            adventurerMaxHealth: adventurerData.health, // Same as current health for now
+            adventurerMaxHealth: maxHealth.toString(), // Correctly calculated max health
             level: level.toString(),
             xp: adventurerData.xp,
             gold: adventurerData.gold,
@@ -750,7 +755,7 @@ export function initializeLootSurvivorMemory(ctx: any): LootSurvivorState {
         ctx.agentMemory = {
             adventurerId: "0",
             adventurerHealth: "0",
-            adventurerMaxHealth: "0",
+            adventurerMaxHealth: "100", // Update to default base health
             level: "1",
             xp: "0",
             gold: "0",
@@ -920,7 +925,7 @@ export const goalContexts = context({
         return {
             adventurerId: "0",
             adventurerHealth: "0",
-            adventurerMaxHealth: "0",
+            adventurerMaxHealth: "100", // Set to base health value
             level: "1",
             xp: "0",
             gold: "0",
@@ -1220,11 +1225,6 @@ export const lootSurvivor = extension({
                         const healthFound = parseInt(updatedState.adventurerHealth) - parseInt(initialState.adventurerHealth);
                         state.lastAction = `Found ${healthFound} Health`;
                         console.log(`[DISCOVERY] Found ${healthFound} Health`);
-
-                        // Check if new health exceeds max health
-                        if (parseInt(state.adventurerHealth) > parseInt(state.adventurerMaxHealth)) {
-                            state.adventurerMaxHealth = state.adventurerHealth;
-                        }
                     }
                     // Check if bag items count changed (item discovery)
                     else if (updatedState.bagItems.length > initialState.bagItems.length) {
@@ -1809,7 +1809,7 @@ export const lootSurvivor = extension({
 
                         // Calculate level
                         const xpNumber = parseInt(adventurerData.xp);
-                        const level = Math.floor(Math.sqrt(xpNumber / 100)) + 1;
+                        const level = Math.floor(Math.sqrt(xpNumber));
 
                         // Map item IDs to names
                         const getItemName = (item: { id: string, xp: string }): string => {
@@ -1927,7 +1927,11 @@ export const lootSurvivor = extension({
 
                         // Update adventurer stats
                         state.adventurerHealth = adventurerData.health;
-                        state.adventurerMaxHealth = adventurerData.health; // Max health based on current health
+                        // Calculate max health correctly
+                        const baseHealth = 100;
+                        const vitalityBonus = parseInt(adventurerData.stats.vitality) * 15;
+                        const maxHealth = Math.min(baseHealth + vitalityBonus, 1023);
+                        state.adventurerMaxHealth = maxHealth.toString();
                         state.xp = adventurerData.xp;
                         state.gold = adventurerData.gold;
                         state.level = level.toString();
