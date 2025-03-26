@@ -121,22 +121,9 @@ createDreams({
         .describe(
           "You use this to make an action in a dungeon. If the lootPhase == true then you can select the Loot option, which will then take you to the next phase. If the lootPhase == false then you can select the Rock, Paper, Scissors option."
         ),
-      async handler(
-        call: ActionCall<{
-          action:
-            | "rock"
-            | "paper"
-            | "scissor"
-            | "loot_one"
-            | "loot_two"
-            | "loot_three";
-          dungeonId: number;
-        }>,
-        ctx: any,
-        agent: Agent
-      ) {
+      async handler(call, ctx: any, agent: Agent) {
         try {
-          const { action, dungeonId } = call.data;
+          const { action, dungeonId } = call;
 
           const payload = {
             action: action,
@@ -189,7 +176,7 @@ createDreams({
       description:
         "Fetch information about all upcoming enemies in the dungeon",
       schema: z.object({}), // No parameters needed for this GET request
-      async handler(call: ActionCall<{}>, ctx: any, agent: Agent) {
+      async handler(call, ctx: any, agent: Agent) {
         try {
           const response = await fetch(
             "https://gigaverse.io/api/indexer/enemies",
@@ -234,7 +221,7 @@ createDreams({
       name: "getPlayerState",
       description: "Fetch the current state of the player in the dungeon",
       schema: z.object({}), // No parameters needed for this GET request
-      async handler(call: ActionCall<{}>, ctx: any, agent: Agent) {
+      async handler(call, ctx: any, agent: Agent) {
         try {
           const response = await fetch(
             "https://gigaverse.io/api/game/dungeon/state",
@@ -285,15 +272,9 @@ createDreams({
           .default(1)
           .describe("The ID of the dungeon to start. Default is 1."),
       }),
-      async handler(
-        call: ActionCall<{
-          dungeonId: number;
-        }>,
-        ctx: any,
-        agent: Agent
-      ) {
+      async handler(call, ctx: any, agent: Agent) {
         try {
-          const { dungeonId } = call.data;
+          const { dungeonId } = call;
 
           const payload = {
             action: "start_run",
