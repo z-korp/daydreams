@@ -1,0 +1,9 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/dusk.css";
+@import "fumadocs-ui/css/preset.css";
+
+@source '../node_modules/fumadocs-ui/dist/**/*.js';
+
+body {
+  font-family: var(--font-mono);
+}
