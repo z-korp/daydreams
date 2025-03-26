@@ -12,3 +12,4 @@ export * from "./container";
 export * from "./serviceProvider";
 export * from "./handlers";
 export * from "./providers";
+export * from "./http";

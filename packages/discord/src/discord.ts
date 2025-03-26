@@ -28,7 +28,7 @@ const discordChannelContext = context({
   key: ({ channelId }) => channelId,
   schema: z.object({ channelId: z.string() }),
 
-  async setup(args, { container }) {
+  async setup(args, {}, { container }) {
     const channel = await container
       .resolve<DiscordClient>("discord")
       .client.channels.fetch(args.channelId);
@@ -62,15 +62,15 @@ export const discord = extension({
           user: user.name,
           content: text,
         }),
-      subscribe(send, { container }) {
+      subscribe(send, agent) {
+        const { container } = agent;
         function listener(message: Message) {
           if (
             message.author.displayName ==
-            container.resolve<DiscordClient>("discord").credentials
-              .discord_bot_name
+            container.resolve("discord").credentials.discord_bot_name
           ) {
             console.log(
-              `Skipping message from ${container.resolve<DiscordClient>("discord").credentials.discord_bot_name}`
+              `Skipping message from ${container.resolve("discord").credentials.discord_bot_name}`
             );
             return;
           }
@@ -90,7 +90,8 @@ export const discord = extension({
           );
         }
 
-        const { client } = container.resolve<DiscordClient>("discord");
+        const discordClient = container.resolve("discord");
+        const { client } = discordClient;
 
         client.on(Events.MessageCreate, listener);
         return () => {
