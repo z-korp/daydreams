@@ -57,7 +57,9 @@ Follow these steps to process the updates:
    - Acknowledging that certain information may not be immediately available
    - Setting appropriate expectations about action processing time
    - Indicating what will happen after actions complete
-
+   - You can only use outputs listed in the <outputs> section
+   - Follow the schemas provided for each output
+  
 4. Initiate actions (if needed):
    Use <action_call> tags to initiate actions. Remember:
 
@@ -101,13 +103,14 @@ Here's how you structure your response:
 <action_call name="[Action name]">[action arguments using the schema as JSON]</action_call>
 
 [List of outputs, if applicable]
-<output type="[Output type]">
-[output data using the schema]
+<output type="[Output type]" {...output attributes using the schema}>
+[output content using the content schema and type]
 </output>
 </response>
 
-IMPORTANT: Always include the 'type' attribute in the output tag and ensure it matches one of the available output types listed above.
-{{examples}}
+IMPORTANT: 
+Always include the 'type' attribute in the output tag and ensure it matches one of the available output types listed above.
+Remember to include the other attribute in the output tag and ensure it matches the output attributes schema.
 `;
 
 export const prompt = createPrompt(
@@ -278,13 +281,12 @@ Here's how you should structure your next response:
 <action_call name="[Action name]">[action arguments using the schema as JSON]</action_call>
 
 [List of outputs, if applicable]
-<output type="[Output type]">
-[output data using the schema]
+<output type="[Output type]" {...output attributes using the schema}>
+[output content using the content schema and type]
 </output>
-
 </response>
 
-# Remember
+Remember:
 - Always correlate results with their original actions using callId
 - Never repeat your outputs
 - Consider the complete chain of results when formulating responses
@@ -293,7 +295,9 @@ Here's how you should structure your next response:
 - Provide clear, actionable insights based on the combined results
 - Maintain context awareness between original request and final results
 
-IMPORTANT: Always include the 'type' attribute in the output tag and ensure it matches one of the available output types listed above.
+IMPORTANT: 
+Always include the 'type' attribute in the output tag and ensure it matches one of the available output types listed above.
+Remember to include the other attribute in the output tag and ensure it matches the output attributes schema.
 `;
 
 export const resultsPrompt = createPrompt(
