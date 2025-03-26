@@ -238,17 +238,19 @@ createDreams({
           .describe("Type of goal"),
       }),
       handler(call, ctx, agent) {
-        const agentMemory = ctx.agentMemory as GoalContextMemory;
+        const agentMemory = ctx.memory;
 
         if (!agentMemory.goal) {
           return { error: "No goals have been set yet" };
         }
 
-        const goalType = call.data.goalType;
-        const goalId = call.data.goalId;
+        const goalType = call.goalType;
+        const goalId = call.goalId;
 
         // Find the goal in the specified category
-        const goal = agentMemory.goal[goalType].find((g) => g.id === goalId);
+        const goal = agentMemory.goal[goalType].find(
+          (g: any) => g.id === goalId
+        );
 
         if (!goal) {
           return {
@@ -273,9 +275,9 @@ createDreams({
       schema: z.object({ goal: goalPlanningSchema }),
       handler(call, ctx, agent) {
         const agentMemory = ctx.agentMemory as GoalContextMemory;
-        agentMemory.goal = call.data.goal;
+        agentMemory.goal = call.goal;
         return {
-          plan: call.data.goal,
+          plan: call.goal,
           message: "Goal plan has been set successfully",
         };
       },
@@ -301,8 +303,8 @@ createDreams({
           return { error: "No goals have been set yet" };
         }
 
-        const goalType = call.data.goalType;
-        const goalId = call.data.goalId;
+        const goalType = call.goalType;
+        const goalId = call.goalId;
 
         // Find the goal in the specified category
         const goalIndex = agentMemory.goal[goalType].findIndex(
@@ -318,7 +320,7 @@ createDreams({
         // Update the goal with the provided updates
         agentMemory.goal[goalType][goalIndex] = {
           ...agentMemory.goal[goalType][goalIndex],
-          ...call.data.updates,
+          ...call.updates,
         };
 
         return {
@@ -378,7 +380,7 @@ createDreams({
       async handler(call, ctx, agent) {
         const result = await fetchGraphQL(
           "https://api.cartridge.gg/x/eternum-sepolia/torii/graphql",
-          call.data.query
+          call.query
         );
 
         if (result instanceof Error) {
