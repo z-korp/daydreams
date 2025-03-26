@@ -79,8 +79,8 @@ createDreams({
       description: "Add a task to the goal",
       schema: z.object({ task: z.string() }),
       handler(call, ctx, _agent) {
-        const agentMemory = ctx.agentMemory as GoalMemory;
-        agentMemory.tasks.push(call.data.task);
+        const agentMemory = ctx.memory as GoalMemory;
+        agentMemory.tasks.push(call.task);
         return {};
       },
     }),
@@ -89,9 +89,9 @@ createDreams({
       description: "Complete a task",
       schema: z.object({ task: z.string() }),
       handler(call, ctx, _agent) {
-        const agentMemory = ctx.agentMemory as GoalMemory;
+        const agentMemory = ctx.memory as GoalMemory;
         agentMemory.tasks = agentMemory.tasks.filter(
-          (task) => task !== call.data.task
+          (task) => task !== call.task
         );
         return {};
       },

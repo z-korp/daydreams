@@ -114,17 +114,8 @@ const dreams = createDreams({
         limit_px: z.number().describe("Limit price for the order"),
         is_buy: z.boolean().describe("Whether this is a buy order"),
       }),
-      async handler(
-        call: ActionCall<{
-          ticker: string;
-          sz: number;
-          limit_px: number;
-          is_buy: boolean;
-        }>,
-        ctx: AgentContext<any, any> & { memory: HyperliquidMemory },
-        _agent: Agent
-      ) {
-        const { ticker, sz, limit_px, is_buy } = call.data;
+      async handler(call, ctx: any, agent: Agent) {
+        const { ticker, sz, limit_px, is_buy } = call;
 
         try {
           const result = await hyperliquid.placeLimitOrderInstantOrCancel(
@@ -160,17 +151,8 @@ const dreams = createDreams({
         limit_px: z.number().describe("Limit price for the order"),
         is_buy: z.boolean().describe("Whether this is a buy order"),
       }),
-      async handler(
-        call: ActionCall<{
-          ticker: string;
-          sz: number;
-          limit_px: number;
-          is_buy: boolean;
-        }>,
-        ctx: AgentContext<any, any> & { memory: HyperliquidMemory },
-        _agent: Agent
-      ) {
-        const { ticker, sz, limit_px, is_buy } = call.data;
+      async handler(call, ctx: any, agent: Agent) {
+        const { ticker, sz, limit_px, is_buy } = call;
 
         try {
           const result = await hyperliquid.placeLimitOrderGoodTilCancel(
@@ -205,16 +187,8 @@ const dreams = createDreams({
         sz: z.number().describe("Size of the order"),
         is_buy: z.boolean().describe("Whether this is a buy order"),
       }),
-      async handler(
-        call: ActionCall<{
-          ticker: string;
-          sz: number;
-          is_buy: boolean;
-        }>,
-        ctx: AgentContext<any, any> & { memory: HyperliquidMemory },
-        _agent: Agent
-      ) {
-        const { ticker, sz, is_buy } = call.data;
+      async handler(call, ctx: any, agent: Agent) {
+        const { ticker, sz, is_buy } = call;
 
         try {
           const result = await hyperliquid.placeMarketOrder(ticker, sz, is_buy);
@@ -244,16 +218,8 @@ const dreams = createDreams({
         usdtotalprice: z.number().describe("Total USD amount to trade"),
         is_buy: z.boolean().describe("Whether this is a buy order"),
       }),
-      async handler(
-        call: ActionCall<{
-          ticker: string;
-          usdtotalprice: number;
-          is_buy: boolean;
-        }>,
-        ctx: AgentContext<any, any> & { memory: HyperliquidMemory },
-        _agent: Agent
-      ) {
-        const { ticker, usdtotalprice, is_buy } = call.data;
+      async handler(call, ctx: any, agent: Agent) {
+        const { ticker, usdtotalprice, is_buy } = call;
 
         try {
           const result = await hyperliquid.placeMarketOrderUSD(
@@ -279,11 +245,7 @@ const dreams = createDreams({
       name: "HYPERLIQUID_GET_BALANCES",
       description: "Get account balances and positions from Hyperliquid",
       schema: z.object({}),
-      async handler(
-        _call: ActionCall<{}>,
-        ctx: AgentContext<any, any> & { memory: HyperliquidMemory },
-        _agent: Agent
-      ) {
+      async handler(call, ctx: any, agent: Agent) {
         try {
           const result = await hyperliquid.getAccountBalancesAndPositions();
           const resultStr = JSON.stringify(result, null, 2);
@@ -303,11 +265,7 @@ const dreams = createDreams({
       name: "HYPERLIQUID_GET_OPEN_ORDERS",
       description: "Get open orders from Hyperliquid",
       schema: z.object({}),
-      async handler(
-        _call: ActionCall<{}>,
-        ctx: AgentContext<any, any> & { memory: HyperliquidMemory },
-        _agent: Agent
-      ) {
+      async handler(call, ctx: any, agent: Agent) {
         try {
           const result = await hyperliquid.getOpenOrders();
           const resultStr = JSON.stringify(result, null, 2);
@@ -334,15 +292,8 @@ const dreams = createDreams({
           ),
         orderId: z.number().describe("ID of the order to cancel"),
       }),
-      async handler(
-        call: ActionCall<{
-          ticker: string;
-          orderId: number;
-        }>,
-        ctx: AgentContext<any, any> & { memory: HyperliquidMemory },
-        _agent: Agent
-      ) {
-        const { ticker, orderId } = call.data;
+      async handler(call, ctx: any, agent: Agent) {
+        const { ticker, orderId } = call;
 
         try {
           const result = await hyperliquid.cancelOrder(ticker, orderId);
@@ -367,14 +318,8 @@ const dreams = createDreams({
           .array(z.string())
           .describe("Array of tickers to sell positions for"),
       }),
-      async handler(
-        call: ActionCall<{
-          tickers: string[];
-        }>,
-        ctx: AgentContext<any, any> & { memory: HyperliquidMemory },
-        _agent: Agent
-      ) {
-        const { tickers } = call.data;
+      async handler(call, ctx: any, agent: Agent) {
+        const { tickers } = call;
 
         try {
           const result = await hyperliquid.marketSellPositions(tickers);
