@@ -1,8 +1,10 @@
+import { z } from "zod";
 import type { Logger } from "./logger";
 import type { TaskRunner } from "./task";
 import { runAction } from "./tasks";
 import type {
   ActionCall,
+  ActionCtxRef,
   ActionResult,
   AnyAction,
   AnyAgent,
@@ -33,7 +35,7 @@ export async function prepareActionCall({
   logger,
 }: {
   call: ActionCall;
-  actions: AnyAction[];
+  actions: ActionCtxRef[];
   logger: Logger;
 }) {
   const action = actions.find((a) => a.name === call.name);
@@ -48,11 +50,25 @@ export async function prepareActionCall({
   }
 
   try {
-    const data = action.schema.parse(
-      call.content.length > 0 ? JSON.parse(call.content) : {}
-    );
+    let data: any = undefined;
+    if (action.schema) {
+      const schema =
+        "parse" in action.schema || "validate" in action.schema
+          ? action.schema
+          : z.object(action.schema);
+
+      data = call.content.length > 0 ? JSON.parse(call.content) : {};
+
+      data =
+        "parse" in action.schema
+          ? schema.parse(data)
+          : schema.validate
+            ? schema.validate(data)
+            : data;
+    }
 
     call.data = data;
+
     return { action, data };
   } catch (error) {
     throw new ParsingError(error);
@@ -105,6 +121,8 @@ export async function handleActionCall({
     },
     {
       debug: agent.debugger,
+      retry: action.retry,
+      abortSignal,
     }
   );
 
@@ -141,7 +159,7 @@ export async function handleOutput({
   workingMemory: WorkingMemory;
   state: ContextState;
   agent: AnyAgent;
-}) {
+}): Promise<OutputRef | OutputRef[]> {
   const output = outputs.find((output) => output.type === outputRef.type);
 
   if (!output) {
@@ -160,29 +178,36 @@ export async function handleOutput({
   logger.debug("agent:output", outputRef.type, outputRef.data);
 
   try {
-    let parsedContent = outputRef.data;
-    if (typeof parsedContent === "string") {
-      if (output.schema._def.typeName !== "ZodString") {
-        try {
-          parsedContent = JSON.parse(parsedContent.trim());
-        } catch (error) {
-          console.log("failed parsing output content", {
-            content: parsedContent,
-          });
-          throw error;
+    if (output.schema) {
+      const schema = (
+        "parse" in output.schema ? output.schema : z.object(output.schema)
+      ) as z.AnyZodObject | z.ZodString;
+
+      let parsedContent = outputRef.content;
+
+      if (typeof parsedContent === "string") {
+        if (schema._def.typeName !== "ZodString") {
+          try {
+            parsedContent = JSON.parse(parsedContent.trim());
+          } catch (error) {
+            console.log("failed parsing output content", {
+              content: parsedContent,
+            });
+            throw error;
+          }
         }
       }
-    }
-    let data: any;
-    try {
-      data = output.schema.parse(parsedContent);
-    } catch (error) {
-      console.log("failed parsing output schema");
-      throw error;
+
+      try {
+        outputRef.data = schema.parse(parsedContent);
+      } catch (error) {
+        console.log("failed parsing output schema");
+        throw error;
+      }
     }
 
     const response = await output.handler(
-      data,
+      outputRef.data,
       {
         ...state,
         workingMemory,
@@ -196,6 +221,7 @@ export async function handleOutput({
         const ref: OutputRef = {
           ...outputRef,
           id: randomUUIDv7(),
+          processed: true,
           ...res,
         };
 
@@ -207,6 +233,7 @@ export async function handleOutput({
       const ref: OutputRef = {
         ...outputRef,
         ...response,
+        processed: true,
       };
 
       ref.formatted = output.format ? output.format(response) : undefined;
@@ -216,19 +243,66 @@ export async function handleOutput({
 
     return {
       ...outputRef,
-      formatted: output.format ? output.format(data) : undefined,
-      data,
+      formatted: output.format ? output.format(outputRef.data) : undefined,
+      processed: true,
     };
   } catch (error) {
     const ref: OutputRef = {
       ...outputRef,
-      params: { error: "true" },
       timestamp: Date.now(),
-      data: { content: outputRef.data, error },
+      error,
+      processed: false,
     };
 
     logger.error("agent:output", outputRef.type, error);
 
     return ref;
   }
+}
+
+export async function prepareAction({
+  action,
+  context,
+  state,
+  workingMemory,
+  agent,
+  agentCtxState,
+}: {
+  action: AnyAction;
+  context: AnyContext;
+  state: ContextState<AnyContext>;
+  workingMemory: WorkingMemory;
+  agent: AnyAgent;
+  agentCtxState: ContextState<AnyContext> | undefined;
+}): Promise<ActionCtxRef | undefined> {
+  if (action.context && action.context.type !== context.type) return undefined;
+
+  let actionMemory: Memory | undefined = undefined;
+
+  if (action.memory) {
+    actionMemory =
+      (await agent.memory.store.get(action.memory.key)) ??
+      action.memory.create();
+  }
+
+  const enabled = action.enabled
+    ? action.enabled({
+        ...state,
+        context,
+        workingMemory,
+        actionMemory,
+        agentMemory: agentCtxState?.memory,
+      })
+    : true;
+
+  if (action.enabled && actionMemory) {
+    await agent.memory.store.set(actionMemory.key, actionMemory);
+  }
+
+  return enabled
+    ? {
+        ...action,
+        ctxId: state.id,
+      }
+    : undefined;
 }
