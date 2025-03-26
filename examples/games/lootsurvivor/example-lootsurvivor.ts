@@ -84,6 +84,16 @@ interface LootSurvivorState {
     neck: string;
     ring: string;
 
+    // Equipment XP (greatness levels)
+    weaponXP: string;
+    chestXP: string;
+    headXP: string;
+    waistXP: string;
+    footXP: string;
+    handXP: string;
+    neckXP: string;
+    ringXP: string;
+
     // Beast info
     currentBeast: string;
     beastHealth: string;
@@ -99,7 +109,7 @@ interface LootSurvivorState {
     bagItems: string[];
 
     // Market
-    marketItems: string[];
+    marketItems: Array<{ id: string, name: string, price: string }>;
 }
 
 // Helper to convert hex values to decimal
@@ -107,6 +117,234 @@ function hexToDec(hex: string): string {
     // Remove '0x' prefix if present
     const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
     return parseInt(cleanHex, 16).toString();
+}
+
+// Function to get prefix1 name from ID
+function getPrefix1(prefixId: string): string {
+    const prefixNames: { [key: string]: string } = {
+        "1": "Agony", "2": "Apocalypse", "3": "Armageddon", "4": "Beast", "5": "Behemoth",
+        "6": "Blight", "7": "Blood", "8": "Bramble", "9": "Brimstone", "10": "Brood",
+        "11": "Carrion", "12": "Cataclysm", "13": "Chimeric", "14": "Corpse", "15": "Corruption",
+        "16": "Damnation", "17": "Death", "18": "Demon", "19": "Dire", "20": "Dragon",
+        "21": "Dread", "22": "Doom", "23": "Dusk", "24": "Eagle", "25": "Empyrean",
+        "26": "Fate", "27": "Foe", "28": "Gale", "29": "Ghoul", "30": "Gloom",
+        "31": "Glyph", "32": "Golem", "33": "Grim", "34": "Hate", "35": "Havoc",
+        "36": "Honour", "37": "Horror", "38": "Hypnotic", "39": "Kraken", "40": "Loath",
+        "41": "Maelstrom", "42": "Mind", "43": "Miracle", "44": "Morbid", "45": "Oblivion",
+        "46": "Onslaught", "47": "Pain", "48": "Pandemonium", "49": "Phoenix", "50": "Plague",
+        "51": "Rage", "52": "Rapture", "53": "Rune", "54": "Skull", "55": "Sol",
+        "56": "Soul", "57": "Sorrow", "58": "Spirit", "59": "Storm", "60": "Tempest",
+        "61": "Torment", "62": "Vengeance", "63": "Victory", "64": "Viper", "65": "Vortex",
+        "66": "Woe", "67": "Wrath", "68": "Lights", "69": "Shimmering"
+    };
+    return prefixNames[prefixId] || "";
+}
+
+// Function to get prefix2 name from ID
+function getPrefix2(suffixId: string): string {
+    const suffixNames: { [key: string]: string } = {
+        "1": "Bane", "2": "Root", "3": "Bite", "4": "Song", "5": "Roar",
+        "6": "Grasp", "7": "Instrument", "8": "Glow", "9": "Bender", "10": "Shadow",
+        "11": "Whisper", "12": "Shout", "13": "Growl", "14": "Tear", "15": "Peak",
+        "16": "Form", "17": "Sun", "18": "Moon"
+    };
+    return suffixNames[suffixId] || "";
+}
+
+// Function to get suffix name from ID
+function getItemSuffix(suffixId: string): string {
+    const itemSuffixes: { [key: string]: string } = {
+        "1": "of Power", "2": "of Giant", "3": "of Titans", "4": "of Skill",
+        "5": "of Perfection", "6": "of Brilliance", "7": "of Enlightenment", "8": "of Protection",
+        "9": "of Anger", "10": "of Rage", "11": "of Fury", "12": "of Vitriol",
+        "13": "of the Fox", "14": "of Detection", "15": "of Reflection", "16": "of the Twins"
+    };
+    return itemSuffixes[suffixId] || "";
+}
+
+// Function to get item tier from ID
+function getItemTier(itemId: number): string {
+    // Tier mapping according to loot.cairo and constants.cairo
+    // The itemId directly corresponds to the item tiers defined in the contract
+
+    // Item types by tier
+    const tierRanges: { [key: string]: number[] } = {
+        "T1": [
+            // Jewelry
+            1, 2, 3, 6, 7, 8,
+            // Weapons and armor - Per itemId in constants.cairo
+            9, 13, 17, 22, 27, 32, 37, 42, 47, 52, 57, 62, 67, 72, 77, 82, 87, 92, 97
+        ],
+        "T2": [
+            // Jewelry
+            4,
+            // Weapons and armor
+            10, 14, 18, 23, 28, 33, 38, 43, 48, 53, 58, 63, 68, 73, 78, 83, 88, 93, 98
+        ],
+        "T3": [
+            // Jewelry
+            5,
+            // Weapons and armor
+            11, 15, 19, 24, 29, 34, 39, 44, 49, 54, 59, 64, 69, 74, 79, 84, 89, 94, 99
+        ],
+        "T4": [
+            // Higher tier items
+            20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100
+        ],
+        "T5": [
+            // Lowest tier items
+            12, 16, 21, 26, 31, 36, 41, 46, 51, 56, 61, 66, 71, 76, 81, 86, 91, 96, 101
+        ]
+    };
+
+    // Check each tier
+    for (const [tier, ids] of Object.entries(tierRanges)) {
+        if (ids.includes(itemId)) {
+            return tier;
+        }
+    }
+
+    // Default if not found
+    console.log(`[WARNING] Could not determine tier for item ID: ${itemId}`);
+    return "Unknown";
+}
+
+// Function to get price based on tier and charisma
+function getItemPrice(tier: string, charisma: number = 0): number {
+    // Formula: 4 * (6 - tier_number) - charisma
+    // With a minimum price of 1 gold
+    const TIER_PRICE = 4; // Base multiplier
+    const MIN_PRICE = 1;  // Minimum item price
+
+    let tierNumber = 0;
+    switch (tier) {
+        case "T1": tierNumber = 1; break;
+        case "T2": tierNumber = 2; break;
+        case "T3": tierNumber = 3; break;
+        case "T4": tierNumber = 4; break;
+        case "T5": tierNumber = 5; break;
+        default: tierNumber = 0; break;
+    }
+
+    // Calculate price using the formula and apply minimum price
+    const price = Math.max(TIER_PRICE * (6 - tierNumber) - charisma, MIN_PRICE);
+    return price;
+}
+
+// Function to get potion price based on level and charisma
+function getPotionPrice(level: number, charisma: number = 0): number {
+    // Formula: level - (2 * charisma)
+    // With a minimum price of 1 gold
+    const MIN_PRICE = 1;
+    const CHARISMA_DISCOUNT = 2;
+
+    const price = Math.max(level - (CHARISMA_DISCOUNT * charisma), MIN_PRICE);
+    return price;
+}
+
+/**
+ * Game constants for item greatness levels
+ */
+const SUFFIX_UNLOCK_GREATNESS = 15;
+const PREFIXES_UNLOCK_GREATNESS = 19;
+
+/**
+ * Calculates item greatness level from XP value
+ * Uses the same formula as adventurer level: sqrt(xp)
+ * @param xp - The item's XP value
+ */
+function calculateGreatness(xp: number): number {
+    return Math.floor(Math.sqrt(xp));
+}
+
+/**
+ * Determines if an item has enough greatness to get a suffix
+ * @param greatness - The item's greatness level
+ */
+function canHaveSuffix(greatness: number): boolean {
+    return greatness >= SUFFIX_UNLOCK_GREATNESS;
+}
+
+/**
+ * Determines if an item has enough greatness to get prefixes
+ * @param greatness - The item's greatness level
+ */
+function canHavePrefixes(greatness: number): boolean {
+    return greatness >= PREFIXES_UNLOCK_GREATNESS;
+}
+
+// Function to get item type from ID
+function getItemType(itemId: number): string {
+    // Based on ItemUtils in utils.cairo
+    // Necklace: items 1-3 (Pendant, Necklace, Amulet)
+    if (itemId >= 1 && itemId <= 3) {
+        return "Necklace";
+    }
+    // Ring: items 4-8 (Silver Ring, Bronze Ring, Platinum Ring, Titanium Ring, Gold Ring)
+    else if (itemId >= 4 && itemId <= 8) {
+        return "Ring";
+    }
+    // Magic/Cloth: items 9-41
+    // Ghost Wand through Gloves
+    else if (itemId >= 9 && itemId <= 41) {
+        return "Magic/Cloth";
+    }
+    // Blade/Hide: items 42-71
+    // Katana through Leather Gloves
+    else if (itemId >= 42 && itemId <= 71) {
+        return "Blade/Hide";
+    }
+    // Bludgeon/Metal: items 72-101
+    // Warhammer through Heavy Gloves
+    else if (itemId >= 72 && itemId <= 101) {
+        return "Bludgeon/Metal";
+    }
+    return "Unknown";
+}
+
+/**
+ * Gets a formatted item name with special properties based on its greatness level
+ * @param itemId - The base item ID
+ * @param xp - The item's XP value
+ * @param special1 - The item's suffix ID (e.g., "of Power")
+ * @param special2 - The item's prefix1 ID (e.g., "Agony")
+ * @param special3 - The item's prefix2 ID (e.g., "Bane")
+ */
+function getFullItemName(itemId: number, xp: number, special1?: string, special2?: string, special3?: string): string {
+    // Get the base item name
+    const baseName = ITEM_NAMES[itemId - 1] || `Unknown (${itemId})`;
+
+    // Get the item type
+    const itemType = getItemType(itemId);
+
+    // Calculate greatness level from XP
+    const greatness = calculateGreatness(xp);
+
+    // Start with the base name
+    let fullName = baseName;
+
+    // Add suffix if greatness is high enough
+    if (canHaveSuffix(greatness) && special1 && parseInt(special1) > 0) {
+        fullName += " " + getItemSuffix(special1);
+    }
+
+    // Add prefixes if greatness is high enough
+    if (canHavePrefixes(greatness)) {
+        // Add prefix1 (e.g., "Agony")
+        if (special2 && parseInt(special2) > 0) {
+            fullName = getPrefix1(special2) + " " + fullName;
+        }
+
+        // Add prefix2 (e.g., "Bane")
+        if (special3 && parseInt(special3) > 0) {
+            fullName += " " + getPrefix2(special3);
+        }
+    }
+
+    // Add item type to the name
+    fullName += ` [${itemType}]`;
+
+    return fullName;
 }
 
 // Function to parse adventurer data from Starknet response
@@ -464,130 +702,35 @@ async function getAdventurerState(contractAddress: string, adventurerId: string)
 
         // Calculate level
         const xpNumber = parseInt(adventurerData.xp);
-        const level = Math.floor(Math.sqrt(xpNumber / 100)) + 1;
+        const level = Math.floor(Math.sqrt(xpNumber));
 
         // Check if in battle
         const inBattle = parseInt(adventurerData.beast_health) > 0;
 
         // Map item IDs to names
-        const getItemName = (item: { id: string, xp: string }): string => {
-            if (!item || item.id === "0") return "None";
+        const getItemName = (item: { id: string, xp: string }, special1?: string, special2?: string, special3?: string): string => {
+            const itemId = parseInt(item.id);
+            if (itemId <= 0) {
+                return "None";
+            }
 
-            // Complete item mapping based on loot/constants/ItemId
-            const itemTypes: { [key: number]: string } = {
-                0: "None",
-                1: "Pendant",
-                2: "Necklace",
-                3: "Amulet",
-                4: "Silver Ring",
-                5: "Bronze Ring",
-                6: "Platinum Ring",
-                7: "Titanium Ring",
-                8: "Gold Ring",
-                9: "Ghost Wand",
-                10: "Grave Wand",
-                11: "Bone Wand",
-                12: "Wand",
-                13: "Grimoire",
-                14: "Chronicle",
-                15: "Tome",
-                16: "Book",
-                17: "Divine Robe",
-                18: "Silk Robe",
-                19: "Linen Robe",
-                20: "Robe",
-                21: "Shirt",
-                22: "Crown",
-                23: "Divine Hood",
-                24: "Silk Hood",
-                25: "Linen Hood",
-                26: "Hood",
-                27: "Brightsilk Sash",
-                28: "Silk Sash",
-                29: "Wool Sash",
-                30: "Linen Sash",
-                31: "Sash",
-                32: "Divine Slippers",
-                33: "Silk Slippers",
-                34: "Wool Shoes",
-                35: "Linen Shoes",
-                36: "Shoes",
-                37: "Divine Gloves",
-                38: "Silk Gloves",
-                39: "Wool Gloves",
-                40: "Linen Gloves",
-                41: "Gloves",
-                42: "Katana",
-                43: "Falchion",
-                44: "Scimitar",
-                45: "Long Sword",
-                46: "Short Sword",
-                47: "Demon Husk",
-                48: "Dragonskin Armor",
-                49: "Studded Leather Armor",
-                50: "Hard Leather Armor",
-                51: "Leather Armor",
-                52: "Demon Crown",
-                53: "Dragon's Crown",
-                54: "War Cap",
-                55: "Leather Cap",
-                56: "Cap",
-                57: "Demonhide Belt",
-                58: "Dragonskin Belt",
-                59: "Studded Leather Belt",
-                60: "Hard Leather Belt",
-                61: "Leather Belt",
-                62: "Demonhide Boots",
-                63: "Dragonskin Boots",
-                64: "Studded Leather Boots",
-                65: "Hard Leather Boots",
-                66: "Leather Boots",
-                67: "Demon's Hands",
-                68: "Dragonskin Gloves",
-                69: "Studded Leather Gloves",
-                70: "Hard Leather Gloves",
-                71: "Leather Gloves",
-                72: "Warhammer",
-                73: "Quarterstaff",
-                74: "Maul",
-                75: "Mace",
-                76: "Club",
-                77: "Holy Chestplate",
-                78: "Ornate Chestplate",
-                79: "Plate Mail",
-                80: "Chain Mail",
-                81: "Ring Mail",
-                82: "Ancient Helm",
-                83: "Ornate Helm",
-                84: "Great Helm",
-                85: "Full Helm",
-                86: "Helm",
-                87: "Ornate Belt",
-                88: "War Belt",
-                89: "Plated Belt",
-                90: "Mesh Belt",
-                91: "Heavy Belt",
-                92: "Holy Greaves",
-                93: "Ornate Greaves",
-                94: "Greaves",
-                95: "Chain Boots",
-                96: "Heavy Boots",
-                97: "Holy Gauntlets",
-                98: "Ornate Gauntlets",
-                99: "Gauntlets",
-                100: "Chain Gloves",
-                101: "Heavy Gloves"
-            };
+            // Get XP value
+            const xp = item.xp ? parseInt(item.xp) : 0;
 
-            const id = parseInt(item.id);
-            return itemTypes[id] || `Item #${id}`;
+            // Use our helper function to get the full name with special properties
+            return getFullItemName(itemId, xp, special1, special2, special3);
         };
+
+        // Calculate max health based on game constants
+        const baseHealth = 100; // STARTING_HEALTH from constants
+        const vitalityBonus = parseInt(adventurerData.stats.vitality) * 15; // HEALTH_INCREASE_PER_VITALITY is 15
+        const maxHealth = Math.min(baseHealth + vitalityBonus, 1023); // MAX_ADVENTURER_HEALTH is 1023
 
         // Create state object
         const state: LootSurvivorState = {
             adventurerId,
             adventurerHealth: adventurerData.health,
-            adventurerMaxHealth: adventurerData.health, // Same as current health for now
+            adventurerMaxHealth: maxHealth.toString(), // Correctly calculated max health
             level: level.toString(),
             xp: adventurerData.xp,
             gold: adventurerData.gold,
@@ -603,14 +746,64 @@ async function getAdventurerState(contractAddress: string, adventurerId: string)
             luck: adventurerData.stats.luck,
 
             // Equipment
-            weapon: getItemName(adventurerData.equipment.weapon),
-            chest: getItemName(adventurerData.equipment.chest),
-            head: getItemName(adventurerData.equipment.head),
-            waist: getItemName(adventurerData.equipment.waist),
-            foot: getItemName(adventurerData.equipment.foot),
-            hand: getItemName(adventurerData.equipment.hand),
-            neck: getItemName(adventurerData.equipment.neck),
-            ring: getItemName(adventurerData.equipment.ring),
+            weapon: getItemName(
+                adventurerData.equipment.weapon,
+                adventurerData.equipment.weapon.xp && parseInt(adventurerData.equipment.weapon.xp) >= 15 ? "1" : undefined,
+                adventurerData.equipment.weapon.xp && parseInt(adventurerData.equipment.weapon.xp) >= 19 ? "1" : undefined,
+                adventurerData.equipment.weapon.xp && parseInt(adventurerData.equipment.weapon.xp) >= 19 ? "1" : undefined
+            ),
+            chest: getItemName(
+                adventurerData.equipment.chest,
+                adventurerData.equipment.chest.xp && parseInt(adventurerData.equipment.chest.xp) >= 15 ? "1" : undefined,
+                adventurerData.equipment.chest.xp && parseInt(adventurerData.equipment.chest.xp) >= 19 ? "1" : undefined,
+                adventurerData.equipment.chest.xp && parseInt(adventurerData.equipment.chest.xp) >= 19 ? "1" : undefined
+            ),
+            head: getItemName(
+                adventurerData.equipment.head,
+                adventurerData.equipment.head.xp && parseInt(adventurerData.equipment.head.xp) >= 15 ? "1" : undefined,
+                adventurerData.equipment.head.xp && parseInt(adventurerData.equipment.head.xp) >= 19 ? "1" : undefined,
+                adventurerData.equipment.head.xp && parseInt(adventurerData.equipment.head.xp) >= 19 ? "1" : undefined
+            ),
+            waist: getItemName(
+                adventurerData.equipment.waist,
+                adventurerData.equipment.waist.xp && parseInt(adventurerData.equipment.waist.xp) >= 15 ? "1" : undefined,
+                adventurerData.equipment.waist.xp && parseInt(adventurerData.equipment.waist.xp) >= 19 ? "1" : undefined,
+                adventurerData.equipment.waist.xp && parseInt(adventurerData.equipment.waist.xp) >= 19 ? "1" : undefined
+            ),
+            foot: getItemName(
+                adventurerData.equipment.foot,
+                adventurerData.equipment.foot.xp && parseInt(adventurerData.equipment.foot.xp) >= 15 ? "1" : undefined,
+                adventurerData.equipment.foot.xp && parseInt(adventurerData.equipment.foot.xp) >= 19 ? "1" : undefined,
+                adventurerData.equipment.foot.xp && parseInt(adventurerData.equipment.foot.xp) >= 19 ? "1" : undefined
+            ),
+            hand: getItemName(
+                adventurerData.equipment.hand,
+                adventurerData.equipment.hand.xp && parseInt(adventurerData.equipment.hand.xp) >= 15 ? "1" : undefined,
+                adventurerData.equipment.hand.xp && parseInt(adventurerData.equipment.hand.xp) >= 19 ? "1" : undefined,
+                adventurerData.equipment.hand.xp && parseInt(adventurerData.equipment.hand.xp) >= 19 ? "1" : undefined
+            ),
+            neck: getItemName(
+                adventurerData.equipment.neck,
+                adventurerData.equipment.neck.xp && parseInt(adventurerData.equipment.neck.xp) >= 15 ? "1" : undefined,
+                adventurerData.equipment.neck.xp && parseInt(adventurerData.equipment.neck.xp) >= 19 ? "1" : undefined,
+                adventurerData.equipment.neck.xp && parseInt(adventurerData.equipment.neck.xp) >= 19 ? "1" : undefined
+            ),
+            ring: getItemName(
+                adventurerData.equipment.ring,
+                adventurerData.equipment.ring.xp && parseInt(adventurerData.equipment.ring.xp) >= 15 ? "1" : undefined,
+                adventurerData.equipment.ring.xp && parseInt(adventurerData.equipment.ring.xp) >= 19 ? "1" : undefined,
+                adventurerData.equipment.ring.xp && parseInt(adventurerData.equipment.ring.xp) >= 19 ? "1" : undefined
+            ),
+
+            // Equipment XP (greatness levels)
+            weaponXP: adventurerData.equipment.weapon.xp,
+            chestXP: adventurerData.equipment.chest.xp,
+            headXP: adventurerData.equipment.head.xp,
+            waistXP: adventurerData.equipment.waist.xp,
+            footXP: adventurerData.equipment.foot.xp,
+            handXP: adventurerData.equipment.hand.xp,
+            neckXP: adventurerData.equipment.neck.xp,
+            ringXP: adventurerData.equipment.ring.xp,
 
             // Beast info
             currentBeast: "None",
@@ -658,9 +851,20 @@ async function getAdventurerState(contractAddress: string, adventurerId: string)
                     state.beastLevel = beastData.combat_spec.level;
                     state.beastTier = getBeastTier(beastData.combat_spec.tier);
                     state.beastType = getBeastType(beastData.combat_spec.item_type);
-                    state.beastSpecial1 = beastData.combat_spec.specials.special1;
-                    state.beastSpecial2 = beastData.combat_spec.specials.special2;
-                    state.beastSpecial3 = beastData.combat_spec.specials.special3;
+
+                    // Get formatted special properties for display
+                    const special1 = beastData.combat_spec.specials.special1;
+                    const special2 = beastData.combat_spec.specials.special2;
+                    const special3 = beastData.combat_spec.specials.special3;
+
+                    // Format special1 (item suffix like "of Power")
+                    state.beastSpecial1 = parseInt(special1) > 0 ? getItemSuffix(special1) : "None";
+
+                    // Format special2 (prefix1 like "Agony")
+                    state.beastSpecial2 = parseInt(special2) > 0 ? getPrefix1(special2) : "None";
+
+                    // Format special3 (prefix2 like "Bane")
+                    state.beastSpecial3 = parseInt(special3) > 0 ? getPrefix2(special3) : "None";
                 }
             } catch (beastError) {
                 console.log(`[STARKNET] Could not retrieve beast details: ${beastError}`);
@@ -693,7 +897,7 @@ async function getAdventurerState(contractAddress: string, adventurerId: string)
                     if (itemIdIndex < rawBag.length && rawBag[itemIdIndex] !== "0x0") {
                         const itemId = hexToDec(rawBag[itemIdIndex]);
                         if (itemId !== "0") {
-                            const itemName = getItemName({ id: itemId, xp: "0" });
+                            const itemName = getItemName({ id: itemId.toString(), xp: "0" });
                             state.bagItems.push(itemName);
                         }
                     }
@@ -701,6 +905,52 @@ async function getAdventurerState(contractAddress: string, adventurerId: string)
             }
         } catch (bagError) {
             console.log(`[STARKNET] Could not retrieve bag items: ${bagError}`);
+        }
+
+        // Try to get market items
+        try {
+            console.log(`[STARKNET] Calling get_market function`);
+            const marketResult = await starknet.read({
+                contractAddress: GAME_CONTRACT_ADDRESS,
+                entrypoint: "get_market",
+                calldata: [adventurerId]
+            });
+
+            console.log(`[STARKNET] Raw market result:`, JSON.stringify(marketResult));
+
+            if (marketResult && !marketResult.message && (marketResult.result || marketResult)) {
+                const rawMarket = marketResult.result || marketResult;
+                state.marketItems = [];
+
+                // Log the raw market for further debugging
+                console.log(`[MARKET] Raw market data (${rawMarket.length} items):`, rawMarket);
+
+                // Process each market item ID
+                // The data appears to be a flattened array of item IDs
+                for (let i = 0; i < rawMarket.length; i++) {
+                    const itemId = hexToDec(rawMarket[i]);
+                    if (itemId !== "0") {
+                        const itemName = getItemName({ id: itemId.toString(), xp: "0" });
+                        const tier = getItemTier(parseInt(itemId));
+                        // Apply charisma discount to price
+                        const price = getItemPrice(tier, parseInt(adventurerData.stats.charisma));
+
+                        state.marketItems.push({
+                            id: itemId.toString(),
+                            name: itemName,
+                            price: price.toString()
+                        });
+
+                        // Debug log
+                        console.log(`[MARKET] Added item: ${itemName} (ID: ${itemId}, Tier: ${tier}, Price: ${price} gold, with CHA discount)`);
+                    }
+                }
+
+                // Log total market items
+                console.log(`[MARKET] Total items available: ${state.marketItems.length}`);
+            }
+        } catch (marketError) {
+            console.log(`[STARKNET] Could not retrieve market items: ${marketError}`);
         }
 
         return state;
@@ -723,9 +973,14 @@ function printGameState(state: LootSurvivorState) {
     console.log(`Available Upgrades: ${state.statUpgrades}`);
 
     console.log("\n=== EQUIPMENT ===");
-    console.log(`Weapon: ${state.weapon} | Chest: ${state.chest} | Head: ${state.head}`);
-    console.log(`Waist: ${state.waist} | Foot: ${state.foot} | Hand: ${state.hand}`);
-    console.log(`Neck: ${state.neck} | Ring: ${state.ring}`);
+    console.log(`Weapon: ${state.weapon}${state.weaponXP ? ` (Greatness: ${calculateGreatness(parseInt(state.weaponXP))}, XP: ${state.weaponXP})` : ''}`);
+    console.log(`Chest: ${state.chest}${state.chestXP ? ` (Greatness: ${calculateGreatness(parseInt(state.chestXP))}, XP: ${state.chestXP})` : ''}`);
+    console.log(`Head: ${state.head}${state.headXP ? ` (Greatness: ${calculateGreatness(parseInt(state.headXP))}, XP: ${state.headXP})` : ''}`);
+    console.log(`Waist: ${state.waist}${state.waistXP ? ` (Greatness: ${calculateGreatness(parseInt(state.waistXP))}, XP: ${state.waistXP})` : ''}`);
+    console.log(`Foot: ${state.foot}${state.footXP ? ` (Greatness: ${calculateGreatness(parseInt(state.footXP))}, XP: ${state.footXP})` : ''}`);
+    console.log(`Hand: ${state.hand}${state.handXP ? ` (Greatness: ${calculateGreatness(parseInt(state.handXP))}, XP: ${state.handXP})` : ''}`);
+    console.log(`Neck: ${state.neck}${state.neckXP ? ` (Greatness: ${calculateGreatness(parseInt(state.neckXP))}, XP: ${state.neckXP})` : ''}`);
+    console.log(`Ring: ${state.ring}${state.ringXP ? ` (Greatness: ${calculateGreatness(parseInt(state.ringXP))}, XP: ${state.ringXP})` : ''}`);
 
     if (state.inBattle === "true") {
         console.log("\n=== BATTLE ===");
@@ -738,19 +993,53 @@ function printGameState(state: LootSurvivorState) {
     console.log("\n=== INVENTORY ===");
     console.log(`Bag Items: ${state.bagItems.length > 0 ? state.bagItems.join(", ") : "None"}`);
 
+    console.log("\n=== MARKET ===");
+    // Show potion price first
+    const potionPrice = getPotionPrice(parseInt(state.level), parseInt(state.charisma));
+    console.log(`Potion: ${potionPrice} gold (Restores 10 HP)`);
+
+    // Show items grouped by tier
+    if (state.marketItems.length > 0) {
+        console.log("Available Items:");
+        // Group items by tier for better organization
+        const itemsByTier: { [key: string]: Array<{ name: string, price: string }> } = {};
+
+        state.marketItems.forEach(item => {
+            const tier = getItemTier(parseInt(item.id));
+            if (!itemsByTier[tier]) {
+                itemsByTier[tier] = [];
+            }
+            itemsByTier[tier].push({ name: item.name, price: item.price });
+        });
+
+        // Display by tier (lowest price first)
+        const tierOrder = ["T5", "T4", "T3", "T2", "T1"];
+
+        tierOrder.forEach(tier => {
+            if (itemsByTier[tier] && itemsByTier[tier].length > 0) {
+                console.log(`  [${tier}]`);
+                itemsByTier[tier].forEach(item => {
+                    console.log(`  - ${item.name} (${item.price} gold)`);
+                });
+            }
+        });
+    } else {
+        console.log("Available Items: None");
+    }
+
     console.log("\n=== LAST ACTION ===");
     console.log(`${state.lastAction} | Damage Dealt: ${state.lastDamageDealt} | Damage Taken: ${state.lastDamageTaken}`);
     console.log(`Critical Hit: ${state.lastCritical}`);
     console.log("===================\n");
 }
 
-// Helper function to initialize agent memory if it doesn't exist
+// Fix the initializeLootSurvivorMemory function to initialize the new equipment XP fields
 export function initializeLootSurvivorMemory(ctx: any): LootSurvivorState {
     if (!ctx.agentMemory) {
         ctx.agentMemory = {
             adventurerId: "0",
             adventurerHealth: "0",
-            adventurerMaxHealth: "0",
+            adventurerMaxHealth: "100", // Update to default base health
             level: "1",
             xp: "0",
             gold: "0",
@@ -773,6 +1062,16 @@ export function initializeLootSurvivorMemory(ctx: any): LootSurvivorState {
             neck: "None",
             ring: "None",
 
+            // Initialize equipment XP fields
+            weaponXP: "0",
+            chestXP: "0",
+            headXP: "0",
+            waistXP: "0",
+            footXP: "0",
+            handXP: "0",
+            neckXP: "0",
+            ringXP: "0",
+
             currentBeast: "None",
             beastHealth: "0",
             beastMaxHealth: "0",
@@ -791,11 +1090,117 @@ export function initializeLootSurvivorMemory(ctx: any): LootSurvivorState {
             battleActionCount: "0",
 
             bagItems: [],
-            marketItems: [],
+            marketItems: [],  // Empty array of {id, name, price}
         };
     }
     return ctx.agentMemory as LootSurvivorState;
 }
+
+// Define item names array based on the ItemString module in constants.cairo
+// Items are 1-indexed in the contract, so we'll match that here
+const ITEM_NAMES = [
+    'Pendant',
+    'Necklace',
+    'Amulet',
+    'Silver Ring',
+    'Bronze Ring',
+    'Platinum Ring',
+    'Titanium Ring',
+    'Gold Ring',
+    'Ghost Wand',
+    'Grave Wand',
+    'Bone Wand',
+    'Wand',
+    'Grimoire',
+    'Chronicle',
+    'Tome',
+    'Book',
+    'Divine Robe',
+    'Silk Robe',
+    'Linen Robe',
+    'Robe',
+    'Shirt',
+    'Crown',
+    'Divine Hood',
+    'Silk Hood',
+    'Linen Hood',
+    'Hood',
+    'Brightsilk Sash',
+    'Silk Sash',
+    'Wool Sash',
+    'Linen Sash',
+    'Sash',
+    'Divine Slippers',
+    'Silk Slippers',
+    'Wool Shoes',
+    'Linen Shoes',
+    'Shoes',
+    'Divine Gloves',
+    'Silk Gloves',
+    'Wool Gloves',
+    'Linen Gloves',
+    'Gloves',
+    'Katana',
+    'Falchion',
+    'Scimitar',
+    'Long Sword',
+    'Short Sword',
+    'Demon Husk',
+    'Dragonskin Armor',
+    'Studded Leather Armor',
+    'Hard Leather Armor',
+    'Leather Armor',
+    'Demon Crown',
+    'Dragon\'s Crown',
+    'War Cap',
+    'Leather Cap',
+    'Cap',
+    'Demonhide Belt',
+    'Dragonskin Belt',
+    'Studded Leather Belt',
+    'Hard Leather Belt',
+    'Leather Belt',
+    'Demonhide Boots',
+    'Dragonskin Boots',
+    'Studded Leather Boots',
+    'Hard Leather Boots',
+    'Leather Boots',
+    'Demon\'s Hands',
+    'Dragonskin Gloves',
+    'Studded Leather Gloves',
+    'Hard Leather Gloves',
+    'Leather Gloves',
+    'Warhammer',
+    'Quarterstaff',
+    'Maul',
+    'Mace',
+    'Club',
+    'Holy Chestplate',
+    'Ornate Chestplate',
+    'Plate Mail',
+    'Chain Mail',
+    'Ring Mail',
+    'Ancient Helm',
+    'Ornate Helm',
+    'Great Helm',
+    'Full Helm',
+    'Helm',
+    'Ornate Belt',
+    'War Belt',
+    'Plated Belt',
+    'Mesh Belt',
+    'Heavy Belt',
+    'Holy Greaves',
+    'Ornate Greaves',
+    'Greaves',
+    'Chain Boots',
+    'Heavy Boots',
+    'Holy Gauntlets',
+    'Ornate Gauntlets',
+    'Gauntlets',
+    'Chain Gloves',
+    'Heavy Gloves'
+];
 
 // Template for the agent's context
 export const template = `
@@ -920,7 +1325,7 @@ export const goalContexts = context({
         return {
             adventurerId: "0",
             adventurerHealth: "0",
-            adventurerMaxHealth: "0",
+            adventurerMaxHealth: "100", // Set to base health value
             level: "1",
             xp: "0",
             gold: "0",
@@ -943,6 +1348,16 @@ export const goalContexts = context({
             neck: "None",
             ring: "None",
 
+            // Added equipment XP fields
+            weaponXP: "0",
+            chestXP: "0",
+            headXP: "0",
+            waistXP: "0",
+            footXP: "0",
+            handXP: "0",
+            neckXP: "0",
+            ringXP: "0",
+
             currentBeast: "None",
             beastHealth: "0",
             beastMaxHealth: "0",
@@ -961,11 +1376,21 @@ export const goalContexts = context({
             battleActionCount: "0",
 
             bagItems: [],
-            marketItems: [],
+            marketItems: [],  // Empty array of {id, name, price}
         };
     },
 
     render({ memory }) {
+        // Calculate potion price for the UI
+        const potionPrice = memory.level && memory.charisma ?
+            getPotionPrice(parseInt(memory.level), parseInt(memory.charisma)) : 1;
+
+        // Format market items to include potion at the top
+        const formattedMarketItems = memory.marketItems && memory.marketItems.length > 0
+            ? `Potion: ${potionPrice} gold (Restores 10 HP), ` + memory.marketItems.map((item: { name: string; price: string }) =>
+                `${item.name} (${item.price} gold)`).join(", ")
+            : `Potion: ${potionPrice} gold (Restores 10 HP)`;
+
         return render(template, {
             adventurerId: memory.adventurerId ?? "0",
             adventurerHealth: memory.adventurerHealth ?? "0",
@@ -984,14 +1409,14 @@ export const goalContexts = context({
             luck: memory.luck ?? "0",
             statUpgrades: memory.statUpgrades ?? "0",
 
-            weapon: memory.weapon ?? "None",
-            chest: memory.chest ?? "None",
-            head: memory.head ?? "None",
-            waist: memory.waist ?? "None",
-            foot: memory.foot ?? "None",
-            hand: memory.hand ?? "None",
-            neck: memory.neck ?? "None",
-            ring: memory.ring ?? "None",
+            weapon: memory.weapon ? `${memory.weapon}${memory.weaponXP ? ` (Greatness: ${calculateGreatness(parseInt(memory.weaponXP))})` : ''}` : "None",
+            chest: memory.chest ? `${memory.chest}${memory.chestXP ? ` (Greatness: ${calculateGreatness(parseInt(memory.chestXP))})` : ''}` : "None",
+            head: memory.head ? `${memory.head}${memory.headXP ? ` (Greatness: ${calculateGreatness(parseInt(memory.headXP))})` : ''}` : "None",
+            waist: memory.waist ? `${memory.waist}${memory.waistXP ? ` (Greatness: ${calculateGreatness(parseInt(memory.waistXP))})` : ''}` : "None",
+            foot: memory.foot ? `${memory.foot}${memory.footXP ? ` (Greatness: ${calculateGreatness(parseInt(memory.footXP))})` : ''}` : "None",
+            hand: memory.hand ? `${memory.hand}${memory.handXP ? ` (Greatness: ${calculateGreatness(parseInt(memory.handXP))})` : ''}` : "None",
+            neck: memory.neck ? `${memory.neck}${memory.neckXP ? ` (Greatness: ${calculateGreatness(parseInt(memory.neckXP))})` : ''}` : "None",
+            ring: memory.ring ? `${memory.ring}${memory.ringXP ? ` (Greatness: ${calculateGreatness(parseInt(memory.ringXP))})` : ''}` : "None",
 
             currentBeast: memory.currentBeast ?? "None",
             beastHealth: memory.beastHealth ?? "0",
@@ -1010,7 +1435,7 @@ export const goalContexts = context({
             lastCritical: memory.lastCritical ?? "false",
 
             bagItems: memory.bagItems?.join(", ") ?? "None",
-            marketItems: memory.marketItems?.join(", ") ?? "None",
+            marketItems: formattedMarketItems,
         } as any);
     },
 });
@@ -1220,11 +1645,6 @@ export const lootSurvivor = extension({
                         const healthFound = parseInt(updatedState.adventurerHealth) - parseInt(initialState.adventurerHealth);
                         state.lastAction = `Found ${healthFound} Health`;
                         console.log(`[DISCOVERY] Found ${healthFound} Health`);
-
-                        // Check if new health exceeds max health
-                        if (parseInt(state.adventurerHealth) > parseInt(state.adventurerMaxHealth)) {
-                            state.adventurerMaxHealth = state.adventurerHealth;
-                        }
                     }
                     // Check if bag items count changed (item discovery)
                     else if (updatedState.bagItems.length > initialState.bagItems.length) {
@@ -1692,7 +2112,7 @@ export const lootSurvivor = extension({
                     potions: z
                         .number()
                         .default(0)
-                        .describe("Number of potions to purchase"),
+                        .describe("Number of potions to purchase (costs level - (2 * charisma) gold each, restores 10 HP)"),
                     statUpgrades: z
                         .object({
                             strength: z.number().default(0),
@@ -1747,9 +2167,14 @@ export const lootSurvivor = extension({
                         }
                     }
 
-                    // Log potion purchase
+                    // Simplify the potion logging to avoid errors
                     if (potions > 0) {
-                        console.log(`[PURCHASE] Buying ${potions} potions`);
+                        // Use reasonable default values for now - will be calculated properly when data is available
+                        const estimatedLevel = 1;
+                        const estimatedCharisma = statUpgrades.charisma;
+                        const potionPrice = Math.max(estimatedLevel - (2 * estimatedCharisma), 1);
+
+                        console.log(`[PURCHASE] Buying ${potions} potions (estimated cost: ${potionPrice} gold each)`);
                     }
 
                     // Log item purchases
@@ -1769,28 +2194,61 @@ export const lootSurvivor = extension({
                         equip: item.equip ? 1 : 0 // Convert boolean to 0/1
                     }));
 
-                    const upgradeResult = await starknet.write({
-                        contractAddress: GAME_CONTRACT_ADDRESS,
-                        entrypoint: "upgrade",
-                        calldata: [
-                            adventurerId,
-                            potions,
-                            // Stats structure
-                            statUpgrades.strength,
-                            statUpgrades.dexterity,
-                            statUpgrades.vitality,
-                            statUpgrades.intelligence,
-                            statUpgrades.wisdom,
-                            statUpgrades.charisma,
-                            0, // luck (not in our input schema, default to 0)
-                            // Items array
-                            items.length,
-                            ...items.flatMap(item => [item.item_id, item.equip ? 1 : 0])
-                        ]
-                    });
+                    // Replace the upgradeResult section with better error handling
+                    // Around line ~2055
+                    let upgradeResult = null;
+                    let retryCount = 0;
+                    const maxRetries = 3;
 
-                    console.log(`[STARKNET] Upgrade transaction hash: ${upgradeResult.transaction_hash}`);
-                    console.log(`[STARKNET] Waiting for transaction confirmation...`);
+                    while (!upgradeResult && retryCount < maxRetries) {
+                        try {
+                            console.log(`[STARKNET] Submitting upgrade transaction (attempt ${retryCount + 1}/${maxRetries})`);
+                            upgradeResult = await starknet.write({
+                                contractAddress: GAME_CONTRACT_ADDRESS,
+                                entrypoint: "upgrade",
+                                calldata: [
+                                    adventurerId,
+                                    potions,
+                                    // Stats structure
+                                    statUpgrades.strength,
+                                    statUpgrades.dexterity,
+                                    statUpgrades.vitality,
+                                    statUpgrades.intelligence,
+                                    statUpgrades.wisdom,
+                                    statUpgrades.charisma,
+                                    0, // luck (not in our input schema, default to 0)
+                                    // Items array length first, followed by items
+                                    items.length,
+                                    ...items.flatMap(item => [item.item_id, item.equip ? 1 : 0])
+                                ]
+                            });
+
+                            // At this point, we received some response from the node
+                            // If we don't have a transaction hash, we still consider it a successful submission
+                            // but need to wait for the hash
+                            if (!upgradeResult?.transaction_hash) {
+                                console.log(`[STARKNET] Transaction submitted, but no hash received yet. Waiting for confirmation...`);
+                                // Instead of retrying, we'll exit the loop and continue with state updates
+                                break;
+                            } else {
+                                console.log(`[STARKNET] Upgrade transaction hash: ${upgradeResult.transaction_hash}`);
+                            }
+                        } catch (error: unknown) {
+                            console.error(`[ERROR] Failed to submit upgrade transaction (attempt ${retryCount + 1}/${maxRetries}): ${error instanceof Error ? error.message : String(error)}`);
+                            // Wait before retrying - only retry on actual errors
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            retryCount++;
+                            // Only continue retry loop if we had an actual error
+                            continue;
+                        }
+
+                        // If we got here, we successfully got a response, so exit retry loop
+                        break;
+                    }
+
+                    // We always wait a bit after submitting transactions to let them propagate
+                    console.log(`[STARKNET] Waiting for transaction to be processed...`);
+                    await new Promise(resolve => setTimeout(resolve, 3000));
 
                     // Now get updated adventurer state
                     console.log(`[STARKNET] Getting updated adventurer state`);
@@ -1809,125 +2267,29 @@ export const lootSurvivor = extension({
 
                         // Calculate level
                         const xpNumber = parseInt(adventurerData.xp);
-                        const level = Math.floor(Math.sqrt(xpNumber / 100)) + 1;
+                        const level = Math.floor(Math.sqrt(xpNumber));
 
                         // Map item IDs to names
-                        const getItemName = (item: { id: string, xp: string }): string => {
-                            if (!item || item.id === "0") return "None";
+                        const getItemName = (item: { id: string, xp: string }, special1?: string, special2?: string, special3?: string): string => {
+                            const itemId = parseInt(item.id);
+                            if (itemId <= 0) {
+                                return "None";
+                            }
 
-                            // Complete item mapping based on loot/constants/ItemId
-                            const itemTypes: { [key: number]: string } = {
-                                0: "None",
-                                1: "Pendant",
-                                2: "Necklace",
-                                3: "Amulet",
-                                4: "Silver Ring",
-                                5: "Bronze Ring",
-                                6: "Platinum Ring",
-                                7: "Titanium Ring",
-                                8: "Gold Ring",
-                                9: "Ghost Wand",
-                                10: "Grave Wand",
-                                11: "Bone Wand",
-                                12: "Wand",
-                                13: "Grimoire",
-                                14: "Chronicle",
-                                15: "Tome",
-                                16: "Book",
-                                17: "Divine Robe",
-                                18: "Silk Robe",
-                                19: "Linen Robe",
-                                20: "Robe",
-                                21: "Shirt",
-                                22: "Crown",
-                                23: "Divine Hood",
-                                24: "Silk Hood",
-                                25: "Linen Hood",
-                                26: "Hood",
-                                27: "Brightsilk Sash",
-                                28: "Silk Sash",
-                                29: "Wool Sash",
-                                30: "Linen Sash",
-                                31: "Sash",
-                                32: "Divine Slippers",
-                                33: "Silk Slippers",
-                                34: "Wool Shoes",
-                                35: "Linen Shoes",
-                                36: "Shoes",
-                                37: "Divine Gloves",
-                                38: "Silk Gloves",
-                                39: "Wool Gloves",
-                                40: "Linen Gloves",
-                                41: "Gloves",
-                                42: "Katana",
-                                43: "Falchion",
-                                44: "Scimitar",
-                                45: "Long Sword",
-                                46: "Short Sword",
-                                47: "Demon Husk",
-                                48: "Dragonskin Armor",
-                                49: "Studded Leather Armor",
-                                50: "Hard Leather Armor",
-                                51: "Leather Armor",
-                                52: "Demon Crown",
-                                53: "Dragon's Crown",
-                                54: "War Cap",
-                                55: "Leather Cap",
-                                56: "Cap",
-                                57: "Demonhide Belt",
-                                58: "Dragonskin Belt",
-                                59: "Studded Leather Belt",
-                                60: "Hard Leather Belt",
-                                61: "Leather Belt",
-                                62: "Demonhide Boots",
-                                63: "Dragonskin Boots",
-                                64: "Studded Leather Boots",
-                                65: "Hard Leather Boots",
-                                66: "Leather Boots",
-                                67: "Demon's Hands",
-                                68: "Dragonskin Gloves",
-                                69: "Studded Leather Gloves",
-                                70: "Hard Leather Gloves",
-                                71: "Leather Gloves",
-                                72: "Warhammer",
-                                73: "Quarterstaff",
-                                74: "Maul",
-                                75: "Mace",
-                                76: "Club",
-                                77: "Holy Chestplate",
-                                78: "Ornate Chestplate",
-                                79: "Plate Mail",
-                                80: "Chain Mail",
-                                81: "Ring Mail",
-                                82: "Ancient Helm",
-                                83: "Ornate Helm",
-                                84: "Great Helm",
-                                85: "Full Helm",
-                                86: "Helm",
-                                87: "Ornate Belt",
-                                88: "War Belt",
-                                89: "Plated Belt",
-                                90: "Mesh Belt",
-                                91: "Heavy Belt",
-                                92: "Holy Greaves",
-                                93: "Ornate Greaves",
-                                94: "Greaves",
-                                95: "Chain Boots",
-                                96: "Heavy Boots",
-                                97: "Holy Gauntlets",
-                                98: "Ornate Gauntlets",
-                                99: "Gauntlets",
-                                100: "Chain Gloves",
-                                101: "Heavy Gloves"
-                            };
+                            // Get XP value 
+                            const xp = item.xp ? parseInt(item.xp) : 0;
 
-                            const id = parseInt(item.id);
-                            return itemTypes[id] || `Item #${id}`;
+                            // Use our helper function to get the full name with special properties
+                            return getFullItemName(itemId, xp, special1, special2, special3);
                         };
 
                         // Update adventurer stats
                         state.adventurerHealth = adventurerData.health;
-                        state.adventurerMaxHealth = adventurerData.health; // Max health based on current health
+                        // Calculate max health correctly
+                        const baseHealth = 100;
+                        const vitalityBonus = parseInt(adventurerData.stats.vitality) * 15;
+                        const maxHealth = Math.min(baseHealth + vitalityBonus, 1023);
+                        state.adventurerMaxHealth = maxHealth.toString();
                         state.xp = adventurerData.xp;
                         state.gold = adventurerData.gold;
                         state.level = level.toString();
@@ -1943,14 +2305,30 @@ export const lootSurvivor = extension({
                         state.luck = adventurerData.stats.luck;
 
                         // Update equipment
-                        state.weapon = getItemName(adventurerData.equipment.weapon);
-                        state.chest = getItemName(adventurerData.equipment.chest);
-                        state.head = getItemName(adventurerData.equipment.head);
-                        state.waist = getItemName(adventurerData.equipment.waist);
-                        state.foot = getItemName(adventurerData.equipment.foot);
-                        state.hand = getItemName(adventurerData.equipment.hand);
-                        state.neck = getItemName(adventurerData.equipment.neck);
-                        state.ring = getItemName(adventurerData.equipment.ring);
+                        state.weapon = getItemName(
+                            adventurerData.equipment.weapon
+                        );
+                        state.chest = getItemName(
+                            adventurerData.equipment.chest
+                        );
+                        state.head = getItemName(
+                            adventurerData.equipment.head
+                        );
+                        state.waist = getItemName(
+                            adventurerData.equipment.waist
+                        );
+                        state.foot = getItemName(
+                            adventurerData.equipment.foot
+                        );
+                        state.hand = getItemName(
+                            adventurerData.equipment.hand
+                        );
+                        state.neck = getItemName(
+                            adventurerData.equipment.neck
+                        );
+                        state.ring = getItemName(
+                            adventurerData.equipment.ring
+                        );
 
                         // Beast health
                         state.beastHealth = adventurerData.beast_health;
@@ -1978,9 +2356,20 @@ export const lootSurvivor = extension({
                                     state.beastLevel = beastData.combat_spec.level;
                                     state.beastTier = getBeastTier(beastData.combat_spec.tier);
                                     state.beastType = getBeastType(beastData.combat_spec.item_type);
-                                    state.beastSpecial1 = beastData.combat_spec.specials.special1;
-                                    state.beastSpecial2 = beastData.combat_spec.specials.special2;
-                                    state.beastSpecial3 = beastData.combat_spec.specials.special3;
+
+                                    // Get formatted special properties for display
+                                    const special1 = beastData.combat_spec.specials.special1;
+                                    const special2 = beastData.combat_spec.specials.special2;
+                                    const special3 = beastData.combat_spec.specials.special3;
+
+                                    // Format special1 (item suffix like "of Power")
+                                    state.beastSpecial1 = parseInt(special1) > 0 ? getItemSuffix(special1) : "None";
+
+                                    // Format special2 (prefix1 like "Agony")
+                                    state.beastSpecial2 = parseInt(special2) > 0 ? getPrefix1(special2) : "None";
+
+                                    // Format special3 (prefix2 like "Bane")
+                                    state.beastSpecial3 = parseInt(special3) > 0 ? getPrefix2(special3) : "None";
                                 }
                             } catch (beastError) {
                                 console.log(`[STARKNET] Could not retrieve beast details: ${beastError}`);
@@ -2013,7 +2402,7 @@ export const lootSurvivor = extension({
                                     if (itemIdIndex < rawBag.length && rawBag[itemIdIndex] !== "0x0") {
                                         const itemId = hexToDec(rawBag[itemIdIndex]);
                                         if (itemId !== "0") {
-                                            const itemName = getItemName({ id: itemId, xp: "0" });
+                                            const itemName = getItemName({ id: itemId.toString(), xp: "0" });
                                             state.bagItems.push(itemName);
                                         }
                                     }
@@ -2022,6 +2411,62 @@ export const lootSurvivor = extension({
                         } catch (bagError) {
                             console.log(`[STARKNET] Could not retrieve bag items: ${bagError}`);
                         }
+
+                        // Try to get market items
+                        try {
+                            console.log(`[STARKNET] Calling get_market function`);
+                            const marketResult = await starknet.read({
+                                contractAddress: GAME_CONTRACT_ADDRESS,
+                                entrypoint: "get_market",
+                                calldata: [adventurerId]
+                            });
+
+                            console.log(`[STARKNET] Raw market result:`, JSON.stringify(marketResult));
+
+                            if (marketResult && !marketResult.message && (marketResult.result || marketResult)) {
+                                const rawMarket = marketResult.result || marketResult;
+                                state.marketItems = [];
+
+                                // Log the raw market for further debugging
+                                console.log(`[MARKET] Raw market data (${rawMarket.length} items):`, rawMarket);
+
+                                // Process each market item ID
+                                // The data appears to be a flattened array of item IDs
+                                for (let i = 0; i < rawMarket.length; i++) {
+                                    const itemId = hexToDec(rawMarket[i]);
+                                    if (itemId !== "0") {
+                                        const itemName = getItemName({ id: itemId.toString(), xp: "0" });
+                                        const tier = getItemTier(parseInt(itemId));
+                                        // Apply charisma discount to price
+                                        const price = getItemPrice(tier, parseInt(adventurerData.stats.charisma));
+
+                                        state.marketItems.push({
+                                            id: itemId.toString(),
+                                            name: itemName,
+                                            price: price.toString()
+                                        });
+
+                                        // Debug log
+                                        console.log(`[MARKET] Added item: ${itemName} (ID: ${itemId}, Tier: ${tier}, Price: ${price} gold, with CHA discount)`);
+                                    }
+                                }
+
+                                // Log total market items
+                                console.log(`[MARKET] Total items available: ${state.marketItems.length}`);
+                            }
+                        } catch (marketError) {
+                            console.log(`[STARKNET] Could not retrieve market items: ${marketError}`);
+                        }
+
+                        // Store equipment XP values
+                        state.weaponXP = adventurerData.equipment.weapon.xp;
+                        state.chestXP = adventurerData.equipment.chest.xp;
+                        state.headXP = adventurerData.equipment.head.xp;
+                        state.waistXP = adventurerData.equipment.waist.xp;
+                        state.footXP = adventurerData.equipment.foot.xp;
+                        state.handXP = adventurerData.equipment.hand.xp;
+                        state.neckXP = adventurerData.equipment.neck.xp;
+                        state.ringXP = adventurerData.equipment.ring.xp;
 
                         state.lastAction = "Upgraded Adventurer";
                     }
