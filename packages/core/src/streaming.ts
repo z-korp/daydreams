@@ -4,10 +4,9 @@ import { generateEpisode } from "./memory/utils";
 import type { TaskRunner } from "./task";
 import type {
   ActionCall,
+  ActionCtxRef,
   ActionResult,
-  AnyAction,
   AnyAgent,
-  AnyContext,
   ContextState,
   Handlers,
   Log,
@@ -101,6 +100,7 @@ export async function* wrapStream(
 
 const defaultTags = new Set([
   "think",
+  "thinking",
   "response",
   "output",
   "action_call",
@@ -120,19 +120,21 @@ export function createContextStreamHandler({
   actionCalls,
   workingMemory,
   abortSignal,
+  subCtxsStates,
 }: {
   agent: AnyAgent;
   taskRunner: TaskRunner;
-  ctxState: ContextState<AnyContext>;
-  agentCtxState?: ContextState<AnyContext>;
+  ctxState: ContextState;
+  agentCtxState?: ContextState;
   chain: Log[];
   logger: Logger;
   handlers?: Partial<Handlers>;
   outputs: Output[];
-  actions: AnyAction[];
+  actions: ActionCtxRef[];
   actionCalls: Promise<any>[];
   workingMemory: WorkingMemory;
   abortSignal?: AbortSignal;
+  subCtxsStates: ContextState[];
 }) {
   const state = {
     index: 0,
@@ -154,12 +156,14 @@ export function createContextStreamHandler({
       });
     }
 
+    state.index = Math.max(index, state.index);
+
     return state.logsByIndex.get(index)! as TLog &
       Pick<PartialLog, "id" | "timestamp" | "processed">;
   }
 
   async function pushLogStream(log: Log, done: boolean) {
-    if (done) chain.push(log);
+    if (log.ref !== "output" && done) chain.push(log);
 
     if (log.ref === "thought" && done) {
       workingMemory.thoughts.push(log);
@@ -167,8 +171,13 @@ export function createContextStreamHandler({
       handlers?.onThinking?.(log);
     }
 
+    if (log.ref === "output" && done) {
+      handleOutputStream(log);
+    }
+
     if (log.ref === "action_call" && done) {
       workingMemory.calls.push(log);
+      handleActionCallStream(log);
     }
 
     if (log.ref === "action_result" && done) {
@@ -203,11 +212,7 @@ export function createContextStreamHandler({
     handlers?.onLogStream?.(log, done);
   }
 
-  async function handleActionCallStream(call: ActionCall, done: boolean) {
-    if (!done) {
-      return pushLogStream(call, false);
-    }
-
+  async function handleActionCallStream(call: ActionCall) {
     // todo: handle errors
     const { action } = await prepareActionCall({
       call,
@@ -217,15 +222,18 @@ export function createContextStreamHandler({
 
     if (abortSignal?.aborted) return;
 
-    pushLogStream(call, true);
-
     actionCalls.push(
       handleActionCall({
         call,
         action,
         agent,
         logger,
-        state: ctxState,
+        state:
+          action.ctxId === ctxState.id
+            ? ctxState
+            : (subCtxsStates.find(
+                (subCtxState) => subCtxState.id === action.ctxId
+              ) ?? ctxState),
         taskRunner,
         workingMemory,
         agentState: agentCtxState,
@@ -251,11 +259,7 @@ export function createContextStreamHandler({
     );
   }
 
-  async function handleOutputStream(outputRef: OutputRef, done: boolean) {
-    if (!done) {
-      return pushLogStream(outputRef, false);
-    }
-
+  async function handleOutputStream(outputRef: OutputRef) {
     const refs = await handleOutput({
       agent,
       logger,
@@ -270,19 +274,17 @@ export function createContextStreamHandler({
         type: ref.type,
         processed: ref.processed,
       });
-
+      chain.push(ref);
       workingMemory.outputs.push(ref);
-      pushLogStream(ref, true);
     }
   }
 
   async function handler(el: StackElement) {
     if (abortSignal?.aborted) return;
 
-    state.index = Math.max(el.index, state.index);
-
     switch (el.tag) {
       case "think":
+      case "thinking":
       case "reasoning": {
         const ref = getOrCreateRef(el.index, {
           ref: "thought",
@@ -304,12 +306,13 @@ export function createContextStreamHandler({
           ref: "action_call",
         });
 
-        handleActionCallStream(
+        pushLogStream(
           {
             ...ref,
             name: el.attributes.name,
             content: el.content.join(""),
             data: undefined,
+            processed: false,
           },
           el.done
         );
@@ -322,20 +325,22 @@ export function createContextStreamHandler({
           ref: "output",
         });
 
+        const { type, ...params } = el.attributes;
         // Check if the type attribute exists
-        if (!el.attributes.type) {
+        if (!type) {
           logger.error("agent:output", "Missing output type attribute", {
             content: el.content.join(""),
             attributes: el.attributes,
           });
-          break;
         }
 
-        handleOutputStream(
+        pushLogStream(
           {
             ...ref,
-            type: el.attributes.type,
-            data: el.content.join("").trim(),
+            type,
+            params,
+            content: el.content.join("").trim(),
+            data: undefined,
           },
           el.done
         );
@@ -351,6 +356,7 @@ export function createContextStreamHandler({
   return {
     state,
     handler,
+    push: pushLogStream,
     tags: defaultTags,
   };
 }
