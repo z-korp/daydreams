@@ -1,10 +1,5 @@
 import { createGroq } from "@ai-sdk/groq";
-import {
-  createDreams,
-  LogLevel,
-  searchWebAction,
-  validateEnv,
-} from "@daydreamsai/core";
+import { createDreams, LogLevel, validateEnv } from "@daydreamsai/core";
 import { telegram } from "@daydreamsai/telegram";
 import { deepResearch } from "../deep-research/research";
 import { z } from "zod";
@@ -27,5 +22,4 @@ createDreams({
   logger: LogLevel.DEBUG,
   model: groq("deepseek-r1-distill-llama-70b"),
   extensions: [telegram, deepResearch],
-  actions: [searchWebAction],
 }).start();
