@@ -10,12 +10,14 @@
   },
   "dependencies": {
     "@types/react-syntax-highlighter": "^15.5.13",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "fast-glob": "^3.3.3",
     "fumadocs-core": "15.1.2",
     "fumadocs-mdx": "11.5.7",
     "fumadocs-ui": "15.1.2",
     "gray-matter": "^4.0.3",
-    "lucide-react": "^0.475.0",
+    "lucide-react": "^0.484.0",
     "next": "15.2.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -23,7 +25,9 @@
     "remark": "^15.0.1",
     "remark-gfm": "^4.0.1",
     "remark-mdx": "^3.1.0",
-    "remark-stringify": "^11.0.0"
+    "remark-stringify": "^11.0.0",
+    "tailwind-merge": "^3.0.2",
+    "tw-animate-css": "^1.2.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.15",
