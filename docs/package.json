@@ -9,6 +9,8 @@
     "postinstall": "fumadocs-mdx"
   },
   "dependencies": {
+    "@react-three/drei": "^10.0.5",
+    "@react-three/fiber": "^9.1.0",
     "@types/react-syntax-highlighter": "^15.5.13",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -27,6 +29,7 @@
     "remark-mdx": "^3.1.0",
     "remark-stringify": "^11.0.0",
     "tailwind-merge": "^3.0.2",
+    "three": "^0.172.0",
     "tw-animate-css": "^1.2.4"
   },
   "devDependencies": {
