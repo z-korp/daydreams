@@ -1,7 +1,7 @@
 import "./global.css";
 import { RootProvider } from "fumadocs-ui/provider";
 import { Metadata } from "next";
-import { Inter, Open_Sans } from "next/font/google";
+import { Inter, Open_Sans, Space_Grotesk } from "next/font/google";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -10,6 +10,11 @@ const inter = Inter({
 const jetbrainsMono = Open_Sans({
   subsets: ["latin"],
   variable: "--font-mono",
+});
+
+const space_grotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-sans",
 });
 
 export const metadata: Metadata = {
@@ -55,10 +60,10 @@ export default function Layout({ children }: { children: any }) {
   return (
     <html
       lang="en"
-      className={`${inter.className} ${jetbrainsMono.variable}`}
+      className={`${inter.className} ${jetbrainsMono.variable} ${space_grotesk.variable}`}
       suppressHydrationWarning
     >
-      <body className="flex flex-col min-h-screen">
+      <body className="flex flex-col min-h-screen font-sans">
         <RootProvider>{children}</RootProvider>
       </body>
     </html>

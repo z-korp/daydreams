@@ -4,6 +4,8 @@ description:
   This guide will walk you through the installation process for Daydreams.
 ---
 
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
 ## Prerequisites
 
 - Node.js 18+ using [nvm](https://github.com/nvm-sh/nvm)
@@ -11,21 +13,58 @@ description:
 We use [ai-sdk](https://sdk.vercel.ai/docs/introduction) to support multiple
 LLMs. You will need to install the ai-sdk for the LLM you want to use.
 
-```bash [npm]
-npm i @daydreamsai/core @ai-sdk/groq
-```
+<Tabs groupId="package-manager" persist items={["npm", "pnpm", "yarn", "bun"]}>
+  <Tab value="npm">
+    ```bash
+    npm install @daydreamsai/core 
+    ```
+  </Tab>
+    <Tab value="pnpm">
+    ```bash
+    pnpm add @daydreamsai/core
+    ```
+  </Tab>
 
-```bash [pnpm]
-pnpm add @daydreamsai/core @ai-sdk/groq
-```
+  <Tab value="yarn">
+    ```bash
+    yarn add @daydreamsai/core
+    ```
+  </Tab>
+  <Tab value="bun">
+    ```bash
+    bun add @daydreamsai/core
+    ```
+  </Tab>
+</Tabs>
 
-```bash [yarn]
-yarn add @daydreamsai/core @ai-sdk/groq
-```
+### Install ai-sdk
 
-```bash [bun]
-bun add @daydreamsai/core @ai-sdk/groq
-```
+See all available ai-sdk packages
+[here](https://sdk.vercel.ai/docs/introduction).
+
+<Tabs groupId="package-manager" persist items={["npm", "pnpm", "yarn", "bun"]}>
+  <Tab value="npm">
+    ```bash
+    npm install @ai-sdk/groq
+    ```
+  </Tab>
+    <Tab value="pnpm">
+    ```bash
+    pnpm add @ai-sdk/groq
+    ```
+  </Tab>
+
+  <Tab value="yarn">
+    ```bash
+    yarn add @ai-sdk/groq
+    ```
+  </Tab>
+  <Tab value="bun">
+    ```bash
+    bun add @ai-sdk/groq
+    ```
+  </Tab>
+</Tabs>
 
 ### Basic Usage
 
