@@ -3,3 +3,6 @@ packages:
   - "clients/**/*"
   - "examples/**/*"
   - "docs"
+  - "vibe/**/*"
+  - "llm-api"
+  - "llm-front"

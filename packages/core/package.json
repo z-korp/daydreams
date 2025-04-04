@@ -6,20 +6,19 @@
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    "./package.json": "./package.json",
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": {
-        "default": "./dist/index.js"
-      }
-    },
-    "./extensions": {
-      "types": "./dist/extensions/index.d.ts",
-      "import": {
-        "default": "./dist/extensions/index.js"
-      }
-    }
+  ".": {
+    "import": "./dist/index.js",
+    "require": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "default": "./dist/index.js"
   },
+  "./extensions": {
+    "import": "./dist/extensions/index.js",
+    "require": "./dist/extensions/index.js",
+    "types": "./dist/extensions/index.d.ts"
+  },
+  "./package.json": "./package.json"
+},
   "devDependencies": {
     "@types/bun": "latest",
     "tsup": "^8.3.6",
