@@ -1,4 +1,9 @@
 ---
+description: 
+globs: 
+alwaysApply: false
+---
+---
 description: Use when you need to create a github issue
 globs: 
 alwaysApply: false
