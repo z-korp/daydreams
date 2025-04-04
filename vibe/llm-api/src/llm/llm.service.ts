@@ -20,10 +20,10 @@ export class LlmService {
 
       // Recherche dans les logs de réponse
       const response = responseLogs.find(log => log.ref === 'output');
-      
+      console.log('================================================     SERVICE', response);
       // Accès sécurisé aux propriétés
       return {
-        content: response?.content || "Aucune réponse générée.",
+        content: response?.params?.content || "Aucune réponse générée.",
         sessionId,
         timestamp: Date.now(),
       };

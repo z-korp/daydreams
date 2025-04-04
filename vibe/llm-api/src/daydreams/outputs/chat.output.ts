@@ -3,18 +3,21 @@ import { output, OutputResponse } from '@daydreamsai/core';
 import { z } from 'zod';
 
 export const chatOutput = output({
-  name: "chat:response",
   schema: z.object({
     content: z.string().min(1, "Le contenu ne peut pas être vide"),
   }),
-  handler: (response, context, agent): OutputResponse => {
-    // Si vous devez traiter la réponse avant de la retourner
-    console.log("Réponse reçue:", response);
+  handler: (response, context, agent): any => {
+    // Logs pour le débogage
+    console.log('[DEBUG] Output Handler - Response reçue:', JSON.stringify(response));
+    console.log('[DEBUG] Output Handler - Context:', context?.id || 'No context');
     
-    // Retourner un objet compatible avec OutputResponse
-    return {
-      type: "text",
-      value: response.content,
+    // Créer une réponse valide du type OutputResponse
+    const outputResponse: any = {
+      type: 'message',  // Utilisez le type correct selon la doc de daydreams
+      content: response.content || "Réponse par défaut"
     };
+    
+    console.log('[DEBUG] Output Handler - Retourne:', JSON.stringify(outputResponse));
+    return outputResponse;
   }
 });

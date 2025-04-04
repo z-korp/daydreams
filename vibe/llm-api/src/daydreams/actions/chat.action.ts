@@ -11,8 +11,8 @@ export const addToChatHistory = action({
   }),
   handler(call, ctx) {
     try {
-      // Access the context memory directly
-      const memory = ctx.memory;
+      // Utiliser ctx.agentMemory au lieu de ctx.memory
+      const memory = ctx.agentMemory as any;
       
       // Initialize history array if it doesn't exist
       if (!Array.isArray(memory.history)) {
