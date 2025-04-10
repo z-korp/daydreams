@@ -99,7 +99,7 @@ You are an expert AI agent playing a strategic roguelike dungeon crawler game ba
 ## Strategic Elements:
 - Analyze enemy patterns and stats
 - Choose optimal moves based on attack/defense values
-- Make strategic loot decisions to build your character
+- Make strategic loot decisions in your own to build your character
 - Balance aggressive and defensive playstyles
 - Adapt strategy based on current HP and enemy threats
 
@@ -175,7 +175,9 @@ const goalContexts = context({
     id: string(),
     initialGoal: z.string(),
     initialTasks: z.array(z.string()),
+    
   }),
+  maxSteps: 100,
 
   key({ id }) {
     return id;
@@ -328,96 +330,101 @@ const gigaExtension = extension({
           let battleResult = "draw";
 
           // Update the state with player and enemy data
-          const state = ctx.agentMemory as GigaverseState;
+          if (!ctx.memory || !ctx.memory.goal) {
+            console.warn("Warning: Agent memory is not initialized yet");
+            // Continue without updating state
+          } else {
+            const state = ctx.memory.goal as GigaverseState;
 
-          // Extract data from the response structure
-          if (
-            result.data &&
-            result.data.run &&
-            result.data.run.players &&
-            result.data.run.players.length >= 2
-          ) {
-            const playerData = result.data.run.players[0]; // First player is the user
-            const enemyData = result.data.run.players[1]; // Second player is the enemy
-
-            // Get the enemy's last move
-            enemyMove = enemyData.lastMove || "unknown";
-
-            // Determine the battle result
-            if (playerData.thisPlayerWin === true) {
-              battleResult = "win";
-            } else if (enemyData.thisPlayerWin === true) {
-              battleResult = "lose";
-            } else {
-              battleResult = "draw";
-            }
-
-            // Update player stats
-            state.currentHP = playerData.health.current.toString();
-            state.playerHealth = playerData.health.current.toString();
-            state.playerMaxHealth = playerData.health.currentMax.toString();
-            state.playerShield = playerData.shield.current.toString();
-            state.playerMaxShield = playerData.shield.currentMax.toString();
-
-            // Update rock/paper/scissor stats
-            state.rockAttack = playerData.rock.currentATK.toString();
-            state.rockDefense = playerData.rock.currentDEF.toString();
-            state.rockCharges = playerData.rock.currentCharges.toString();
-
-            state.paperAttack = playerData.paper.currentATK.toString();
-            state.paperDefense = playerData.paper.currentDEF.toString();
-            state.paperCharges = playerData.paper.currentCharges.toString();
-
-            state.scissorAttack = playerData.scissor.currentATK.toString();
-            state.scissorDefense = playerData.scissor.currentDEF.toString();
-            state.scissorCharges = playerData.scissor.currentCharges.toString();
-
-            // Update enemy stats
-            state.enemyHealth = enemyData.health.current.toString();
-            state.enemyMaxHealth = enemyData.health.currentMax.toString();
-            state.enemyShield = enemyData.shield.current.toString();
-            state.enemyMaxShield = enemyData.shield.currentMax.toString();
-
-            // Update battle result and enemy move
-            state.lastBattleResult = battleResult;
-            state.lastEnemyMove = enemyMove;
-
-            // Update loot phase status
-            state.lootPhase = (result.data.run.lootPhase || false).toString();
-
-            // Update loot options if available
+            // Extract data from the response structure
             if (
-              result.data.run.lootOptions &&
-              result.data.run.lootOptions.length > 0
+              result.data &&
+              result.data.run &&
+              result.data.run.players &&
+              result.data.run.players.length >= 2
             ) {
-              state.lootOptions = result.data.run.lootOptions;
-              state.currentLoot = result.data.run.lootOptions.length.toString();
+              const playerData = result.data.run.players[0]; // First player is the user
+              const enemyData = result.data.run.players[1]; // Second player is the enemy
+
+              // Get the enemy's last move
+              enemyMove = enemyData.lastMove || "unknown";
+
+              // Determine the battle result
+              if (playerData.thisPlayerWin === true) {
+                battleResult = "win";
+              } else if (enemyData.thisPlayerWin === true) {
+                battleResult = "lose";
+              } else {
+                battleResult = "draw";
+              }
+
+              // Update player stats
+              state.currentHP = playerData.health.current.toString();
+              state.playerHealth = playerData.health.current.toString();
+              state.playerMaxHealth = playerData.health.currentMax.toString();
+              state.playerShield = playerData.shield.current.toString();
+              state.playerMaxShield = playerData.shield.currentMax.toString();
+
+              // Update rock/paper/scissor stats
+              state.rockAttack = playerData.rock.currentATK.toString();
+              state.rockDefense = playerData.rock.currentDEF.toString();
+              state.rockCharges = playerData.rock.currentCharges.toString();
+
+              state.paperAttack = playerData.paper.currentATK.toString();
+              state.paperDefense = playerData.paper.currentDEF.toString();
+              state.paperCharges = playerData.paper.currentCharges.toString();
+
+              state.scissorAttack = playerData.scissor.currentATK.toString();
+              state.scissorDefense = playerData.scissor.currentDEF.toString();
+              state.scissorCharges = playerData.scissor.currentCharges.toString();
+
+              // Update enemy stats
+              state.enemyHealth = enemyData.health.current.toString();
+              state.enemyMaxHealth = enemyData.health.currentMax.toString();
+              state.enemyShield = enemyData.shield.current.toString();
+              state.enemyMaxShield = enemyData.shield.currentMax.toString();
+
+              // Update battle result and enemy move
+              state.lastBattleResult = battleResult;
+              state.lastEnemyMove = enemyMove;
+
+              // Update loot phase status
+              state.lootPhase = (result.data.run.lootPhase || false).toString();
+
+              // Update loot options if available
+              if (
+                result.data.run.lootOptions &&
+                result.data.run.lootOptions.length > 0
+              ) {
+                state.lootOptions = result.data.run.lootOptions;
+                state.currentLoot = result.data.run.lootOptions.length.toString();
+              }
+
+              // Update room information
+              if (result.data.entity) {
+                state.currentRoom = result.data.entity.ROOM_NUM_CID.toString();
+                state.currentDungeon =
+                  result.data.entity.DUNGEON_ID_CID.toString();
+                state.currentEnemy = result.data.entity.ENEMY_CID.toString();
+              }
             }
 
-            // Update room information
-            if (result.data.entity) {
-              state.currentRoom = result.data.entity.ROOM_NUM_CID.toString();
-              state.currentDungeon =
-                result.data.entity.DUNGEON_ID_CID.toString();
-              state.currentEnemy = result.data.entity.ENEMY_CID.toString();
+            if (["rock", "paper", "scissor"].includes(action)) {
+              simpleUI.visualizeRPSMove(action, enemyMove, battleResult);
             }
-          }
 
-          if (["rock", "paper", "scissor"].includes(action)) {
-            simpleUI.visualizeRPSMove(action, enemyMove, battleResult);
-          }
+            // Display the updated state to the user
+            simpleUI.printDetailedGameState(state);
 
-          // Display the updated state to the user
-          simpleUI.printDetailedGameState(state);
+            // Update game state in the UI
+            if (result.gameState) {
+              simpleUI.printGameState(result.gameState);
+            }
 
-          // Update game state in the UI
-          if (result.gameState) {
-            simpleUI.printGameState(result.gameState);
-          }
-
-          // Update player stats in the UI
-          if (result.playerState) {
-            simpleUI.printPlayerStats(result.playerState);
+            // Update player stats in the UI
+            if (result.playerState) {
+              simpleUI.printPlayerStats(result.playerState);
+            }
           }
 
           return {
@@ -429,10 +436,10 @@ const gigaExtension = extension({
             Enemy Move: ${enemyMove}
             Battle Result: ${battleResult}
 
-            Player Health: ${state.playerHealth}
-            Player Max Health: ${state.playerMaxHealth}
-            Player Shield: ${state.playerShield}
-            Player Max Shield: ${state.playerMaxShield}
+            Player Health: ${ctx.memory?.goal?.playerHealth || "Unknown"}
+            Player Max Health: ${ctx.memory?.goal?.playerMaxHealth || "Unknown"}
+            Player Shield: ${ctx.memory?.goal?.playerShield || "Unknown"}
+            Player Max Shield: ${ctx.memory?.goal?.playerMaxShield || "Unknown"}
             
 
             `,
@@ -565,85 +572,91 @@ const gigaExtension = extension({
           }
 
           // Update the state with player data
-          if (
-            result.data &&
-            result.data.run &&
-            result.data.run.players &&
-            result.data.run.players.length > 0
-          ) {
-            const state = ctx.agentMemory as GigaverseState;
-            const playerData = result.data.run.players[0]; // First player is the user
+          if (!ctx.memory || !ctx.memory.goal) {
+            console.warn("Warning: Agent memory is not initialized yet");
+            // Continue without updating state
+          } else {
+            const state = ctx.memory.goal as GigaverseState;
 
-            // Update player stats
-            state.currentHP = playerData.health.current.toString();
-            state.playerHealth = playerData.health.current.toString();
-            state.playerMaxHealth = playerData.health.currentMax.toString();
-            state.playerShield = playerData.shield.current.toString();
-            state.playerMaxShield = playerData.shield.currentMax.toString();
-
-            // Update rock/paper/scissor stats
-            state.rockAttack = playerData.rock.currentATK.toString();
-            state.rockDefense = playerData.rock.currentDEF.toString();
-            state.rockCharges = playerData.rock.currentCharges.toString();
-
-            state.paperAttack = playerData.paper.currentATK.toString();
-            state.paperDefense = playerData.paper.currentDEF.toString();
-            state.paperCharges = playerData.paper.currentCharges.toString();
-
-            state.scissorAttack = playerData.scissor.currentATK.toString();
-            state.scissorDefense = playerData.scissor.currentDEF.toString();
-            state.scissorCharges = playerData.scissor.currentCharges.toString();
-
-            // Update loot phase status
-            state.lootPhase = (result.data.run.lootPhase || false).toString();
-
-            // Update loot options if available
             if (
-              result.data.run.lootOptions &&
-              result.data.run.lootOptions.length > 0
+              result.data &&
+              result.data.run &&
+              result.data.run.players &&
+              result.data.run.players.length > 0
             ) {
-              state.lootOptions = result.data.run.lootOptions;
-              state.currentLoot = result.data.run.lootOptions.length.toString();
-            }
+              const playerData = result.data.run.players[0]; // First player is the user
 
-            // Update room information if available
-            if (result.data.entity) {
-              state.currentRoom = result.data.entity.ROOM_NUM_CID.toString();
-              state.currentDungeon =
-                result.data.entity.DUNGEON_ID_CID.toString();
-              state.currentEnemy = result.data.entity.ENEMY_CID.toString();
-            }
+              // Update player stats
+              state.currentHP = playerData.health.current.toString();
+              state.playerHealth = playerData.health.current.toString();
+              state.playerMaxHealth = playerData.health.currentMax.toString();
+              state.playerShield = playerData.shield.current.toString();
+              state.playerMaxShield = playerData.shield.currentMax.toString();
 
-            // Update enemy stats if available
-            if (result.data.run.players.length > 1) {
-              const enemyData = result.data.run.players[1]; // Second player is the enemy
-              state.enemyHealth = enemyData.health.current.toString();
-              state.enemyMaxHealth = enemyData.health.currentMax.toString();
-              state.enemyShield = enemyData.shield.current.toString();
-              state.enemyMaxShield = enemyData.shield.currentMax.toString();
+              // Update rock/paper/scissor stats
+              state.rockAttack = playerData.rock.currentATK.toString();
+              state.rockDefense = playerData.rock.currentDEF.toString();
+              state.rockCharges = playerData.rock.currentCharges.toString();
 
-              // Update battle result and enemy move if available
-              if (enemyData.lastMove) {
-                state.lastEnemyMove = enemyData.lastMove;
+              state.paperAttack = playerData.paper.currentATK.toString();
+              state.paperDefense = playerData.paper.currentDEF.toString();
+              state.paperCharges = playerData.paper.currentCharges.toString();
 
-                // Determine battle result if not already set
-                if (
-                  !state.lastBattleResult &&
-                  playerData.thisPlayerWin !== undefined
-                ) {
-                  if (playerData.thisPlayerWin === true) {
-                    state.lastBattleResult = "win";
-                  } else if (enemyData.thisPlayerWin === true) {
-                    state.lastBattleResult = "lose";
-                  } else {
-                    state.lastBattleResult = "draw";
+              state.scissorAttack = playerData.scissor.currentATK.toString();
+              state.scissorDefense = playerData.scissor.currentDEF.toString();
+              state.scissorCharges = playerData.scissor.currentCharges.toString();
+
+              // Update loot phase status
+              state.lootPhase = (result.data.run.lootPhase || false).toString();
+
+              // Update loot options if available
+              if (
+                result.data.run.lootOptions &&
+                result.data.run.lootOptions.length > 0
+              ) {
+                state.lootOptions = result.data.run.lootOptions;
+                state.currentLoot = result.data.run.lootOptions.length.toString();
+              }
+
+              // Update room information if available
+              if (result.data.entity) {
+                state.currentRoom = result.data.entity.ROOM_NUM_CID.toString();
+                state.currentDungeon =
+                  result.data.entity.DUNGEON_ID_CID.toString();
+                state.currentEnemy = result.data.entity.ENEMY_CID.toString();
+              }
+
+              // Update enemy stats if available
+              if (result.data.run.players.length > 1) {
+                const enemyData = result.data.run.players[1]; // Second player is the enemy
+                state.enemyHealth = enemyData.health.current.toString();
+                state.enemyMaxHealth = enemyData.health.currentMax.toString();
+                state.enemyShield = enemyData.shield.current.toString();
+                state.enemyMaxShield = enemyData.shield.currentMax.toString();
+
+                // Update battle result and enemy move if available
+                if (enemyData.lastMove) {
+                  state.lastEnemyMove = enemyData.lastMove;
+
+                  // Determine battle result if not already set
+                  if (
+                    !state.lastBattleResult &&
+                    playerData.thisPlayerWin !== undefined
+                  ) {
+                    if (playerData.thisPlayerWin === true) {
+                      state.lastBattleResult = "win";
+                    } else if (enemyData.thisPlayerWin === true) {
+                      state.lastBattleResult = "lose";
+                    } else {
+                      state.lastBattleResult = "draw";
+                    }
                   }
                 }
               }
-            }
 
-            // Display the updated state to the user
-            simpleUI.printDetailedGameState(state);
+              // Display the updated state to the user
+              simpleUI.printDetailedGameState(state);
+            }
           }
 
           // Log success to the UI
@@ -745,52 +758,58 @@ const gigaExtension = extension({
           }
 
           // Update the state with the new run data
-          if (
-            result.data &&
-            result.data.run &&
-            result.data.run.players &&
-            result.data.run.players.length > 0
-          ) {
-            const state = ctx.agentMemory as GigaverseState;
-            const playerData = result.data.run.players[0]; // First player is the user
+          if (!ctx.memory || !ctx.memory.goal) {
+            console.warn("Warning: Agent memory is not initialized yet");
+            // Continue without updating state
+          } else {
+            const state = ctx.memory.goal as GigaverseState;
 
-            // Update player stats
-            state.currentHP = playerData.health.current.toString();
-            state.playerHealth = playerData.health.current.toString();
-            state.playerMaxHealth = playerData.health.currentMax.toString();
-            state.playerShield = playerData.shield.current.toString();
-            state.playerMaxShield = playerData.shield.currentMax.toString();
+            if (
+              result.data &&
+              result.data.run &&
+              result.data.run.players &&
+              result.data.run.players.length > 0
+            ) {
+              const playerData = result.data.run.players[0]; // First player is the user
 
-            // Update rock/paper/scissor stats
-            state.rockAttack = playerData.rock.currentATK.toString();
-            state.rockDefense = playerData.rock.currentDEF.toString();
-            state.rockCharges = playerData.rock.currentCharges.toString();
+              // Update player stats
+              state.currentHP = playerData.health.current.toString();
+              state.playerHealth = playerData.health.current.toString();
+              state.playerMaxHealth = playerData.health.currentMax.toString();
+              state.playerShield = playerData.shield.current.toString();
+              state.playerMaxShield = playerData.shield.currentMax.toString();
 
-            state.paperAttack = playerData.paper.currentATK.toString();
-            state.paperDefense = playerData.paper.currentDEF.toString();
-            state.paperCharges = playerData.paper.currentCharges.toString();
+              // Update rock/paper/scissor stats
+              state.rockAttack = playerData.rock.currentATK.toString();
+              state.rockDefense = playerData.rock.currentDEF.toString();
+              state.rockCharges = playerData.rock.currentCharges.toString();
 
-            state.scissorAttack = playerData.scissor.currentATK.toString();
-            state.scissorDefense = playerData.scissor.currentDEF.toString();
-            state.scissorCharges = playerData.scissor.currentCharges.toString();
+              state.paperAttack = playerData.paper.currentATK.toString();
+              state.paperDefense = playerData.paper.currentDEF.toString();
+              state.paperCharges = playerData.paper.currentCharges.toString();
 
-            // Update dungeon info
-            state.currentDungeon = dungeonId.toString();
-            state.currentRoom = "1"; // New runs start at room 1
-            state.lootPhase = "false";
-            state.lootOptions = [];
-            state.lastBattleResult = "";
-            state.lastEnemyMove = "";
+              state.scissorAttack = playerData.scissor.currentATK.toString();
+              state.scissorDefense = playerData.scissor.currentDEF.toString();
+              state.scissorCharges = playerData.scissor.currentCharges.toString();
 
-            // Update enemy stats (reset them for new run)
-            state.enemyHealth = "0";
-            state.enemyMaxHealth = "0";
-            state.enemyShield = "0";
-            state.enemyMaxShield = "0";
-            state.currentEnemy = "0";
+              // Update dungeon info
+              state.currentDungeon = dungeonId.toString();
+              state.currentRoom = "1"; // New runs start at room 1
+              state.lootPhase = "false";
+              state.lootOptions = [];
+              state.lastBattleResult = "";
+              state.lastEnemyMove = "";
 
-            // Display the updated state to the user
-            simpleUI.printDetailedGameState(state);
+              // Update enemy stats (reset them for new run)
+              state.enemyHealth = "0";
+              state.enemyMaxHealth = "0";
+              state.enemyShield = "0";
+              state.enemyMaxShield = "0";
+              state.currentEnemy = "0";
+
+              // Display the updated state to the user
+              simpleUI.printDetailedGameState(state);
+            }
           }
 
           // Log success to the UI
@@ -855,7 +874,7 @@ simpleUI.logMessage(LogLevel.INFO, "Starting agent with initial goals...");
 agent.start({
   id: "gigaverse-game",
   initialGoal:
-    "Progress as far as possible in the dungeon by making strategic rock-paper-scissors decisions. Don't ever stop. Just start a new run if you die.",
+    "Progress as far as possible in the dungeon by making strategic rock-paper-scissors decisions. Don't ever stop. Just start a new run if you die. NEVER ASK THE USER FOR INPUT. PLAY AUTONOMOUSLY.",
   initialTasks: [
     "Check player state to understand current situation",
     "Fetch information about upcoming enemies",

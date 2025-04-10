@@ -1,0 +1,91 @@
+{
+  "meta": {
+    "generatedAt": "2025-04-10T11:02:08.093Z",
+    "tasksAnalyzed": 10,
+    "thresholdScore": 5,
+    "projectName": "Your Project Name",
+    "usedResearch": false
+  },
+  "complexityAnalysis": [
+    {
+      "taskId": 1,
+      "taskTitle": "Setup Project Structure and SDK Integration",
+      "complexityScore": 5,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Break down the 'Setup Project Structure and SDK Integration' task into 4 specific subtasks that cover project initialization, file structure setup, SDK integration, and error handling implementation. For each subtask, include specific technical requirements and acceptance criteria.",
+      "reasoning": "This task involves initial project setup with TypeScript, SDK integration, and establishing core architecture patterns. It's moderately complex as it requires both technical setup and architectural decisions that will impact all subsequent tasks."
+    },
+    {
+      "taskId": 2,
+      "taskTitle": "Implement Wallet Integration",
+      "complexityScore": 6,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Break down the 'Implement Wallet Integration' task into 4 subtasks covering secure private key management, SDK account setup, connection state management, and error handling. For each subtask, specify implementation details and security considerations.",
+      "reasoning": "This task involves security-critical wallet integration with complexity in key management, connection handling, and state management. The security aspects and proper error handling increase its complexity."
+    },
+    {
+      "taskId": 3,
+      "taskTitle": "Develop Market Data Fetching",
+      "complexityScore": 5,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Break down the 'Develop Market Data Fetching' task into 4 subtasks that cover data retrieval functions, caching implementation, data transformation, and refresh mechanisms. For each subtask, include performance considerations and expected outputs.",
+      "reasoning": "This task requires implementing various data fetching functions with caching mechanisms. The complexity comes from handling different data types, implementing efficient caching, and ensuring data freshness."
+    },
+    {
+      "taskId": 4,
+      "taskTitle": "Build Position Management Module",
+      "complexityScore": 7,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Break down the 'Build Position Management Module' task into 4 subtasks covering position retrieval, calculation helpers, real-time monitoring, and data formatting. For each subtask, specify implementation details and integration points with other modules.",
+      "reasoning": "This task has higher complexity due to the need to calculate financial metrics, implement real-time monitoring, and manage state. It also depends on both wallet integration and market data, adding integration complexity."
+    },
+    {
+      "taskId": 5,
+      "taskTitle": "Implement Order Creation Functionality",
+      "complexityScore": 8,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Break down the 'Implement Order Creation Functionality' task into 5 subtasks covering increase orders, decrease orders, swap orders, parameter validation, and error handling. For each subtask, detail the required parameters, validation rules, and potential error conditions.",
+      "reasoning": "This is one of the most complex tasks as it involves implementing multiple order types, each with their own parameter requirements and validation logic. Financial transaction handling requires rigorous error handling and validation."
+    },
+    {
+      "taskId": 6,
+      "taskTitle": "Add Order Cancellation Functionality",
+      "complexityScore": 5,
+      "recommendedSubtasks": 3,
+      "expansionPrompt": "Break down the 'Add Order Cancellation Functionality' task into 3 subtasks covering pending order retrieval, cancellation implementation, and confirmation/retry mechanisms. For each subtask, specify implementation details and edge cases to handle.",
+      "reasoning": "This task is moderately complex, requiring implementation of order cancellation with confirmation flows and retry mechanisms. It's simpler than order creation but still requires careful transaction handling."
+    },
+    {
+      "taskId": 7,
+      "taskTitle": "Develop Trade History Analysis",
+      "complexityScore": 6,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Break down the 'Develop Trade History Analysis' task into 4 subtasks covering history retrieval, performance metrics calculation, filtering/sorting functionality, and data formatting. For each subtask, specify algorithms, data structures, and output formats.",
+      "reasoning": "This task involves both data retrieval and analytical processing. The complexity comes from implementing various performance metrics calculations and providing flexible filtering/sorting capabilities."
+    },
+    {
+      "taskId": 8,
+      "taskTitle": "Implement Error Handling and Retry Mechanisms",
+      "complexityScore": 7,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Break down the 'Implement Error Handling and Retry Mechanisms' task into 4 subtasks covering error categorization, retry implementation, logging enhancement, and user-friendly messaging. For each subtask, detail implementation approaches and integration points.",
+      "reasoning": "This task has significant complexity due to the need to handle diverse error types, implement sophisticated retry logic with backoff, and ensure comprehensive logging. It requires changes across multiple components of the system."
+    },
+    {
+      "taskId": 9,
+      "taskTitle": "Create Example Trading Strategies",
+      "complexityScore": 8,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Break down the 'Create Example Trading Strategies' task into 5 subtasks covering strategy interface design, market making strategy, trend-following strategy, range trading strategy, and strategy execution framework. For each subtask, detail the algorithm, configurable parameters, and integration with the agent's core functionality.",
+      "reasoning": "This is one of the most complex tasks as it requires implementing multiple trading strategies, each with its own logic and parameters. It also depends on nearly all previous components and requires deep domain knowledge of trading algorithms."
+    },
+    {
+      "taskId": 10,
+      "taskTitle": "Finalize Documentation and Example File",
+      "complexityScore": 4,
+      "recommendedSubtasks": 3,
+      "expansionPrompt": "Break down the 'Finalize Documentation and Example File' task into 3 subtasks covering code documentation, usage examples, and README preparation. For each subtask, specify documentation standards, example scenarios to cover, and key information to include.",
+      "reasoning": "This task is less technically complex but requires comprehensive understanding of all implemented features. The focus is on clear communication and ensuring the example file works correctly with minimal configuration."
+    }
+  ]
+}
