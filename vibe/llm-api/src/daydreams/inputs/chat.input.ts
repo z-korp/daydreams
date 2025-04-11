@@ -1,19 +1,19 @@
-import { input, formatMsg } from "@daydreamsai/core";
+import { input, formatMsg } from "../core-adapter";
 import { z } from "zod";
 import { chatContext } from "../context/chat.context";
 
 export const apiInput = input({
   schema: z.object({
     sessionId: z.string(),
-    userId: z.string().default('user'),
+    userId: z.string().default("user"),
     prompt: z.string(),
   }),
 
-  format: ({ prompt, userId }) =>
+  format: (inputRef) =>
     formatMsg({
       role: "user",
-      content: prompt,
-      user: userId,
+      content: inputRef.data.prompt,
+      user: inputRef.data.userId,
     }),
 
   subscribe() {

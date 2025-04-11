@@ -1,5 +1,5 @@
 import { Provider } from "@nestjs/common";
-import { createDreams, LogLevel } from "@daydreamsai/core";
+import { createDreams, LogLevel } from "./core-adapter";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 import { ConfigService } from "@nestjs/config";
