@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Controller, Post, Body } from "@nestjs/common";
 import { DaydreamsService } from "../daydreams/daydreams.service.js";
 import { chatContext } from "../daydreams/context/chat.context.js";
