@@ -19,7 +19,7 @@ import { apiInput } from "./inputs/chat.input.js";
 import { chatOutput } from "./outputs/chat.output.js";
 
 type AnthropicModelId = "claude-3-7-sonnet-latest";
-type OpenAIModelId = "gpt-4-turbo";
+type OpenAIModelId = "gpt-4.1" | "gpt-4.1-nano";
 type ModelType = "anthropic" | "openai";
 
 export interface AgentResponse {
@@ -49,7 +49,7 @@ export class DaydreamsService implements OnModuleInit {
   constructor(private configService: ConfigService) {}
 
   async onModuleInit() {
-    await this.initializeAgent("openai", "gpt-4-turbo"); // Default to Claude
+    await this.initializeAgent("openai", "gpt-4.1-nano"); // Default to Claude
   }
 
   private async initializeAgent(
