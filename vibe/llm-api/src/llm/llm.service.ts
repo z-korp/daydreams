@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { chatContext } from "../daydreams/context/chat.context";
-import { createDreams } from "../daydreams/core-adapter";
+import { createDreams } from "@daydreamsai/core";
+import { chatContext } from "../daydreams/context/chat.context.js";
 
 @Injectable()
 export class LlmService {

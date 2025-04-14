@@ -1,6 +1,6 @@
 // src/daydreams/outputs/chat.output.ts
 import { z } from "zod";
-import { output, OutputResponse } from "../core-adapter";
+import { output } from "@daydreamsai/core";
 
 export const chatOutput = output({
   schema: z.object({

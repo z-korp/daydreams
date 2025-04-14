@@ -1,4 +1,4 @@
-import { context } from "../core-adapter";
+import { context } from "@daydreamsai/core";
 import { z } from "zod";
 
 export type ChatMessage = {

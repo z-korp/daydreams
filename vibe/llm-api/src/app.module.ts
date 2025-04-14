@@ -1,12 +1,11 @@
 import { Module } from "@nestjs/common";
-import { AppController } from "./app.controller";
-import { AppService } from "./app.service";
-import { ChatModule } from "./chat/chat.module";
-import { LlmModule } from "./llm/llm.module";
-import { LlmController } from "./llm/llm.controller";
-import { DaydreamsAgentProvider } from "./daydreams/agent.provider";
-import { DaydreamsModule } from "./daydreams/daydreams.module";
-import { validateEnv } from "./config/config";
+import { AppController } from "./app.controller.js";
+import { AppService } from "./app.service.js";
+import { ChatModule } from "./chat/chat.module.js";
+import { LlmModule } from "./llm/llm.module.js";
+import { LlmController } from "./llm/llm.controller.js";
+import { DaydreamsModule } from "./daydreams/daydreams.module.js";
+import { validateEnv } from "./config/config.js";
 import { ConfigModule } from "@nestjs/config";
 
 @Module({
@@ -20,6 +19,6 @@ import { ConfigModule } from "@nestjs/config";
     }),
   ],
   controllers: [AppController, LlmController],
-  providers: [AppService, DaydreamsAgentProvider],
+  providers: [AppService],
 })
 export class AppModule {}

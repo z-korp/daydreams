@@ -1,13 +1,11 @@
 import { Provider } from "@nestjs/common";
-import { createDreams, LogLevel } from "./core-adapter";
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { z } from "zod";
 import { ConfigService } from "@nestjs/config";
-
-import { chatContext } from "./context/chat.context";
-import { addToChatHistory, clearChatHistory } from "./actions/chat.action";
-import { apiInput } from "./inputs/chat.input";
-import { chatOutput } from "./outputs/chat.output";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createDreams, LogLevel } from "@daydreamsai/core";
+import { chatContext } from "./context/chat.context.js";
+import { addToChatHistory, clearChatHistory } from "./actions/chat.action.js";
+import { apiInput } from "./inputs/chat.input.js";
+import { chatOutput } from "./outputs/chat.output.js";
 
 export const DaydreamsAgentProvider: Provider = {
   provide: "DAYDREAMS_AGENT",
@@ -17,12 +15,14 @@ export const DaydreamsAgentProvider: Provider = {
 
     console.log("[DEBUG] Initialisation du DaydreamsAgent");
 
-    const anthropic = createAnthropic({ apiKey: apiKey });
-    console.log("[DEBUG] Provider Anthropic créé");
-
     try {
+      const anthropic = createAnthropic({ apiKey });
+      console.log("[DEBUG] Provider Anthropic créé");
+
       console.log("[DEBUG] Création de l'agent Dreams");
-      const agent = await createDreams({
+
+      // Création de l'agent avec createDreams (fonction asynchrone)
+      const dreamsInstance = await createDreams({
         logger: LogLevel.DEBUG,
         model: anthropic("claude-3-7-sonnet-latest"),
         context: chatContext,
@@ -39,7 +39,10 @@ export const DaydreamsAgentProvider: Provider = {
             data
           );
         },
-      }).start({
+      });
+
+      // Démarrer l'agent
+      const agent = await dreamsInstance.start({
         sessionId: "default-session",
       });
 
@@ -47,7 +50,20 @@ export const DaydreamsAgentProvider: Provider = {
       return agent;
     } catch (error) {
       console.error("[ERROR] Échec de création de l'agent:", error);
-      throw error;
+      // En cas d'erreur, retourner un agent de secours avec méthode send
+      return {
+        send: async (request: any) => {
+          console.log("[FALLBACK] Utilisation de l'agent de secours");
+          return [
+            {
+              ref: "output",
+              content:
+                "Le système rencontre des difficultés. Veuillez réessayer plus tard.",
+              type: "error",
+            },
+          ];
+        },
+      };
     }
   },
 };

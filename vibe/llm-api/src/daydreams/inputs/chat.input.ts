@@ -1,6 +1,6 @@
-import { input, formatMsg } from "../core-adapter";
+import { input, formatMsg } from "@daydreamsai/core";
 import { z } from "zod";
-import { chatContext } from "../context/chat.context";
+import { chatContext } from "../context/chat.context.js";
 
 export const apiInput = input({
   schema: z.object({

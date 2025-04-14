@@ -1,88 +1,55 @@
-import { action } from "../core-adapter";
+import { action } from "@daydreamsai/core";
 import { z } from "zod";
-import { ChatMessage } from "../context/chat.context";
+import { ChatMessage } from "../context/chat.context.js";
 
 export const addToChatHistory = action({
-  name: "addToChatHistory",
-  description:
-    "Adds a new message to the chat history and maintains conversation state",
+  name: "chat:addMessage",
+  description: "Add a message to the chat history",
   schema: z.object({
-    role: z
-      .enum(["user", "assistant"])
-      .describe("Who is sending this message (user or assistant)"),
-    content: z
-      .string()
-      .describe("The actual message content to be added to the history"),
+    content: z.string().min(1, "Content cannot be empty"),
+    role: z.enum(["user", "assistant"]),
   }),
-  handler(call, ctx) {
-    try {
-      // Utiliser ctx.agentMemory au lieu de ctx.memory
-      const memory = ctx.agentMemory as any;
+  handler: (call: any, ctx: any) => {
+    // Adaptation pour gérer les différentes structures possibles de call
+    let content, role;
 
-      // Initialize history array if it doesn't exist
-      if (!Array.isArray(memory.history)) {
-        memory.history = [];
-      }
-
-      // Create a well-structured message object
-      const newMessage: ChatMessage = {
-        role: call.role,
-        content: call.content,
-        timestamp: Date.now(),
-      };
-
-      // Add message to history
-      memory.history.push(newMessage);
-
-      // Update session metadata
-      memory.lastActive = Date.now();
-      memory.messageCount = (memory.messageCount || 0) + 1;
-
-      return {
-        success: true,
-        messageId: memory.messageCount,
-        message: `Successfully added ${call.role} message to chat history`,
-      };
-    } catch (error) {
-      console.error("Error adding message to chat history:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        message: "Failed to add message to chat history",
-      };
+    if (call.data) {
+      // Si call a la propriété data, utilise-la directement
+      content = call.data.content;
+      role = call.data.role;
+    } else {
+      // Sinon, on suppose que content et role sont des propriétés directes
+      content = call.content;
+      role = call.role;
     }
+
+    // Create a new message with timestamp
+    const message: ChatMessage = {
+      content,
+      role,
+      timestamp: Date.now(),
+    };
+
+    // Update the chat context memory
+    ctx.memory.history = ctx.memory.history || [];
+    ctx.memory.history.push(message);
+    ctx.memory.lastActive = Date.now();
+    ctx.memory.messageCount = (ctx.memory.messageCount || 0) + 1;
+
+    return { success: true, message };
   },
 });
 
-// Additional actions for chat functionality
 export const clearChatHistory = action({
-  name: "clearChatHistory",
-  description: "Clears the entire chat history for the current session",
+  name: "chat:clear",
+  description: "Clear the chat history",
   schema: z.object({}),
-  handler(call, ctx) {
-    try {
-      const memory = ctx.memory;
+  handler: (call: any, ctx: any) => {
+    // Clear the chat history
+    ctx.memory.history = [];
+    ctx.memory.messageCount = 0;
+    ctx.memory.lastActive = Date.now();
 
-      // Store the count for reference
-      const previousCount = memory.history?.length || 0;
-
-      // Reset the history
-      memory.history = [];
-      memory.lastActive = Date.now();
-      memory.messageCount = 0;
-
-      return {
-        success: true,
-        clearedMessages: previousCount,
-        message: `Chat history cleared. Removed ${previousCount} messages.`,
-      };
-    } catch (error) {
-      console.error("Error clearing chat history:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        message: "Failed to clear chat history",
-      };
-    }
+    return { success: true };
   },
 });

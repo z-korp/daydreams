@@ -1,8 +1,10 @@
-import { Module } from '@nestjs/common';
-import { DaydreamsAgentProvider } from './agent.provider';
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import { DaydreamsService } from "./daydreams.service.js";
 
 @Module({
-  providers: [DaydreamsAgentProvider],
-  exports: [DaydreamsAgentProvider]
+  imports: [ConfigModule],
+  providers: [DaydreamsService],
+  exports: [DaydreamsService],
 })
 export class DaydreamsModule {}

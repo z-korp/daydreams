@@ -1,13 +1,10 @@
-import { Module } from '@nestjs/common';
-import { HttpModule } from '@nestjs/axios';
-import { LlmService } from './llm.service';
-import { LlmController } from './llm.controller';
-import { DaydreamsModule } from 'src/daydreams/daydreams.module';
+import { Module } from "@nestjs/common";
+import { HttpModule } from "@nestjs/axios";
+import { LlmController } from "./llm.controller.js";
+import { DaydreamsModule } from "../daydreams/daydreams.module.js";
 
 @Module({
   imports: [HttpModule, DaydreamsModule],
-  providers: [LlmService],
-  exports: [LlmService],
   controllers: [LlmController],
 })
 export class LlmModule {}

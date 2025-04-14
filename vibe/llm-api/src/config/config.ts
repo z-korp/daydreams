@@ -1,5 +1,5 @@
 // src/config/config.ts
-import { envSchema } from "./env.validation";
+import { envSchema } from "./env.validation.js";
 
 export const validateEnv = (config: Record<string, any>) => {
   const parsed = envSchema.safeParse(config);
