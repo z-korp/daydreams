@@ -1062,9 +1062,6 @@ importers:
       '@ai-sdk/groq':
         specifier: ^1.2.3
         version: 1.2.3(zod@3.24.2)
-      '@ai-sdk/openai':
-        specifier: ^1.3.12
-        version: 1.3.12(zod@3.24.2)
       '@ai-sdk/provider':
         specifier: 1.0.10
         version: 1.0.10
@@ -1072,6 +1069,9 @@ importers:
         specifier: ^0.3.0
         version: 0.3.0(react@19.1.0)(typescript@5.7.3)
       '@daydreamsai/discord':
+        specifier: ^0.3.0
+        version: 0.3.0(react@19.1.0)(typescript@5.7.3)
+      '@daydreamsai/mongodb':
         specifier: ^0.3.0
         version: 0.3.0(react@19.1.0)(typescript@5.7.3)
       '@nestjs/axios':
@@ -1354,17 +1354,6 @@ packages:
       zod: 3.24.2
     dev: false
 
-  /@ai-sdk/openai@1.3.12(zod@3.24.2):
-    resolution: {integrity: sha512-ueAP69p8a/ZR2ns+pmlr9h/nyV2/DAwzfnPUGZiLpXbxWnLXd2g3a7l38CuEhBydH/nOfDb/byMgpS8+bnJHTg==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      zod: ^3.0.0
-    dependencies:
-      '@ai-sdk/provider': 1.1.3
-      '@ai-sdk/provider-utils': 2.2.7(zod@3.24.2)
-      zod: 3.24.2
-    dev: false
-
   /@ai-sdk/openai@1.3.5(zod@3.24.2):
     resolution: {integrity: sha512-kNXftkURozvxm54Jb+5/mIBR9TYVVwZODRL4lJCCTyj/9bp0w1aArz6cGbI4hHQx1vkXG9U10eKvWIV/lsHzUA==}
     engines: {node: '>=18'}
@@ -1469,18 +1458,6 @@ packages:
       zod: 3.24.2
     dev: false
 
-  /@ai-sdk/provider-utils@2.2.7(zod@3.24.2):
-    resolution: {integrity: sha512-kM0xS3GWg3aMChh9zfeM+80vEZfXzR3JEUBdycZLtbRZ2TRT8xOj3WodGHPb06sUK5yD7pAXC/P7ctsi2fvUGQ==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      zod: ^3.23.8
-    dependencies:
-      '@ai-sdk/provider': 1.1.3
-      nanoid: 3.3.11
-      secure-json-parse: 2.7.0
-      zod: 3.24.2
-    dev: false
-
   /@ai-sdk/provider@1.0.10:
     resolution: {integrity: sha512-pco8Zl9U0xwXI+nCLc0woMtxbvjU8hRmGTseAUiPHFLYAAL8trRPCukg69IDeinOvIeo1SmXxAIdWWPZOLb4Cg==}
     engines: {node: '>=18'}
@@ -1510,13 +1487,6 @@ packages:
 
   /@ai-sdk/provider@1.1.2:
     resolution: {integrity: sha512-ITdgNilJZwLKR7X5TnUr1BsQW6UTX5yFp0h66Nfx8XjBYkWD9W3yugr50GOz3CnE9m/U/Cd5OyEbTMI0rgi6ZQ==}
-    engines: {node: '>=18'}
-    dependencies:
-      json-schema: 0.4.0
-    dev: false
-
-  /@ai-sdk/provider@1.1.3:
-    resolution: {integrity: sha512-qZMxYJ0qqX/RfnuIaab+zp8UAeJn/ygXXAffR5I4N0n1IrvA6qBsjc8hXLmBiMV2zoXlifkacF7sEFnYnjBcqg==}
     engines: {node: '>=18'}
     dependencies:
       json-schema: 0.4.0
@@ -3077,6 +3047,24 @@ packages:
       - bufferutil
       - react
       - utf-8-validate
+    dev: false
+
+  /@daydreamsai/mongodb@0.3.0(react@19.1.0)(typescript@5.7.3):
+    resolution: {integrity: sha512-RsMKbPWzoFgd8VkbusFzZL1oqIFTJEsEnR0ZxXG+8dAWkTWwBJ7QAoH6pUHt6piW228iQMPqohcYCG6Y6ggw0A==}
+    dependencies:
+      '@daydreamsai/core': 0.3.0(react@19.1.0)(typescript@5.7.3)
+      mongodb: 6.14.2
+      zod: 3.24.2
+    transitivePeerDependencies:
+      - '@aws-sdk/credential-providers'
+      - '@mongodb-js/zstd'
+      - gcp-metadata
+      - kerberos
+      - mongodb-client-encryption
+      - react
+      - snappy
+      - socks
+      - typescript
     dev: false
 
   /@discordjs/builders@1.10.1:

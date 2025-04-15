@@ -8,15 +8,19 @@ import {
   AnyContext,
   Memory,
   LanguageModelV1,
-  ContextRef,
-  Log,
+  BaseMemory,
+  createMemory,
+  createMemoryStore,
 } from "@daydreamsai/core";
+import { createChromaVectorStore } from "@daydreamsai/chromadb";
+import { createMongoMemoryStore } from "@daydreamsai/mongodb";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { chatContext } from "./context/chat.context.js";
 import { addToChatHistory, clearChatHistory } from "./actions/chat.action.js";
 import { apiInput } from "./inputs/chat.input.js";
 import { chatOutput } from "./outputs/chat.output.js";
+import { ObjectId } from "mongodb";
 
 type AnthropicModelId = "claude-3-7-sonnet-latest";
 type OpenAIModelId = "gpt-4.1" | "gpt-4.1-nano";
@@ -35,11 +39,6 @@ interface AgentRequest {
     type: string;
     data: Record<string, unknown>;
   };
-  model?: LanguageModelV1;
-  contexts?: ContextRef<AnyContext>[];
-  outputs?: Record<string, unknown>;
-  actions?: Action<any, any, unknown, AnyContext, Agent<any>, Memory<any>>[];
-  chain?: Log[];
 }
 
 @Injectable()
@@ -49,7 +48,7 @@ export class DaydreamsService implements OnModuleInit {
   constructor(private configService: ConfigService) {}
 
   async onModuleInit() {
-    await this.initializeAgent("openai", "gpt-4.1-nano"); // Default to Claude
+    await this.initializeAgent("openai", "gpt-4.1-nano");
   }
 
   private async initializeAgent(
@@ -57,8 +56,8 @@ export class DaydreamsService implements OnModuleInit {
     modelId: AnthropicModelId | OpenAIModelId
   ) {
     try {
+      // === 1. Init modèle ===
       let model: LanguageModelV1;
-
       if (modelType === "anthropic" && this.isAnthropicModel(modelId)) {
         const apiKey = this.configService.get<string>("ANTHROPIC_API_KEY");
         const anthropic = createAnthropic({ apiKey });
@@ -73,13 +72,34 @@ export class DaydreamsService implements OnModuleInit {
         );
       }
 
-      console.log(
-        `[DEBUG] Initializing Daydreams agent with ${modelType} model ${modelId}...`
-      );
+      // === 2. Configuration mémoire ===
+      const backend =
+        this.configService.get<string>("MEMORY_BACKEND") ?? "chroma";
+      let memory: BaseMemory;
 
+      if (backend === "mongo") {
+        console.log("[INFO] Using MongoDB memory backend");
+        const mongoStore = await createMongoMemoryStore({
+          uri: this.configService.get<string>("MONGODB_URI"),
+          dbName: "daydreams",
+        });
+        memory = createMemory(
+          mongoStore,
+          createChromaVectorStore("agent-episodes")
+        );
+      } else {
+        console.log("[INFO] Using in-memory store with Chroma vector backend");
+        memory = createMemory(
+          createMemoryStore(),
+          createChromaVectorStore("agent-episodes")
+        );
+      }
+
+      // === 3. Création agent ===
       const dreams = createDreams({
         logger: LogLevel.DEBUG,
         model,
+        memory,
         context: chatContext,
         actions: [addToChatHistory, clearChatHistory] as Action<
           any,
@@ -89,12 +109,8 @@ export class DaydreamsService implements OnModuleInit {
           Agent<any>,
           Memory<any>
         >[],
-        inputs: {
-          chat: apiInput,
-        },
-        outputs: {
-          "chat:response": chatOutput,
-        },
+        inputs: { chat: apiInput },
+        outputs: { "chat:response": chatOutput },
         debugger: (contextId, keys, data) => {
           console.log(
             `[DEBUG] Agent - contextId: ${contextId}, keys: ${keys.join(":")}`,
@@ -103,12 +119,13 @@ export class DaydreamsService implements OnModuleInit {
         },
       });
 
-      this.agent = (await dreams.start({
-        sessionId: "default-session",
-      })) as Agent<AnyContext>;
-      console.log("[SUCCESS] Daydreams agent started successfully");
+      const sessionId = new ObjectId().toHexString();
+      console.log("[DEBUG] sessionId:", sessionId);
+
+      this.agent = (await dreams.start({ sessionId })) as Agent<AnyContext>;
+      console.log("[SUCCESS] Daydreams agent started");
     } catch (error) {
-      console.error("[ERROR] Failed to initialize Daydreams agent:", error);
+      console.error("[ERROR] Failed to initialize agent:", error);
       throw error;
     }
   }
