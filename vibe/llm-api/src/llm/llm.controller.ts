@@ -3,6 +3,12 @@ import { Controller, Post, Body } from "@nestjs/common";
 import { DaydreamsService } from "../daydreams/daydreams.service.js";
 import { chatContext } from "../daydreams/context/chat.context.js";
 
+interface ChatRequest {
+  sessionId: string;
+  message?: string;
+  prompt?: string;
+}
+
 @Controller("llm")
 export class LlmController {
   constructor(private readonly daydreamsService: DaydreamsService) {}
@@ -26,11 +32,11 @@ export class LlmController {
   }
 
   @Post()
-  async sendMessage(@Body() data: any) {
+  async sendMessage(@Body() data: ChatRequest) {
     console.log("[DEBUG] Processing message request:", data);
 
     try {
-      // Validation des données
+      // Validate request data
       if (!data.sessionId) {
         console.log("[DEBUG] No sessionId provided, using default");
         data.sessionId = "default";
@@ -43,15 +49,17 @@ export class LlmController {
           type: "chat",
           data: {
             sessionId: data.sessionId,
-            prompt: data.message || "Message vide",
+            prompt: data.message || "Empty message",
           },
         },
       });
 
       return response;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[ERROR] Error processing message:", error);
-      throw new Error(`Processing error: ${error.message}`);
+      throw new Error(
+        `Processing error: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   }
 }

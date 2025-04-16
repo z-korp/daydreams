@@ -13,7 +13,7 @@ import {
   createMemoryStore,
 } from "@daydreamsai/core";
 import { createChromaVectorStore } from "@daydreamsai/chromadb";
-import { createMongoMemoryStore } from "@daydreamsai/mongodb";
+import { createSupabaseMemoryStore } from "./vendors/supabase.js";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { chatContext } from "./context/chat.context.js";
@@ -48,7 +48,7 @@ export class DaydreamsService implements OnModuleInit {
   constructor(private configService: ConfigService) {}
 
   async onModuleInit() {
-    await this.initializeAgent("openai", "gpt-4.1-nano");
+    await this.initializeAgent("anthropic", "claude-3-7-sonnet-latest");
   }
 
   private async initializeAgent(
@@ -56,14 +56,21 @@ export class DaydreamsService implements OnModuleInit {
     modelId: AnthropicModelId | OpenAIModelId
   ) {
     try {
-      // === 1. Init modèle ===
+      // === 1. Initialize model ===
       let model: LanguageModelV1;
       if (modelType === "anthropic" && this.isAnthropicModel(modelId)) {
         const apiKey = this.configService.get<string>("ANTHROPIC_API_KEY");
+        if (!apiKey) {
+          throw new Error("ANTHROPIC_API_KEY is not defined");
+        }
+        console.log("[INFO] Initializing Claude model");
         const anthropic = createAnthropic({ apiKey });
         model = anthropic(modelId);
       } else if (modelType === "openai" && this.isOpenAIModel(modelId)) {
         const apiKey = this.configService.get<string>("OPENAI_API_KEY");
+        if (!apiKey) {
+          throw new Error("OPENAI_API_KEY is not defined");
+        }
         const openai = createOpenAI({ apiKey });
         model = openai(modelId);
       } else {
@@ -72,19 +79,28 @@ export class DaydreamsService implements OnModuleInit {
         );
       }
 
-      // === 2. Configuration mémoire ===
+      // === 2. Memory configuration ===
       const backend =
         this.configService.get<string>("MEMORY_BACKEND") ?? "chroma";
       let memory: BaseMemory;
 
-      if (backend === "mongo") {
-        console.log("[INFO] Using MongoDB memory backend");
-        const mongoStore = await createMongoMemoryStore({
-          uri: this.configService.get<string>("MONGODB_URI"),
-          dbName: "daydreams",
+      if (backend === "supabase") {
+        console.log("[INFO] Using Supabase memory backend");
+        const supabaseUrl = this.configService.get<string>("SUPABASE_URL");
+        const supabaseApiKey =
+          this.configService.get<string>("SUPABASE_API_KEY");
+        const supabaseTable =
+          this.configService.get<string>("SUPABASE_TABLE") || "conversations";
+        if (!supabaseUrl || !supabaseApiKey) {
+          throw new Error("SUPABASE_URL or SUPABASE_API_KEY is not defined");
+        }
+        const supabaseStore = await createSupabaseMemoryStore({
+          url: supabaseUrl,
+          apiKey: supabaseApiKey,
+          tableName: supabaseTable,
         });
         memory = createMemory(
-          mongoStore,
+          supabaseStore,
           createChromaVectorStore("agent-episodes")
         );
       } else {
@@ -95,11 +111,22 @@ export class DaydreamsService implements OnModuleInit {
         );
       }
 
-      // === 3. Création agent ===
+      // === 3. Initialize agent ===
+      const supabaseUrl = this.configService.get<string>("SUPABASE_URL");
+      const supabaseApiKey = this.configService.get<string>("SUPABASE_API_KEY");
+      const supabaseTable =
+        this.configService.get<string>("SUPABASE_TABLE") || "conversations";
       const dreams = createDreams({
         logger: LogLevel.DEBUG,
         model,
-        memory,
+        memory: createMemory(
+          await createSupabaseMemoryStore({
+            url: supabaseUrl!,
+            apiKey: supabaseApiKey!,
+            tableName: supabaseTable,
+          }),
+          createChromaVectorStore("my-agent-apisodes")
+        ),
         context: chatContext,
         actions: [addToChatHistory, clearChatHistory] as Action<
           any,
