@@ -21,6 +21,7 @@ import { addToChatHistory, clearChatHistory } from "./actions/chat.action.js";
 import { apiInput } from "./inputs/chat.input.js";
 import { chatOutput } from "./outputs/chat.output.js";
 import { ObjectId } from "mongodb";
+import { TemplateService } from "./template.service.js";
 
 type AnthropicModelId = "claude-3-7-sonnet-latest";
 type OpenAIModelId = "gpt-4.1" | "gpt-4.1-nano";
@@ -79,7 +80,10 @@ export class DaydreamsService implements OnModuleInit {
   private model: LanguageModelV1;
   private memory: BaseMemory;
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private templateService: TemplateService
+  ) {}
 
   async onModuleInit() {
     // Register available contexts
@@ -490,5 +494,64 @@ export class DaydreamsService implements OnModuleInit {
     // Enregistrer le template
     this.contextTemplates.set(template.id, template);
     return template.id;
+  }
+
+  // Ajouter une nouvelle méthode pour créer un agent avec un template
+  async createAgentWithTemplate(
+    templateId: string,
+    variables: Record<string, string>,
+    config: Omit<AgentConfig, "contexts" | "contextArgs">
+  ): Promise<string> {
+    try {
+      console.log(`[INFO] Creating agent with template ${templateId}`);
+
+      // Vérifier si le template existe
+      const templateContent = this.templateService.renderTemplate(
+        templateId,
+        variables
+      );
+      if (!templateContent) {
+        throw new Error(`Template '${templateId}' not found`);
+      }
+
+      // Déterminer quel contexte utiliser (par défaut, on utilise "chat")
+      const contextType = "chat";
+      if (!this.availableContexts.has(contextType)) {
+        throw new Error(`Context type '${contextType}' does not exist`);
+      }
+
+      // Créer les arguments de contexte
+      const contextArgs = {
+        [contextType]: {
+          sessionId: new ObjectId().toHexString(),
+          userId: variables.userId || "user",
+          prompt: templateContent, // Utiliser le template comme prompt
+          // Ajouter d'autres variables comme arguments de contexte
+          ...Object.keys(variables).reduce(
+            (acc, key) => {
+              acc[key] = variables[key];
+              return acc;
+            },
+            {} as Record<string, string>
+          ),
+        },
+      };
+
+      // Créer la configuration complète de l'agent
+      const fullConfig: AgentConfig = {
+        ...config,
+        contexts: [contextType],
+        contextArgs,
+      };
+
+      // Créer l'agent avec la configuration
+      return this.createAgent(fullConfig);
+    } catch (error) {
+      console.error(
+        `[ERROR] Failed to create agent with template ${templateId}:`,
+        error
+      );
+      throw error;
+    }
   }
 }

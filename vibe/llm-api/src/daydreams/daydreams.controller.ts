@@ -57,6 +57,15 @@ export class CreateContextTemplateDto {
   defaultArgs?: Record<string, unknown>;
 }
 
+// DTO pour créer un agent à partir d'un template
+export class CreateAgentWithTemplateDto {
+  templateId: string;
+  variables: Record<string, string>;
+  id?: string; // Optional, a random ID will be generated if not provided
+  modelType: "anthropic" | "openai";
+  modelId: string;
+}
+
 @Controller("daydreams")
 export class DaydreamsController {
   constructor(private readonly daydreamsService: DaydreamsService) {}
@@ -335,6 +344,45 @@ export class DaydreamsController {
       return {
         success: false,
         error: error?.message || "Failed to create agent from template",
+      };
+    }
+  }
+
+  // Create a new agent with a template
+  @Post("agents/with-template")
+  async createAgentWithTemplate(@Body() dto: CreateAgentWithTemplateDto) {
+    try {
+      // Generate an ID if not provided
+      const agentId =
+        dto.id ||
+        `agent-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+      const config: Omit<AgentConfig, "contexts" | "contextArgs"> = {
+        id: agentId,
+        modelType: dto.modelType,
+        modelId:
+          dto.modelType === "anthropic"
+            ? "claude-3-7-sonnet-latest"
+            : dto.modelId === "gpt-4.1" || dto.modelId === "gpt-4.1-nano"
+              ? dto.modelId
+              : "gpt-4.1", // Default to gpt-4.1 if invalid
+      };
+
+      const createdId = await this.daydreamsService.createAgentWithTemplate(
+        dto.templateId,
+        dto.variables,
+        config
+      );
+
+      return {
+        success: true,
+        agentId: createdId,
+        message: `Agent ${createdId} created successfully with template ${dto.templateId}`,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error?.message || "Failed to create agent with template",
       };
     }
   }

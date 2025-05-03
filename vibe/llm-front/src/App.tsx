@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
+import TemplateManager from "./components/TemplateManager";
 
 // Define more specific interfaces for the API response structure
 interface ResponseItem {
@@ -112,6 +113,9 @@ function App() {
     useState<boolean>(false);
   const [selectedContextType, setSelectedContextType] = useState<string>("");
   const [contextAgentArgs, setContextAgentArgs] = useState<string>("{}");
+
+  // Ajouter un état pour gérer les onglets
+  const [activeTab, setActiveTab] = useState<"chat" | "templates">("chat");
 
   // Initialize or load existing sessions on mount
   useEffect(() => {
@@ -803,437 +807,466 @@ function App() {
 
   return (
     <div className="app-container">
-      <div className="sidebar">
-        <div className="sidebar-header">
-          <h2>Salons</h2>
-          <button
-            onClick={() => setShowNewSessionForm(true)}
-            className="new-session-button"
-          >
-            +
-          </button>
-        </div>
+      <div className="tabs-navigation">
+        <button
+          className={`tab-button ${activeTab === "chat" ? "active" : ""}`}
+          onClick={() => setActiveTab("chat")}
+        >
+          Chat
+        </button>
+        <button
+          className={`tab-button ${activeTab === "templates" ? "active" : ""}`}
+          onClick={() => setActiveTab("templates")}
+        >
+          Templates
+        </button>
+      </div>
 
-        {showNewSessionForm && (
-          <div className="new-session-form">
-            <input
-              type="text"
-              placeholder="Nom du salon"
-              value={newSessionName}
-              onChange={(e) => setNewSessionName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && createNewSession()}
-            />
-            <div className="form-buttons">
-              <button onClick={createNewSession}>Créer</button>
-              <button onClick={() => setShowNewSessionForm(false)}>
-                Annuler
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="sessions-list">
-          {sessions.length === 0 ? (
-            <div className="no-sessions">Aucun salon</div>
-          ) : (
-            sessions.map((session) => (
-              <div
-                key={session.id}
-                className={`session-item ${selectedSession?.id === session.id ? "active" : ""}`}
-                onClick={() => switchSession(session)}
-              >
-                <span className="session-name">{session.name}</span>
-                <span
-                  className="delete-session"
-                  onClick={(e) => deleteSession(session.id, e)}
-                >
-                  ×
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="sidebar-section">
-          <div className="sidebar-header">
-            <h2>Agents</h2>
-            <div className="button-group">
+      {activeTab === "chat" ? (
+        <>
+          <div className="sidebar">
+            <div className="sidebar-header">
+              <h2>Salons</h2>
               <button
-                onClick={() => setShowAgentDialog(true)}
+                onClick={() => setShowNewSessionForm(true)}
                 className="new-session-button"
-                title="Créer un agent personnalisé"
               >
                 +
               </button>
-              <button
-                onClick={() => setShowTemplateDialog(true)}
-                className="template-button"
-                title="Créer à partir d'un template"
-              >
-                T
-              </button>
-              <button
-                onClick={() => setShowContextAgentDialog(true)}
-                className="context-button"
-                title="Créer avec un contexte spécifique"
-              >
-                C
-              </button>
             </div>
-          </div>
 
-          <div className="agents-list">
-            {loadingAgents ? (
-              <div className="loading-info">Chargement...</div>
-            ) : agents.length === 0 ? (
-              <div className="no-agents">Aucun agent</div>
-            ) : (
-              agents.map((agent) => (
-                <div
-                  key={agent.id}
-                  className={`agent-item ${selectedAgent?.id === agent.id ? "active" : ""}`}
-                  onClick={() => setSelectedAgent(agent)}
-                >
-                  <div className="agent-header">
-                    <span className="agent-name">
-                      Agent {agent.id.substring(0, 6)}...
-                    </span>
-                    <button
-                      className="agent-info-button"
-                      onClick={(e) => viewAgentDetails(agent, e)}
-                      title="Voir les détails de l'agent"
-                    >
-                      i
-                    </button>
-                  </div>
-                  <span className="agent-contexts">
-                    {agent.config.contexts.join(", ")}
-                  </span>
-                  <span className="agent-model">
-                    {agent.config.modelType}: {agent.config.modelId}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="chat-container">
-        <div className="chat-header">
-          <h1>
-            {selectedSession ? selectedSession.name : "Vibe Chat"}
-            {selectedAgent &&
-              ` - Agent: ${selectedAgent.id.substring(0, 6)}...`}
-          </h1>
-          <div className="session-info">
-            {selectedSession && <>Session: {selectedSession.id}</>}
-          </div>
-        </div>
-
-        <div className="messages-container">
-          {messages.length === 0 ? (
-            <div className="empty-state">
-              Envoyez un message pour démarrer la conversation
-            </div>
-          ) : (
-            messages.map((msg, index) => (
-              <div key={index} className={`message ${msg.role}`}>
-                <div className="message-content">
-                  {processMessageContent(msg.content)}
-                </div>
-                <div className="message-time">
-                  {new Date(msg.timestamp).toLocaleTimeString()}
-                </div>
-
-                {msg.role === "assistant" && msg.rawResponse && (
-                  <button
-                    className="toggle-details-button"
-                    onClick={() => toggleDetails(index)}
-                  >
-                    {msg.showDetails
-                      ? "Masquer les détails"
-                      : "Afficher les détails"}
+            {showNewSessionForm && (
+              <div className="new-session-form">
+                <input
+                  type="text"
+                  placeholder="Nom du salon"
+                  value={newSessionName}
+                  onChange={(e) => setNewSessionName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && createNewSession()}
+                />
+                <div className="form-buttons">
+                  <button onClick={createNewSession}>Créer</button>
+                  <button onClick={() => setShowNewSessionForm(false)}>
+                    Annuler
                   </button>
-                )}
-
-                {msg.role === "assistant" &&
-                  msg.rawResponse &&
-                  msg.showDetails && (
-                    <div
-                      className="response-details"
-                      ref={(el) => {
-                        responseDetailsRefs.current[index] = el;
-                      }}
-                    >
-                      {renderFilteredResponse(msg, index)}
-                    </div>
-                  )}
-              </div>
-            ))
-          )}
-          {loading && (
-            <div className="message assistant loading">
-              <div className="loading-indicator">...</div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        <div className="input-container">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Tapez votre message ici..."
-            disabled={loading}
-          />
-          <button onClick={sendMessage} disabled={loading || !input.trim()}>
-            Envoyer
-          </button>
-        </div>
-      </div>
-
-      {/* Modal pour créer un nouvel agent */}
-      {showAgentDialog && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2>Créer un nouvel agent</h2>
-
-            <div className="form-group">
-              <label>Contextes disponibles:</label>
-              <div className="context-checkboxes">
-                {availableContexts.map((context) => (
-                  <label key={context} className="context-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={newAgentContexts.includes(context)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setNewAgentContexts([...newAgentContexts, context]);
-                        } else {
-                          setNewAgentContexts(
-                            newAgentContexts.filter((c) => c !== context)
-                          );
-                        }
-                      }}
-                    />
-                    {context}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="modal-buttons">
-              <button
-                onClick={createNewAgent}
-                disabled={newAgentContexts.length === 0}
-              >
-                Créer
-              </button>
-              <button onClick={() => setShowAgentDialog(false)}>Annuler</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal pour afficher les détails d'un agent */}
-      {showAgentInfoDialog && agentToView && (
-        <div className="modal-overlay">
-          <div className="modal-content agent-info-modal">
-            <h2>Détails de l'Agent</h2>
-
-            <div className="agent-info-section">
-              <h3>Informations générales</h3>
-              <div className="agent-info-grid">
-                <div className="info-label">ID:</div>
-                <div className="info-value">{agentToView.id}</div>
-
-                <div className="info-label">Modèle:</div>
-                <div className="info-value">
-                  {agentToView.config.modelType} / {agentToView.config.modelId}
                 </div>
               </div>
-            </div>
+            )}
 
-            <div className="agent-info-section">
-              <h3>Contextes ({agentToView.config.contexts.length})</h3>
-              <div className="contexts-list">
-                {agentToView.config.contexts.map((context) => (
-                  <div key={context} className="context-item">
-                    <h4>{context}</h4>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="agent-info-section">
-              <h3>Paramètres des contextes</h3>
-              <div className="context-args">
-                {formatContextArgs(agentToView.config.contextArgs)}
-              </div>
-            </div>
-
-            <div className="agent-info-section">
-              <h3>JSON Complet</h3>
-              <div className="agent-raw-json">
-                <pre>{JSON.stringify(agentToView, null, 2)}</pre>
-              </div>
-            </div>
-
-            <div className="modal-buttons">
-              <button
-                onClick={() => setSelectedAgent(agentToView)}
-                className="use-agent-button"
-              >
-                Utiliser cet agent
-              </button>
-              <button onClick={() => setShowAgentInfoDialog(false)}>
-                Fermer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal pour créer un agent à partir d'un template */}
-      {showTemplateDialog && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2>Créer un agent à partir d'un template</h2>
-
-            <div className="form-group">
-              <label>Choisir un template:</label>
-              <div className="template-list">
-                {loadingTemplates ? (
-                  <div className="loading-info">Chargement...</div>
-                ) : contextTemplates.length === 0 ? (
-                  <div className="no-templates">Aucun template disponible</div>
-                ) : (
-                  contextTemplates.map((template) => (
-                    <div
-                      key={template.id}
-                      className={`template-item ${selectedTemplate?.id === template.id ? "active" : ""}`}
-                      onClick={() => setSelectedTemplate(template)}
+            <div className="sessions-list">
+              {sessions.length === 0 ? (
+                <div className="no-sessions">Aucun salon</div>
+              ) : (
+                sessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className={`session-item ${selectedSession?.id === session.id ? "active" : ""}`}
+                    onClick={() => switchSession(session)}
+                  >
+                    <span className="session-name">{session.name}</span>
+                    <span
+                      className="delete-session"
+                      onClick={(e) => deleteSession(session.id, e)}
                     >
-                      <h4>{template.name}</h4>
-                      <p>{template.description}</p>
-                      <div className="template-context">
-                        Contexte: {template.context.type}
+                      ×
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="sidebar-section">
+              <div className="sidebar-header">
+                <h2>Agents</h2>
+                <div className="button-group">
+                  <button
+                    onClick={() => setShowAgentDialog(true)}
+                    className="new-session-button"
+                    title="Créer un agent personnalisé"
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick={() => setShowTemplateDialog(true)}
+                    className="template-button"
+                    title="Créer à partir d'un template"
+                  >
+                    T
+                  </button>
+                  <button
+                    onClick={() => setShowContextAgentDialog(true)}
+                    className="context-button"
+                    title="Créer avec un contexte spécifique"
+                  >
+                    C
+                  </button>
+                </div>
+              </div>
+
+              <div className="agents-list">
+                {loadingAgents ? (
+                  <div className="loading-info">Chargement...</div>
+                ) : agents.length === 0 ? (
+                  <div className="no-agents">Aucun agent</div>
+                ) : (
+                  agents.map((agent) => (
+                    <div
+                      key={agent.id}
+                      className={`agent-item ${selectedAgent?.id === agent.id ? "active" : ""}`}
+                      onClick={() => setSelectedAgent(agent)}
+                    >
+                      <div className="agent-header">
+                        <span className="agent-name">
+                          Agent {agent.id.substring(0, 6)}...
+                        </span>
+                        <button
+                          className="agent-info-button"
+                          onClick={(e) => viewAgentDetails(agent, e)}
+                          title="Voir les détails de l'agent"
+                        >
+                          i
+                        </button>
                       </div>
+                      <span className="agent-contexts">
+                        {agent.config.contexts.join(", ")}
+                      </span>
+                      <span className="agent-model">
+                        {agent.config.modelType}: {agent.config.modelId}
+                      </span>
                     </div>
                   ))
                 )}
               </div>
             </div>
+          </div>
 
-            {selectedTemplate && (
-              <div className="form-group">
-                <label>Arguments personnalisés (JSON):</label>
-                <textarea
-                  value={customArgs}
-                  onChange={(e) => setCustomArgs(e.target.value)}
-                  placeholder="Arguments JSON (optionnel)"
-                  rows={5}
-                />
-                <div className="template-info">
-                  <small>Arguments par défaut:</small>
-                  <pre>
-                    {JSON.stringify(
-                      selectedTemplate.defaultArgs || {},
-                      null,
-                      2
-                    )}
-                  </pre>
-                </div>
+          <div className="chat-container">
+            <div className="chat-header">
+              <h1>
+                {selectedSession ? selectedSession.name : "Vibe Chat"}
+                {selectedAgent &&
+                  ` - Agent: ${selectedAgent.id.substring(0, 6)}...`}
+              </h1>
+              <div className="session-info">
+                {selectedSession && <>Session: {selectedSession.id}</>}
               </div>
-            )}
+            </div>
 
-            <div className="modal-buttons">
-              <button
-                onClick={createAgentFromTemplate}
-                disabled={!selectedTemplate}
-              >
-                Créer
-              </button>
-              <button onClick={() => setShowTemplateDialog(false)}>
-                Annuler
+            <div className="messages-container">
+              {messages.length === 0 ? (
+                <div className="empty-state">
+                  Envoyez un message pour démarrer la conversation
+                </div>
+              ) : (
+                messages.map((msg, index) => (
+                  <div key={index} className={`message ${msg.role}`}>
+                    <div className="message-content">
+                      {processMessageContent(msg.content)}
+                    </div>
+                    <div className="message-time">
+                      {new Date(msg.timestamp).toLocaleTimeString()}
+                    </div>
+
+                    {msg.role === "assistant" && msg.rawResponse && (
+                      <button
+                        className="toggle-details-button"
+                        onClick={() => toggleDetails(index)}
+                      >
+                        {msg.showDetails
+                          ? "Masquer les détails"
+                          : "Afficher les détails"}
+                      </button>
+                    )}
+
+                    {msg.role === "assistant" &&
+                      msg.rawResponse &&
+                      msg.showDetails && (
+                        <div
+                          className="response-details"
+                          ref={(el) => {
+                            responseDetailsRefs.current[index] = el;
+                          }}
+                        >
+                          {renderFilteredResponse(msg, index)}
+                        </div>
+                      )}
+                  </div>
+                ))
+              )}
+              {loading && (
+                <div className="message assistant loading">
+                  <div className="loading-indicator">...</div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <div className="input-container">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Tapez votre message ici..."
+                disabled={loading}
+              />
+              <button onClick={sendMessage} disabled={loading || !input.trim()}>
+                Envoyer
               </button>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Modal pour créer un agent à partir d'un contexte spécifique */}
-      {showContextAgentDialog && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2>Créer un agent avec un contexte spécifique</h2>
+          {/* Modal pour créer un nouvel agent */}
+          {showAgentDialog && (
+            <div className="modal-overlay">
+              <div className="modal-content">
+                <h2>Créer un nouvel agent</h2>
 
-            <div className="form-group">
-              <label>Sélectionner un contexte:</label>
-              <div className="context-select">
-                <select
-                  value={selectedContextType}
-                  onChange={(e) => setSelectedContextType(e.target.value)}
-                  className="context-dropdown"
-                >
-                  <option value="">-- Sélectionner un contexte --</option>
-                  {availableContexts.map((context) => (
-                    <option key={context} value={context}>
-                      {context}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+                <div className="form-group">
+                  <label>Contextes disponibles:</label>
+                  <div className="context-checkboxes">
+                    {availableContexts.map((context) => (
+                      <label key={context} className="context-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={newAgentContexts.includes(context)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setNewAgentContexts([
+                                ...newAgentContexts,
+                                context,
+                              ]);
+                            } else {
+                              setNewAgentContexts(
+                                newAgentContexts.filter((c) => c !== context)
+                              );
+                            }
+                          }}
+                        />
+                        {context}
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-            {selectedContextType && (
-              <div className="form-group">
-                <label>Arguments du contexte (JSON):</label>
-                <textarea
-                  value={contextAgentArgs}
-                  onChange={(e) => setContextAgentArgs(e.target.value)}
-                  placeholder="Arguments du contexte (optionnel)"
-                  rows={5}
-                />
-                <div className="args-help">
-                  <small>Format suggéré:</small>
-                  <pre>
-                    {JSON.stringify(
-                      {
-                        sessionId: `session-${Date.now()}`,
-                        userId: "user",
-                        title: "Nouveau contexte",
-                        tags: ["custom"],
-                      },
-                      null,
-                      2
-                    )}
-                  </pre>
+                <div className="modal-buttons">
+                  <button
+                    onClick={createNewAgent}
+                    disabled={newAgentContexts.length === 0}
+                  >
+                    Créer
+                  </button>
+                  <button onClick={() => setShowAgentDialog(false)}>
+                    Annuler
+                  </button>
                 </div>
               </div>
-            )}
-
-            <div className="modal-buttons">
-              <button
-                onClick={createAgentWithContext}
-                disabled={!selectedContextType}
-              >
-                Créer
-              </button>
-              <button
-                onClick={() => {
-                  setShowContextAgentDialog(false);
-                  setSelectedContextType("");
-                  setContextAgentArgs("{}");
-                }}
-              >
-                Annuler
-              </button>
             </div>
-          </div>
-        </div>
+          )}
+
+          {/* Modal pour afficher les détails d'un agent */}
+          {showAgentInfoDialog && agentToView && (
+            <div className="modal-overlay">
+              <div className="modal-content agent-info-modal">
+                <h2>Détails de l'Agent</h2>
+
+                <div className="agent-info-section">
+                  <h3>Informations générales</h3>
+                  <div className="agent-info-grid">
+                    <div className="info-label">ID:</div>
+                    <div className="info-value">{agentToView.id}</div>
+
+                    <div className="info-label">Modèle:</div>
+                    <div className="info-value">
+                      {agentToView.config.modelType} /{" "}
+                      {agentToView.config.modelId}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="agent-info-section">
+                  <h3>Contextes ({agentToView.config.contexts.length})</h3>
+                  <div className="contexts-list">
+                    {agentToView.config.contexts.map((context) => (
+                      <div key={context} className="context-item">
+                        <h4>{context}</h4>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="agent-info-section">
+                  <h3>Paramètres des contextes</h3>
+                  <div className="context-args">
+                    {formatContextArgs(agentToView.config.contextArgs)}
+                  </div>
+                </div>
+
+                <div className="agent-info-section">
+                  <h3>JSON Complet</h3>
+                  <div className="agent-raw-json">
+                    <pre>{JSON.stringify(agentToView, null, 2)}</pre>
+                  </div>
+                </div>
+
+                <div className="modal-buttons">
+                  <button
+                    onClick={() => setSelectedAgent(agentToView)}
+                    className="use-agent-button"
+                  >
+                    Utiliser cet agent
+                  </button>
+                  <button onClick={() => setShowAgentInfoDialog(false)}>
+                    Fermer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal pour créer un agent à partir d'un template */}
+          {showTemplateDialog && (
+            <div className="modal-overlay">
+              <div className="modal-content">
+                <h2>Créer un agent à partir d'un template</h2>
+
+                <div className="form-group">
+                  <label>Choisir un template:</label>
+                  <div className="template-list">
+                    {loadingTemplates ? (
+                      <div className="loading-info">Chargement...</div>
+                    ) : contextTemplates.length === 0 ? (
+                      <div className="no-templates">
+                        Aucun template disponible
+                      </div>
+                    ) : (
+                      contextTemplates.map((template) => (
+                        <div
+                          key={template.id}
+                          className={`template-item ${selectedTemplate?.id === template.id ? "active" : ""}`}
+                          onClick={() => setSelectedTemplate(template)}
+                        >
+                          <h4>{template.name}</h4>
+                          <p>{template.description}</p>
+                          <div className="template-context">
+                            Contexte: {template.context.type}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {selectedTemplate && (
+                  <div className="form-group">
+                    <label>Arguments personnalisés (JSON):</label>
+                    <textarea
+                      value={customArgs}
+                      onChange={(e) => setCustomArgs(e.target.value)}
+                      placeholder="Arguments JSON (optionnel)"
+                      rows={5}
+                    />
+                    <div className="template-info">
+                      <small>Arguments par défaut:</small>
+                      <pre>
+                        {JSON.stringify(
+                          selectedTemplate.defaultArgs || {},
+                          null,
+                          2
+                        )}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                <div className="modal-buttons">
+                  <button
+                    onClick={createAgentFromTemplate}
+                    disabled={!selectedTemplate}
+                  >
+                    Créer
+                  </button>
+                  <button onClick={() => setShowTemplateDialog(false)}>
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal pour créer un agent à partir d'un contexte spécifique */}
+          {showContextAgentDialog && (
+            <div className="modal-overlay">
+              <div className="modal-content">
+                <h2>Créer un agent avec un contexte spécifique</h2>
+
+                <div className="form-group">
+                  <label>Sélectionner un contexte:</label>
+                  <div className="context-select">
+                    <select
+                      value={selectedContextType}
+                      onChange={(e) => setSelectedContextType(e.target.value)}
+                      className="context-dropdown"
+                    >
+                      <option value="">-- Sélectionner un contexte --</option>
+                      {availableContexts.map((context) => (
+                        <option key={context} value={context}>
+                          {context}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {selectedContextType && (
+                  <div className="form-group">
+                    <label>Arguments du contexte (JSON):</label>
+                    <textarea
+                      value={contextAgentArgs}
+                      onChange={(e) => setContextAgentArgs(e.target.value)}
+                      placeholder="Arguments du contexte (optionnel)"
+                      rows={5}
+                    />
+                    <div className="args-help">
+                      <small>Format suggéré:</small>
+                      <pre>
+                        {JSON.stringify(
+                          {
+                            sessionId: `session-${Date.now()}`,
+                            userId: "user",
+                            title: "Nouveau contexte",
+                            tags: ["custom"],
+                          },
+                          null,
+                          2
+                        )}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                <div className="modal-buttons">
+                  <button
+                    onClick={createAgentWithContext}
+                    disabled={!selectedContextType}
+                  >
+                    Créer
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowContextAgentDialog(false);
+                      setSelectedContextType("");
+                      setContextAgentArgs("{}");
+                    }}
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <TemplateManager />
       )}
     </div>
   );
