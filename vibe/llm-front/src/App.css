@@ -48,6 +48,31 @@ body {
   font-weight: 600;
 }
 
+.button-group {
+  display: flex;
+  gap: 8px;
+}
+
+.template-button {
+  background-color: #e67e22;
+  color: white;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.template-button:hover {
+  background-color: #d35400;
+}
+
 .new-session-button {
   background-color: #3498db;
   color: white;
@@ -513,6 +538,36 @@ button:disabled {
   background-color: #2980b9;
 }
 
+.agent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.agent-info-button {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: #3498db;
+  color: white;
+  font-weight: bold;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+}
+
+.agent-info-button:hover {
+  background-color: #2980b9;
+}
+
 .agent-name {
   font-weight: bold;
   font-size: 0.9rem;
@@ -521,6 +576,12 @@ button:disabled {
 .agent-contexts {
   font-size: 0.8rem;
   color: #ccc;
+  margin-top: 2px;
+}
+
+.agent-model {
+  font-size: 0.75rem;
+  color: #aaa;
   margin-top: 4px;
 }
 
@@ -663,4 +724,230 @@ button:disabled {
 .response-item-content {
   scrollbar-width: thin;
   scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+/* Styles pour le modal d'information sur l'agent */
+.agent-info-modal {
+  width: 90%;
+  max-width: 700px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.agent-info-section {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #34495e;
+}
+
+.agent-info-section h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  color: #3498db;
+}
+
+.agent-info-grid {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 5px 10px;
+}
+
+.info-label {
+  font-weight: bold;
+  color: #ccc;
+}
+
+.info-value {
+  word-break: break-all;
+}
+
+.contexts-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.context-item {
+  background-color: #1a2530;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.context-item h4 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.context-args-item {
+  background-color: #1a2530;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.context-args-item h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  color: #3498db;
+}
+
+.context-args-item pre {
+  margin: 0;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  color: #ddd;
+}
+
+.agent-raw-json {
+  background-color: #1a2530;
+  padding: 10px;
+  border-radius: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.agent-raw-json pre {
+  margin: 0;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  color: #ddd;
+}
+
+.use-agent-button {
+  background-color: #27ae60;
+  margin-right: 10px;
+}
+
+.use-agent-button:hover {
+  background-color: #219653;
+}
+
+/* Styles pour les templates */
+.template-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 15px;
+  background-color: #1a2530;
+  border-radius: 4px;
+  padding: 5px;
+}
+
+.template-item {
+  background-color: #2c3e50;
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.template-item:hover {
+  background-color: #34495e;
+}
+
+.template-item.active {
+  background-color: #3498db;
+}
+
+.template-item h4 {
+  margin: 0 0 5px 0;
+  font-size: 1rem;
+}
+
+.template-item p {
+  margin: 0 0 5px 0;
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+.template-context {
+  font-size: 0.8rem;
+  color: #95a5a6;
+}
+
+.template-info {
+  margin-top: 8px;
+}
+
+.template-info small {
+  display: block;
+  color: #95a5a6;
+  margin-bottom: 4px;
+}
+
+.template-info pre {
+  background-color: #1a2530;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  max-height: 150px;
+  overflow-y: auto;
+  margin: 0;
+  color: #ddd;
+}
+
+.no-templates {
+  text-align: center;
+  padding: 15px 0;
+  color: #ccc;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.context-button {
+  background-color: #27ae60;
+  color: white;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.context-button:hover {
+  background-color: #219653;
+}
+
+.context-select {
+  margin-bottom: 15px;
+}
+
+.context-dropdown {
+  width: 100%;
+  padding: 8px;
+  background-color: #1a2530;
+  border: 1px solid #34495e;
+  border-radius: 4px;
+  color: white;
+}
+
+.args-help {
+  margin-top: 8px;
+}
+
+.args-help small {
+  display: block;
+  color: #95a5a6;
+  margin-bottom: 4px;
+}
+
+.args-help pre {
+  background-color: #1a2530;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  max-height: 150px;
+  overflow-y: auto;
+  margin: 0;
+  color: #ddd;
 }

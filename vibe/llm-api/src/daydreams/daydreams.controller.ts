@@ -3,6 +3,7 @@ import {
   DaydreamsService,
   AgentConfig,
   AgentResponse,
+  ContextTemplate,
 } from "./daydreams.service.js";
 
 // DTO for creating a new agent
@@ -36,6 +37,24 @@ export class AgentMessageDto {
   sourceAgentId: string;
   targetAgentId: string;
   content: string;
+}
+
+// DTO pour la création d'un agent à partir d'un template
+export class CreateAgentFromTemplateDto {
+  templateId: string;
+  id?: string; // Optional, a random ID will be generated if not provided
+  modelType: "anthropic" | "openai";
+  modelId: string;
+  customArgs?: Record<string, unknown>;
+}
+
+// DTO pour la création d'un template personnalisé
+export class CreateContextTemplateDto {
+  id: string;
+  name: string;
+  description: string;
+  contextType: string;
+  defaultArgs?: Record<string, unknown>;
 }
 
 @Controller("daydreams")
@@ -220,6 +239,102 @@ export class DaydreamsController {
       return {
         success: false,
         error: error?.message || "Failed to send message",
+      };
+    }
+  }
+
+  // Get available context templates
+  @Get("templates")
+  getContextTemplates() {
+    return {
+      templates: this.daydreamsService.getContextTemplates(),
+    };
+  }
+
+  // Get a specific context template
+  @Get("templates/:id")
+  getContextTemplate(@Param("id") templateId: string) {
+    const template = this.daydreamsService.getContextTemplate(templateId);
+    if (!template) {
+      return { error: `Template ${templateId} not found` };
+    }
+
+    return { template };
+  }
+
+  // Create a new context template
+  @Post("templates")
+  async createContextTemplate(@Body() dto: CreateContextTemplateDto) {
+    try {
+      // Obtenir le contexte à partir du type
+      const contextType = dto.contextType;
+      const contexts = this.daydreamsService.getAvailableContexts();
+
+      if (!contexts.includes(contextType)) {
+        return {
+          success: false,
+          error: `Context type ${contextType} not found. Available types: ${contexts.join(", ")}`,
+        };
+      }
+
+      // Créer l'objet de template
+      const template: ContextTemplate = {
+        id: dto.id,
+        name: dto.name,
+        description: dto.description,
+        context: { type: contextType } as any, // Le service résoudra le contexte complet
+        defaultArgs: dto.defaultArgs || {},
+      };
+
+      const createdId = this.daydreamsService.createContextTemplate(template);
+      return {
+        success: true,
+        templateId: createdId,
+        message: `Template ${createdId} created successfully`,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error?.message || "Failed to create template",
+      };
+    }
+  }
+
+  // Create a new agent from a template
+  @Post("agents/from-template")
+  async createAgentFromTemplate(@Body() dto: CreateAgentFromTemplateDto) {
+    try {
+      // Generate an ID if not provided
+      const agentId =
+        dto.id ||
+        `agent-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+      const config: Omit<AgentConfig, "contexts" | "contextArgs"> = {
+        id: agentId,
+        modelType: dto.modelType,
+        modelId:
+          dto.modelType === "anthropic"
+            ? "claude-3-7-sonnet-latest"
+            : dto.modelId === "gpt-4.1" || dto.modelId === "gpt-4.1-nano"
+              ? dto.modelId
+              : "gpt-4.1", // Default to gpt-4.1 if invalid
+      };
+
+      const createdId = await this.daydreamsService.createAgentFromTemplate(
+        dto.templateId,
+        config,
+        dto.customArgs
+      );
+
+      return {
+        success: true,
+        agentId: createdId,
+        message: `Agent ${createdId} created successfully from template ${dto.templateId}`,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error?.message || "Failed to create agent from template",
       };
     }
   }

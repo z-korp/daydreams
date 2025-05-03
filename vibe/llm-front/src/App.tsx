@@ -49,6 +49,16 @@ interface Agent {
 // Récupérer l'URL de l'API depuis les variables d'environnement
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
+interface ContextTemplate {
+  id: string;
+  name: string;
+  description: string;
+  context: {
+    type: string;
+  };
+  defaultArgs?: Record<string, unknown>;
+}
+
 function App() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -66,6 +76,9 @@ function App() {
   const [showAgentDialog, setShowAgentDialog] = useState(false);
   const [newAgentContexts, setNewAgentContexts] = useState<string[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [showAgentInfoDialog, setShowAgentInfoDialog] =
+    useState<boolean>(false);
+  const [agentToView, setAgentToView] = useState<Agent | null>(null);
 
   // List of possible filters based on the response structure
   const filters = [
@@ -84,10 +97,27 @@ function App() {
     {}
   );
 
+  // Nouveaux états pour la gestion de templates
+  const [contextTemplates, setContextTemplates] = useState<ContextTemplate[]>(
+    []
+  );
+  const [loadingTemplates, setLoadingTemplates] = useState<boolean>(false);
+  const [showTemplateDialog, setShowTemplateDialog] = useState<boolean>(false);
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<ContextTemplate | null>(null);
+  const [customArgs, setCustomArgs] = useState<string>("{}");
+
+  // Nouveaux états pour la création d'agent avec un contexte spécifique
+  const [showContextAgentDialog, setShowContextAgentDialog] =
+    useState<boolean>(false);
+  const [selectedContextType, setSelectedContextType] = useState<string>("");
+  const [contextAgentArgs, setContextAgentArgs] = useState<string>("{}");
+
   // Initialize or load existing sessions on mount
   useEffect(() => {
     loadSessions();
     loadAgentsAndContexts();
+    loadTemplates();
   }, []);
 
   // Load sessions from localStorage
@@ -273,6 +303,125 @@ function App() {
       }
     } catch (error) {
       console.error("Error creating agent:", error);
+    }
+  };
+
+  // Function to load available templates
+  const loadTemplates = async () => {
+    setLoadingTemplates(true);
+    try {
+      const response = await fetch(`${API_URL}/daydreams/templates`);
+      if (response.ok) {
+        const data = await response.json();
+        setContextTemplates(data.templates || []);
+      }
+    } catch (error) {
+      console.error("Error loading templates:", error);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
+  // Create an agent from a template
+  const createAgentFromTemplate = async () => {
+    if (!selectedTemplate) return;
+
+    try {
+      let parsedArgs = {};
+      try {
+        parsedArgs = JSON.parse(customArgs);
+      } catch (e) {
+        console.error("Invalid JSON for custom args", e);
+        // Continuer avec un objet vide
+      }
+
+      const response = await fetch(
+        `${API_URL}/daydreams/agents/from-template`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            templateId: selectedTemplate.id,
+            modelType: "anthropic", // Default value
+            modelId: "claude-3-7-sonnet-latest", // Default value
+            customArgs: parsedArgs,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Agent created successfully from template:", result);
+        setShowTemplateDialog(false);
+        // Reload the list of agents
+        loadAgentsAndContexts();
+      } else {
+        console.error(
+          "Failed to create agent from template:",
+          await response.json()
+        );
+      }
+    } catch (error) {
+      console.error("Error creating agent from template:", error);
+    }
+  };
+
+  // Create an agent with a specific context
+  const createAgentWithContext = async () => {
+    if (!selectedContextType) return;
+
+    try {
+      let parsedArgs: Record<string, unknown> = {};
+      try {
+        parsedArgs = JSON.parse(contextAgentArgs);
+      } catch (e) {
+        console.error("Invalid JSON for context args", e);
+        // Continuer avec un objet vide
+      }
+
+      const agentId = `agent-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const contextArgs: Record<string, Record<string, unknown>> = {
+        [selectedContextType]: {
+          ...parsedArgs,
+          sessionId: parsedArgs.sessionId || `session-${Date.now()}`,
+          userId: parsedArgs.userId || "user",
+        },
+      };
+
+      const newAgent = {
+        id: agentId,
+        modelType: "anthropic", // Valeur par défaut
+        modelId: "claude-3-7-sonnet-latest", // Valeur par défaut
+        contexts: [selectedContextType],
+        contextArgs: contextArgs,
+      };
+
+      const response = await fetch(`${API_URL}/daydreams/agents`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newAgent),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Agent created successfully with context:", result);
+        setShowContextAgentDialog(false);
+        setSelectedContextType("");
+        setContextAgentArgs("{}");
+        // Recharger la liste des agents
+        loadAgentsAndContexts();
+      } else {
+        console.error(
+          "Failed to create agent with context:",
+          await response.json()
+        );
+      }
+    } catch (error) {
+      console.error("Error creating agent with context:", error);
     }
   };
 
@@ -633,6 +782,25 @@ function App() {
     return <div style={{ whiteSpace: "pre-wrap" }}>{content}</div>;
   };
 
+  // Function to format context args for display
+  const formatContextArgs = (
+    contextArgs: Record<string, Record<string, unknown>>
+  ) => {
+    return Object.entries(contextArgs).map(([contextId, args]) => (
+      <div key={contextId} className="context-args-item">
+        <h4>{contextId}</h4>
+        <pre>{JSON.stringify(args, null, 2)}</pre>
+      </div>
+    ));
+  };
+
+  // Function to view agent details
+  const viewAgentDetails = (agent: Agent, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent selecting the agent
+    setAgentToView(agent);
+    setShowAgentInfoDialog(true);
+  };
+
   return (
     <div className="app-container">
       <div className="sidebar">
@@ -689,12 +857,29 @@ function App() {
         <div className="sidebar-section">
           <div className="sidebar-header">
             <h2>Agents</h2>
-            <button
-              onClick={() => setShowAgentDialog(true)}
-              className="new-session-button"
-            >
-              +
-            </button>
+            <div className="button-group">
+              <button
+                onClick={() => setShowAgentDialog(true)}
+                className="new-session-button"
+                title="Créer un agent personnalisé"
+              >
+                +
+              </button>
+              <button
+                onClick={() => setShowTemplateDialog(true)}
+                className="template-button"
+                title="Créer à partir d'un template"
+              >
+                T
+              </button>
+              <button
+                onClick={() => setShowContextAgentDialog(true)}
+                className="context-button"
+                title="Créer avec un contexte spécifique"
+              >
+                C
+              </button>
+            </div>
           </div>
 
           <div className="agents-list">
@@ -709,11 +894,23 @@ function App() {
                   className={`agent-item ${selectedAgent?.id === agent.id ? "active" : ""}`}
                   onClick={() => setSelectedAgent(agent)}
                 >
-                  <span className="agent-name">
-                    Agent {agent.id.substring(0, 6)}...
-                  </span>
+                  <div className="agent-header">
+                    <span className="agent-name">
+                      Agent {agent.id.substring(0, 6)}...
+                    </span>
+                    <button
+                      className="agent-info-button"
+                      onClick={(e) => viewAgentDetails(agent, e)}
+                      title="Voir les détails de l'agent"
+                    >
+                      i
+                    </button>
+                  </div>
                   <span className="agent-contexts">
                     {agent.config.contexts.join(", ")}
+                  </span>
+                  <span className="agent-model">
+                    {agent.config.modelType}: {agent.config.modelId}
                   </span>
                 </div>
               ))
@@ -835,6 +1032,205 @@ function App() {
                 Créer
               </button>
               <button onClick={() => setShowAgentDialog(false)}>Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal pour afficher les détails d'un agent */}
+      {showAgentInfoDialog && agentToView && (
+        <div className="modal-overlay">
+          <div className="modal-content agent-info-modal">
+            <h2>Détails de l'Agent</h2>
+
+            <div className="agent-info-section">
+              <h3>Informations générales</h3>
+              <div className="agent-info-grid">
+                <div className="info-label">ID:</div>
+                <div className="info-value">{agentToView.id}</div>
+
+                <div className="info-label">Modèle:</div>
+                <div className="info-value">
+                  {agentToView.config.modelType} / {agentToView.config.modelId}
+                </div>
+              </div>
+            </div>
+
+            <div className="agent-info-section">
+              <h3>Contextes ({agentToView.config.contexts.length})</h3>
+              <div className="contexts-list">
+                {agentToView.config.contexts.map((context) => (
+                  <div key={context} className="context-item">
+                    <h4>{context}</h4>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="agent-info-section">
+              <h3>Paramètres des contextes</h3>
+              <div className="context-args">
+                {formatContextArgs(agentToView.config.contextArgs)}
+              </div>
+            </div>
+
+            <div className="agent-info-section">
+              <h3>JSON Complet</h3>
+              <div className="agent-raw-json">
+                <pre>{JSON.stringify(agentToView, null, 2)}</pre>
+              </div>
+            </div>
+
+            <div className="modal-buttons">
+              <button
+                onClick={() => setSelectedAgent(agentToView)}
+                className="use-agent-button"
+              >
+                Utiliser cet agent
+              </button>
+              <button onClick={() => setShowAgentInfoDialog(false)}>
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal pour créer un agent à partir d'un template */}
+      {showTemplateDialog && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Créer un agent à partir d'un template</h2>
+
+            <div className="form-group">
+              <label>Choisir un template:</label>
+              <div className="template-list">
+                {loadingTemplates ? (
+                  <div className="loading-info">Chargement...</div>
+                ) : contextTemplates.length === 0 ? (
+                  <div className="no-templates">Aucun template disponible</div>
+                ) : (
+                  contextTemplates.map((template) => (
+                    <div
+                      key={template.id}
+                      className={`template-item ${selectedTemplate?.id === template.id ? "active" : ""}`}
+                      onClick={() => setSelectedTemplate(template)}
+                    >
+                      <h4>{template.name}</h4>
+                      <p>{template.description}</p>
+                      <div className="template-context">
+                        Contexte: {template.context.type}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {selectedTemplate && (
+              <div className="form-group">
+                <label>Arguments personnalisés (JSON):</label>
+                <textarea
+                  value={customArgs}
+                  onChange={(e) => setCustomArgs(e.target.value)}
+                  placeholder="Arguments JSON (optionnel)"
+                  rows={5}
+                />
+                <div className="template-info">
+                  <small>Arguments par défaut:</small>
+                  <pre>
+                    {JSON.stringify(
+                      selectedTemplate.defaultArgs || {},
+                      null,
+                      2
+                    )}
+                  </pre>
+                </div>
+              </div>
+            )}
+
+            <div className="modal-buttons">
+              <button
+                onClick={createAgentFromTemplate}
+                disabled={!selectedTemplate}
+              >
+                Créer
+              </button>
+              <button onClick={() => setShowTemplateDialog(false)}>
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal pour créer un agent à partir d'un contexte spécifique */}
+      {showContextAgentDialog && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Créer un agent avec un contexte spécifique</h2>
+
+            <div className="form-group">
+              <label>Sélectionner un contexte:</label>
+              <div className="context-select">
+                <select
+                  value={selectedContextType}
+                  onChange={(e) => setSelectedContextType(e.target.value)}
+                  className="context-dropdown"
+                >
+                  <option value="">-- Sélectionner un contexte --</option>
+                  {availableContexts.map((context) => (
+                    <option key={context} value={context}>
+                      {context}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {selectedContextType && (
+              <div className="form-group">
+                <label>Arguments du contexte (JSON):</label>
+                <textarea
+                  value={contextAgentArgs}
+                  onChange={(e) => setContextAgentArgs(e.target.value)}
+                  placeholder="Arguments du contexte (optionnel)"
+                  rows={5}
+                />
+                <div className="args-help">
+                  <small>Format suggéré:</small>
+                  <pre>
+                    {JSON.stringify(
+                      {
+                        sessionId: `session-${Date.now()}`,
+                        userId: "user",
+                        title: "Nouveau contexte",
+                        tags: ["custom"],
+                      },
+                      null,
+                      2
+                    )}
+                  </pre>
+                </div>
+              </div>
+            )}
+
+            <div className="modal-buttons">
+              <button
+                onClick={createAgentWithContext}
+                disabled={!selectedContextType}
+              >
+                Créer
+              </button>
+              <button
+                onClick={() => {
+                  setShowContextAgentDialog(false);
+                  setSelectedContextType("");
+                  setContextAgentArgs("{}");
+                }}
+              >
+                Annuler
+              </button>
             </div>
           </div>
         </div>

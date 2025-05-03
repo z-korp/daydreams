@@ -12,10 +12,10 @@ import {
   createMemory,
   createMemoryStore,
 } from "@daydreamsai/core";
-import { createChromaVectorStore } from "@daydreamsai/chromadb";
-import { createSupabaseMemoryStore } from "./vendors/supabase.js";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createChromaVectorStore } from "@daydreamsai/chromadb";
+import { createSupabaseMemoryStore } from "./vendors/supabase.js";
 import { chatContext } from "./context/chat.context.js";
 import { addToChatHistory, clearChatHistory } from "./actions/chat.action.js";
 import { apiInput } from "./inputs/chat.input.js";
@@ -60,11 +60,21 @@ export interface AgentCommunicationChannel {
   messageHandler: (message: MessageData) => Promise<void>;
 }
 
+// Template de contexte de base
+export interface ContextTemplate {
+  id: string;
+  name: string;
+  description: string;
+  context: AnyContext;
+  defaultArgs?: Record<string, unknown>;
+}
+
 @Injectable()
 export class DaydreamsService implements OnModuleInit {
   private agents: Map<string, Agent<AnyContext>> = new Map();
   private agentConfigs: Map<string, AgentConfig> = new Map();
   private availableContexts: Map<string, AnyContext> = new Map();
+  private contextTemplates: Map<string, ContextTemplate> = new Map();
   private communicationChannels: AgentCommunicationChannel[] = [];
   private model: LanguageModelV1;
   private memory: BaseMemory;
@@ -74,6 +84,9 @@ export class DaydreamsService implements OnModuleInit {
   async onModuleInit() {
     // Register available contexts
     this.registerAvailableContexts();
+
+    // Register context templates
+    this.registerContextTemplates();
 
     // Initialize shared resources (model and memory)
     await this.initializeSharedResources();
@@ -88,6 +101,58 @@ export class DaydreamsService implements OnModuleInit {
     // Add more context types as they become available
     // this.availableContexts.set("workflow", workflowContext);
     // this.availableContexts.set("game", gameContext);
+  }
+
+  private registerContextTemplates() {
+    // Enregistrer le template de base pour le chat
+    const baseChatTemplate: ContextTemplate = {
+      id: "base-chat",
+      name: "Chat de base",
+      description:
+        "Un contexte de chat simple pour les conversations générales",
+      context: chatContext,
+      defaultArgs: {
+        sessionId: new ObjectId().toHexString(),
+        title: "Conversation générale",
+        tags: ["general"],
+      },
+    };
+
+    // Ajouter le template de base au registre
+    this.contextTemplates.set(baseChatTemplate.id, baseChatTemplate);
+
+    // Template de chat pour un assistant de support technique
+    const techSupportTemplate: ContextTemplate = {
+      id: "tech-support",
+      name: "Support Technique",
+      description: "Contexte pour un agent de support technique",
+      context: chatContext,
+      defaultArgs: {
+        sessionId: new ObjectId().toHexString(),
+        title: "Support Technique",
+        tags: ["support", "technique"],
+      },
+    };
+
+    this.contextTemplates.set(techSupportTemplate.id, techSupportTemplate);
+
+    // Template pour un assistant créatif
+    const creativeAssistantTemplate: ContextTemplate = {
+      id: "creative-assistant",
+      name: "Assistant Créatif",
+      description: "Contexte pour un agent assistant dans des tâches créatives",
+      context: chatContext,
+      defaultArgs: {
+        sessionId: new ObjectId().toHexString(),
+        title: "Assistant Créatif",
+        tags: ["créatif", "brainstorming"],
+      },
+    };
+
+    this.contextTemplates.set(
+      creativeAssistantTemplate.id,
+      creativeAssistantTemplate
+    );
   }
 
   private async initializeSharedResources() {
@@ -113,7 +178,7 @@ export class DaydreamsService implements OnModuleInit {
       this.model = openai(modelId as OpenAIModelId);
     } else {
       throw new Error(
-        `Invalid model configuration: ${modelType} - ${String(modelId)}`
+        `Invalid model configuration: ${modelType} - ${modelId as string}`
       );
     }
 
@@ -360,5 +425,70 @@ export class DaydreamsService implements OnModuleInit {
 
   private isOpenAIModel(modelId: string): modelId is OpenAIModelId {
     return modelId.startsWith("gpt-");
+  }
+
+  // Méthode pour créer un agent basé sur un template de contexte
+  async createAgentFromTemplate(
+    templateId: string,
+    config: Omit<AgentConfig, "contexts" | "contextArgs">,
+    customArgs?: Record<string, unknown>
+  ): Promise<string> {
+    // Vérifier si le template existe
+    const template = this.contextTemplates.get(templateId);
+    if (!template) {
+      throw new Error(`Template de contexte '${templateId}' non trouvé`);
+    }
+
+    // Get the context type from the template
+    const contextType = template.context.type;
+
+    // Verify that the context type is registered
+    if (!this.availableContexts.has(contextType)) {
+      throw new Error(`Unknown context: ${contextType}`);
+    }
+
+    // Fusionner les arguments par défaut avec les arguments personnalisés
+    const contextArgs = {
+      [contextType]: {
+        ...template.defaultArgs,
+        ...customArgs,
+        // Assurer que sessionId est toujours unique s'il n'est pas fourni
+        sessionId: customArgs?.sessionId || new ObjectId().toHexString(),
+      },
+    };
+
+    // Créer la configuration complète de l'agent
+    const fullConfig: AgentConfig = {
+      ...config,
+      contexts: [contextType],
+      contextArgs,
+    };
+
+    // Créer l'agent avec la configuration
+    return this.createAgent(fullConfig);
+  }
+
+  // Obtenir tous les templates de contexte disponibles
+  getContextTemplates(): ContextTemplate[] {
+    return Array.from(this.contextTemplates.values());
+  }
+
+  // Obtenir un template de contexte spécifique
+  getContextTemplate(templateId: string): ContextTemplate | null {
+    return this.contextTemplates.get(templateId) || null;
+  }
+
+  // Créer un nouveau template de contexte personnalisé
+  createContextTemplate(template: ContextTemplate): string {
+    // Vérifier si le contexte référencé existe
+    if (!this.availableContexts.has(template.context.type)) {
+      throw new Error(
+        `Le type de contexte '${template.context.type}' n'existe pas`
+      );
+    }
+
+    // Enregistrer le template
+    this.contextTemplates.set(template.id, template);
+    return template.id;
   }
 }
