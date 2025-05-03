@@ -1,4 +1,9 @@
 ---
+description: 
+globs: 
+alwaysApply: false
+---
+---
 description: This is for documentation
 globs: .mdx, .md
 alwaysApply: false

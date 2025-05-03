@@ -16,6 +16,12 @@
       }
     }
   },
+  "./extensions": {
+    "import": "./dist/extensions/index.js",
+    "require": "./dist/extensions/index.js",
+    "types": "./dist/extensions/index.d.ts"
+  },
+  "./package.json": "./package.json",
   "devDependencies": {
     "@ai-sdk/anthropic": "^1.2.3",
     "@ai-sdk/groq": "^1.2.2",
