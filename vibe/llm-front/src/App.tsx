@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
 
 // Define more specific interfaces for the API response structure
@@ -32,6 +32,20 @@ interface Session {
   createdAt: number;
 }
 
+// Définition des interfaces pour les agents
+interface AgentConfig {
+  id: string;
+  modelType: string;
+  modelId: string;
+  contexts: string[];
+  contextArgs: Record<string, Record<string, unknown>>;
+}
+
+interface Agent {
+  id: string;
+  config: AgentConfig;
+}
+
 // Récupérer l'URL de l'API depuis les variables d'environnement
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -45,6 +59,14 @@ function App() {
   const [newSessionName, setNewSessionName] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Nouveaux états pour la gestion d'agents
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [availableContexts, setAvailableContexts] = useState<string[]>([]);
+  const [loadingAgents, setLoadingAgents] = useState(false);
+  const [showAgentDialog, setShowAgentDialog] = useState(false);
+  const [newAgentContexts, setNewAgentContexts] = useState<string[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+
   // List of possible filters based on the response structure
   const filters = [
     { id: "all", label: "All" },
@@ -57,9 +79,15 @@ function App() {
     { id: "action_result", label: "Action Results" },
   ];
 
+  // Add a reference for the response details
+  const responseDetailsRefs = useRef<{ [key: number]: HTMLDivElement | null }>(
+    {}
+  );
+
   // Initialize or load existing sessions on mount
   useEffect(() => {
     loadSessions();
+    loadAgentsAndContexts();
   }, []);
 
   // Load sessions from localStorage
@@ -170,8 +198,86 @@ function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Fonction pour charger les agents et les contextes disponibles
+  const loadAgentsAndContexts = async () => {
+    setLoadingAgents(true);
+    try {
+      // Charger les contextes disponibles
+      const contextsResponse = await fetch(`${API_URL}/daydreams/contexts`);
+      if (contextsResponse.ok) {
+        const data = await contextsResponse.json();
+        setAvailableContexts(data.contexts || []);
+      }
+
+      // Charger les agents
+      const agentsResponse = await fetch(`${API_URL}/daydreams/agents`);
+      if (agentsResponse.ok) {
+        const data = await agentsResponse.json();
+        setAgents(data.agents || []);
+
+        // Sélectionner le premier agent par défaut s'il existe
+        if (data.agents && data.agents.length > 0) {
+          setSelectedAgent(data.agents[0]);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading agents and contexts:", error);
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
+
+  // Fonction pour créer un nouvel agent
+  const createNewAgent = async () => {
+    try {
+      const agentId = `agent-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const contextArgs: Record<string, Record<string, unknown>> = {};
+
+      // Initialiser les arguments par défaut pour chaque contexte
+      newAgentContexts.forEach((contextId) => {
+        if (contextId === "chat") {
+          contextArgs[contextId] = {
+            sessionId: `session-${Date.now()}`,
+            userId: "user",
+          };
+        } else {
+          contextArgs[contextId] = {};
+        }
+      });
+
+      const newAgent = {
+        id: agentId,
+        modelType: "anthropic", // Valeur par défaut
+        modelId: "claude-3-7-sonnet-latest", // Valeur par défaut
+        contexts: newAgentContexts,
+        contextArgs: contextArgs,
+      };
+
+      const response = await fetch(`${API_URL}/daydreams/agents`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newAgent),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Agent created successfully:", result);
+        setShowAgentDialog(false);
+        setNewAgentContexts([]);
+        // Recharger la liste des agents
+        loadAgentsAndContexts();
+      } else {
+        console.error("Failed to create agent:", await response.json());
+      }
+    } catch (error) {
+      console.error("Error creating agent:", error);
+    }
+  };
+
   const sendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !selectedAgent) return;
 
     // Make sure we have a session
     if (!selectedSession) {
@@ -204,17 +310,34 @@ function App() {
     setInput("");
 
     try {
-      // Send request to API
-      const response = await fetch(`${API_URL}/llm/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sessionId: selectedSession?.id,
-          prompt: input,
-        }),
-      });
+      // Envoyer la requête à l'agent spécifique
+      const response = await fetch(
+        `${API_URL}/daydreams/agents/${selectedAgent.id}/send`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            // Format attendu par le contrôleur
+            contextId: selectedAgent.config.contexts[0],
+            // Les paramètres requis par le schéma d'entrée
+            message: input, // Pour compatibilité avec le contrôleur
+            userId: "user", // Pour compatibilité avec le contrôleur
+
+            // Modification pour que le contrôleur transmette les bons paramètres
+            // Le contrôleur doit maintenant utiliser ces valeurs dans input.data
+            input: {
+              type: "chat",
+              data: {
+                sessionId: selectedSession?.id || `session-${Date.now()}`,
+                prompt: input,
+                userId: "user",
+              },
+            },
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("API request failed");
@@ -340,25 +463,25 @@ function App() {
     if (item.ref === "input" || item.ref === "output") {
       // Convert content to string if it's an object
       if (typeof item.content === "object" && item.content !== null) {
-        content = JSON.stringify(item.content);
+        content = JSON.stringify(item.content, null, 2);
       } else {
         content = item.content || "";
       }
 
       // If we have data and no content, use the data
       if (!content && item.data) {
-        content = JSON.stringify(item.data);
+        content = JSON.stringify(item.data, null, 2);
       }
     } else if (item.ref === "step") {
       const prompt = item.data?.prompt
         ? typeof item.data.prompt === "object"
-          ? JSON.stringify(item.data.prompt)
+          ? JSON.stringify(item.data.prompt, null, 2)
           : item.data.prompt
         : "";
 
       const response = item.data?.response
         ? typeof item.data.response === "object"
-          ? JSON.stringify(item.data.response)
+          ? JSON.stringify(item.data.response, null, 2)
           : item.data.response
         : "";
 
@@ -366,30 +489,32 @@ function App() {
     } else if (item.ref === "thought") {
       content =
         typeof item.content === "object"
-          ? JSON.stringify(item.content)
+          ? JSON.stringify(item.content, null, 2)
           : item.content || "";
     } else if (item.ref === "run") {
       content = `Run: ${item.type}`;
     } else if (item.ref === "action_call") {
       const actionContent =
         typeof item.content === "object"
-          ? JSON.stringify(item.content)
+          ? JSON.stringify(item.content, null, 2)
           : item.content || "";
       content = `Action Call: ${item.name || "Unnamed"} - ${actionContent}`;
     } else if (item.ref === "action_result") {
-      content = `Action Result: ${item.name || "Unnamed"} - ${JSON.stringify(item.data)}`;
+      content = `Action Result: ${item.name || "Unnamed"} - ${JSON.stringify(item.data, null, 2)}`;
     } else {
-      content = JSON.stringify(item);
+      content = JSON.stringify(item, null, 2);
     }
 
     // Create a unique key combining the item id and index
-    const uniqueKey = `${item.id}-${index}`;
+    const uniqueKey = `${item.id || index}-${index}`;
 
     return (
       <div key={uniqueKey} className="response-item">
         <div className="response-item-header">
           <span className="response-item-type">{item.ref}</span>
-          <span className="response-item-id">{item.id.substring(0, 8)}...</span>
+          <span className="response-item-id">
+            {item.id ? item.id.substring(0, 8) + "..." : `item-${index}`}
+          </span>
         </div>
         <div className="response-item-content">
           <pre>{content}</pre>
@@ -429,7 +554,7 @@ function App() {
         : message.rawResponse.filter((item) => item.ref === filter);
 
     return (
-      <div className="response-details">
+      <>
         <div className="filter-controls">
           {filters.map((f) => (
             <button
@@ -449,8 +574,63 @@ function App() {
             <div className="no-items">Aucun élément de ce type trouvé</div>
           )}
         </div>
-      </div>
+      </>
     );
+  };
+
+  // Create a toggleDetails function with smooth scrolling
+  const toggleDetails = useCallback((index: number) => {
+    setMessages((prev) => {
+      const newMessages = [...prev];
+      const showDetails = !newMessages[index].showDetails;
+
+      newMessages[index] = {
+        ...newMessages[index],
+        showDetails,
+      };
+
+      // If showing details, scroll to them after a short delay to allow rendering
+      if (showDetails) {
+        setTimeout(() => {
+          const detailsElement = responseDetailsRefs.current[index];
+          if (detailsElement) {
+            detailsElement.scrollIntoView({
+              behavior: "smooth",
+              block: "nearest",
+            });
+          }
+        }, 100);
+      }
+
+      return newMessages;
+    });
+  }, []);
+
+  // Fix the message content display
+  const processMessageContent = (content: string) => {
+    // Check if the content is a JSON string and try to parse it
+    if (content && typeof content === "string") {
+      try {
+        // Only try to parse if it looks like JSON
+        if (
+          (content.startsWith("{") && content.endsWith("}")) ||
+          (content.startsWith("[") && content.endsWith("]"))
+        ) {
+          const parsed = JSON.parse(content);
+          // If it's an object, format it nicely
+          return (
+            <pre className="formatted-content">
+              {JSON.stringify(parsed, null, 2)}
+            </pre>
+          );
+        }
+      } catch {
+        // Not valid JSON, continue with original content
+      }
+    }
+
+    // Regular string content - preserve line breaks
+    return <div style={{ whiteSpace: "pre-wrap" }}>{content}</div>;
   };
 
   return (
@@ -505,11 +685,50 @@ function App() {
             ))
           )}
         </div>
+
+        <div className="sidebar-section">
+          <div className="sidebar-header">
+            <h2>Agents</h2>
+            <button
+              onClick={() => setShowAgentDialog(true)}
+              className="new-session-button"
+            >
+              +
+            </button>
+          </div>
+
+          <div className="agents-list">
+            {loadingAgents ? (
+              <div className="loading-info">Chargement...</div>
+            ) : agents.length === 0 ? (
+              <div className="no-agents">Aucun agent</div>
+            ) : (
+              agents.map((agent) => (
+                <div
+                  key={agent.id}
+                  className={`agent-item ${selectedAgent?.id === agent.id ? "active" : ""}`}
+                  onClick={() => setSelectedAgent(agent)}
+                >
+                  <span className="agent-name">
+                    Agent {agent.id.substring(0, 6)}...
+                  </span>
+                  <span className="agent-contexts">
+                    {agent.config.contexts.join(", ")}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="chat-container">
         <div className="chat-header">
-          <h1>{selectedSession ? selectedSession.name : "Vibe Chat"}</h1>
+          <h1>
+            {selectedSession ? selectedSession.name : "Vibe Chat"}
+            {selectedAgent &&
+              ` - Agent: ${selectedAgent.id.substring(0, 6)}...`}
+          </h1>
           <div className="session-info">
             {selectedSession && <>Session: {selectedSession.id}</>}
           </div>
@@ -523,7 +742,9 @@ function App() {
           ) : (
             messages.map((msg, index) => (
               <div key={index} className={`message ${msg.role}`}>
-                <div className="message-content">{msg.content}</div>
+                <div className="message-content">
+                  {processMessageContent(msg.content)}
+                </div>
                 <div className="message-time">
                   {new Date(msg.timestamp).toLocaleTimeString()}
                 </div>
@@ -531,16 +752,7 @@ function App() {
                 {msg.role === "assistant" && msg.rawResponse && (
                   <button
                     className="toggle-details-button"
-                    onClick={() => {
-                      setMessages((prev) => {
-                        const newMessages = [...prev];
-                        newMessages[index] = {
-                          ...newMessages[index],
-                          showDetails: !newMessages[index].showDetails,
-                        };
-                        return newMessages;
-                      });
-                    }}
+                    onClick={() => toggleDetails(index)}
                   >
                     {msg.showDetails
                       ? "Masquer les détails"
@@ -550,8 +762,16 @@ function App() {
 
                 {msg.role === "assistant" &&
                   msg.rawResponse &&
-                  msg.showDetails &&
-                  renderFilteredResponse(msg, index)}
+                  msg.showDetails && (
+                    <div
+                      className="response-details"
+                      ref={(el) => {
+                        responseDetailsRefs.current[index] = el;
+                      }}
+                    >
+                      {renderFilteredResponse(msg, index)}
+                    </div>
+                  )}
               </div>
             ))
           )}
@@ -576,6 +796,49 @@ function App() {
           </button>
         </div>
       </div>
+
+      {/* Modal pour créer un nouvel agent */}
+      {showAgentDialog && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Créer un nouvel agent</h2>
+
+            <div className="form-group">
+              <label>Contextes disponibles:</label>
+              <div className="context-checkboxes">
+                {availableContexts.map((context) => (
+                  <label key={context} className="context-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={newAgentContexts.includes(context)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setNewAgentContexts([...newAgentContexts, context]);
+                        } else {
+                          setNewAgentContexts(
+                            newAgentContexts.filter((c) => c !== context)
+                          );
+                        }
+                      }}
+                    />
+                    {context}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="modal-buttons">
+              <button
+                onClick={createNewAgent}
+                disabled={newAgentContexts.length === 0}
+              >
+                Créer
+              </button>
+              <button onClick={() => setShowAgentDialog(false)}>Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

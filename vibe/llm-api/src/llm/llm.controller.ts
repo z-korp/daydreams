@@ -19,7 +19,11 @@ export class LlmController {
   ) {
     console.log("[DEBUG] Processing chat request:", { sessionId, prompt });
 
-    const response = await this.daydreamsService.send({
+    // Get the first available agent ID or default to first in the list
+    const agentIds = this.daydreamsService.getAgentIds();
+    const agentId = agentIds.length > 0 ? agentIds[0] : "default";
+
+    const response = await this.daydreamsService.send(agentId, {
       context: chatContext,
       args: { sessionId },
       input: {
@@ -42,7 +46,11 @@ export class LlmController {
         data.sessionId = "default";
       }
 
-      const response = await this.daydreamsService.send({
+      // Get the first available agent ID or default to first in the list
+      const agentIds = this.daydreamsService.getAgentIds();
+      const agentId = agentIds.length > 0 ? agentIds[0] : "default";
+
+      const response = await this.daydreamsService.send(agentId, {
         context: chatContext,
         args: { sessionId: data.sessionId },
         input: {
