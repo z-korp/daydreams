@@ -26,6 +26,12 @@ interface Message {
   showDetails?: boolean; // Added for show/hide details functionality
 }
 
+interface Session {
+  id: string;
+  name: string;
+  createdAt: number;
+}
+
 // Récupérer l'URL de l'API depuis les variables d'environnement
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -33,9 +39,10 @@ function App() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-  const [sessionId] = useState(
-    "session-" + Math.random().toString(36).substring(2, 9)
-  );
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [showNewSessionForm, setShowNewSessionForm] = useState(false);
+  const [newSessionName, setNewSessionName] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // List of possible filters based on the response structure
@@ -50,6 +57,114 @@ function App() {
     { id: "action_result", label: "Action Results" },
   ];
 
+  // Initialize or load existing sessions on mount
+  useEffect(() => {
+    loadSessions();
+  }, []);
+
+  // Load sessions from localStorage
+  const loadSessions = () => {
+    const savedSessions = localStorage.getItem("chatSessions");
+    if (savedSessions) {
+      const parsedSessions = JSON.parse(savedSessions);
+      setSessions(parsedSessions);
+
+      // If we have a recent session, select it
+      const lastSessionId = localStorage.getItem("lastSessionId");
+      if (lastSessionId) {
+        const lastSession = parsedSessions.find(
+          (s: Session) => s.id === lastSessionId
+        );
+        if (lastSession) {
+          setSelectedSession(lastSession);
+          loadSessionMessages(lastSession.id);
+        }
+      }
+    }
+  };
+
+  // Save sessions to localStorage
+  const saveSessions = (updatedSessions: Session[]) => {
+    localStorage.setItem("chatSessions", JSON.stringify(updatedSessions));
+    setSessions(updatedSessions);
+  };
+
+  // Create a new session
+  const createNewSession = () => {
+    if (!newSessionName.trim()) {
+      setNewSessionName(`Salon ${sessions.length + 1}`);
+    }
+
+    const sessionId = "session-" + Math.random().toString(36).substring(2, 9);
+    const newSession: Session = {
+      id: sessionId,
+      name: newSessionName.trim() || `Salon ${sessions.length + 1}`,
+      createdAt: Date.now(),
+    };
+
+    const updatedSessions = [...sessions, newSession];
+    saveSessions(updatedSessions);
+    setSelectedSession(newSession);
+    setMessages([]);
+    localStorage.setItem("lastSessionId", sessionId);
+    localStorage.setItem(`messages-${sessionId}`, JSON.stringify([]));
+
+    setShowNewSessionForm(false);
+    setNewSessionName("");
+  };
+
+  // Switch to a different session
+  const switchSession = (session: Session) => {
+    setSelectedSession(session);
+    localStorage.setItem("lastSessionId", session.id);
+    loadSessionMessages(session.id);
+  };
+
+  // Load messages for a specific session
+  const loadSessionMessages = (sessionId: string) => {
+    const savedMessages = localStorage.getItem(`messages-${sessionId}`);
+    if (savedMessages) {
+      setMessages(JSON.parse(savedMessages));
+    } else {
+      setMessages([]);
+    }
+  };
+
+  // Save messages for the current session
+  const saveSessionMessages = (newMessages: Message[]) => {
+    if (selectedSession) {
+      localStorage.setItem(
+        `messages-${selectedSession.id}`,
+        JSON.stringify(newMessages)
+      );
+    }
+  };
+
+  // Delete a session
+  const deleteSession = (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent switching to the session when deleting
+
+    const updatedSessions = sessions.filter((s) => s.id !== sessionId);
+    saveSessions(updatedSessions);
+
+    // Remove session messages
+    localStorage.removeItem(`messages-${sessionId}`);
+
+    // If we deleted the selected session, select another one or clear
+    if (selectedSession && selectedSession.id === sessionId) {
+      if (updatedSessions.length > 0) {
+        const newSelected = updatedSessions[0];
+        setSelectedSession(newSelected);
+        localStorage.setItem("lastSessionId", newSelected.id);
+        loadSessionMessages(newSelected.id);
+      } else {
+        setSelectedSession(null);
+        localStorage.removeItem("lastSessionId");
+        setMessages([]);
+      }
+    }
+  };
+
   // Scroll to bottom whenever messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -58,6 +173,22 @@ function App() {
   const sendMessage = async () => {
     if (!input.trim()) return;
 
+    // Make sure we have a session
+    if (!selectedSession) {
+      // Create a default session if none exists
+      const sessionId = "session-" + Math.random().toString(36).substring(2, 9);
+      const newSession: Session = {
+        id: sessionId,
+        name: `Salon ${sessions.length + 1}`,
+        createdAt: Date.now(),
+      };
+
+      const updatedSessions = [...sessions, newSession];
+      saveSessions(updatedSessions);
+      setSelectedSession(newSession);
+      localStorage.setItem("lastSessionId", sessionId);
+    }
+
     // Add user message to state
     const userMessage: Message = {
       role: "user",
@@ -65,7 +196,10 @@ function App() {
       timestamp: Date.now(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    saveSessionMessages(updatedMessages);
+
     setLoading(true);
     setInput("");
 
@@ -77,7 +211,7 @@ function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          sessionId,
+          sessionId: selectedSession?.id,
           prompt: input,
         }),
       });
@@ -106,23 +240,56 @@ function App() {
         if (outputs.length > 0) {
           // Prioritize actual output content
           const output = outputs[outputs.length - 1];
-          content =
-            output.content || output.data?.response || JSON.stringify(output);
+          if (output.content) {
+            // Handle content that might be an object
+            content =
+              typeof output.content === "object"
+                ? JSON.stringify(output.content)
+                : output.content;
+          } else if (output.data?.response) {
+            // Handle response that might be an object
+            content =
+              typeof output.data.response === "object"
+                ? JSON.stringify(output.data.response)
+                : output.data.response;
+          } else {
+            content = JSON.stringify(output);
+          }
         } else {
           // If no outputs, use the last item in the response
           const lastItem = data.response[data.response.length - 1];
-          content =
-            lastItem.content ||
-            lastItem.data?.response ||
-            "No direct output found in response.";
+          if (lastItem.content) {
+            content =
+              typeof lastItem.content === "object"
+                ? JSON.stringify(lastItem.content)
+                : lastItem.content;
+          } else if (lastItem.data?.response) {
+            content =
+              typeof lastItem.data.response === "object"
+                ? JSON.stringify(lastItem.data.response)
+                : lastItem.data.response;
+          } else {
+            content = "No direct output found in response.";
+          }
         }
       } else if (data.response && typeof data.response === "object") {
         // Handle when response is a single object
         rawResponse = [data.response];
-        content = data.response.content || JSON.stringify(data.response);
+
+        if (data.response.content) {
+          content =
+            typeof data.response.content === "object"
+              ? JSON.stringify(data.response.content)
+              : data.response.content;
+        } else {
+          content = JSON.stringify(data.response);
+        }
       } else if (data.content) {
         // Handle original format
-        content = data.content;
+        content =
+          typeof data.content === "object"
+            ? JSON.stringify(data.content)
+            : data.content;
       } else {
         content =
           "Response received but cannot parse format. Check console for details.";
@@ -137,7 +304,9 @@ function App() {
         activeFilter: "all",
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      const finalMessages = [...updatedMessages, assistantMessage];
+      setMessages(finalMessages);
+      saveSessionMessages(finalMessages);
     } catch (error) {
       console.error("Error sending message:", error);
 
@@ -149,7 +318,9 @@ function App() {
         timestamp: Date.now(),
       };
 
-      setMessages((prev) => [...prev, errorMessage]);
+      const finalMessages = [...updatedMessages, errorMessage];
+      setMessages(finalMessages);
+      saveSessionMessages(finalMessages);
     } finally {
       setLoading(false);
     }
@@ -163,27 +334,59 @@ function App() {
   };
 
   // Format an individual response item for display
-  const formatResponseItem = (item: ResponseItem) => {
+  const formatResponseItem = (item: ResponseItem, index: number) => {
     let content = "";
 
     if (item.ref === "input" || item.ref === "output") {
-      content = item.content || JSON.stringify(item.data);
+      // Convert content to string if it's an object
+      if (typeof item.content === "object" && item.content !== null) {
+        content = JSON.stringify(item.content);
+      } else {
+        content = item.content || "";
+      }
+
+      // If we have data and no content, use the data
+      if (!content && item.data) {
+        content = JSON.stringify(item.data);
+      }
     } else if (item.ref === "step") {
-      content = `Step ${item.step}: ${item.data?.prompt || ""}\n\nResponse: ${item.data?.response || ""}`;
+      const prompt = item.data?.prompt
+        ? typeof item.data.prompt === "object"
+          ? JSON.stringify(item.data.prompt)
+          : item.data.prompt
+        : "";
+
+      const response = item.data?.response
+        ? typeof item.data.response === "object"
+          ? JSON.stringify(item.data.response)
+          : item.data.response
+        : "";
+
+      content = `Step ${item.step}: ${prompt}\n\nResponse: ${response}`;
     } else if (item.ref === "thought") {
-      content = item.content || "";
+      content =
+        typeof item.content === "object"
+          ? JSON.stringify(item.content)
+          : item.content || "";
     } else if (item.ref === "run") {
       content = `Run: ${item.type}`;
     } else if (item.ref === "action_call") {
-      content = `Action Call: ${item.name} - ${item.content}`;
+      const actionContent =
+        typeof item.content === "object"
+          ? JSON.stringify(item.content)
+          : item.content || "";
+      content = `Action Call: ${item.name || "Unnamed"} - ${actionContent}`;
     } else if (item.ref === "action_result") {
-      content = `Action Result: ${item.name} - ${JSON.stringify(item.data)}`;
+      content = `Action Result: ${item.name || "Unnamed"} - ${JSON.stringify(item.data)}`;
     } else {
       content = JSON.stringify(item);
     }
 
+    // Create a unique key combining the item id and index
+    const uniqueKey = `${item.id}-${index}`;
+
     return (
-      <div key={item.id} className="response-item">
+      <div key={uniqueKey} className="response-item">
         <div className="response-item-header">
           <span className="response-item-type">{item.ref}</span>
           <span className="response-item-id">{item.id.substring(0, 8)}...</span>
@@ -241,7 +444,7 @@ function App() {
 
         <div className="filtered-items">
           {filteredItems.length > 0 ? (
-            filteredItems.map((item) => formatResponseItem(item))
+            filteredItems.map((item, index) => formatResponseItem(item, index))
           ) : (
             <div className="no-items">Aucun élément de ce type trouvé</div>
           )}
@@ -251,71 +454,127 @@ function App() {
   };
 
   return (
-    <div className="chat-container">
-      <div className="chat-header">
-        <h1>Vibe Chat</h1>
-        <div className="session-info">Session: {sessionId}</div>
-      </div>
+    <div className="app-container">
+      <div className="sidebar">
+        <div className="sidebar-header">
+          <h2>Salons</h2>
+          <button
+            onClick={() => setShowNewSessionForm(true)}
+            className="new-session-button"
+          >
+            +
+          </button>
+        </div>
 
-      <div className="messages-container">
-        {messages.length === 0 ? (
-          <div className="empty-state">
-            Envoyez un message pour démarrer la conversation
-          </div>
-        ) : (
-          messages.map((msg, index) => (
-            <div key={index} className={`message ${msg.role}`}>
-              <div className="message-content">{msg.content}</div>
-              <div className="message-time">
-                {new Date(msg.timestamp).toLocaleTimeString()}
-              </div>
-
-              {msg.role === "assistant" && msg.rawResponse && (
-                <button
-                  className="toggle-details-button"
-                  onClick={() => {
-                    setMessages((prev) => {
-                      const newMessages = [...prev];
-                      newMessages[index] = {
-                        ...newMessages[index],
-                        showDetails: !newMessages[index].showDetails,
-                      };
-                      return newMessages;
-                    });
-                  }}
-                >
-                  {msg.showDetails
-                    ? "Masquer les détails"
-                    : "Afficher les détails"}
-                </button>
-              )}
-
-              {msg.role === "assistant" &&
-                msg.rawResponse &&
-                msg.showDetails &&
-                renderFilteredResponse(msg, index)}
+        {showNewSessionForm && (
+          <div className="new-session-form">
+            <input
+              type="text"
+              placeholder="Nom du salon"
+              value={newSessionName}
+              onChange={(e) => setNewSessionName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && createNewSession()}
+            />
+            <div className="form-buttons">
+              <button onClick={createNewSession}>Créer</button>
+              <button onClick={() => setShowNewSessionForm(false)}>
+                Annuler
+              </button>
             </div>
-          ))
-        )}
-        {loading && (
-          <div className="message assistant loading">
-            <div className="loading-indicator">...</div>
           </div>
         )}
-        <div ref={messagesEndRef} />
+
+        <div className="sessions-list">
+          {sessions.length === 0 ? (
+            <div className="no-sessions">Aucun salon</div>
+          ) : (
+            sessions.map((session) => (
+              <div
+                key={session.id}
+                className={`session-item ${selectedSession?.id === session.id ? "active" : ""}`}
+                onClick={() => switchSession(session)}
+              >
+                <span className="session-name">{session.name}</span>
+                <span
+                  className="delete-session"
+                  onClick={(e) => deleteSession(session.id, e)}
+                >
+                  ×
+                </span>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
-      <div className="input-container">
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Tapez votre message ici..."
-          disabled={loading}
-        />
-        <button onClick={sendMessage} disabled={loading || !input.trim()}>
-          Envoyer
-        </button>
+      <div className="chat-container">
+        <div className="chat-header">
+          <h1>{selectedSession ? selectedSession.name : "Vibe Chat"}</h1>
+          <div className="session-info">
+            {selectedSession && <>Session: {selectedSession.id}</>}
+          </div>
+        </div>
+
+        <div className="messages-container">
+          {messages.length === 0 ? (
+            <div className="empty-state">
+              Envoyez un message pour démarrer la conversation
+            </div>
+          ) : (
+            messages.map((msg, index) => (
+              <div key={index} className={`message ${msg.role}`}>
+                <div className="message-content">{msg.content}</div>
+                <div className="message-time">
+                  {new Date(msg.timestamp).toLocaleTimeString()}
+                </div>
+
+                {msg.role === "assistant" && msg.rawResponse && (
+                  <button
+                    className="toggle-details-button"
+                    onClick={() => {
+                      setMessages((prev) => {
+                        const newMessages = [...prev];
+                        newMessages[index] = {
+                          ...newMessages[index],
+                          showDetails: !newMessages[index].showDetails,
+                        };
+                        return newMessages;
+                      });
+                    }}
+                  >
+                    {msg.showDetails
+                      ? "Masquer les détails"
+                      : "Afficher les détails"}
+                  </button>
+                )}
+
+                {msg.role === "assistant" &&
+                  msg.rawResponse &&
+                  msg.showDetails &&
+                  renderFilteredResponse(msg, index)}
+              </div>
+            ))
+          )}
+          {loading && (
+            <div className="message assistant loading">
+              <div className="loading-indicator">...</div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="input-container">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Tapez votre message ici..."
+            disabled={loading}
+          />
+          <button onClick={sendMessage} disabled={loading || !input.trim()}>
+            Envoyer
+          </button>
+        </div>
       </div>
     </div>
   );

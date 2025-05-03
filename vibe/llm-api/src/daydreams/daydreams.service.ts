@@ -121,8 +121,8 @@ export class DaydreamsService implements OnModuleInit {
         model,
         memory: createMemory(
           await createSupabaseMemoryStore({
-            url: supabaseUrl!,
-            apiKey: supabaseApiKey!,
+            url: supabaseUrl,
+            apiKey: supabaseApiKey,
             tableName: supabaseTable,
           }),
           createChromaVectorStore("my-agent-apisodes")
