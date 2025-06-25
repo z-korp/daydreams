@@ -128,12 +128,12 @@ export function formatOutputInterface(output: Output<any>) {
     output.instructions
       ? { tag: "instructions", children: output.instructions }
       : null,
-    {
-      tag: "attributes_schema",
-      children: output.attributes
-        ? formatSchema(output.attributes, "attributes")
-        : {},
-    },
+    output.attributes
+      ? {
+          tag: "attributes_schema",
+          children: formatSchema(output.attributes, "attributes"),
+        }
+      : null,
     {
       tag: "content_schema",
       children: formatSchema(output.schema ?? z.string(), "content"),

@@ -1,18 +1,35 @@
 /**
- * GMX Trading Agent
- *
- * This file implements an AI agent that can interact with the GMX exchange to:
- * - Monitor market conditions
- * - Execute trades
- * - Manage positions
- * - Track performance
- * - Analyze trading history
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 🌟 VEGA - GMX TRADING AGENT
+ * ═══════════════════════════════════════════════════════════════════════════════
  * 
- * IMPORTANT: Token approval functionality is not fully implemented yet.
- * Before trading, manually approve tokens using the GMX interface (https://app.gmx.io).
- * This grants GMX permission to use your tokens for trading.
- * Without this step, trades will fail with "insufficient allowance" errors.
+ * A sophisticated AI trading assistant specializing in GMX perpetual futures
+ * Built with the Daydreams framework and powered by advanced personality modeling
+ * 
+ * ✨ Features:
+ * • Full GMX protocol integration with real-time trading
+ * • Advanced risk management with data-driven decision making
+ * • Multi-platform support (CLI + Discord)
+ * • Comprehensive market analysis and position tracking
+ * • Obsessive risk-conscious personality (10/10 risk management)
+ * 
+ * 🚀 Quick Start:
+ * 1. Configure environment variables (see .env.example)
+ * 2. Ensure wallet has sufficient funds for trading
+ * 3. Run: `bun run examples/gmx/example-gmx.ts`
+ * 
+ * 📊 Vega's Personality Profile:
+ * • Analytical: 9/10 • Risk-Conscious: 10/10 • Precision: 9/10
+ * • Communicative: 9/10 • Proactive: 8/10 • Adaptable: 8/10
+ * 
+ * ⚠️  IMPORTANT: Ensure token approvals are set via app.gmx.io before trading
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
  */
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📦 IMPORTS
+// ═══════════════════════════════════════════════════════════════════════════════
 
 import { openrouter } from "@openrouter/ai-sdk-provider";
 import { openai } from "@ai-sdk/openai";
@@ -24,15 +41,22 @@ import {
     validateEnv, 
     LogLevel,
     Logger,
-    extension
+    createMemory,
+    createVectorStore,
+    createMemoryStore
 } from "@daydreamsai/core";
 import { cliExtension } from "@daydreamsai/cli";
-import { string, z } from "zod";
+import { discord } from "@daydreamsai/discord";
+import { createMongoMemoryStore } from "@daydreamsai/mongodb";
+import { z } from "zod/v4";
 import { GmxSdk } from "@gmx-io/sdk";
 import { createWalletClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
-// GMX order types enum
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📋 CONSTANTS & TYPES
+// ═══════════════════════════════════════════════════════════════════════════════
+
 enum OrderType {
     MarketSwap = 0,
     LimitSwap = 1,
@@ -45,10 +69,22 @@ enum OrderType {
     StopIncrease = 8
 }
 
-// Constants
+// Token ABI for approval operations
+const tokenAbi = [
+    {
+        name: 'approve',
+        type: 'function',
+        inputs: [
+            { name: 'spender', type: 'address' },
+            { name: 'amount', type: 'uint256' }
+        ],
+        outputs: [{ name: '', type: 'bool' }],
+        stateMutability: 'nonpayable'
+    }
+] as const;
+
 const USD_DECIMALS = 30;
 
-// Define typed interface for GMX trading state
 interface GmxTradingState {
     goal: string;
     tasks: string[];
@@ -77,91 +113,60 @@ interface GmxTradingState {
     activeStrategies: string[];
 }
 
-
-// Define the memory type for the Loot Survivor context
 interface GmxTradingMemory {
     lastResult: string | null;
     gmx: GmxTradingState | null;
-  }
+}
 
-  
-// Helper function to convert BigInt to decimal with proper precision
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔧 UTILITY FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
 const bigIntToDecimal = (value: bigint, decimals: number): number => {
-    // Convert to string first to prevent precision loss
     const valueStr = value.toString();
     const decimalPointPosition = valueStr.length - decimals;
 
     if (decimalPointPosition <= 0) {
-        // Value is less than 1
         return Number(`0.${'0'.repeat(Math.abs(decimalPointPosition))}${valueStr}`);
     } else {
-        // Value is greater than or equal to 1
         const integerPart = valueStr.substring(0, decimalPointPosition);
         const fractionalPart = valueStr.substring(decimalPointPosition);
         return Number(`${integerPart}.${fractionalPart}`);
     }
 };
 
-
-// Helper function to convert trade action and order type to a readable description
 function getTradeActionDescription(eventName: string, orderType: number, isLong: boolean): string {
-    // TradeActionType: "OrderCreated", "OrderExecuted", "OrderCancelled", "OrderUpdated", "OrderFrozen"
-    // OrderType: 0 = Market Increase, 1 = Limit Increase, 2 = Market Decrease, 3 = Limit Decrease, 4 = Market Swap, 5 = Limit Swap
-    
     let action = '';
     
     switch (eventName) {
-        case 'OrderCreated':
-            action = 'Created';
-            break;
-        case 'OrderExecuted':
-            action = 'Executed';
-            break;
-        case 'OrderCancelled':
-            action = 'Cancelled';
-            break;
-        case 'OrderUpdated':
-            action = 'Updated';
-            break;
-        case 'OrderFrozen':
-            action = 'Frozen';
-            break;
-        default:
-            action = eventName;
+        case 'OrderCreated': action = 'Created'; break;
+        case 'OrderExecuted': action = 'Executed'; break;
+        case 'OrderCancelled': action = 'Cancelled'; break;
+        case 'OrderUpdated': action = 'Updated'; break;
+        case 'OrderFrozen': action = 'Frozen'; break;
+        default: action = eventName;
     }
     
     let orderTypeStr = '';
     switch (orderType) {
-        case 0:
-            orderTypeStr = `Market ${isLong ? 'Long' : 'Short'} Increase`;
-            break;
-        case 1:
-            orderTypeStr = `Limit ${isLong ? 'Long' : 'Short'} Increase`;
-            break;
-        case 2:
-            orderTypeStr = `Market ${isLong ? 'Long' : 'Short'} Decrease`;
-            break;
-        case 3:
-            orderTypeStr = `Limit ${isLong ? 'Long' : 'Short'} Decrease`;
-            break;
-        case 4:
-            orderTypeStr = 'Market Swap';
-            break;
-        case 5:
-            orderTypeStr = 'Limit Swap';
-            break;
-        default:
-            orderTypeStr = `Order Type ${orderType}`;
+        case 0: orderTypeStr = `Market ${isLong ? 'Long' : 'Short'} Increase`; break;
+        case 1: orderTypeStr = `Limit ${isLong ? 'Long' : 'Short'} Increase`; break;
+        case 2: orderTypeStr = `Market ${isLong ? 'Long' : 'Short'} Decrease`; break;
+        case 3: orderTypeStr = `Limit ${isLong ? 'Long' : 'Short'} Decrease`; break;
+        case 4: orderTypeStr = 'Market Swap'; break;
+        case 5: orderTypeStr = 'Limit Swap'; break;
+        default: orderTypeStr = `Order Type ${orderType}`;
     }
     
     return `${action} ${orderTypeStr}`;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⚙️ ENVIRONMENT VALIDATION & SETUP
+// ═══════════════════════════════════════════════════════════════════════════════
 
-// Log startup message
-console.log("Starting GMX Trading Agent...", LogLevel.INFO);
+console.log("🚀 Starting GMX Trading Agent...", LogLevel.INFO);
 
-// Validate environment variables
 const env = validateEnv(
     z.object({
         ANTHROPIC_API_KEY: z.string(),
@@ -173,17 +178,26 @@ const env = validateEnv(
         GMX_SUBSQUID_URL: z.string(),
         GMX_WALLET_ADDRESS: z.string(),
         GMX_PRIVATE_KEY: z.string(),
-        GMX_MAX_POSITION_SIZE: z.string().default("1000"),
-        GMX_MIN_POSITION_SIZE: z.string().default("10"),
-        GMX_MAX_LEVERAGE: z.string().default("10"),
+        GMX_MAX_POSITION_SIZE: z.string().default("20"),
+        GMX_MIN_POSITION_SIZE: z.string().default("5"),
+        GMX_MAX_LEVERAGE: z.string().default("1"),
         GMX_SLIPPAGE_TOLERANCE: z.string().default("30"),
+        MARKET_ANALYSIS_INTERVAL: z.string().default("300000"),
+        POSITION_CHECK_INTERVAL: z.string().default("60000"),
+        AUTO_TAKE_PROFIT_PERCENT: z.string().default("20"),
+        AUTO_STOP_LOSS_PERCENT: z.string().default("10"),
+        MONGODB_STRING: z.string().min(1, "MONGODB_STRING is required for memory persistence"),
+        DISCORD_TOKEN: z.string().optional(),
+        DISCORD_BOT_NAME: z.string().optional(),
     })
 );
 
-// Create account from private key
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔐 WALLET & SDK CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
 const account = privateKeyToAccount(env.GMX_PRIVATE_KEY as `0x${string}`);
 
-// Create wallet client with the account
 const walletClient = createWalletClient({
     account,
     transport: http(env.GMX_RPC_URL),
@@ -202,1600 +216,344 @@ const walletClient = createWalletClient({
     }
 });
 
-// Initialize SDK with RPC URL and network
 const sdk = new GmxSdk({
     rpcUrl: env.GMX_RPC_URL,
-    chainId: parseInt(env.GMX_CHAIN_ID || "42161"), // Default to Arbitrum One
+    chainId: parseInt(env.GMX_CHAIN_ID || "42161"),
     oracleUrl: env.GMX_ORACLE_URL,
     walletClient: walletClient,
     subsquidUrl: env.GMX_SUBSQUID_URL,
-    subgraphUrl: env.GMX_SUBSQUID_URL, // Using subsquid URL as fallback for subgraph
+    subgraphUrl: env.GMX_SUBSQUID_URL,
     account: account?.address || env.GMX_WALLET_ADDRESS as `0x${string}`, 
 });
 
-// This is redundant but keeping for safety
 if (env.GMX_WALLET_ADDRESS) {
     sdk.setAccount(env.GMX_WALLET_ADDRESS as `0x${string}`);
-    console.log("GMX SDK initialized with account:", env.GMX_WALLET_ADDRESS);
+    console.log(`💼 GMX SDK initialized with account: ${env.GMX_WALLET_ADDRESS}`);
 }
 
-// Define GMX context template
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🗄️ MEMORY & PERSISTENCE CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+async function createMongoMemory() {
+    console.log("🗄️ Initializing MongoDB memory store...");
+    
+    try {
+        const mongoMemoryStore = await createMongoMemoryStore({
+            uri: env.MONGODB_STRING,
+            dbName: "vega_gmx_trading",
+            collectionName: "trading_memories"
+        });
+        
+        const memory = createMemory(mongoMemoryStore, createVectorStore());
+        
+        console.log("✅ MongoDB memory store initialized successfully!");
+        console.log(`📊 Database: vega_gmx_trading | Collection: trading_memories`);
+        
+        // Test MongoDB connection with a simple write/read
+        const testKey = `connection_test_${Date.now()}`;
+        const testValue = { timestamp: new Date().toISOString(), message: "Vega MongoDB connection test" };
+        
+        await mongoMemoryStore.set(testKey, testValue);
+        const retrieved = await mongoMemoryStore.get(testKey);
+        
+        if (retrieved && retrieved.message === testValue.message) {
+            console.log("🧪 MongoDB read/write test: ✅ PASSED");
+            await mongoMemoryStore.delete(testKey); // Clean up test data
+        } else {
+            console.log("🧪 MongoDB read/write test: ❌ FAILED");
+        }
+        
+        return { memory, store: mongoMemoryStore };
+    } catch (error) {
+        console.error("❌ Failed to initialize MongoDB memory store:", error);
+        console.log("⚠️  Falling back to in-memory storage...");
+        
+        // Fallback to in-memory storage if MongoDB fails
+        const fallbackStore = createMemoryStore();
+        const memory = createMemory(fallbackStore, createVectorStore());
+        
+        console.log("✅ Fallback in-memory store initialized");
+        
+        return { memory, store: null };
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🤖 VEGA CHARACTER DEFINITION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const vegaCharacter = {
+    id: "vega-gmx-trader-v1",
+    name: "Vega",
+    description: "A sophisticated AI trading assistant specializing in GMX perpetual futures",
+    traits: {
+        analytical: 9,        // Highly data-driven and methodical
+        riskConscious: 10,    // Obsessed with risk management
+        opportunistic: 8,     // Quick to spot and act on opportunities  
+        communicative: 9,     // Excellent at explaining decisions
+        confidence: 7,        // Confident but acknowledges uncertainty
+        adaptability: 8,      // Adjusts strategies based on market conditions
+        patience: 6,          // Prefers good setups but won't wait forever
+        aggression: 5,        // Balanced - neither too conservative nor reckless
+        precision: 9,         // Extremely precise with numbers and execution
+        proactivity: 8,       // Continuously monitors and suggests improvements
+    },
+    speechExamples: [
+        "I'm seeing a strong setup on ETH-USD with solid risk-reward at current levels",
+        "The data suggests we should tighten our stop loss to 2% given the elevated volatility",
+        "Risk-reward here looks favorable - targeting 3:1 with proper position sizing",
+        "Market conditions have shifted. I recommend adjusting our leverage from 5x to 3x",
+        "I've identified an arbitrage opportunity with 1.2% potential profit",
+        "Current position is showing 15% unrealized gains. Consider taking partial profits",
+        "Funding rates are turning negative - this could impact our long positions",
+        "I'm monitoring unusual volume patterns that might signal a trend reversal",
+        "Based on my analysis, we should avoid overleveraging in this market environment",
+        "The technical indicators are aligning - I suggest scaling into this position gradually"
+    ],
+    tradingPhilosophy: [
+        "Risk management is the foundation of profitable trading",
+        "Position sizing determines long-term success more than entry timing",
+        "Market conditions change - strategies must evolve with them",
+        "Data-driven decisions outperform emotional reactions",
+        "Consistent small wins compound into significant returns",
+        "Always have an exit plan before entering any position"
+    ]
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📊 GMX TRADING CONTEXT CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
 const gmxContext = context<GmxTradingMemory>({
     type: "gmx-trading-agent",
-    maxSteps: 100, // Allow many steps for continuous play
+    maxSteps: 100,
     schema: z.object({
-      adventurerId: z.string().describe("The ID of the adventurer to play as"),
+        name: z.string().describe("The agent's name"),
+        role: z.string().describe("The agent's role and specialization"),
     }),
     instructions: `
-You are an expert AI agent trading on GMX, a decentralized perpetual futures exchange.
-Your personality and trading style is detailed in the <character> section.
+You are ${vegaCharacter.name}, ${vegaCharacter.description}.
 
-<goal>
-- Monitor market conditions and execute trades based on strategy
-- Manage positions and risk
-- Keep the User updated on trading activities and performance
-- Analyze market trends and identify trading opportunities
-- Execute trades with proper position sizing and risk management
-- Monitor open positions and adjust strategies as needed
-</goal>
+PERSONALITY TRAITS:
+${Object.entries(vegaCharacter.traits).map(([trait, level]) => 
+    `- ${trait.charAt(0).toUpperCase() + trait.slice(1)}: ${level}/10`
+).join('\n')}
 
-<character>
-Your name is Trader, and you are a disciplined algorithmic trader.
-You focus on risk management and systematic trading approaches.
-You are patient and only take trades when conditions are optimal.
-You analyze market data thoroughly before making decisions.
-You maintain emotional discipline during market volatility.
-You communicate clearly about your trading decisions and rationale.
-</character>
+TRADING PHILOSOPHY:
+${vegaCharacter.tradingPhilosophy.map(p => `- ${p}`).join('\n')}
 
-## Trading Overview
-- GMX is a decentralized perpetual futures exchange on ${env.GMX_NETWORK}
-- You can trade various assets with leverage
-- Each trade requires proper position sizing and risk management
-- You must monitor positions and manage risk at all times
-- GMX uses a unique price impact model that affects entry and exit prices
-- Funding rates affect the cost of holding positions over time
+You are responding in Discord, so keep responses concise and conversational but maintain your analytical and professional demeanor.
 
-## Risk Management Rules
-- Maximum position size: ${env.GMX_MAX_POSITION_SIZE} USD
-- Minimum position size: ${env.GMX_MIN_POSITION_SIZE} USD
-- Maximum leverage: ${env.GMX_MAX_LEVERAGE}x
-- Slippage tolerance: ${env.GMX_SLIPPAGE_TOLERANCE} basis points
-- Never risk more than 10% of the portfolio on a single trade
-- Use stop losses to limit potential losses
-- Take profit levels should be set based on technical analysis
+TRADING CONFIGURATION & LIMITS:
+Your current trading parameters are:
+- Maximum Position Size: $${env.GMX_MAX_POSITION_SIZE} USD
+- Minimum Position Size: $${env.GMX_MIN_POSITION_SIZE} USD  
+- Maximum Leverage: ${env.GMX_MAX_LEVERAGE}x
+- Slippage Tolerance: ${env.GMX_SLIPPAGE_TOLERANCE} basis points
+- Market Analysis Interval: ${Math.floor(parseInt(env.MARKET_ANALYSIS_INTERVAL) / 1000 / 60)} minutes
+- Position Check Interval: ${Math.floor(parseInt(env.POSITION_CHECK_INTERVAL) / 1000)} seconds
+- Auto Take Profit: ${env.AUTO_TAKE_PROFIT_PERCENT}%
+- Auto Stop Loss: ${env.AUTO_STOP_LOSS_PERCENT}%
 
-## Trading Strategy
-- Monitor market conditions and identify trading opportunities
-- Execute trades with proper position sizing and risk management
-- Monitor open positions and manage them according to strategy
-- Close positions when stop loss or take profit levels are hit
-- Analyze past trades to improve future performance
+ALWAYS respect these limits when discussing or analyzing trading opportunities. Never suggest positions outside these parameters.
 
-## Market Analysis
-- Technical analysis: Support/resistance levels, trend lines, moving averages
-- Fundamental analysis: Market news, economic events, project developments
-- Sentiment analysis: Social media, community sentiment, market fear/greed
-- On-chain analysis: Volume, liquidity, funding rates, open interest
+COMMUNICATION STYLE:
+- Be direct, precise, and analytical
+- Use specific numbers and data when possible
+- Always consider risk management first
+- Speak with confidence but acknowledge uncertainty when appropriate
+- Use phrases like: ${vegaCharacter.speechExamples.slice(0, 3).join(', ')}
 
-Remember to:
-- Always check market conditions before trading
-- Monitor your positions and risk exposure
-- Keep track of your trading performance
-- Stay within the defined risk parameters
-- Communicate your analysis and decisions clearly
-`;
-render: ({ memory, args }) => {
-    const adv = memory.adventurer?.adventurer;
-    const stats = adv?.stats;
-    const equipment = adv?.equipment;
+CORE EXPERTISE:
+- GMX perpetual futures trading and analysis
+- Risk management and position sizing
+- Market analysis (technical, fundamental, sentiment, on-chain)
+- Trading strategy development and optimization
+- Portfolio management and performance tracking
 
-    if (!memory.adventurer) {
+When discussing trading, always emphasize:
+1. Risk management and proper position sizing (within your configured limits)
+2. Data-driven decision making
+3. Market conditions and their impact on strategy
+4. Clear entry/exit criteria
+5. Performance metrics and continuous improvement
+
+RISK MANAGEMENT RULES:
+- Never suggest positions larger than $${env.GMX_MAX_POSITION_SIZE}
+- Never suggest positions smaller than $${env.GMX_MIN_POSITION_SIZE}
+- Never suggest leverage higher than ${env.GMX_MAX_LEVERAGE}x
+- Always consider ${env.AUTO_TAKE_PROFIT_PERCENT}% take profit and ${env.AUTO_STOP_LOSS_PERCENT}% stop loss levels
+- Factor in ${env.GMX_SLIPPAGE_TOLERANCE} bps slippage tolerance
+
+If asked about specific trading actions, provide educational insights about strategy and risk management within your configured parameters.
+
+Remember: You're an expert trading assistant with deep knowledge of GMX and DeFi trading, but always emphasize the importance of DYOR (Do Your Own Research) and proper risk management.
+
+CRITICAL DISCORD RULES:
+1. Always respond with natural language text only
+2. Never output JSON objects or structured data
+3. When action results are received, summarize them conversationally
+4. Format responses for Discord readability (use **bold**, *italic*, etc.)
+5. Keep responses under 2000 characters for Discord limits
+6. Always provide a helpful, conversational response even if an action fails
+`,
+render: ({ memory, args }: { memory: GmxTradingMemory; args: { name: string; role: string } }) => {
+    const tradingState = memory.gmx;
+
+    if (!tradingState) {
       return `
-Adventurer ID: ${args.adventurerId || "Not set"}
-Status: No adventurer data loaded. Use getAndUpdateAdventurerState to fetch data.
+**${vegaCharacter.name} - GMX Trading Assistant** 📈
+
+I'm your GMX trading specialist with expertise in perpetual futures, risk management, and market analysis.
+
+**Personality Profile**
+${Object.entries(vegaCharacter.traits).map(([trait, level]) => 
+    `${trait.charAt(0).toUpperCase() + trait.slice(1)}: ${level}/10`
+).join(' | ')}
+
+Ready to discuss GMX trading strategies, market analysis, or risk management. What's on your mind?
+
+*Note: This is educational content. Always DYOR and manage risk appropriately.*
 `;
     }
 
-    const level = calculateLevel(adv.xp);
-    const maxHealth = 50 + adv.stats.vitality * 15 + (level - 1) * 15;
-    const healthPercent = Math.round((adv.health / maxHealth) * 100);
-
+    const performance = tradingState.tradingHistory.performance;
+    const riskParams = tradingState.riskParameters;
+    
     return `
-=== ADVENTURER #${memory.adventurer.adventurerId} ===
+**${vegaCharacter.name} - GMX Trading Assistant** 📈
 
-**STATUS**
-Health: ${adv.health}/${maxHealth} (${healthPercent}%)
-Level: ${level} (${adv.xp} XP)
-Gold: ${adv.gold}
-${adv.beastHealth > 0 ? `⚔️ IN COMBAT - Beast Health: ${adv.beastHealth}` : ""}
-${
-  adv.statUpgradesAvailable > 0
-    ? `📈 ${adv.statUpgradesAvailable} stat upgrades available!`
-    : ""
-}
+**Current Status**
+- Goal: ${tradingState.goal}
+- Active Task: ${tradingState.currentTask || "Monitoring markets"}
+- Strategies: ${tradingState.activeStrategies.length > 0 ? tradingState.activeStrategies.join(", ") : "Adaptive"}
 
-**STATS**
-STR: ${stats.strength} | DEX: ${stats.dexterity} | VIT: ${stats.vitality}
-INT: ${stats.intelligence} | WIS: ${stats.wisdom} | CHA: ${
-      stats.charisma
-    } | LUCK: ${stats.luck}
+**Positions & Performance**
+- Open Positions: ${tradingState.positions.length}
+- Pending Orders: ${tradingState.orders.length}
+- Total P&L: ${performance.totalPnl.toFixed(2)} USD
+- Win Rate: ${(performance.winRate * 100).toFixed(1)}%
 
-**EQUIPMENT**
-Weapon: ${formatItem(
-      equipment.weapon,
-      BigInt(memory.adventurer.adventurerEntropy)
-    )}
-Chest:  ${formatItem(
-      equipment.chest,
-      BigInt(memory.adventurer.adventurerEntropy)
-    )}
-Head:   ${formatItem(
-      equipment.head,
-      BigInt(memory.adventurer.adventurerEntropy)
-    )}
-Waist:  ${formatItem(
-      equipment.waist,
-      BigInt(memory.adventurer.adventurerEntropy)
-    )}
-Foot:   ${formatItem(
-      equipment.foot,
-      BigInt(memory.adventurer.adventurerEntropy)
-    )}
-Hand:   ${formatItem(
-      equipment.hand,
-      BigInt(memory.adventurer.adventurerEntropy)
-    )}
-Neck:   ${formatItem(
-      equipment.neck,
-      BigInt(memory.adventurer.adventurerEntropy)
-    )}
-Ring:   ${formatItem(
-      equipment.ring,
-      BigInt(memory.adventurer.adventurerEntropy)
-    )}
+**Risk Parameters**
+- Max Position: ${riskParams.maxPositionSize} USD (Min: ${riskParams.minPositionSize} USD)
+- Max Leverage: ${riskParams.maxLeverage}x
+- Slippage Tolerance: ${riskParams.slippageTolerance} bps
+- Auto TP/SL: ${riskParams.autoTakeProfitPercent}%/${riskParams.autoStopLossPercent}%
 
-**LAST ACTION**
-${memory.lastResult || "No actions taken yet"}
-${
-  adv.statUpgradesAvailable > 0 && memory.marketItems
-    ? `\n**MARKET OPEN**\nGold: ${
-        adv.gold
-      }\nPotion Price: ${calculatePotionPrice(
-        stats.charisma
-      )} gold\n\nAvailable Items:\n${memory.marketItems
-        .map((id) => {
-          const lootManager = new LootManager(id, 0, BigInt(0));
-          const itemType = lootManager.getItemType();
-          const price = calculateItemPrice(id, stats.charisma);
-          return `- ${getItemName(id)} [${itemType}] - ${price}g`;
-        })
-        .join(
-          "\n"
-        )}\n\nYou can:\n- Buy potions with lootSurvivor:upgrade (heals you)\n- Buy items with lootSurvivor:upgrade\n- Upgrade stats with lootSurvivor:upgrade`
-    : ""
-}
+**Market Data**
+- Markets Available: ${tradingState.marketData?.markets ? Object.keys(tradingState.marketData.markets).length : 0}
+- Tokens Available: ${tradingState.marketData?.tokens ? Object.keys(tradingState.marketData.tokens).length : 0}
+
+${memory.lastResult ? `**Last Action:** ${memory.lastResult}` : ""}
+
+Ready for market analysis, strategy discussion, or risk management insights!
 `;
   },
   create: () => ({
     lastResult: null,
-    adventurer: null,
-    marketItems: undefined,
+    gmx: {
+      goal: "Provide GMX trading insights and analysis",
+      tasks: ["Monitor market conditions", "Analyze trading opportunities", "Provide risk management guidance"],
+      currentTask: "Monitoring market conditions",
+      positions: [],
+      orders: [],
+      marketData: null,
+      tradingHistory: {
+        trades: [],
+        performance: {
+          totalPnl: 0,
+          winRate: 0,
+          averageProfit: 0,
+          averageLoss: 0
+        }
+      },
+      riskParameters: {
+        maxPositionSize: parseInt(env.GMX_MAX_POSITION_SIZE || "20"),
+        minPositionSize: parseInt(env.GMX_MIN_POSITION_SIZE || "5"),
+        maxLeverage: parseInt(env.GMX_MAX_LEVERAGE || "1"),
+        slippageTolerance: parseInt(env.GMX_SLIPPAGE_TOLERANCE || "30"),
+        marketAnalysisIntervalMs: parseInt(env.MARKET_ANALYSIS_INTERVAL || "300000"),
+        positionCheckIntervalMs: parseInt(env.POSITION_CHECK_INTERVAL || "60000"),
+        autoTakeProfitPercent: parseInt(env.AUTO_TAKE_PROFIT_PERCENT || "20"),
+        autoStopLossPercent: parseInt(env.AUTO_STOP_LOSS_PERCENT || "10")
+      },
+      activeStrategies: ["Risk Management", "Market Analysis"]
+    }
   }),
 });
 
-// Create the GMX extension with actions
-const gmxExtension = extension({
-    name: "gmx",
-    contexts: {
-        goal: gmxContext,
-    },
-    actions: [
-        // READ METHODS
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🚀 AGENT INITIALIZATION & STARTUP
+// ═══════════════════════════════════════════════════════════════════════════════
 
-        // Markets
-        action({
-            name: "get_markets_info",
-            description: "Get detailed information about markets, tokens, and trading volumes on GMX",
-            schema: z.object({
-            }),
-            async handler(data, ctx, agent) {                
-                try {
-                    // Fetch market and token information
-                    const { marketsInfoData, tokensData } = await sdk.markets.getMarketsInfo();
-                    
-                    // Fetch daily volumes data
-                    const volumes = await sdk.markets.getDailyVolumes();
-                    
-                    // Create a mapping of market addresses to volume data for easier lookup
-                    const volumeByMarket: Record<string, {
-                        longVolumeUsd: number;
-                        shortVolumeUsd: number;
-                        totalVolumeUsd: number;
-                    }> = {};
-                    
-                    if (volumes && Array.isArray(volumes)) {
-                        volumes.forEach(volumeData => {
-                            if (volumeData && volumeData.marketAddress) {
-                                // Convert BigInt to human-readable USD values
-                                const longVolumeUsd = Number(volumeData.longVolumeUsd ? 
-                                    volumeData.longVolumeUsd / BigInt(10 ** USD_DECIMALS) : 0n);
-                                const shortVolumeUsd = Number(volumeData.shortVolumeUsd ?
-                                    volumeData.shortVolumeUsd / BigInt(10 ** USD_DECIMALS) : 0n);
-                                    
-                                volumeByMarket[volumeData.marketAddress] = {
-                                    longVolumeUsd,
-                                    shortVolumeUsd,
-                                    totalVolumeUsd: longVolumeUsd + shortVolumeUsd
-                                };
-                            }
-                        });
-                    }
-                    
-                    // Simplify token data to contain only essential information
-                    const simplifiedTokensData: Record<string, any> = {};
-                    
-                    if (tokensData) {
-                        Object.keys(tokensData).forEach(address => {
-                            const tokenData = tokensData[address];
-                            if (tokenData) {
-                                simplifiedTokensData[address] = {
-                                    name: tokenData.name,
-                                    symbol: tokenData.symbol,
-                                    decimals: tokenData.decimals,
-                                    address: tokenData.address,
-                                    priceDecimals: tokenData.priceDecimals,
-                                    prices: tokenData.prices ? {
-                                        minPrice: tokenData.prices.minPrice,
-                                        maxPrice: tokenData.prices.maxPrice
-                                    } : undefined,
-                                    balance: tokenData.balance
-                                };
-                            }
-                        });
-                    }
-                    
-                    // Simplify market data to contain only essential information + add volume data
-                    const simplifiedMarketsData: Record<string, any> = {};
-                    const marketsWithVolume: any[] = [];
-                    
-                    if (marketsInfoData) {
-                        Object.keys(marketsInfoData).forEach(address => {
-                            const marketData = marketsInfoData[address];
-                            if (marketData) {
-                                // Get volume data for this market if available
-                                const volumeData = volumeByMarket[address] || {
-                                    longVolumeUsd: 0,
-                                    shortVolumeUsd: 0,
-                                    totalVolumeUsd: 0
-                                };
-                                
-                                const simplifiedMarket = {
-                                    marketTokenAddress: marketData.marketTokenAddress,
-                                    indexTokenAddress: marketData.indexTokenAddress,
-                                    longTokenAddress: marketData.longTokenAddress,
-                                    shortTokenAddress: marketData.shortTokenAddress,
-                                    name: marketData.name,
-                                    longInterestUsd: marketData.longInterestUsd 
-                                        ? Number(marketData.longInterestUsd / BigInt(10 ** USD_DECIMALS)) 
-                                        : 0,
-                                    shortInterestUsd: marketData.shortInterestUsd 
-                                        ? Number(marketData.shortInterestUsd / BigInt(10 ** USD_DECIMALS)) 
-                                        : 0,
-                                    // Include token symbols for easier reference
-                                    indexToken: marketData.indexToken?.symbol,
-                                    longToken: marketData.longToken?.symbol,
-                                    shortToken: marketData.shortToken?.symbol,
-                                    // Include current prices from the tokens
-                                    indexTokenPrice: marketData.indexToken?.prices?.maxPrice 
-                                        ? Number(marketData.indexToken.prices.maxPrice / BigInt(10 ** USD_DECIMALS))
-                                        : 0,
-                                    longTokenPrice: marketData.longToken?.prices?.maxPrice
-                                        ? Number(marketData.longToken.prices.maxPrice / BigInt(10 ** USD_DECIMALS))
-                                        : 0,
-                                    shortTokenPrice: marketData.shortToken?.prices?.maxPrice
-                                        ? Number(marketData.shortToken.prices.maxPrice / BigInt(10 ** USD_DECIMALS))
-                                        : 0,
-                                    isSpotOnly: marketData.isSpotOnly,
-                                    // Include volume data
-                                    volume: volumeData
-                                };
-                                
-                                simplifiedMarketsData[address] = simplifiedMarket;
-                                
-                                // Add to array for sorting
-                                marketsWithVolume.push({
-                                    address,
-                                    ...simplifiedMarket
-                                });
-                            }
-                        });
-                    }
-                    
-                    // Sort markets by volume and get top markets
-                    const topMarketsByVolume = [...marketsWithVolume]
-                        .sort((a, b) => (b.volume?.totalVolumeUsd || 0) - (a.volume?.totalVolumeUsd || 0))
-                        .slice(0, 10);
-                    
-                    // Sort markets by interest (open positions) and get top markets
-                    const topMarketsByInterest = [...marketsWithVolume]
-                        .sort((a, b) => (b.longInterestUsd + b.shortInterestUsd) - (a.longInterestUsd + a.shortInterestUsd))
-                        .slice(0, 10);
-                                        
-                    // Update state with simplified market data
-                    const state = ctx.memory as GmxTradingState;
-                    if (state) {
-                        state.marketData = {
-                            markets: simplifiedMarketsData,
-                            tokens: simplifiedTokensData
-                        };
-                    }
-                    
-                    return {
-                        success: true,
-                        message: `Successfully fetched markets info (${Object.keys(simplifiedMarketsData).length} markets) and tokens data (${Object.keys(simplifiedTokensData).length} tokens)`,
-                        marketsSummary: {
-                            count: Object.keys(simplifiedMarketsData).length,
-                            topMarketsByVolume: topMarketsByVolume.map(m => ({
-                                name: m.name,
-                                indexToken: m.indexToken,
-                                volume: m.volume.totalVolumeUsd
-                            })),
-                            topMarketsByInterest: topMarketsByInterest.map(m => ({
-                                name: m.name,
-                                indexToken: m.indexToken,
-                                longInterest: m.longInterestUsd,
-                                shortInterest: m.shortInterestUsd,
-                                totalInterest: m.longInterestUsd + m.shortInterestUsd
-                            }))
-                        },
-                        tokensSummary: {
-                            count: Object.keys(simplifiedTokensData).length,
-                            sampleTokens: Object.values(simplifiedTokensData)
-                                .slice(0, 5)
-                                .map(token => ({
-                                    symbol: token.symbol,
-                                    name: token.name,
-                                    address: token.address
-                                }))
-                        }
-                    };
-                } catch (error) {
-                    return {
-                        success: false,
-                        error: error instanceof Error ? error.message : String(error),
-                        message: "Failed to fetch markets info"
-                    };
-                }
-            }
-        }),
+async function initializeAgent() {
+    console.log("⚡ Initializing Vega trading agent with MongoDB persistence...", LogLevel.INFO);
+    
+    // Initialize MongoDB memory
+    const { memory, store } = await createMongoMemory();
+    
+    // Create the agent with MongoDB memory
+    const agent = createDreams({
+        model: openrouter("google/gemini-2.0-flash-001"),
+        logger: new Logger({ level: LogLevel.DEBUG }),
+        extensions: [discord],
+        context: gmxContext,
+        memory: memory,
+        defaultOutput: "discord:message",
+    });
+    
+    console.log("✅ Agent created successfully!");
+    
+    // Start the agent
+    await agent.start({
+        name: vegaCharacter.name,
+        role: vegaCharacter.description,
+    });
+    
+    console.log("🎯 Vega is now live and ready for GMX trading!");
+    
+    return { agent, mongoStore: store };
+}
 
-        // Tokens
-        action({
-            name: "get_tokens_data",
-            description: "Get data for available tokens on GMX",
-            schema: z.object({
-            }),
-            async handler(data, ctx, agent) {
-                try {
-                    const tokensData = await sdk.tokens.getTokensData();
-                    return {
-                        success: true,
-                        message: `Successfully fetched data for ${Object.keys(tokensData).length} tokens`,
-                        tokensData
-                    };
-                } catch (error) {
-                    return {
-                        success: false,
-                        error: error instanceof Error ? error.message : String(error),
-                        message: "Failed to fetch tokens data"
-                    };
-                }
-            }
-        }),
+console.log("🚀 Starting GMX Trading Agent with Discord...");
 
-        // Positions
+let currentAgent: any = null;
+let mongoStore: any = null;
 
-        // Trades (combines Positions and Orders)
-        action({
-            name: "get_trades",
-            description: "Get all current trading positions and orders on GMX",
-            schema: z.object({}),
-            async handler(data, ctx, agent) {
-                try {
-                    // Get market and token data first
-                    const { marketsInfoData, tokensData } = await sdk.markets.getMarketsInfo();
-                    
-                    if (!marketsInfoData || !tokensData) {
-                        throw new Error("Failed to get market and token data");
-                    }
-                    
-                    // ===== FETCH POSITIONS =====
-                    const positions = await sdk.positions.getPositions({
-                        marketsData: marketsInfoData,
-                        tokensData: tokensData,
-                        start: 0,
-                        end: 1000,
-                    });
-                    
-                    //console.log("Raw positions data:", JSON.stringify(positions, (key, value) => 
-                    //    typeof value === 'bigint' ? value.toString() : value, 2));
-                    
-                    // ===== FETCH ORDERS =====
-                    const { ordersInfoData } = await sdk.orders.getOrders({
-                        marketsInfoData,
-                        tokensData
-                    });
-                    
-                    //console.log("Raw orders data:", JSON.stringify(ordersInfoData, (key, value) => 
-                    //    typeof value === 'bigint' ? value.toString() : value, 2));
-                    
-                    // ===== PROCESS POSITIONS =====
-                    const simplifiedPositions: any[] = [];
-                    
-                    if (positions.positionsData) {
-                        Object.values(positions.positionsData).forEach(position => {
-                            try {
-                                // Get market info for better display
-                                const marketInfo = marketsInfoData[position.marketAddress];
-                                if (!marketInfo) return;
-                                
-                                // Get token info
-                                const indexToken = tokensData[marketInfo.indexTokenAddress];
-                                const collateralToken = tokensData[position.collateralTokenAddress];
-                                if (!indexToken || !collateralToken) return;
-                                                                
-                                // Get token decimals
-                                const collateralTokenDecimals = collateralToken.decimals || 6; // Most stablecoins use 6 decimals
-                                const indexTokenDecimals = indexToken.decimals || 18; // Most crypto assets use 18 decimals
-                                
-                                // Convert collateral amount to proper decimal value
-                                const collateralAmount = bigIntToDecimal(position.collateralAmount, collateralTokenDecimals);
-                                
-                                // Get token prices with proper decimal conversion
-                                const collateralTokenPrice = bigIntToDecimal(collateralToken.prices?.minPrice || 0n, USD_DECIMALS);
-                                const indexTokenPrice = bigIntToDecimal(indexToken.prices?.maxPrice || 0n, USD_DECIMALS);
-                                
-                                // Calculate collateral value in USD with proper precision
-                                const collateralUsd = collateralAmount * collateralTokenPrice;
-                                
-                                // Calculate size with proper decimal handling
-                                const sizeInUsd = bigIntToDecimal(position.sizeInUsd, USD_DECIMALS);
-                                
-                                // Calculate index token amount (size in tokens)
-                                const sizeInTokens = bigIntToDecimal(position.sizeInTokens, indexTokenDecimals);
-                                
-                                // Calculate entry price from size and tokens
-                                const entryPrice = sizeInTokens > 0 ? sizeInUsd / sizeInTokens : 0;
-                                
-                                // Calculate PnL with proper precision
-                                const pnlUsd = bigIntToDecimal(position.pnl || 0n, USD_DECIMALS);
-
-                                // Calculate borrowing fees in USD with proper precision
-                                const borrowingFeesUsd = bigIntToDecimal(position.pendingBorrowingFeesUsd || 0n, USD_DECIMALS);
-
-                                // Calculate net PnL (PnL - fees)
-                                const netPnl = pnlUsd - borrowingFeesUsd;
-
-                                // Calculate net position value
-                                const netPositionValue = collateralUsd + netPnl;
-
-                                // Calculate PnL percentage based on collateral
-                                const pnlPercentage = collateralUsd > 0 ? (netPnl / collateralUsd) * 100 : 0;  
-
-                                // Calculate true leverage (size / collateral)
-                                const leverage = collateralUsd > 0 ? sizeInUsd / collateralUsd : 0;
-
-                                // Calculate liquidation price using GMX formula
-                                const minCollateralFactor = leverage/10;
-                                const liquidationPrice = position.isLong ?
-                                    entryPrice * (1 - (1 / leverage) * (1 - minCollateralFactor)) :
-                                    entryPrice * (1 + (1 / leverage) * (1 - minCollateralFactor));
-                                
-                                // Add the processed position with calculated values
-                                simplifiedPositions.push({
-                                    type: 'Position',
-                                    key: position.key,
-                                    marketName: marketInfo.name,
-                                    indexToken: indexToken.symbol,
-                                    collateralToken: collateralToken.symbol,
-                                    direction: position.isLong ? 'LONG' : 'SHORT',
-                                    leverage: leverage.toFixed(2) + 'x',
-                                    sizeUsd: sizeInUsd.toFixed(2),
-                                    collateralUsd: collateralUsd.toFixed(2),
-                                    collateralAmount: collateralAmount.toFixed(6),
-                                    netValue: netPositionValue.toFixed(2),
-                                    pnl: netPnl.toFixed(2),
-                                    pnlPercentage: pnlPercentage.toFixed(2) + '%',
-                                    entryPrice: entryPrice.toFixed(2),
-                                    markPrice: indexTokenPrice.toFixed(2),
-                                    liquidationPrice: liquidationPrice.toFixed(2),
-                                    borrowingFees: borrowingFeesUsd.toFixed(4),
-                                    status: 'Open',
-                                    openTime: new Date(Number(position.increasedAtTime) * 1000).toLocaleString()
-                                });
-                            } catch (error) {
-                                console.error("Error processing position:", error);
-                            }
-                        });
-                    }
-                    
-                    // ===== PROCESS ORDERS =====
-                    const simplifiedOrders: any[] = [];
-                    
-                    if (ordersInfoData) {
-                        Object.values(ordersInfoData).forEach(order => {
-                            try {
-                                // Common order properties
-                                const baseOrderInfo = {
-                                    type: 'Order',
-                                    key: order.key,
-                                    createdAt: order.updatedAtTime ? 
-                                        new Date(Number(order.updatedAtTime) * 1000).toLocaleString() : 'Unknown',
-                                };
-                                
-                                // Get market info if available - treating order as any to avoid type errors
-                                const orderAny = order as any;
-                                const marketInfo = order.marketAddress ? marketsInfoData[order.marketAddress] : (orderAny.marketInfo || null);
-                                const marketName = marketInfo?.name || 'Unknown Market';
-                                
-                                // Determine order type more accurately by examining the structure
-                                // These are the GMX OrderType values:
-                                // 0=MarketSwap, 1=LimitSwap, 2=MarketIncrease, 3=LimitIncrease, 4=MarketDecrease, 5=LimitDecrease, 6=StopLossDecrease
-                                
-                                let orderType = order.orderType;
-                                let orderTypeStr = '';
-                                let orderDetails = {};
-                                
-                                // If order has indexToken and isLong property, it's a position order
-                                const isPositionOrder = (orderAny.isLong !== undefined) && 
-                                    (orderAny.indexToken || (orderAny.marketInfo?.indexToken));
-                                const indexToken = orderAny.indexToken || (orderAny.marketInfo?.indexToken);
-                                
-                                if (isPositionOrder && indexToken) {
-                                    // Position order (increase or decrease)
-                                    const direction = orderAny.isLong ? 'LONG' : 'SHORT';
-                                    const indexTokenSymbol = indexToken.symbol || 'Unknown';
-                                    
-                                    // Calculate size in USD with proper decimal conversion
-                                    const sizeInUsd = order.sizeDeltaUsd ? 
-                                        bigIntToDecimal(order.sizeDeltaUsd, USD_DECIMALS) : 0;
-                                    
-                                    // Calculate trigger price with proper decimals for limit orders
-                                    let triggerPrice = null;
-                                    if ('triggerPrice' in order && order.triggerPrice) {
-                                        triggerPrice = bigIntToDecimal(order.triggerPrice, USD_DECIMALS).toFixed(2);
-                                    } else if (orderAny.contractTriggerPrice) {
-                                        // For some orders, the trigger price is in contractTriggerPrice
-                                        const tokenDecimals = indexToken.decimals || 18;
-                                        const priceValue = bigIntToDecimal(orderAny.contractTriggerPrice, tokenDecimals);
-                                        // Convert to USD if needed (some chains store prices in token-specific decimals)
-                                        triggerPrice = priceValue.toFixed(2);
-                                    }
-                                    
-                                    // Get collateral token
-                                    const collateralToken = orderAny.initialCollateralToken?.symbol || 
-                                                         (order.initialCollateralTokenAddress && 
-                                                          tokensData[order.initialCollateralTokenAddress]?.symbol) || 
-                                                          'Unknown';
-                                    
-                                    // Determine action and type based on orderType
-                                    let action = '';
-                                    
-                                    if (orderType === 2) {
-                                        action = 'Market Increase';
-                                        orderTypeStr = 'Market Increase';
-                                    } else if (orderType === 3) {
-                                        action = 'Limit Increase';
-                                        orderTypeStr = 'Limit Increase';
-                                    } else if (orderType === 4) {
-                                        action = 'Market Decrease';
-                                        orderTypeStr = 'Market Decrease';
-                                    } else if (orderType === 5) {
-                                        action = 'Limit Decrease';
-                                        orderTypeStr = 'Limit Decrease';
-                                    } else if (orderType === 6) {
-                                        action = 'Stop Loss';
-                                        orderTypeStr = 'Stop Loss Decrease';
-                                    } else {
-                                        // Default to increase order if we have position data but uncertain type
-                                        if (sizeInUsd > 0 && triggerPrice) {
-                                            action = 'Limit Increase';
-                                            orderTypeStr = 'Limit Increase';
-                                        } else {
-                                            action = `Position Order Type ${orderType}`;
-                                            orderTypeStr = `Position Order Type ${orderType}`;
-                                        }
-                                    }
-                                    
-                                    orderDetails = {
-                                        action,
-                                        orderType: orderTypeStr,
-                                        market: marketName,
-                                        indexToken: indexTokenSymbol,
-                                        direction,
-                                        size: sizeInUsd.toFixed(2),
-                                        triggerPrice,
-                                        collateralToken,
-                                        triggerThresholdType: 'triggerThresholdType' in order ? order.triggerThresholdType : undefined
-                                    };
-                                } else {
-                                    // Swap order
-                                    let fromToken = 'Unknown';
-                                    let toToken = 'Unknown';
-                                    
-                                    // Get from token symbol
-                                    if (orderAny.initialCollateralToken) {
-                                        fromToken = orderAny.initialCollateralToken.symbol;
-                                    } else if (order.initialCollateralTokenAddress && tokensData[order.initialCollateralTokenAddress]) {
-                                        fromToken = tokensData[order.initialCollateralTokenAddress].symbol;
-                                    }
-                                    
-                                    // Get to token symbol
-                                    if (orderAny.targetCollateralToken) {
-                                        toToken = orderAny.targetCollateralToken.symbol;
-                                    } else if (orderAny.marketInfo) {
-                                        // Try to guess the to token from market info
-                                        const market = orderAny.marketInfo;
-                                        if (market.longTokenAddress && market.longTokenAddress !== order.initialCollateralTokenAddress) {
-                                            toToken = tokensData[market.longTokenAddress]?.symbol || 'Unknown';
-                                        } else if (market.shortTokenAddress && market.shortTokenAddress !== order.initialCollateralTokenAddress) {
-                                            toToken = tokensData[market.shortTokenAddress]?.symbol || 'Unknown';
-                                        }
-                                    }
-                                    
-                                    // For swap orders
-                                    const isLimit = orderType === 1;
-                                    
-                                    // Calculate input amount with proper decimals
-                                    let amountIn = 0;
-                                    let fromTokenDecimals = 18;
-                                    
-                                    if (order.initialCollateralTokenAddress && tokensData[order.initialCollateralTokenAddress]) {
-                                        fromTokenDecimals = tokensData[order.initialCollateralTokenAddress].decimals || 18;
-                                    } else if (orderAny.initialCollateralToken) {
-                                        fromTokenDecimals = orderAny.initialCollateralToken.decimals || 18;
-                                    }
-                                    
-                                    if (order.initialCollateralDeltaAmount) {
-                                        amountIn = bigIntToDecimal(order.initialCollateralDeltaAmount, fromTokenDecimals);
-                                    }
-                                    
-                                    // Check sizeDeltaUsd for swap amount in USD (some swap orders use this)
-                                    let amountInUsd;
-                                    if (order.sizeDeltaUsd) {
-                                        amountInUsd = bigIntToDecimal(order.sizeDeltaUsd, USD_DECIMALS);
-                                    }
-                                    
-                                    orderTypeStr = isLimit ? 'Limit Swap' : 'Market Swap';
-                                    orderDetails = {
-                                        action: orderTypeStr,
-                                        orderType: orderTypeStr,
-                                        fromToken,
-                                        toToken,
-                                        amountIn: amountIn.toFixed(6),
-                                        amountInUsd: amountInUsd ? `$${amountInUsd.toFixed(2)}` : undefined,
-                                    };
-                                }
-                                
-                                // Add the processed order to our array
-                                simplifiedOrders.push({
-                                    ...baseOrderInfo,
-                                    ...orderDetails
-                                });
-                            } catch (err) {
-                                console.error("Error processing order:", err);
-                                // Continue to next order
-                            }
-                        });
-                    }
-                    
-                    // ===== COMBINE POSITIONS AND ORDERS =====
-                    const allTrades = [...simplifiedPositions, ...simplifiedOrders];
-                    
-                    // Group trades by market for better organization
-                    const tradesByMarket: Record<string, any[]> = {};
-                    
-                    allTrades.forEach(trade => {
-                        const market = trade.marketName || trade.market || 'Other';
-                        if (!tradesByMarket[market]) {
-                            tradesByMarket[market] = [];
-                        }
-                        tradesByMarket[market].push(trade);
-                    });
-                    
-                    // Update state
-                    const state = ctx.memory as GmxTradingState;
-                    if (state) {
-                        state.positions = simplifiedPositions;
-                        state.orders = simplifiedOrders;
-                    }
-                    
-                    return {
-                        success: true,
-                        message: `Found ${simplifiedPositions.length} positions and ${simplifiedOrders.length} orders`,
-                        summary: {
-                            positionCount: simplifiedPositions.length,
-                            orderCount: simplifiedOrders.length,
-                            totalTradeCount: allTrades.length,
-                            markets: Object.keys(tradesByMarket).length
-                        },
-                        positions: simplifiedPositions,
-                        orders: simplifiedOrders,
-                        tradesByMarket
-                    };
-                } catch (error) {
-                    return {
-                        success: false,
-                        error: error instanceof Error ? error.message : String(error),
-                        message: "Failed to fetch trades"
-                    };
-                }
-            }
-        }),
-        // Trades
-        action({
-            name: "get_trade_history",
-            description: "Get trading history on GMX",
-            schema: z.object({}),
-            async handler(data, ctx, agent) {
-                try {
-                    // Get market and token data first
-                    const { marketsInfoData, tokensData } = await sdk.markets.getMarketsInfo();
-                    
-                    if (!marketsInfoData || !tokensData) {
-                        throw new Error("Failed to get market and token data");
-                    }
-                                        
-                    // Set default time range if not provided (last 30 days)
-                    const now = Math.floor(Date.now() / 1000);
-                    const thirtyDaysAgo = now - (30 * 24 * 60 * 60);
-                    
-                    // Create params for trade history request
-                    const params: any = {
-                        account: sdk.account, // Use the SDK's current account
-                        pageSize: 100,
-                        pageIndex: 0,
-                        fromTxTimestamp: thirtyDaysAgo,
-                        toTxTimestamp: now,
-                        marketsInfoData,
-                        tokensData
-                    };
-                    
-
-                    // Fetch trade history using the SDK
-                    const tradeActions = await sdk.trades.getTradeHistory(params);
-                    console.log("tradeActions:", tradeActions);
-                    
-                    // Process trades for better readability
-                    const simplifiedTrades: any[] = [];
-                    let totalPnl = 0;
-                    let winCount = 0;
-                    let totalWins = 0;
-                    let lossCount = 0;
-                    let totalLosses = 0;
-                    
-                    tradeActions.forEach(trade => {
-                        try {
-                            if (!trade) return;
-                            
-                            // Common properties for all trade types
-                            const baseTradeInfo = {
-                                id: trade.id,
-                                timestamp: new Date(trade.transaction.timestamp * 1000).toLocaleString(),
-                                txHash: trade.transaction.hash,
-                                eventName: trade.eventName,
-                                orderType: trade.orderType,
-                                orderKey: trade.orderKey
-                            };
-                            
-                            // Process position trades (non-swap trades)
-                            if ('marketInfo' in trade) {
-                                const positionTrade = trade;
-                                
-                                // Extract market and token info
-                                const indexToken = positionTrade.indexToken.symbol;
-                                const isLong = positionTrade.isLong;
-                                const side = isLong ? 'LONG' : 'SHORT';
-                                
-                                // Convert BigInt values to human-readable numbers
-                                const sizeUsd = bigIntToDecimal(positionTrade.sizeDeltaUsd, USD_DECIMALS);
-                                
-                                // Get prices with proper decimal handling
-                                const price = positionTrade.executionPrice 
-                                    ? bigIntToDecimal(positionTrade.executionPrice, USD_DECIMALS)
-                                    : positionTrade.triggerPrice
-                                        ? bigIntToDecimal(positionTrade.triggerPrice, USD_DECIMALS)
-                                        : 0;
-                                
-                                // Calculate PnL if available
-                                let pnlUsd = 0;
-                                let pnlPercentage = 0;
-                                
-                                if (positionTrade.pnlUsd) {
-                                    pnlUsd = bigIntToDecimal(positionTrade.pnlUsd, USD_DECIMALS);
-                                    
-                                    // Update statistics
-                                    totalPnl += pnlUsd;
-                                    
-                                    if (pnlUsd > 0) {
-                                        winCount++;
-                                        totalWins += pnlUsd;
-                                    } else if (pnlUsd < 0) {
-                                        lossCount++;
-                                        totalLosses += Math.abs(pnlUsd);
-                                    }
-                                }
-                                
-                                // Get fees if available
-                                const fees = {
-                                    positionFee: positionTrade.positionFeeAmount 
-                                        ? bigIntToDecimal(positionTrade.positionFeeAmount, USD_DECIMALS) 
-                                        : 0,
-                                    borrowingFee: positionTrade.borrowingFeeAmount 
-                                        ? bigIntToDecimal(positionTrade.borrowingFeeAmount, USD_DECIMALS) 
-                                        : 0,
-                                    fundingFee: positionTrade.fundingFeeAmount 
-                                        ? bigIntToDecimal(positionTrade.fundingFeeAmount, USD_DECIMALS) 
-                                        : 0
-                                };
-                                
-                                // Add to simplified trades array
-                                simplifiedTrades.push({
-                                    ...baseTradeInfo,
-                                    type: 'Position',
-                                    market: positionTrade.marketInfo.name,
-                                    marketAddress: positionTrade.marketAddress,
-                                    indexToken,
-                                    side,
-                                    size: sizeUsd.toFixed(2),
-                                    price: price.toFixed(2),
-                                    collateral: {
-                                        token: positionTrade.initialCollateralToken.symbol,
-                                        amount: bigIntToDecimal(
-                                            positionTrade.initialCollateralDeltaAmount, 
-                                            positionTrade.initialCollateralToken.decimals
-                                        ).toFixed(6)
-                                    },
-                                    pnl: pnlUsd.toFixed(2),
-                                    pnlPercentage: pnlPercentage.toFixed(2) + '%',
-                                    fees,
-                                    // Add action type based on eventName and orderType
-                                    action: getTradeActionDescription(trade.eventName, trade.orderType, isLong)
-                                });
-                            } 
-                            // Process swap trades
-                            else if ('targetCollateralToken' in trade) {
-                                const swapTrade = trade;
-                                
-                                // Convert BigInt values to human-readable numbers
-                                const fromToken = swapTrade.initialCollateralToken;
-                                const toToken = swapTrade.targetCollateralToken;
-                                
-                                const amountIn = bigIntToDecimal(
-                                    swapTrade.initialCollateralDeltaAmount, 
-                                    fromToken.decimals
-                                );
-                                
-                                const amountOut = swapTrade.executionAmountOut 
-                                    ? bigIntToDecimal(swapTrade.executionAmountOut, toToken.decimals)
-                                    : 0;
-                                
-                                // Add to simplified trades array
-                                simplifiedTrades.push({
-                                    ...baseTradeInfo,
-                                    type: 'Swap',
-                                    fromToken: fromToken.symbol,
-                                    toToken: toToken.symbol,
-                                    amountIn: amountIn.toFixed(6),
-                                    amountOut: amountOut.toFixed(6),
-                                    // Add action type based on eventName and orderType
-                                    action: getTradeActionDescription(trade.eventName, trade.orderType, false)
-                                });
-                            }
-                        } catch (err) {
-                            console.error("Error processing trade:", err);
-                            // Continue to next trade
-                        }
-                    });
-                    
-                    // Calculate performance metrics
-                    const tradeCount = simplifiedTrades.length;
-                    const winRate = tradeCount > 0 ? (winCount / tradeCount) * 100 : 0;
-                    const averageProfit = winCount > 0 ? totalWins / winCount : 0;
-                    const averageLoss = lossCount > 0 ? totalLosses / lossCount : 0;
-                    const profitFactor = totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? Infinity : 0;
-                    
-                    // Update state
-                    const state = ctx.memory as GmxTradingState;
-                    if (state) {
-                        state.tradingHistory = {
-                            trades: simplifiedTrades,
-                            performance: {
-                                totalPnl,
-                                winRate,
-                                averageProfit,
-                                averageLoss
-                            }
-                        };
-                    }
-                    
-                    return {
-                        success: true,
-                        message: `Retrieved ${simplifiedTrades.length} trades from ${new Date(thirtyDaysAgo * 1000).toLocaleDateString()} to ${new Date(now * 1000).toLocaleDateString()}`,
-                        trades: simplifiedTrades,
-                        performance: {
-                            totalPnl: totalPnl.toFixed(2),
-                            winRate: winRate.toFixed(2) + '%',
-                            averageProfit: averageProfit.toFixed(2),
-                            averageLoss: averageLoss.toFixed(2),
-                            profitFactor: profitFactor.toFixed(2),
-                            tradeCount,
-                            winCount,
-                            lossCount,
-                            tradingPeriod: {
-                                from: new Date(thirtyDaysAgo * 1000).toLocaleDateString(),
-                                to: new Date(now * 1000).toLocaleDateString()
-                            }
-                        }
-                    };
-                } catch (error) {
-                    return {
-                        success: false,
-                        error: error instanceof Error ? error.message : String(error),
-                        message: "Failed to fetch trade history"
-                    };
-                }
-            }
-        }),
-
-
-        // WRITE METHODS
-
-        // Orders
-        action({
-            name: "cancel_orders",
-            description: "Cancel orders on GMX by order keys",
-            schema: z.object({
-                orderKeys: z.array(z.string()).describe("Array of order keys to cancel"),
-            }),
-            async handler(data, ctx, agent) {
-                try {                    
-                    // Cancel orders
-                    const result = await sdk.orders.cancelOrders(data.orderKeys);
-                    
-                    return {
-                        success: true,
-                        message: `Successfully submitted cancellation for ${data.orderKeys.length} orders`,
-                        result
-                    };
-                } catch (error) {
-                    return {
-                        success: false,
-                        error: error instanceof Error ? error.message : String(error),
-                        message: "Failed to cancel orders"
-                    };
-                }
-            }
-        }),
-
-        /* Token approval
-        action({
-            name: "approve_token",
-            description: "Approve token for spending by GMX exchange router",
-            schema: z.object({
-                tokenAddress: z.string().describe("Address of the token to approve"),
-                amount: z.string().describe("Amount to approve (use 'max' for maximum approval)"),
-            }),
-            async handler(
-                call: ActionCall<{
-                  tokenAddress: string;
-                  amount: string;
-                }>,
-                ctx: any,
-                agent: Agent
-              ) {
-                try {                    
-                    // Set the exchange router address based on the chain
-                    // This is the contract that needs token approval
-                    const exchangeRouterAddress = "0x7452c558d45f8afc8c83dae62c3f8a5be19c71f6"; // GMX ExchangeRouter on Arbitrum
-
-                    // Convert amount to BigInt
-                    let approvalAmount: bigint;
-                    if (data.amount.toLowerCase() === 'max') {
-                        // Instead of maximum possible approval amount, use a high but limited value
-                        // Get token info to calculate decimals
-                        const tokensDataResult = await sdk.tokens.getTokensData();
-                        const tokensData = tokensDataResult.tokensData || {};
-                        const tokenInfo = tokensData[data.tokenAddress];
-                        
-                        if (!tokenInfo) {
-                            throw new Error(`Token not found: ${data.tokenAddress}`);
-                        }
-                        
-                        // Set approval to equivalent of 100,000 tokens (which should be plenty for trading)
-                        const decimalMultiplier = 10n ** BigInt(tokenInfo.decimals || 18);
-                        approvalAmount = 100000n * decimalMultiplier;
-                    } else {
-                        // Get token info to calculate decimals
-                        const tokensDataResult = await sdk.tokens.getTokensData();
-                        const tokensData = tokensDataResult.tokensData || {};
-                        const tokenInfo = tokensData[data.tokenAddress];
-                        
-                        if (!tokenInfo) {
-                            throw new Error(`Token not found: ${data.tokenAddress}`);
-                        }
-                        
-                        // Parse amount with token's decimals and multiply by 10 for buffer
-                        const decimalMultiplier = 10n ** BigInt(tokenInfo.decimals || 18);
-                        const baseAmount = BigInt(Math.floor(parseFloat(data.amount) * Number(decimalMultiplier)));
-                        approvalAmount = baseAmount * 10n; // 10x the requested amount
-                    }
-                    
-                    console.log(`Approving ${data.tokenAddress} for ${approvalAmount} to spender ${exchangeRouterAddress}`);
-                    
-                    // Create and send approval transaction
-                    const result = await sdk.callContract(
-                        data.tokenAddress as `0x${string}`,
-                        tokenAbi,
-                        "approve",
-                        [exchangeRouterAddress as `0x${string}`, approvalAmount]
-                    );
-                    
-                    return {
-                        success: true,
-                        message: `Successfully submitted approval for ${data.amount} of token ${data.tokenAddress}`,
-                        tokenAddress: data.tokenAddress,
-                        spender: exchangeRouterAddress,
-                        amount: data.amount,
-                        txHash: result
-                    };
-                } catch (error) {
-                    console.error("Error approving token:", error);
-                    return {
-                        success: false,
-                        error: error instanceof Error ? error.message : String(error),
-                        message: "Failed to approve token"
-                    };
-                }
-            }
-        }),
-        */
-
-        action({
-            name: "create_increase_order",
-            description: "Create a new increase position order on GMX",
-            schema: z.object({
-                marketAddress: z.string().describe("Address of the market to trade - ALWAYS USE marketTokenAddress"),
-                collateralTokenAddress: z.string().describe("Address of the token to use as collateral"),
-                indexTokenAddress: z.string().describe("Address of the token to use as index"),
-                isLong: z.boolean().describe("Whether the position is long or short"),
-                isLimit: z.boolean().describe("Whether this is a limit order"),
-                sizeUsd: z.number().describe("Size of the position in USD"),
-                leverage: z.number().describe("Leverage for the position"),
-                triggerPrice: z.string().optional().describe("Price at which to trigger a limit order"),
-            }),
-            async handler(data, ctx, agent) {
-                try {
-                    // Get market and token data
-                    const { marketsInfoData, tokensData } = await sdk.markets.getMarketsInfo();
-
-                    console.log("data", data);
-                    if (!marketsInfoData || !tokensData) {
-                        throw new Error("Failed to get market and token data");
-                    }
-                    
-                    // Get market info
-                    const marketInfo = marketsInfoData[data.marketAddress];
-                    if (!marketInfo) {
-                        throw new Error(`Market not found: ${data.marketAddress}`);
-                    }
-                    
-                    // Get collateral token
-                    const collateralToken = tokensData[data.collateralTokenAddress];
-                    if (!collateralToken) {
-                        throw new Error(`Collateral token not found: ${data.collateralTokenAddress}`);
-                    }
-                    
-                    // Get index token
-                    const indexToken = tokensData[marketInfo.indexTokenAddress];
-                    if (!indexToken) {
-                        throw new Error(`Index token not found for market: ${data.marketAddress}`);
-                    }
-                    
-                    // Calculate a reasonable position sizes with proper precision
-                    // GMX uses 30 decimals for USD amounts
-                    const sizeDeltaUsd = BigInt(Math.floor(data.sizeUsd * (10 ** USD_DECIMALS)));
-                    const collateralUsd = sizeDeltaUsd / BigInt(data.leverage);
-                    
-                    // Get prices for tokens - these come from the SDK data
-                    const indexTokenPrice = indexToken.prices?.maxPrice || 0n;
-                    const collateralTokenPrice = collateralToken.prices?.minPrice || 0n;
-                    
-                    // Calculate collateral amount from USD value
-                    const collateralAmount = collateralUsd * BigInt(10 ** collateralToken.decimals) / collateralTokenPrice;
-                    
-                    // Calculate token amount from USD value
-                    const sizeDeltaInTokens = sizeDeltaUsd * BigInt(10 ** indexToken.decimals) / indexTokenPrice;
-                    
-                    // Calculate acceptable price with small slippage
-                    const acceptablePriceDeltaBps = BigInt(parseInt(env.GMX_SLIPPAGE_TOLERANCE));
-                    const isLong = data.isLong;
-                    
-                    // For long positions, we're willing to pay more, for shorts we want to receive more
-                    const acceptablePriceMultiplier = isLong 
-                        ? 10000n + acceptablePriceDeltaBps 
-                        : 10000n - acceptablePriceDeltaBps;
-                    
-                    const acceptablePrice = (indexTokenPrice * acceptablePriceMultiplier) / 10000n;
-                    
-                    // Calculate position fees
-                    // This is typically around 0.1% of position size
-                    const positionFeeUsd = sizeDeltaUsd / BigInt(1000);
-                    
-                    // Parse trigger price if provided
-                    let triggerPrice = 0n;
-                    if (data.triggerPrice) {
-                        triggerPrice = BigInt(parseFloat(data.triggerPrice) * (10 ** USD_DECIMALS));
-                    }
-                    
-                    // Create a properly formatted increaseAmounts object
-                    const increaseAmounts = {
-                        initialCollateralAmount: collateralAmount,
-                        initialCollateralUsd: collateralUsd,
-                        collateralDeltaAmount: collateralAmount,
-                        collateralDeltaUsd: collateralUsd,
-                        indexTokenAmount: sizeDeltaInTokens,  // Amount in tokens based on price
-                        sizeDeltaUsd: sizeDeltaUsd,
-                        sizeDeltaInTokens: sizeDeltaInTokens,
-                        estimatedLeverage: BigInt(Math.floor(data.leverage * 10000)),
-                        indexPrice: indexTokenPrice,
-                        initialCollateralPrice: collateralTokenPrice,
-                        collateralPrice: collateralTokenPrice,
-                        triggerPrice: triggerPrice,
-                        acceptablePrice: acceptablePrice,
-                        acceptablePriceDeltaBps: acceptablePriceDeltaBps,
-                        positionFeeUsd: positionFeeUsd,
-                        swapPathStats: undefined,
-                        uiFeeUsd: 0n,
-                        swapUiFeeUsd: 0n,
-                        feeDiscountUsd: 0n,
-                        borrowingFeeUsd: 0n,
-                        fundingFeeUsd: 0n,
-                        positionPriceImpactDeltaUsd: 0n,
-                        
-                        // Include these additional properties required by the SDK
-                        estimatedPnl: 0n,
-                        estimatedPnlPercentage: 0n,
-                        entryMarkPrice: indexTokenPrice,
-                        exitMarkPrice: indexTokenPrice,
-                        sizeDeltaInTokensUsd: sizeDeltaUsd,
-                        collateralDeltaInTokensUsd: collateralUsd,
-                        executionPrice: indexTokenPrice,
-                        entryPrice: indexTokenPrice,
-                        markPrice: indexTokenPrice,
-                        liquidationPrice: 0n,
-                        minCollateralUsd: collateralUsd,
-                        priceImpactDiffUsd: 0n
-                    };
-
-                    console.log("Submitting increase order with amounts:", JSON.stringify({
-                        marketAddress: data.marketAddress,
-                        isLong: data.isLong,
-                        isLimit: data.isLimit,
-                        leverage: data.leverage,
-                        sizeUsd: data.sizeUsd,
-                        initialCollateralUsd: Number(collateralUsd) / (10 ** USD_DECIMALS),
-                    }));
-                    
-                    // Create increase order
-                    const result = await sdk.orders.createIncreaseOrder({
-                        marketsInfoData,
-                        tokensData,
-                        isLimit: data.isLimit,
-                        isLong: data.isLong,
-                        marketAddress: data.marketAddress,
-                        allowedSlippage: parseInt(env.GMX_SLIPPAGE_TOLERANCE),
-                        collateralToken,
-                        collateralTokenAddress: collateralToken.address,
-                        receiveTokenAddress: collateralToken.address,
-                        fromToken: collateralToken,
-                        marketInfo,
-                        indexToken,
-                        increaseAmounts,
-                        skipSimulation: true, // Set to true to avoid simulation errors
-                    });
-
-                    return {
-                        success: true,
-                        message: "Successfully created increase order",
-                        result,
-                        orderDetails: {
-                            market: data.marketAddress,
-                            marketName: marketInfo.name,
-                            isLong: data.isLong,
-                            isLimit: data.isLimit,
-                            sizeUsd: data.sizeUsd,
-                            leverage: data.leverage,
-                            collateralToken: collateralToken.symbol,
-                        }
-                    };
-                } catch (error) {
-                    console.error("Error creating increase order:", error);
-                    return {
-                        success: false,
-                        error: error instanceof Error ? error.message : String(error),
-                        message: "Failed to create increase order"
-                    };
-                }
-            }
-        }),
-
-        action({
-            name: "create_decrease_order",
-            description: "Create a new decrease position order on GMX",
-            schema: z.object({
-                marketAddress: z.string().describe("Address of the market to trade - ALWAYS USE marketTokenAddress"),
-                collateralTokenAddress: z.string().describe("Address of the token to use as collateral"),
-                indexTokenAddress: z.string().describe("Address of the token to use as index"),
-                isLong: z.boolean().describe("Whether the position is long or short"),
-                isLimit: z.boolean().describe("Whether this is a limit order or market order"),
-                sizeUsd: z.number().describe("Size of the position to decrease in USD"),
-                triggerPrice: z.string().optional().describe("Price at which to trigger a limit order"),
-            }),
-            async handler(data, ctx, agent) {
-                try {
-                    // Get market and token data
-                    const { marketsInfoData, tokensData } = await sdk.markets.getMarketsInfo();
-                    
-                    if (!marketsInfoData || !tokensData) {
-                        throw new Error("Failed to get market and token data");
-                    }
-                    
-                    // Get market info
-                    const marketInfo = marketsInfoData[data.marketAddress];
-                    if (!marketInfo) {
-                        throw new Error(`Market not found: ${data.marketAddress}`);
-                    }
-                    
-                    // Get collateral token
-                    const collateralToken = tokensData[data.collateralTokenAddress];
-                    if (!collateralToken) {
-                        throw new Error(`Collateral token not found: ${data.collateralTokenAddress}`);
-                    }
-                    
-                    // Get index token
-                    const indexToken = tokensData[marketInfo.indexTokenAddress];
-                    if (!indexToken) {
-                        throw new Error(`Index token not found for market: ${data.marketAddress}`);
-                    }
-                    
-                    // Set up size delta in USD with proper precision
-                    const sizeDeltaUsd = BigInt(Math.floor(data.sizeUsd * (10 ** USD_DECIMALS)));
-                    
-                    // Calculate token amount from USD value
-                    const indexTokenPrice = indexToken.prices?.maxPrice || 0n;
-                    const sizeDeltaInTokens = indexTokenPrice > 0 ? 
-                        (sizeDeltaUsd * BigInt(10 ** indexToken.decimals)) / indexTokenPrice : 
-                        0n;
-                    
-                    // Calculate acceptable price with slippage
-                    const acceptablePriceDeltaBps = BigInt(parseInt(env.GMX_SLIPPAGE_TOLERANCE));
-                    
-                    // For long positions on decrease, we want to receive MORE, for shorts we accept LESS
-                    const acceptablePriceMultiplier = data.isLong 
-                        ? 10000n - acceptablePriceDeltaBps 
-                        : 10000n + acceptablePriceDeltaBps;
-                    
-                    const acceptablePrice = (indexTokenPrice * acceptablePriceMultiplier) / 10000n;
-                    
-                    // Parse trigger price if provided for limit orders
-                    let triggerPrice = 0n;
-                    if (data.triggerPrice) {
-                        triggerPrice = BigInt(parseFloat(data.triggerPrice) * (10 ** USD_DECIMALS));
-                    }
-                    
-                    // Create decrease position amounts object
-                    const decreaseAmounts: any = {
-                        isFullClose: false, // Partial close based on sizeDeltaUsd
-                        sizeDeltaUsd,
-                        sizeDeltaInTokens,
-                        collateralDeltaUsd: sizeDeltaUsd, // Assumes 1:1 withdrawal of collateral proportional to size
-                        collateralDeltaAmount: 0n, // Will be calculated by GMX
-
-                        indexPrice: indexTokenPrice,
-                        collateralPrice: collateralToken.prices?.minPrice || 0n,
-                        triggerPrice: data.isLimit ? triggerPrice : undefined,
-                        acceptablePrice,
-                        acceptablePriceDeltaBps,
-                        recommendedAcceptablePriceDeltaBps: acceptablePriceDeltaBps,
-
-                        // Required fields with default values
-                        estimatedPnl: 0n,
-                        estimatedPnlPercentage: 0n,
-                        realizedPnl: 0n,
-                        realizedPnlPercentage: 0n,
-                        
-                        positionFeeUsd: 0n,
-                        uiFeeUsd: 0n,
-                        swapUiFeeUsd: 0n,
-                        feeDiscountUsd: 0n,
-                        borrowingFeeUsd: 0n,
-                        fundingFeeUsd: 0n,
-                        swapProfitFeeUsd: 0n,
-                        positionPriceImpactDeltaUsd: 0n,
-                        priceImpactDiffUsd: 0n,
-                        payedRemainingCollateralAmount: 0n,
-                        
-                        payedOutputUsd: 0n,
-                        payedRemainingCollateralUsd: 0n,
-                        
-                        receiveTokenAmount: 0n,
-                        receiveUsd: 0n,
-                        
-                        // Set the order type based on isLimit
-                        triggerOrderType: data.isLimit ? 
-                            OrderType.LimitDecrease : 
-                            OrderType.MarketDecrease,
-                        
-                        // Use NoSwap as the default swap type (receive same token as collateral)
-                        decreaseSwapType: 0, // DecreasePositionSwapType.NoSwap
-                    };
-                    
-                    console.log("Submitting decrease order with amounts:", JSON.stringify({
-                        marketAddress: data.marketAddress,
-                        isLong: data.isLong,
-                        isLimit: data.isLimit,
-                        sizeUsd: data.sizeUsd,
-                    }));
-                    
-                    // Create decrease order
-                    const result = await sdk.orders.createDecreaseOrder({
-                        marketsInfoData,
-                        tokensData,
-                        marketInfo,
-                        decreaseAmounts,
-                        collateralToken,
-                        allowedSlippage: parseInt(env.GMX_SLIPPAGE_TOLERANCE),
-                        isLong: data.isLong,
-                        referralCode: undefined, // Optional referral code
-                    });
-                    
-                    return {
-                        success: true,
-                        message: "Successfully created decrease order",
-                        result,
-                        orderDetails: {
-                            market: data.marketAddress,
-                            marketName: marketInfo.name,
-                            isLong: data.isLong,
-                            isLimit: data.isLimit,
-                            sizeUsd: data.sizeUsd,
-                            collateralToken: collateralToken.symbol,
-                        }
-                    };
-                } catch (error) {
-                    console.error("Error creating decrease order:", error);
-                    return {
-                        success: false,
-                        error: error instanceof Error ? error.message : String(error),
-                        message: "Failed to create decrease order"
-                    };
-                }
-            }
-        }),
-
-        action({
-            name: "create_swap_order",
-            description: "Create a token swap order on GMX",
-            schema: z.object({
-                fromTokenAddress: z.string().describe("Address of the token to swap from"),
-                toTokenAddress: z.string().describe("Address of the token to swap to"),
-                amountIn: z.number().describe("Amount of fromToken to swap"),
-                isLimit: z.boolean().describe("Whether this is a limit order"),
-            }),
-            async handler(data, ctx, agent) {
-                try {
-                    // Get market and token data
-                    const { marketsInfoData, tokensData } = await sdk.markets.getMarketsInfo();
-                    
-                    if (!marketsInfoData || !tokensData) {
-                        throw new Error("Failed to get market and token data");
-                    }
-                                        
-                    // Get tokens
-                    const fromToken = tokensData[data.fromTokenAddress];
-                    if (!fromToken) {
-                        throw new Error(`From token not found: ${data.fromTokenAddress}`);
-                    }
-                    
-                    const toToken = tokensData[data.toTokenAddress];
-                    if (!toToken) {
-                        throw new Error(`To token not found: ${data.toTokenAddress}`);
-                    }
-                    
-                    // Find a market that contains both tokens
-                    let swapPath: string[] = [];
-                    let marketKey: string | null = null;
-                    
-                    // First try to find a direct market
-                    for (const [address, market] of Object.entries(marketsInfoData)) {
-                        // Check if market contains both tokens
-                        const hasFromToken = 
-                            market.longTokenAddress === data.fromTokenAddress || 
-                            market.shortTokenAddress === data.fromTokenAddress;
-                        
-                        const hasToToken = 
-                            market.longTokenAddress === data.toTokenAddress || 
-                            market.shortTokenAddress === data.toTokenAddress;
-                        
-                        if (hasFromToken && hasToToken) {
-                            marketKey = address;
-                            swapPath = [address];
-                            break;
-                        }
-                    }
-                    
-                    // If no direct market found, find an intermediary through USDC
-                    if (!marketKey) {
-                        const usdcAddress = "0xaf88d065e77c8cc2239327c5edb3a432268e5831"; // USDC on Arbitrum
-                        let fromTokenMarket: string | null = null;
-                        let toTokenMarket: string | null = null;
-                        
-                        for (const [address, market] of Object.entries(marketsInfoData)) {
-                            // Find market for fromToken to USDC
-                            if (!fromTokenMarket && 
-                                (market.longTokenAddress === data.fromTokenAddress || market.shortTokenAddress === data.fromTokenAddress) &&
-                                (market.longTokenAddress === usdcAddress || market.shortTokenAddress === usdcAddress)) {
-                                fromTokenMarket = address;
-                            }
-                            
-                            // Find market for USDC to toToken
-                            if (!toTokenMarket && 
-                                (market.longTokenAddress === data.toTokenAddress || market.shortTokenAddress === data.toTokenAddress) &&
-                                (market.longTokenAddress === usdcAddress || market.shortTokenAddress === usdcAddress)) {
-                                toTokenMarket = address;
-                            }
-                            
-                            if (fromTokenMarket && toTokenMarket) {
-                                swapPath = [fromTokenMarket, toTokenMarket];
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (swapPath.length === 0) {
-                        throw new Error(`Could not find a valid swap path from ${fromToken.symbol} to ${toToken.symbol}`);
-                    }
-                    
-                    // Calculate input amount with proper precision
-                    const amountIn = BigInt(Math.floor(data.amountIn * Number(`1e${fromToken.decimals || 18}`)));
-                    
-                    // Get token prices
-                    const fromTokenPrice = fromToken.prices?.minPrice || 0n;
-                    const toTokenPrice = toToken.prices?.maxPrice || 0n;
-                    
-                    // Calculate USD values
-                    const usdIn = amountIn * fromTokenPrice / BigInt(10 ** (fromToken.decimals || 18));
-                    
-                    // Calculate estimated output amount with 0.3% fee
-                    const feeAmount = usdIn * 30n / 10000n; // 0.3% fee
-                    const usdAfterFee = usdIn - feeAmount;
-                    
-                    const estimatedAmountOut = toTokenPrice > 0 ? 
-                        (usdAfterFee * BigInt(10 ** (toToken.decimals || 18))) / toTokenPrice : 
-                        0n;
-                    
-                    // Apply slippage to minimum output
-                    const slippageBps = BigInt(parseInt(env.GMX_SLIPPAGE_TOLERANCE));
-                    const minOutputAmount = (estimatedAmountOut * (10000n - slippageBps)) / 10000n;
-                    
-                    // Calculate USD out with slippage
-                    const usdOut = minOutputAmount * toTokenPrice / BigInt(10 ** (toToken.decimals || 18));
-                    
-                    // Create swap path stats 
-                    const swapPathStats = {
-                        swapPath,
-                        swapSteps: [{
-                            marketAddress: swapPath[0],
-                            tokenInAddress: data.fromTokenAddress,
-                            tokenOutAddress: data.toTokenAddress,
-                            isWrap: false,
-                            isUnwrap: false,
-                            swapFeeAmount: feeAmount,
-                            swapFeeUsd: feeAmount,
-                            priceImpactDeltaUsd: 0n,
-                            amountIn,
-                            amountInAfterFees: amountIn - (amountIn * 30n / 10000n),
-                            usdIn,
-                            amountOut: estimatedAmountOut,
-                            usdOut
-                        }],
-                        totalSwapPriceImpactDeltaUsd: 0n,
-                        totalSwapFeeUsd: feeAmount,
-                        totalFeesDeltaUsd: feeAmount,
-                        tokenInAddress: data.fromTokenAddress,
-                        tokenOutAddress: data.toTokenAddress,
-                        usdOut,
-                        amountOut: estimatedAmountOut
-                    };
-                    
-                    // Create complete SwapAmounts object
-                    const swapAmounts = {
-                        amountIn,
-                        usdIn,
-                        amountOut: estimatedAmountOut,
-                        usdOut,
-                        priceIn: fromTokenPrice,
-                        priceOut: toTokenPrice,
-                        swapPathStats,
-                        minOutputAmount,
-                        uiFeeUsd: 0n
-                    };
-                    
-                    console.log("Submitting swap order with parameters:", JSON.stringify({
-                        fromToken: fromToken.symbol,
-                        toToken: toToken.symbol,
-                        amountIn: data.amountIn,
-                        isLimit: data.isLimit,
-                        estimatedAmountOut: Number(estimatedAmountOut) / (10 ** (toToken.decimals || 18)),
-                        swapPath: swapPath.map(p => marketsInfoData[p]?.name || p),
-                    }));
-                    
-                    // Create swap order
-                    const result = await sdk.orders.createSwapOrder({
-                        isLimit: data.isLimit,
-                        allowedSlippage: parseInt(env.GMX_SLIPPAGE_TOLERANCE),
-                        swapAmounts,
-                        fromToken,
-                        toToken,
-                        tokensData
-                    });
-                    
-                    return {
-                        success: true,
-                        message: "Successfully created swap order",
-                        result,
-                        swapDetails: {
-                            fromToken: fromToken.symbol,
-                            toToken: toToken.symbol,
-                            amountIn: data.amountIn,
-                            estimatedAmountOut: Number(estimatedAmountOut) / (10 ** (toToken.decimals || 18)),
-                            isLimit: data.isLimit,
-                            minOutputAmount: Number(minOutputAmount) / (10 ** (toToken.decimals || 18)),
-                            swapPath: swapPath.map(p => marketsInfoData[p]?.name || p),
-                        }
-                    };
-                } catch (error) {
-                    console.error("Error creating swap order:", error);
-                    return {
-                        success: false,
-                        error: error instanceof Error ? error.message : String(error),
-                        message: "Failed to create swap order"
-                    };
-                }
-            }
-        }),
-    ],
+// Initialize and start the agent
+initializeAgent().then(({ agent, mongoStore: store }) => {
+    currentAgent = agent;
+    mongoStore = store;
+}).catch((error) => {
+    console.error("❌ Failed to initialize agent:", error);
+    process.exit(1);
 });
 
-// 4. Create the GMX agent
-const agent = createDreams({
-    model: openrouter("google/gemini-2.0-flash-001"),
-    logger: new Logger({ level: LogLevel.DEBUG }),
-    extensions: [cliExtension, gmxExtension],
-    contexts: [gmxContext],
-});
+// Handle graceful shutdown
+async function gracefulShutdown() {
+    console.log("\n🛑 Shutting down Vega trading agent...");
+    
+    try {
+        if (currentAgent) {
+            console.log("📊 Stopping agent...");
+            await currentAgent.stop();
+        }
+        
+        // Close MongoDB connection if available
+        if (mongoStore && typeof mongoStore.close === 'function') {
+            console.log("🗄️ Closing MongoDB connection...");
+            await mongoStore.close();
+            console.log("✅ MongoDB connection closed");
+        }
+        
+        console.log("✅ Graceful shutdown completed");
+    } catch (error) {
+        console.error("❌ Error during shutdown:", error);
+    } finally {
+        process.exit(0);
+    }
+}
 
-// 5. Start the agent with initial goals
-console.log("Starting agent with initial goals...", LogLevel.INFO);
-
-(async () => {
-    await agent.start();
-})();
-
-// Handle exit
-process.on("SIGINT", () => {
-    console.log("Shutting down agent...");
-    process.exit(0);
-  });
+process.on("SIGINT", gracefulShutdown);
+process.on("SIGTERM", gracefulShutdown);
