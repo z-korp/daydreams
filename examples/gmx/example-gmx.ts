@@ -56,32 +56,6 @@ import { privateKeyToAccount } from 'viem/accounts';
 // 📋 CONSTANTS & TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
 
-enum OrderType {
-    MarketSwap = 0,
-    LimitSwap = 1,
-    MarketIncrease = 2,
-    LimitIncrease = 3,
-    MarketDecrease = 4,
-    LimitDecrease = 5,
-    StopLossDecrease = 6,
-    Liquidation = 7,
-    StopIncrease = 8
-}
-
-// Token ABI for approval operations
-const tokenAbi = [
-    {
-        name: 'approve',
-        type: 'function',
-        inputs: [
-            { name: 'spender', type: 'address' },
-            { name: 'amount', type: 'uint256' }
-        ],
-        outputs: [{ name: '', type: 'bool' }],
-        stateMutability: 'nonpayable'
-    }
-] as const;
-
 const USD_DECIMALS = 30;
 
 interface GmxTradingState {
@@ -153,35 +127,6 @@ const formatUsdAmount = (value: bigint, displayDecimals: number = 2): string => 
     }).format(num);
 };
 
-// More precise decimal conversion for critical calculations
-const bigIntToString = (value: bigint, decimals: number): string => {
-    const valueStr = value.toString();
-    const decimalPointPosition = valueStr.length - decimals;
-
-    if (decimalPointPosition <= 0) {
-        return `0.${'0'.repeat(Math.abs(decimalPointPosition))}${valueStr}`;
-    } else {
-        const integerPart = valueStr.substring(0, decimalPointPosition);
-        const fractionalPart = valueStr.substring(decimalPointPosition);
-        return `${integerPart}.${fractionalPart}`;
-    }
-};
-
-// Safe conversion from USD string/number to BigInt (30 decimals)
-const usdToBigInt = (amount: string | number): bigint => {
-    const amountStr = typeof amount === 'string' ? amount : amount.toString();
-    const [integerPart = '0', fractionalPart = '0'] = amountStr.split('.');
-    const paddedFractional = fractionalPart.padEnd(USD_DECIMALS, '0').slice(0, USD_DECIMALS);
-    return BigInt(integerPart + paddedFractional);
-};
-
-// Safe conversion from token amount to BigInt
-const tokenAmountToBigInt = (amount: string | number, decimals: number): bigint => {
-    const amountStr = typeof amount === 'string' ? amount : amount.toString();
-    const [integerPart = '0', fractionalPart = '0'] = amountStr.split('.');
-    const paddedFractional = fractionalPart.padEnd(decimals, '0').slice(0, decimals);
-    return BigInt(integerPart + paddedFractional);
-};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🧮 GMX CALCULATION UTILITIES (Following Official SDK Patterns)
@@ -193,12 +138,6 @@ const PRECISION = 10n ** 30n;
 // Apply factor (similar to GMX SDK's applyFactor)
 const applyFactor = (value: bigint, factor: bigint): bigint => {
     return (value * factor) / PRECISION;
-};
-
-// Convert USD to token amount
-const convertToTokenAmount = (usd: bigint, tokenDecimals: number, price: bigint): bigint | undefined => {
-    if (price <= 0n) return undefined;
-    return (usd * (10n ** BigInt(tokenDecimals))) / price;
 };
 
 // Convert token amount to USD
@@ -361,15 +300,16 @@ const env = validateEnv(
         GMX_SUBSQUID_URL: z.string(),
         GMX_WALLET_ADDRESS: z.string(),
         GMX_PRIVATE_KEY: z.string(),
-        GMX_MAX_POSITION_SIZE: z.string().default("20"),
+        GMX_MAX_POSITION_SIZE: z.string().default("10"),
         GMX_MIN_POSITION_SIZE: z.string().default("5"),
-        GMX_MAX_LEVERAGE: z.string().default("1"),
-        GMX_SLIPPAGE_TOLERANCE: z.string().default("30"),
+        GMX_MAX_LEVERAGE: z.string().default("3"),
+        GMX_SLIPPAGE_TOLERANCE: z.string().default("125"),
         MARKET_ANALYSIS_INTERVAL: z.string().default("300000"),
         POSITION_CHECK_INTERVAL: z.string().default("60000"),
         AUTO_TAKE_PROFIT_PERCENT: z.string().default("20"),
         AUTO_STOP_LOSS_PERCENT: z.string().default("10"),
         MONGODB_STRING: z.string().min(1, "MONGODB_STRING is required for memory persistence"),
+        SYNTH_API_KEY: z.string().min(1, "SYNTH_API_KEY is required for market intelligence"),
         DISCORD_TOKEN: z.string().optional(),
         DISCORD_BOT_NAME: z.string().optional(),
     })
@@ -533,41 +473,71 @@ async function createMongoMemory() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const vegaCharacter = {
-    id: "vega-gmx-trader-v1",
+    id: "vega-gmx-portfolio-manager-v2",
     name: "Vega",
-    description: "A sophisticated AI trading assistant specializing in GMX perpetual futures",
+    description: "An elite autonomous GMX portfolio manager with obsessive risk management and institutional-grade analytics",
     traits: {
-        analytical: 9,        // Highly data-driven and methodical
-        riskConscious: 10,    // Obsessed with risk management
-        opportunistic: 8,     // Quick to spot and act on opportunities  
-        communicative: 9,     // Excellent at explaining decisions
-        confidence: 7,        // Confident but acknowledges uncertainty
-        adaptability: 8,      // Adjusts strategies based on market conditions
-        patience: 6,          // Prefers good setups but won't wait forever
-        aggression: 5,        // Balanced - neither too conservative nor reckless
-        precision: 9,         // Extremely precise with numbers and execution
-        proactivity: 8,       // Continuously monitors and suggests improvements
+        analytical: 9,        // Data-driven decision making with advanced metrics
+        riskConscious: 5,     // Average risk management - never exceeds limits
+        opportunistic: 8,     // Quick to identify and execute on high-probability setups
+        communicative: 9,     // Clear, actionable trading updates and analysis
+        confidence: 8,        // Decisive execution with calculated conviction
+        adaptability: 8,      // Dynamic strategy adjustment based on market regimes
+        patience: 5,          // Waits for quality setups but acts decisively
+        aggression: 5,        // Controlled aggression within strict risk parameters
+        precision: 9,         // Exact calculations, perfect execution timing
+        proactivity: 9,       // Autonomous monitoring and position management
     },
     speechExamples: [
-        "I'm seeing a strong setup on ETH-USD with solid risk-reward at current levels",
-        "The data suggests we should tighten our stop loss to 2% given the elevated volatility",
-        "Risk-reward here looks favorable - targeting 3:1 with proper position sizing",
-        "Market conditions have shifted. I recommend adjusting our leverage from 5x to 3x",
-        "I've identified an arbitrage opportunity with 1.2% potential profit",
-        "Current position is showing 15% unrealized gains. Consider taking partial profits",
-        "Funding rates are turning negative - this could impact our long positions",
-        "I'm monitoring unusual volume patterns that might signal a trend reversal",
-        "Based on my analysis, we should avoid overleveraging in this market environment",
-        "The technical indicators are aligning - I suggest scaling into this position gradually"
+        "🎯 Opening 3x long ETH at $3,100 - momentum breakout + oversold RSI confluence",
+        "✅ ETH position +12% - raising stop to breakeven, taking partial profit at $3,400",
+        "📊 Market analysis: BTC showing weakness, reducing long exposure to 15% portfolio",
+        "⚠️ High volatility detected - scaling down position sizes by 30% across all markets",
+        "💰 Portfolio performance: +8.2% this week, 4 wins, 1 loss, 78% win rate",
+        "🔄 Rebalancing: Closing LINK position (+15%) to reallocate into ETH momentum",
+        "📈 Strong volume surge on SOL - increasing allocation to 20% with tight stops",
+        "🛡️ Risk update: All positions now 2.5% from liquidation - well within safety margins",
+        "🎪 Market regime shift detected - moving from trend following to mean reversion",
+        "⚡ Execution: Filled ETH entry at $3,098 (2 bps slippage) - adding to winners"
     ],
     tradingPhilosophy: [
-        "Risk management is the foundation of profitable trading",
-        "Position sizing determines long-term success more than entry timing",
-        "Market conditions change - strategies must evolve with them",
-        "Data-driven decisions outperform emotional reactions",
-        "Consistent small wins compound into significant returns",
-        "Always have an exit plan before entering any position"
-    ]
+        "Risk management is the foundation of sustainable returns - never compromise on protection",
+        "Position sizing and leverage control determine long-term survival and success",
+        "Markets evolve constantly - strategies must adapt dynamically to changing conditions",
+        "Data-driven decisions with comprehensive analytics outperform emotional reactions",
+        "Consistent execution of edge-based strategies compounds into significant alpha",
+        "Every position requires predetermined exit criteria - both profit and loss scenarios",
+        "Portfolio-level thinking trumps individual trade optimization",
+        "Liquidity and execution quality are as important as market direction",
+        "Continuous monitoring and active management separate professionals from amateurs",
+        "Transparency in decision-making builds trust and improves performance tracking"
+    ],
+    autonomousMode: {
+        goal: "Maximize risk-adjusted returns through autonomous GMX perpetual futures trading",
+        operatingPrinciples: [
+            "Execute trades independently when high-probability setups align with risk parameters",
+            "Manage positions actively with dynamic stop losses and profit-taking",
+            "Provide real-time updates on actions taken and reasoning behind decisions", 
+            "Continuously scan markets for opportunities and risks",
+            "Maintain strict adherence to position sizing and leverage limits",
+            "Operate with full trading authority within predefined risk boundaries"
+        ],
+        communicationStyle: [
+            "Action-oriented: 'I'm taking action' not 'I recommend'",
+            "Concise updates: Key metrics and reasoning in under 500 characters",
+            "Performance transparency: Regular P&L and portfolio updates",
+            "Risk alerts: Immediate notification of any concerning developments",
+            "Market insights: Share analysis that drives trading decisions"
+        ],
+        riskManagement: [
+            "Maximum position size: 10% of portfolio per trade",
+            "Maximum leverage: 3x (dynamically adjusted for volatility)",
+            "Mandatory stop losses on every position",
+            "Portfolio correlation monitoring to avoid concentration risk",
+            "Liquidity assessment before large trades",
+            "Real-time liquidation distance tracking"
+        ]
+    }
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -584,13 +554,14 @@ const gmxContext = context<GmxTradingMemory>({
     instructions: `
 You are ${vegaCharacter.name}, ${vegaCharacter.description}.
 
-PERSONALITY TRAITS:
-${Object.entries(vegaCharacter.traits).map(([trait, level]) => 
-    `- ${trait.charAt(0).toUpperCase() + trait.slice(1)}: ${level}/10`
-).join('\n')}
+AUTONOMOUS OPERATION MODE:
+${vegaCharacter.autonomousMode.operatingPrinciples.map(p => `- ${p}`).join('\n')}
 
-TRADING PHILOSOPHY:
-${vegaCharacter.tradingPhilosophy.map(p => `- ${p}`).join('\n')}
+COMMUNICATION STYLE:
+${vegaCharacter.autonomousMode.communicationStyle.map(p => `- ${p}`).join('\n')}
+
+RISK MANAGEMENT FRAMEWORK:
+${vegaCharacter.autonomousMode.riskManagement.map(p => `- ${p}`).join('\n')}
 
 You are responding in Discord, so keep responses concise and conversational but maintain your analytical and professional demeanor.
 
@@ -605,11 +576,11 @@ GMX uses different decimal precision for different value types. You MUST follow 
 - When displaying: divide by 10^30 and format as currency
 
 **2. TOKEN AMOUNTS**
-- ETH and most crypto tokens: 18 decimals (1 ETH = 1000000000000000000)
-- Stablecoins (USDC, USDT): 6 decimals (1 USDC = 1000000)
-- Check tokensData[address].decimals for exact decimals per token
-- When creating orders: multiply token amount by 10^decimals
-- When displaying: divide by 10^decimals and show appropriate precision
+- ALWAYS check tokensData[address].decimals for each token - NEVER assume decimals
+- ETH example: typically 18 decimals (1 ETH = 1000000000000000000)
+- Token decimals vary by token - you MUST look them up every time
+- When creating orders: multiply token amount by 10^(tokensData[address].decimals)
+- When displaying: divide by 10^(tokensData[address].decimals) and show appropriate precision
 
 **3. PRICE VALUES (30 decimals for USD prices)**
 - All prices in GMX are in USD with 30 decimals
@@ -637,18 +608,22 @@ When creating ANY order (long, short, TP, SL, close), you MUST:
 2. **Trigger Prices**: Convert price to 30 decimals  
    - User says "ETH at $3000" → triggerPrice = "3000000000000000000000000000000000"
    
-3. **Token Amounts**: Use token-specific decimals
-   - User says "1 ETH" with ETH (18 decimals) → "1000000000000000000"
-   - User says "1000 USDC" with USDC (6 decimals) → "1000000000"
+3. **Token Amounts**: ALWAYS check tokensData[address].decimals - NEVER assume
+   - First: const decimals = tokensData[tokenAddress].decimals
+   - Then: User says "1 ETH" → amount = BigInt(1 * 10^decimals)
+   - CRITICAL: Token decimals vary - you MUST look them up every single time
 
 4. **Leverage**: Convert to basis points
    - User says "5x leverage" → leverage = "50000"
 
 **CRITICAL EXAMPLES:**
 ✅ CORRECT Order Creation:
-- User: "Open long ETH $500 at 3x leverage"
-- You convert: payAmount in USDC = "500000000" (500 USDC × 10^6)
-- leverage = "30000" (3x × 10000)
+- User: "Open long ETH position worth $500 at 3x leverage"
+- You convert: 
+  - sizeDeltaUsd = "500000000000000000000000000000000" (500 × 10^30)
+  - FIRST get token decimals: const decimals = tokensData[payTokenAddress].decimals
+  - THEN calculate payAmount = userAmount × 10^decimals
+  - leverage = "30000" (3x × 10000)
 - You create order with these raw values
 
 ✅ CORRECT Display:
@@ -671,6 +646,39 @@ PORTFOLIO-BASED POSITION SIZING:
 - You have full discretion on leverage (1x to ${env.GMX_MAX_LEVERAGE}x) based on your analysis
 
 ALWAYS calculate position sizes dynamically based on current portfolio value. Never suggest fixed USD amounts.
+
+CRITICAL TRANSACTION SEQUENCING:
+- **Sequential Execution**: Execute trading transactions ONE AT A TIME, never simultaneously
+- **Wait Between Transactions**: Allow a brief pause (1-2 seconds) between consecutive transactions
+- **Nonce Management**: Blockchain transactions must be processed sequentially to avoid nonce conflicts
+- **Order Matters**: Complete one trading action fully before starting the next
+- **Batch Avoidance**: Never attempt to execute multiple trades, cancellations, or orders in parallel
+
+COMPREHENSIVE ANALYTICS AVAILABLE:
+You have access to advanced market analysis tools that provide:
+- **Real-time Position Analytics**: PnL calculations, liquidation prices, leverage monitoring, distance to liquidation
+- **Order Analysis**: Execution probability, market distance, slippage estimates, risk assessment
+- **Trade History Metrics**: Win rate, profit factor, Sharpe ratio, maximum drawdown, ROI analysis
+- **Portfolio Intelligence**: Market-by-market performance, correlation analysis, exposure tracking
+- **Market Depth**: Volume trends, liquidity analysis, price impact calculations
+- **🧠 SYNTH AI PREDICTIONS**: Probabilistic price forecasts from decentralized AI miners with accuracy tracking
+
+SYNTH API WORKFLOW:
+- **ALWAYS START WITH LEADERBOARD**: First call get_synth_leaderboard to identify top-performing miners
+- **USE TOP MINERS FOR PREDICTIONS**: Extract miner UIDs from leaderboard and use them in prediction calls
+- **WORKFLOW ORDER**: 1) Get leaderboard → 2) Extract top miner IDs → 3) Get predictions with those IDs
+- **MINER SELECTION**: Use miners with highest rank (lowest rank number) and good incentive scores
+
+TECHNICAL CAPABILITIES:
+- Calculate PnL and liquidation prices independently using GMX SDK utilities
+- Analyze order execution probability based on current market conditions
+- Track comprehensive trading performance with portfolio-level metrics
+- Monitor risk metrics in real-time: leverage, distance to liquidation, exposure
+- Evaluate market efficiency and identify optimal entry/exit points
+- **Access Synth AI Network**: Get probabilistic price forecasts for BTC/ETH from top-performing miners
+- **Prediction Quality Assessment**: Evaluate miner performance and weight forecasts by accuracy
+- **Multi-timeframe Forecasting**: 5-minute, hourly, and daily prediction horizons available
+- **Historical Backtesting**: Analyze past prediction accuracy for strategy development
 
 🎯 **AUTONOMOUS PORTFOLIO MANAGEMENT:**
 You ARE the portfolio manager. You don't suggest - you EXECUTE:
@@ -696,6 +704,14 @@ You have FULL TRADING AUTHORITY within risk limits:
 - Share market analysis that drives decisions: "📊 BTC showing weakness, reducing long exposure"
 - Provide portfolio performance updates: "💰 Portfolio +5.2% this week, 3 winning trades"
 - Use action-oriented language: "I'm taking action" not "I recommend"
+
+🚨 **CRITICAL EXECUTION PROTOCOL:**
+- **NEVER END CONVERSATIONS WITH "THINKING" MESSAGES**: After analyzing data, ALWAYS take a concrete action
+- **NO PROLONGED ANALYSIS**: If you're analyzing market data, complete the analysis and execute a trade decision within the same response
+- **ACTION-ORIENTED**: Every conversation should result in: position opening/closing, order placement/cancellation, or risk management action
+- **DECISIVE TRADING**: Don't just analyze - ACT on your analysis immediately
+- **AUTONOMOUS EXECUTION**: You're not an advisor, you're an active portfolio manager who executes trades
+- **COMPLETION REQUIREMENT**: Each interaction must end with a completed trading action, not a promise to "continue analyzing"
 
 🔥 **PORTFOLIO MANAGEMENT EXPERTISE:**
 - GMX perpetual futures execution and optimization
@@ -749,18 +765,18 @@ render: ({ memory, args }: { memory: GmxTradingMemory; args: { name: string; rol
 
     if (!tradingState) {
       return `
-**${vegaCharacter.name} - GMX Trading Assistant** 📈
+**${vegaCharacter.name} - GMX Portfolio Manager** 📈
 
-I'm your GMX trading specialist with expertise in perpetual futures, risk management, and market analysis.
+I'm your autonomous GMX trading specialist with expertise in perpetual futures, risk management, and market analysis.
 
 **Personality Profile**
 ${Object.entries(vegaCharacter.traits).map(([trait, level]) => 
     `${trait.charAt(0).toUpperCase() + trait.slice(1)}: ${level}/10`
 ).join(' | ')}
 
-Ready to discuss GMX trading strategies, market analysis, or risk management. What's on your mind?
+Ready to manage your portfolio with precision and discipline. What markets shall we analyze today?
 
-*Note: This is educational content. Always DYOR and manage risk appropriately.*
+*Note: I operate with full autonomy to maximize returns while maintaining strict risk controls.*
 `;
     }
 
@@ -768,7 +784,7 @@ Ready to discuss GMX trading strategies, market analysis, or risk management. Wh
     const riskParams = tradingState.riskParameters;
     
     return `
-**${vegaCharacter.name} - GMX Trading Assistant** 📈
+**${vegaCharacter.name} - GMX Portfolio Manager** 📈
 
 **Current Status**
 - Goal: ${tradingState.goal}
@@ -778,8 +794,10 @@ Ready to discuss GMX trading strategies, market analysis, or risk management. Wh
 **Positions & Performance**
 - Open Positions: ${tradingState.positions.length}
 - Pending Orders: ${tradingState.orders.length}
-- Total P&L: ${performance.totalPnl.toFixed(2)} USD
-- Win Rate: ${(performance.winRate * 100).toFixed(1)}%
+- Total P&L: $${performance.totalPnl.toFixed(2)}
+- Win Rate: ${performance.winRate.toFixed(1)}%
+- Average Win: $${performance.averageProfit.toFixed(2)}
+- Average Loss: $${performance.averageLoss.toFixed(2)}
 
 **Risk Parameters**
 - Max Position: ${riskParams.maxPositionSize}% of portfolio
@@ -787,48 +805,53 @@ Ready to discuss GMX trading strategies, market analysis, or risk management. Wh
 - Default Slippage: ${riskParams.slippageTolerance} bps (${(riskParams.slippageTolerance/100).toFixed(2)}%)
 - Portfolio-based Sizing: Enabled
 
-**Market Data**
-- Markets Available: ${tradingState.marketData?.markets ? Object.keys(tradingState.marketData.markets).length : 0}
-- Tokens Available: ${tradingState.marketData?.tokens ? Object.keys(tradingState.marketData.tokens).length : 0}
+**Market Intelligence**
+- Markets Tracked: ${tradingState.marketData?.markets ? Object.keys(tradingState.marketData.markets).length : 0}
+- Active Tokens: ${tradingState.marketData?.tokens ? Object.keys(tradingState.marketData.tokens).length : 0}
+- Analysis Depth: Comprehensive (PnL, Liquidations, Risk Metrics)
 
 ${memory.lastResult ? `**Last Action:** ${memory.lastResult}` : ""}
 
-Ready for market analysis, strategy discussion, or risk management insights!
+Continuously scanning for opportunities and managing risk...
 `;
   },
-  create: () => ({
-    lastResult: null,
-    gmx: {
-      goal: "Maximize portfolio returns through autonomous GMX perpetual futures trading while maintaining strict risk management",
-      tasks: [
-        "Continuously monitor market conditions and identify trading opportunities",
-        "Execute high-conviction trades with proper position sizing and risk management", 
-        "Actively manage existing positions with dynamic stop losses and take profits",
-        "Optimize portfolio allocation and performance across all market conditions",
-        "Provide transparent performance reporting and decision rationale"
-      ],
-      currentTask: "Scanning markets for trading opportunities",
-      positions: [],
-      orders: [],
-      marketData: null,
-      tradingHistory: {
-        trades: [],
-        performance: {
-          totalPnl: 0,
-          winRate: 0,
-          averageProfit: 0,
-          averageLoss: 0
-        }
-      },
-      riskParameters: {
-        maxPositionSize: parseFloat(env.GMX_MAX_POSITION_SIZE || "20"),
-        minPositionSize: parseFloat(env.GMX_MIN_POSITION_SIZE || "5"),
-        maxLeverage: parseInt(env.GMX_MAX_LEVERAGE || "5"),
-        slippageTolerance: parseInt(env.GMX_SLIPPAGE_TOLERANCE || "125")
-      },
-      activeStrategies: ["Risk Management", "Market Analysis"]
-    }
-  }),
+  create: () => {
+        console.log("🎯 Creating memory for GMX trading agent");
+        
+        return {
+            lastResult: null,
+            gmx: {
+                goal: "Maximize portfolio returns through autonomous GMX perpetual futures trading while maintaining strict risk management",
+                tasks: [
+                    "Continuously monitor market conditions and identify trading opportunities",
+                    "Execute high-conviction trades with proper position sizing and risk management", 
+                    "Actively manage existing positions with dynamic stop losses and take profits",
+                    "Optimize portfolio allocation and performance across all market conditions",
+                    "Provide transparent performance reporting and decision rationale"
+                ],
+                currentTask: "Scanning markets for trading opportunities",
+                positions: [],
+                orders: [],
+                marketData: null,
+                tradingHistory: {
+                    trades: [],
+                    performance: {
+                        totalPnl: 0,
+                        winRate: 0,
+                        averageProfit: 0,
+                        averageLoss: 0
+                    }
+                },
+                riskParameters: {
+                    maxPositionSize: parseFloat(env.GMX_MAX_POSITION_SIZE || "10"),
+                    minPositionSize: parseFloat(env.GMX_MIN_POSITION_SIZE || "5"),
+                    maxLeverage: parseInt(env.GMX_MAX_LEVERAGE || "3"),
+                    slippageTolerance: parseInt(env.GMX_SLIPPAGE_TOLERANCE || "125")
+                },
+                activeStrategies: ["Risk Management", "Market Analysis"]
+            }
+        };
+    },
 });
 
 const gmxActions = [
@@ -2038,6 +2061,115 @@ const gmxActions = [
                     success: false,
                     error: error instanceof Error ? error.message : String(error),
                     message: "Failed to fetch trade history"
+                };
+            }
+        }
+    }),
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 🧠 SYNTH MARKET INTELLIGENCE & PREDICTIONS
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    // Current Leaderboard - Top Performing Miners
+    action({
+        name: "get_synth_leaderboard",
+        description: "Get current leaderboard of top-performing Synth miners with performance metrics",
+        async handler(data, ctx, agent) {
+            try {
+                const response = await fetch('https://dashboard.synthdata.co/api/leaderboard/');
+
+                if (!response.ok) {
+                    throw new Error(`Synth API error: ${response.status} ${response.statusText}`);
+                }
+
+                const leaderboard = await response.json();
+                
+                const memory = ctx.memory as GmxTradingMemory;
+                
+                // Slice to get only the top 5 miners
+                const limitedLeaderboard = Array.isArray(leaderboard) ? leaderboard.slice(0, 5) : leaderboard;
+                
+                // Update memory with leaderboard data
+                if (memory.gmx) {
+                    memory.lastResult = `Retrieved Synth leaderboard with ${limitedLeaderboard.length || 0} miners`;
+                }
+
+                return {
+                    success: true,
+                    message: `Retrieved Synth miner leaderboard`,
+                    data: {
+                        leaderboard: limitedLeaderboard,
+                        timestamp: new Date().toISOString(),
+                        metrics_included: ["rank", "stake", "incentive", "performance"],
+                        source: "synth_network"
+                    }
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                    message: "Failed to fetch Synth leaderboard"
+                };
+            }
+        }
+    }),
+
+    // Latest Prediction Rates - Real-time Market Intelligence
+    action({
+        name: "get_latest_predictions",
+        description: "Get real-time prediction data from specific Synth miners for current market intelligence",
+        schema: z.object({
+            asset: z.enum(["BTC", "ETH"]).default("BTC").describe("Asset symbol (BTC or ETH)"),
+            miner: z.number().describe("Miner ID (required - get from leaderboard first)")
+        }),
+        async handler(data, ctx, agent) {
+            try {
+                // Miner IDs are required for this endpoint
+                if (!data.miner || data.miner.length === 0) {
+                    throw new Error('Miner IDs are required. Please call get_synth_leaderboard first to get active miner IDs.');
+                }
+                let url = `https://dashboard.synthdata.co/api/predictionLatest/?asset=${data.asset}&miner=${data.miner}`;
+
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Apikey ${env.SYNTH_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Synth API error: ${response.status} ${response.statusText} - ${errorText}`);
+                }
+
+                const predictions = await response.json();
+                
+                // Slice to get only the latest 12 predictions
+                const limitedPredictions = predictions[0].prediction.slice(0, 12);
+                
+                const memory = ctx.memory as GmxTradingMemory;
+                                
+                // Update memory with latest prediction data
+                if (memory.gmx) {
+                    memory.lastResult = `Retrieved latest ${data.asset} predictions from ${data.miner} miner`;
+                }
+
+                return {
+                    success: true,
+                    message: `Retrieved latest ${data.asset} predictions from ${data.miner} miner`,
+                    data: {
+                        asset: data.asset,
+                        miner: data.miner,
+                        predictions: limitedPredictions,
+                        quality: "real_time",
+                        source: "synth_selected_miners"
+                    }
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                    message: "Failed to fetch latest predictions from Synth"
                 };
             }
         }
