@@ -481,7 +481,211 @@ Ready for market analysis, strategy discussion, or risk management insights!
       activeStrategies: ["Risk Management", "Market Analysis"]
     }
   }),
-});
+}).setActions([
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 📈 READ METHODS - MARKET DATA
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    // Markets
+    action({
+        name: "get_markets_info",
+        description: "Get detailed information about markets, tokens, and trading volumes on GMX",
+        schema: z.object({}),
+        async handler(data, ctx, agent) {                
+            try {
+                // Fetch market and token information
+                const { marketsInfoData, tokensData } = await sdk.markets.getMarketsInfo();
+                
+                // Fetch daily volumes data
+                const volumes = await sdk.markets.getDailyVolumes();
+                
+                // Create a mapping of market addresses to volume data for easier lookup
+                const volumeByMarket: Record<string, {
+                    longVolumeUsd: number;
+                    shortVolumeUsd: number;
+                    totalVolumeUsd: number;
+                }> = {};
+                
+                if (volumes && Array.isArray(volumes)) {
+                    volumes.forEach(volumeData => {
+                        if (volumeData && volumeData.marketAddress) {
+                            // Convert BigInt to human-readable USD values
+                            const longVolumeUsd = Number(volumeData.longVolumeUsd ? 
+                                volumeData.longVolumeUsd / BigInt(10 ** USD_DECIMALS) : 0n);
+                            const shortVolumeUsd = Number(volumeData.shortVolumeUsd ?
+                                volumeData.shortVolumeUsd / BigInt(10 ** USD_DECIMALS) : 0n);
+                                
+                            volumeByMarket[volumeData.marketAddress] = {
+                                longVolumeUsd,
+                                shortVolumeUsd,
+                                totalVolumeUsd: longVolumeUsd + shortVolumeUsd
+                            };
+                        }
+                    });
+                }
+                
+                // Simplify token data to contain only essential information
+                const simplifiedTokensData: Record<string, any> = {};
+                
+                if (tokensData) {
+                    Object.keys(tokensData).forEach(address => {
+                        const tokenData = tokensData[address];
+                        if (tokenData) {
+                            simplifiedTokensData[address] = {
+                                name: tokenData.name,
+                                symbol: tokenData.symbol,
+                                decimals: tokenData.decimals,
+                                address: tokenData.address,
+                                priceDecimals: tokenData.priceDecimals,
+                                prices: tokenData.prices ? {
+                                    minPrice: tokenData.prices.minPrice,
+                                    maxPrice: tokenData.prices.maxPrice
+                                } : undefined,
+                                balance: tokenData.balance
+                            };
+                        }
+                    });
+                }
+                
+                // Simplify market data to contain only essential information + add volume data
+                const simplifiedMarketsData: Record<string, any> = {};
+                const marketsWithVolume: any[] = [];
+                
+                if (marketsInfoData) {
+                    Object.keys(marketsInfoData).forEach(address => {
+                        const marketData = marketsInfoData[address];
+                        console.log(marketData, LogLevel.INFO);
+                        if (marketData) {
+                            // Get volume data for this market if available
+                            const volumeData = volumeByMarket[address] || {
+                                longVolumeUsd: 0,
+                                shortVolumeUsd: 0,
+                                totalVolumeUsd: 0
+                            };
+                            
+                            const simplifiedMarket = {
+                                marketTokenAddress: marketData.marketTokenAddress,
+                                indexTokenAddress: marketData.indexTokenAddress,
+                                longTokenAddress: marketData.longTokenAddress,
+                                shortTokenAddress: marketData.shortTokenAddress,
+                                name: marketData.name,
+                                longInterestUsd: marketData.longInterestUsd 
+                                    ? Number(marketData.longInterestUsd / BigInt(10 ** USD_DECIMALS)) 
+                                    : 0,
+                                shortInterestUsd: marketData.shortInterestUsd 
+                                    ? Number(marketData.shortInterestUsd / BigInt(10 ** USD_DECIMALS)) 
+                                    : 0,
+                                // Include token symbols for easier reference
+                                indexToken: marketData.indexToken?.symbol,
+                                longToken: marketData.longToken?.symbol,
+                                shortToken: marketData.shortToken?.symbol,
+                                // Include current prices from the tokens
+                                indexTokenPrice: marketData.indexToken?.prices?.maxPrice 
+                                    ? Number(marketData.indexToken.prices.maxPrice / BigInt(10 ** USD_DECIMALS))
+                                    : 0,
+                                longTokenPrice: marketData.longToken?.prices?.maxPrice
+                                    ? Number(marketData.longToken.prices.maxPrice / BigInt(10 ** USD_DECIMALS))
+                                    : 0,
+                                shortTokenPrice: marketData.shortToken?.prices?.maxPrice
+                                    ? Number(marketData.shortToken.prices.maxPrice / BigInt(10 ** USD_DECIMALS))
+                                    : 0,
+                                isSpotOnly: marketData.isSpotOnly,
+                                // Include volume data
+                                volume: volumeData
+                            };
+                            
+                            simplifiedMarketsData[address] = simplifiedMarket;
+                            
+                            // Add to array for sorting
+                            marketsWithVolume.push({
+                                address,
+                                ...simplifiedMarket
+                            });
+                        }
+                    });
+                }
+                
+                // Sort markets by volume and get top markets
+                const topMarketsByVolume = [...marketsWithVolume]
+                    .sort((a, b) => (b.volume?.totalVolumeUsd || 0) - (a.volume?.totalVolumeUsd || 0))
+                    .slice(0, 10);
+                
+                // Sort markets by interest (open positions) and get top markets
+                const topMarketsByInterest = [...marketsWithVolume]
+                    .sort((a, b) => (b.longInterestUsd + b.shortInterestUsd) - (a.longInterestUsd + a.shortInterestUsd))
+                    .slice(0, 10);
+                                        
+                // Update state with simplified market data
+                const memory = ctx.memory as GmxTradingMemory;
+                if (memory.gmx) {
+                    memory.gmx.marketData = {
+                        markets: simplifiedMarketsData,
+                        tokens: simplifiedTokensData
+                    };
+                }
+                
+                return {
+                    success: true,
+                    message: `Successfully fetched markets info (${Object.keys(simplifiedMarketsData).length} markets) and tokens data (${Object.keys(simplifiedTokensData).length} tokens)`,
+                    marketsSummary: {
+                        count: Object.keys(simplifiedMarketsData).length,
+                        topMarketsByVolume: topMarketsByVolume.map(m => ({
+                            name: m.name,
+                            indexToken: m.indexToken,
+                            volume: m.volume.totalVolumeUsd
+                        })),
+                        topMarketsByInterest: topMarketsByInterest.map(m => ({
+                            name: m.name,
+                            indexToken: m.indexToken,
+                            longInterest: m.longInterestUsd,
+                            shortInterest: m.shortInterestUsd,
+                            totalInterest: m.longInterestUsd + m.shortInterestUsd
+                        }))
+                    },
+                    tokensSummary: {
+                        count: Object.keys(simplifiedTokensData).length,
+                        sampleTokens: Object.values(simplifiedTokensData)
+                            .slice(0, 5)
+                            .map(token => ({
+                                symbol: token.symbol,
+                                name: token.name,
+                                address: token.address
+                            }))
+                    }
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                    message: "Failed to fetch markets info"
+                };
+            }
+        }
+    }),
+
+    // Tokens
+    action({
+        name: "get_tokens_data",
+        description: "Get data for available tokens on GMX",
+        schema: z.object({}),
+        async handler(data, ctx, agent) {
+            try {
+                const tokensData = await sdk.tokens.getTokensData();
+                return {
+                    success: true,
+                    message: `Successfully fetched data for ${Object.keys(tokensData).length} tokens`,
+                    tokensData
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                    message: "Failed to fetch tokens data"
+                };
+            }
+        }
+    })
+]);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🚀 AGENT INITIALIZATION & STARTUP
@@ -496,11 +700,12 @@ async function initializeAgent() {
     // Create the agent with MongoDB memory
     const agent = createDreams({
         model: openrouter("google/gemini-2.0-flash-001"),
-        logger: new Logger({ level: LogLevel.DEBUG }),
+        logger: new Logger({ level: LogLevel.INFO }),
         extensions: [discord],
         context: gmxContext,
         memory: memory,
         defaultOutput: "discord:message",
+        actions: gmxContext.actions,
     });
     
     console.log("✅ Agent created successfully!");
