@@ -40,6 +40,7 @@ import {
     Logger
 } from "@daydreamsai/core";
 import { discord } from "@daydreamsai/discord";
+import { createMongoMemoryStore } from "@daydreamsai/mongodb";
 import { z } from "zod/v4";
 import { GmxSdk } from "@gmx-io/sdk";
 import { createWalletClient, http } from 'viem';
@@ -75,6 +76,7 @@ const env = validateEnv(
         SYNTH_API_KEY: z.string().min(1, "SYNTH_API_KEY is required for market intelligence"),
         DISCORD_TOKEN: z.string().min(1, "DISCORD_TOKEN is required for Discord output"),
         DISCORD_BOT_NAME: z.string().min(1, "DISCORD_BOT_NAME is required for Discord output"),
+        MONGODB_STRING: z.string().min(1, "MONGODB_STRING is required for persistent memory"),
     })
 );
 
@@ -437,7 +439,17 @@ const gmx = extension({
 
 console.log("⚡ Initializing Vega trading agent...");
 
-// Create the agent with default memory
+// Initialize persistent memory stores
+console.log("🗄️ Setting up MongoDB persistent memory...");
+const mongoMemoryStore = await createMongoMemoryStore({
+    uri: env.MONGODB_STRING,
+    dbName: "vega_trading_agent", 
+    collectionName: "gmx_memory"
+});
+
+console.log("✅ Memory stores initialized!");
+
+// Create the agent with persistent memory
 const agent = createDreams({
     model: openrouter("google/gemini-2.5-flash-preview-05-20"),
     logger: new Logger({ level: LogLevel.DEBUG }), // Enable debug logging
@@ -445,6 +457,9 @@ const agent = createDreams({
     context: gmx.contexts!.gmxTrading, // Use context from extension
     defaultOutput: "discord:message",
     actions: gmxActions,
+    memory: {
+        store: mongoMemoryStore
+    },
 });
 
 console.log("✅ Agent created successfully!");
