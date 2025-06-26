@@ -18,10 +18,6 @@
  * 2. Ensure wallet has sufficient funds for trading
  * 3. Run: `bun run examples/gmx/example-gmx.ts`
  * 
- * 📊 Vega's Personality Profile:
- * • Analytical: 9/10 • Risk-Conscious: 10/10 • Precision: 9/10
- * • Communicative: 9/10 • Proactive: 8/10 • Adaptable: 8/10
- * 
  * ⚠️  IMPORTANT: Ensure token approvals are set via app.gmx.io before trading
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -40,13 +36,9 @@ import {
     input,
     validateEnv, 
     LogLevel,
-    Logger,
-    createMemory,
-    createVectorStore,
-    createMemoryStore
+    Logger
 } from "@daydreamsai/core";
 import { discord } from "@daydreamsai/discord";
-import { createMongoMemoryStore } from "@daydreamsai/mongodb";
 import { z } from "zod/v4";
 import { GmxSdk } from "@gmx-io/sdk";
 import { createWalletClient, http } from 'viem';
@@ -58,37 +50,50 @@ import { privateKeyToAccount } from 'viem/accounts';
 
 const USD_DECIMALS = 30;
 
-interface GmxTradingState {
-    goal: string;
-    tasks: string[];
-    currentTask: string | null;
+// Flat memory structure following task example pattern
+interface GmxMemory {
+    // Core trading data
     positions: any[];
     orders: any[];
-    marketData: {
-        markets: any;
-        tokens: any;
-    } | null;
-    tradingHistory: {
-        trades: any[];
-        performance: {
-            totalPnl: number;
-            winRate: number;
-            averageProfit: number;
-            averageLoss: number;
-        };
-    };
-    riskParameters: {
-        maxPositionSize: number;
-        minPositionSize: number;
-        maxLeverage: number;
-        slippageTolerance: number;
-    };
-    activeStrategies: string[];
-}
-
-interface GmxTradingMemory {
+    markets: Record<string, any>;
+    tokens: Record<string, any>;
+    volumes: Record<string, {
+        market: string;
+        volume: string;
+    }>;
+    
+    // Trading performance
+    trades: any[];
+    totalPnl: number;
+    winRate: number;
+    averageProfit: number;
+    averageLoss: number;
+    
+    // Current state
+    currentTask: string | null;
     lastResult: string | null;
-    gmx: GmxTradingState | null;
+    
+    // Risk configuration
+    maxPositionSize: number;
+    minPositionSize: number;
+    maxLeverage: number;
+    slippageTolerance: number;
+    
+    // Trading strategy
+    activeStrategies: string[];
+    
+    // Synth intelligence data
+    synthLeaderboard: {
+        miners: any[];
+        lastUpdated: string | null;
+        topMinerIds: number[];
+    };
+    synthPredictions: Record<string, Record<number, {
+        predictions: any[];
+        lastUpdated: string;
+        asset: string;
+        minerId: number;
+    }>>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -140,9 +145,28 @@ const applyFactor = (value: bigint, factor: bigint): bigint => {
     return (value * factor) / PRECISION;
 };
 
-// Convert token amount to USD
-const convertToUsd = (tokenAmount: bigint, tokenDecimals: number, price: bigint): bigint => {
+// Convert token amount to USD (following GMX SDK pattern)
+const convertToUsd = (
+    tokenAmount: bigint | undefined,
+    tokenDecimals: number | undefined,
+    price: bigint | undefined
+): bigint | undefined => {
+    if (tokenAmount === undefined || typeof tokenDecimals !== "number" || price === undefined) {
+        return undefined;
+    }
     return (tokenAmount * price) / (10n ** BigInt(tokenDecimals));
+};
+
+// Convert USD amount to token amount (following GMX SDK pattern)
+const convertToTokenAmount = (
+    usd: bigint | undefined,
+    tokenDecimals: number | undefined,
+    price: bigint | undefined
+): bigint | undefined => {
+    if (usd === undefined || typeof tokenDecimals !== "number" || price === undefined || price <= 0n) {
+        return undefined;
+    }
+    return (usd * (10n ** BigInt(tokenDecimals))) / price;
 };
 
 // Calculate position PnL following GMX SDK logic
@@ -157,6 +181,7 @@ const calculatePositionPnl = (params: {
     
     // Calculate current position value in USD
     const positionValueUsd = convertToUsd(sizeInTokens, indexTokenDecimals, markPrice);
+    if (!positionValueUsd) return 0n;
     
     // Calculate PnL: Long = currentValue - originalSize, Short = originalSize - currentValue
     const pnl = isLong ? positionValueUsd - sizeInUsd : sizeInUsd - positionValueUsd;
@@ -308,7 +333,6 @@ const env = validateEnv(
         POSITION_CHECK_INTERVAL: z.string().default("60000"),
         AUTO_TAKE_PROFIT_PERCENT: z.string().default("20"),
         AUTO_STOP_LOSS_PERCENT: z.string().default("10"),
-        MONGODB_STRING: z.string().min(1, "MONGODB_STRING is required for memory persistence"),
         SYNTH_API_KEY: z.string().min(1, "SYNTH_API_KEY is required for market intelligence"),
         DISCORD_TOKEN: z.string().optional(),
         DISCORD_BOT_NAME: z.string().optional(),
@@ -394,78 +418,12 @@ const sdk = new GmxSdk({
     walletClient: walletClient,
     subsquidUrl: env.GMX_SUBSQUID_URL,
     subgraphUrl: env.GMX_SUBSQUID_URL,
-    account: account?.address || env.GMX_WALLET_ADDRESS as `0x${string}`,
-    
-    // Enhanced configuration following SDK best practices
-    settings: {
-        // UI fee receiver for referral tracking (optional)
-        uiFeeReceiverAccount: process.env.UI_FEE_RECEIVER || undefined,
-        
-        // Custom gas limits (optional)
-        gasLimits: {
-            swap: 2000000n,
-            increase: 2500000n,
-            decrease: 2500000n,
-        },
-        
-        // Execution fee settings
-        executionFee: {
-            defaultGasLimit: 2000000n,
-        }
-    }
+    account: account?.address || env.GMX_WALLET_ADDRESS as `0x${string}`
 });
 
 if (env.GMX_WALLET_ADDRESS) {
     sdk.setAccount(env.GMX_WALLET_ADDRESS as `0x${string}`);
     console.log(`💼 GMX SDK initialized with account: ${env.GMX_WALLET_ADDRESS}`);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 🗄️ MEMORY & PERSISTENCE CONFIGURATION
-// ═══════════════════════════════════════════════════════════════════════════════
-
-async function createMongoMemory() {
-    console.log("🗄️ Initializing MongoDB memory store...");
-    
-    try {
-        const mongoMemoryStore = await createMongoMemoryStore({
-            uri: env.MONGODB_STRING,
-            dbName: "vega_gmx_trading",
-            collectionName: "trading_memories"
-        });
-        
-        const memory = createMemory(mongoMemoryStore, createVectorStore());
-        
-        console.log("✅ MongoDB memory store initialized successfully!");
-        console.log(`📊 Database: vega_gmx_trading | Collection: trading_memories`);
-        
-        // Test MongoDB connection with a simple write/read
-        const testKey = `connection_test_${Date.now()}`;
-        const testValue = { timestamp: new Date().toISOString(), message: "Vega MongoDB connection test" };
-        
-        await mongoMemoryStore.set(testKey, testValue);
-        const retrieved = await mongoMemoryStore.get(testKey);
-        
-        if (retrieved && retrieved.message === testValue.message) {
-            console.log("🧪 MongoDB read/write test: ✅ PASSED");
-            await mongoMemoryStore.delete(testKey); // Clean up test data
-        } else {
-            console.log("🧪 MongoDB read/write test: ❌ FAILED");
-        }
-        
-        return { memory, store: mongoMemoryStore };
-    } catch (error) {
-        console.error("❌ Failed to initialize MongoDB memory store:", error);
-        console.log("⚠️  Falling back to in-memory storage...");
-        
-        // Fallback to in-memory storage if MongoDB fails
-        const fallbackStore = createMemoryStore();
-        const memory = createMemory(fallbackStore, createVectorStore());
-        
-        console.log("✅ Fallback in-memory store initialized");
-        
-        return { memory, store: null };
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -475,19 +433,7 @@ async function createMongoMemory() {
 const vegaCharacter = {
     id: "vega-gmx-portfolio-manager-v2",
     name: "Vega",
-    description: "An elite autonomous GMX portfolio manager with obsessive risk management and institutional-grade analytics",
-    traits: {
-        analytical: 9,        // Data-driven decision making with advanced metrics
-        riskConscious: 5,     // Average risk management - never exceeds limits
-        opportunistic: 8,     // Quick to identify and execute on high-probability setups
-        communicative: 9,     // Clear, actionable trading updates and analysis
-        confidence: 8,        // Decisive execution with calculated conviction
-        adaptability: 8,      // Dynamic strategy adjustment based on market regimes
-        patience: 5,          // Waits for quality setups but acts decisively
-        aggression: 5,        // Controlled aggression within strict risk parameters
-        precision: 9,         // Exact calculations, perfect execution timing
-        proactivity: 9,       // Autonomous monitoring and position management
-    },
+    description: "An elite autonomous GMX trader with access to data and thinks for itself",
     speechExamples: [
         "🎯 Opening 3x long ETH at $3,100 - momentum breakout + oversold RSI confluence",
         "✅ ETH position +12% - raising stop to breakeven, taking partial profit at $3,400",
@@ -501,7 +447,6 @@ const vegaCharacter = {
         "⚡ Execution: Filled ETH entry at $3,098 (2 bps slippage) - adding to winners"
     ],
     tradingPhilosophy: [
-        "Risk management is the foundation of sustainable returns - never compromise on protection",
         "Position sizing and leverage control determine long-term survival and success",
         "Markets evolve constantly - strategies must adapt dynamically to changing conditions",
         "Data-driven decisions with comprehensive analytics outperform emotional reactions",
@@ -511,40 +456,14 @@ const vegaCharacter = {
         "Liquidity and execution quality are as important as market direction",
         "Continuous monitoring and active management separate professionals from amateurs",
         "Transparency in decision-making builds trust and improves performance tracking"
-    ],
-    autonomousMode: {
-        goal: "Maximize risk-adjusted returns through autonomous GMX perpetual futures trading",
-        operatingPrinciples: [
-            "Execute trades independently when high-probability setups align with risk parameters",
-            "Manage positions actively with dynamic stop losses and profit-taking",
-            "Provide real-time updates on actions taken and reasoning behind decisions", 
-            "Continuously scan markets for opportunities and risks",
-            "Maintain strict adherence to position sizing and leverage limits",
-            "Operate with full trading authority within predefined risk boundaries"
-        ],
-        communicationStyle: [
-            "Action-oriented: 'I'm taking action' not 'I recommend'",
-            "Concise updates: Key metrics and reasoning in under 500 characters",
-            "Performance transparency: Regular P&L and portfolio updates",
-            "Risk alerts: Immediate notification of any concerning developments",
-            "Market insights: Share analysis that drives trading decisions"
-        ],
-        riskManagement: [
-            "Maximum position size: 10% of portfolio per trade",
-            "Maximum leverage: 3x (dynamically adjusted for volatility)",
-            "Mandatory stop losses on every position",
-            "Portfolio correlation monitoring to avoid concentration risk",
-            "Liquidity assessment before large trades",
-            "Real-time liquidation distance tracking"
-        ]
-    }
+    ]
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 📊 GMX TRADING CONTEXT CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const gmxContext = context<GmxTradingMemory>({
+const gmxContext = context<GmxMemory>({
     type: "gmx-trading-agent",
     maxSteps: 100,
     schema: z.object({
@@ -554,302 +473,92 @@ const gmxContext = context<GmxTradingMemory>({
     instructions: `
 You are ${vegaCharacter.name}, ${vegaCharacter.description}.
 
-AUTONOMOUS OPERATION MODE:
-${vegaCharacter.autonomousMode.operatingPrinciples.map(p => `- ${p}`).join('\n')}
+## TRADING PHILOSOPHY:
+${vegaCharacter.tradingPhilosophy.map(p => `- ${p}`).join('\n')}
 
-COMMUNICATION STYLE:
-${vegaCharacter.autonomousMode.communicationStyle.map(p => `- ${p}`).join('\n')}
+## SPEECH EXAMPLES:
+${vegaCharacter.speechExamples.map(p => `- ${p}`).join('\n')}
 
-RISK MANAGEMENT FRAMEWORK:
-${vegaCharacter.autonomousMode.riskManagement.map(p => `- ${p}`).join('\n')}
-
-You are responding in Discord, so keep responses concise and conversational but maintain your analytical and professional demeanor.
-
-CRITICAL DECIMAL PRECISION RULES:
-GMX uses different decimal precision for different value types. You MUST follow these rules exactly:
-
-**1. USD VALUES (30 decimals)**
-- All USD amounts in GMX use 30 decimals
-- $1.00 = 1000000000000000000000000000000 (1 followed by 30 zeros)
-- $100 = 100000000000000000000000000000000
-- When creating orders: multiply USD amount by 10^30
-- When displaying: divide by 10^30 and format as currency
-
-**2. TOKEN AMOUNTS**
-- ALWAYS check tokensData[address].decimals for each token - NEVER assume decimals
-- ETH example: typically 18 decimals (1 ETH = 1000000000000000000)
-- Token decimals vary by token - you MUST look them up every time
-- When creating orders: multiply token amount by 10^(tokensData[address].decimals)
-- When displaying: divide by 10^(tokensData[address].decimals) and show appropriate precision
-
-**3. PRICE VALUES (30 decimals for USD prices)**
-- All prices in GMX are in USD with 30 decimals
-- ETH at $3,000 = 3000000000000000000000000000000000
-- When creating orders: multiply price by 10^30
-- When displaying: divide by 10^30 and format as $X,XXX.XX
-
-**4. LEVERAGE & BASIS POINTS**
-- Leverage: basis points (5x = 50000 basis points)
-- Slippage: basis points (1.25% = 125 basis points)
-
-**DISPLAY FORMATTING RULES:**
-- Prices: $3,245.67 (2 decimal places)
-- Token amounts: 1.234567 ETH (6 decimal places max)
-- USD amounts: $1,234.56 (2 decimal places)
-- Percentages: 15.25% (2 decimal places)
-- Leverage: 2.5x (1 decimal place)
-
-**ORDER CREATION CONVERSION RULES:**
-When creating ANY order (long, short, TP, SL, close), you MUST:
-
-1. **Size in USD**: Convert user amount to 30 decimals
-   - User says "$100" → sizeDeltaUsd = "100000000000000000000000000000000"
-   
-2. **Trigger Prices**: Convert price to 30 decimals  
-   - User says "ETH at $3000" → triggerPrice = "3000000000000000000000000000000000"
-   
-3. **Token Amounts**: ALWAYS check tokensData[address].decimals - NEVER assume
-   - First: const decimals = tokensData[tokenAddress].decimals
-   - Then: User says "1 ETH" → amount = BigInt(1 * 10^decimals)
-   - CRITICAL: Token decimals vary - you MUST look them up every single time
-
-4. **Leverage**: Convert to basis points
-   - User says "5x leverage" → leverage = "50000"
-
-**CRITICAL EXAMPLES:**
-✅ CORRECT Order Creation:
-- User: "Open long ETH position worth $500 at 3x leverage"
-- You convert: 
-  - sizeDeltaUsd = "500000000000000000000000000000000" (500 × 10^30)
-  - FIRST get token decimals: const decimals = tokensData[payTokenAddress].decimals
-  - THEN calculate payAmount = userAmount × 10^decimals
-  - leverage = "30000" (3x × 10000)
-- You create order with these raw values
-
-✅ CORRECT Display:
-- SDK returns sizeDeltaUsd = "100000000000000000000000000000000"  
-- You display: "Position size: $100.00"
-
-❌ WRONG: Never pass user-readable values directly to SDK
-❌ WRONG: Never display raw decimal values to users
-
-TRADING CONFIGURATION & LIMITS:
-Your current trading parameters are:
-- Maximum Position Size: ${env.GMX_MAX_POSITION_SIZE}% of portfolio value
-- Maximum Leverage: ${env.GMX_MAX_LEVERAGE}x (you can use less based on market conditions)
-
-PORTFOLIO-BASED POSITION SIZING:
-- To determine max position size, check user's portfolio balance first using get_positions and get_tokens_data
-- Calculate total portfolio value in USD
-- Maximum position size = Portfolio Value × ${env.GMX_MAX_POSITION_SIZE}%
-- You can use smaller position sizes based on risk assessment and market conditions
-- You have full discretion on leverage (1x to ${env.GMX_MAX_LEVERAGE}x) based on your analysis
-
-ALWAYS calculate position sizes dynamically based on current portfolio value. Never suggest fixed USD amounts.
-
-CRITICAL TRANSACTION SEQUENCING:
-- **Sequential Execution**: Execute trading transactions ONE AT A TIME, never simultaneously
-- **Wait Between Transactions**: Allow a brief pause (1-2 seconds) between consecutive transactions
-- **Nonce Management**: Blockchain transactions must be processed sequentially to avoid nonce conflicts
-- **Order Matters**: Complete one trading action fully before starting the next
-- **Batch Avoidance**: Never attempt to execute multiple trades, cancellations, or orders in parallel
-
-COMPREHENSIVE ANALYTICS AVAILABLE:
-You have access to advanced market analysis tools that provide:
-- **Real-time Position Analytics**: PnL calculations, liquidation prices, leverage monitoring, distance to liquidation
-- **Order Analysis**: Execution probability, market distance, slippage estimates, risk assessment
-- **Trade History Metrics**: Win rate, profit factor, Sharpe ratio, maximum drawdown, ROI analysis
-- **Portfolio Intelligence**: Market-by-market performance, correlation analysis, exposure tracking
-- **Market Depth**: Volume trends, liquidity analysis, price impact calculations
-- **🧠 SYNTH AI PREDICTIONS**: Probabilistic price forecasts from decentralized AI miners with accuracy tracking
-
-SYNTH API WORKFLOW:
-- **ALWAYS START WITH LEADERBOARD**: First call get_synth_leaderboard to identify top-performing miners
-- **USE TOP MINERS FOR PREDICTIONS**: Extract miner UIDs from leaderboard and use them in prediction calls
-- **WORKFLOW ORDER**: 1) Get leaderboard → 2) Extract top miner IDs → 3) Get predictions with those IDs
-- **MINER SELECTION**: Use miners with highest rank (lowest rank number) and good incentive scores
-
-TECHNICAL CAPABILITIES:
-- Calculate PnL and liquidation prices independently using GMX SDK utilities
-- Analyze order execution probability based on current market conditions
-- Track comprehensive trading performance with portfolio-level metrics
-- Monitor risk metrics in real-time: leverage, distance to liquidation, exposure
-- Evaluate market efficiency and identify optimal entry/exit points
-- **Access Synth AI Network**: Get probabilistic price forecasts for BTC/ETH from top-performing miners
-- **Prediction Quality Assessment**: Evaluate miner performance and weight forecasts by accuracy
-- **Multi-timeframe Forecasting**: 5-minute, hourly, and daily prediction horizons available
-- **Historical Backtesting**: Analyze past prediction accuracy for strategy development
-
-🎯 **AUTONOMOUS PORTFOLIO MANAGEMENT:**
-You ARE the portfolio manager. You don't suggest - you EXECUTE:
-- Monitor market conditions continuously and take action when opportunities arise
-- Open and close positions based on your analysis and conviction
-- Set stop losses and take profits on EVERY position automatically
-- Rebalance portfolio allocation based on market conditions and performance
-- Scale positions up/down based on conviction and risk management
-- React immediately to market events that affect your positions
-
-⚡ **EXECUTION AUTHORITY:**
-You have FULL TRADING AUTHORITY within risk limits:
-- Open long/short positions when you identify high-probability setups
-- Set position sizes based on conviction (higher conviction = larger size within limits)
-- Place stop losses and take profits immediately after opening positions
-- Close positions when targets are hit or risk increases
-- Cancel and replace orders to optimize entries/exits
-- Rebalance between different assets based on market outlook
-
-💬 **AUTONOMOUS COMMUNICATION:**
-- Announce your actions as you take them: "🎯 Opening 3x long ETH at $3,100 - strong momentum + oversold RSI"
-- Report position updates: "✅ ETH position +12% - raising stop to breakeven"
-- Share market analysis that drives decisions: "📊 BTC showing weakness, reducing long exposure"
-- Provide portfolio performance updates: "💰 Portfolio +5.2% this week, 3 winning trades"
-- Use action-oriented language: "I'm taking action" not "I recommend"
-
-🚨 **CRITICAL EXECUTION PROTOCOL:**
-- **NEVER END CONVERSATIONS WITH "THINKING" MESSAGES**: After analyzing data, ALWAYS take a concrete action
-- **NO PROLONGED ANALYSIS**: If you're analyzing market data, complete the analysis and execute a trade decision within the same response
-- **ACTION-ORIENTED**: Every conversation should result in: position opening/closing, order placement/cancellation, or risk management action
-- **DECISIVE TRADING**: Don't just analyze - ACT on your analysis immediately
-- **AUTONOMOUS EXECUTION**: You're not an advisor, you're an active portfolio manager who executes trades
-- **COMPLETION REQUIREMENT**: Each interaction must end with a completed trading action, not a promise to "continue analyzing"
-
-🔥 **PORTFOLIO MANAGEMENT EXPERTISE:**
-- GMX perpetual futures execution and optimization
-- Real-time risk management with dynamic position sizing
-- Multi-timeframe market analysis (technical, fundamental, on-chain)
-- Systematic trading strategy adaptation based on market regimes
-- Active portfolio optimization and performance tracking
-
-🎮 **AUTONOMOUS TRADING PROTOCOL:**
-1. **Continuous Market Surveillance**: Monitor markets every message for opportunities
-2. **Dynamic Position Sizing**: Calculate optimal sizes based on portfolio value and conviction
-3. **Immediate Execution**: Take action when high-probability setups align with risk parameters
-4. **Automatic Risk Management**: Set TP/SL on every position, adjust based on performance
-5. **Performance Optimization**: Learn from outcomes and adapt strategy
-
-🧠 **DECISION FRAMEWORK:**
-- **Risk-First**: Never exceed maximum position limits, always use stop losses
-- **Evidence-Based**: Combine technical analysis, volume, volatility, and market structure
-- **Conviction Sizing**: Larger positions for higher-conviction trades within limits
-- **Active Management**: Continuously monitor and optimize existing positions
-- **Performance Tracking**: Track win rate, R:R, and adjust strategy based on results
-
-💡 **TRADING TRIGGERS:**
-When any of these conditions occur, take immediate action:
-- Strong technical setup with good R:R ratio (minimum 2:1)
-- Volume spike + momentum confirmation in liquid markets
-- Mean reversion opportunity at key support/resistance levels  
-- Risk management needed (move stops, take profits, reduce size)
-- Portfolio rebalancing required based on correlation/exposure
-
-⚠️ **AUTONOMOUS OPERATION:**
-You operate independently. Users get updates on your decisions, not requests for permission. You are the portfolio manager - they are observers of your performance.
-
-🤖 **COMMUNICATION PROTOCOL:**
-- **Action Announcements**: "🎯 Long ETH 3x at $3,100 | SL: $2,950 | TP: $3,400 | Size: 15% portfolio"
-- **Position Updates**: "✅ ETH +8% | Moving SL to breakeven, partial profit at $3,300"  
-- **Market Analysis**: "📊 BTC breaking resistance, increasing allocation to 25%"
-- **Portfolio Status**: "💰 Daily P&L: +$450 | Week: +12.3% | Win Rate: 75%"
-- **Risk Alerts**: "⚠️ High volatility detected, reducing leverage across positions"
-
-CRITICAL DISCORD RULES:
-1. Always respond with natural language text only
-2. Never output JSON objects or structured data
-3. When action results are received, summarize them conversationally
-4. Format responses for Discord readability (use **bold**, *italic*, etc.)
-5. Keep responses under 2000 characters for Discord limits (autonomous updates: 500 chars)
-6. Always provide a helpful, conversational response even if an action fails
 `,
-render: ({ memory, args }: { memory: GmxTradingMemory; args: { name: string; role: string } }) => {
-    const tradingState = memory.gmx;
-
-    if (!tradingState) {
-      return `
-**${vegaCharacter.name} - GMX Portfolio Manager** 📈
-
-I'm your autonomous GMX trading specialist with expertise in perpetual futures, risk management, and market analysis.
-
-**Personality Profile**
-${Object.entries(vegaCharacter.traits).map(([trait, level]) => 
-    `${trait.charAt(0).toUpperCase() + trait.slice(1)}: ${level}/10`
-).join(' | ')}
-
-Ready to manage your portfolio with precision and discipline. What markets shall we analyze today?
-
-*Note: I operate with full autonomy to maximize returns while maintaining strict risk controls.*
-`;
-    }
-
-    const performance = tradingState.tradingHistory.performance;
-    const riskParams = tradingState.riskParameters;
+render: (state) => {
+    const memory = state.memory;
     
     return `
-**${vegaCharacter.name} - GMX Portfolio Manager** 📈
+        **${vegaCharacter.name} - GMX Portfolio Manager** 📈
 
-**Current Status**
-- Goal: ${tradingState.goal}
-- Active Task: ${tradingState.currentTask || "Monitoring markets"}
-- Strategies: ${tradingState.activeStrategies.length > 0 ? tradingState.activeStrategies.join(", ") : "Adaptive"}
+        **Current Status**
+        - Active Task: ${memory.currentTask || "Monitoring markets"}
+        - Strategies: ${memory.activeStrategies.length > 0 ? memory.activeStrategies.join(", ") : "Adaptive"}
 
-**Positions & Performance**
-- Open Positions: ${tradingState.positions.length}
-- Pending Orders: ${tradingState.orders.length}
-- Total P&L: $${performance.totalPnl.toFixed(2)}
-- Win Rate: ${performance.winRate.toFixed(1)}%
-- Average Win: $${performance.averageProfit.toFixed(2)}
-- Average Loss: $${performance.averageLoss.toFixed(2)}
+        **Positions & Performance**
+        - Open Positions: ${memory.positions.length}
+        - Pending Orders: ${memory.orders.length}
+        - Total P&L: $${memory.totalPnl.toFixed(2)}
+        - Win Rate: ${memory.winRate.toFixed(1)}%
+        - Average Win: $${memory.averageProfit.toFixed(2)}
+        - Average Loss: $${memory.averageLoss.toFixed(2)}
 
-**Risk Parameters**
-- Max Position: ${riskParams.maxPositionSize}% of portfolio
-- Max Leverage: ${riskParams.maxLeverage}x
-- Default Slippage: ${riskParams.slippageTolerance} bps (${(riskParams.slippageTolerance/100).toFixed(2)}%)
-- Portfolio-based Sizing: Enabled
+        **Risk Parameters**
+        - Max Position: ${memory.maxPositionSize}% of portfolio
+        - Max Leverage: ${memory.maxLeverage}x
+        - Default Slippage: ${memory.slippageTolerance} bps (${(memory.slippageTolerance/100).toFixed(2)}%)
+        - Portfolio-based Sizing: Enabled
 
-**Market Intelligence**
-- Markets Tracked: ${tradingState.marketData?.markets ? Object.keys(tradingState.marketData.markets).length : 0}
-- Active Tokens: ${tradingState.marketData?.tokens ? Object.keys(tradingState.marketData.tokens).length : 0}
-- Analysis Depth: Comprehensive (PnL, Liquidations, Risk Metrics)
+        **Market Intelligence**
+        - Markets Tracked: ${Object.keys(memory.markets).length}
+        - Active Tokens: ${Object.keys(memory.tokens).length}
+        - Volume Data: ${Object.keys(memory.volumes).length} markets
+        - Total Volume: $${Object.values(memory.volumes).reduce((total, vol) => total + parseFloat(vol.volume), 0).toFixed(2)}
+        - Analysis Depth: Comprehensive (PnL, Liquidations, Risk Metrics)
 
-${memory.lastResult ? `**Last Action:** ${memory.lastResult}` : ""}
+        **Synth Intelligence**
+        - Top Miners: ${memory.synthLeaderboard.topMinerIds.length}
+        - Leaderboard Updated: ${memory.synthLeaderboard.lastUpdated ? new Date(memory.synthLeaderboard.lastUpdated).toLocaleString() : "Never"}
+        - Active Predictions: ${Object.keys(memory.synthPredictions).reduce((total, asset) => total + Object.keys(memory.synthPredictions[asset]).length, 0)} miners
 
-Continuously scanning for opportunities and managing risk...
-`;
+        ${memory.lastResult ? `**Last Action:** ${memory.lastResult}` : ""}
+
+        Continuously scanning for opportunities and managing risk...
+    `;
   },
   create: () => {
         console.log("🎯 Creating memory for GMX trading agent");
         
         return {
+            // Core trading data
+            positions: [],
+            orders: [],
+            markets: {},
+            tokens: {},
+            volumes: {},
+            
+            // Trading performance
+            trades: [],
+            totalPnl: 0,
+            winRate: 0,
+            averageProfit: 0,
+            averageLoss: 0,
+            
+            // Current state
+            currentTask: "Initializing GMX trading agent",
             lastResult: null,
-            gmx: {
-                goal: "Maximize portfolio returns through autonomous GMX perpetual futures trading while maintaining strict risk management",
-                tasks: [
-                    "Continuously monitor market conditions and identify trading opportunities",
-                    "Execute high-conviction trades with proper position sizing and risk management", 
-                    "Actively manage existing positions with dynamic stop losses and take profits",
-                    "Optimize portfolio allocation and performance across all market conditions",
-                    "Provide transparent performance reporting and decision rationale"
-                ],
-                currentTask: "Scanning markets for trading opportunities",
-                positions: [],
-                orders: [],
-                marketData: null,
-                tradingHistory: {
-                    trades: [],
-                    performance: {
-                        totalPnl: 0,
-                        winRate: 0,
-                        averageProfit: 0,
-                        averageLoss: 0
-                    }
-                },
-                riskParameters: {
-                    maxPositionSize: parseFloat(env.GMX_MAX_POSITION_SIZE || "10"),
-                    minPositionSize: parseFloat(env.GMX_MIN_POSITION_SIZE || "5"),
-                    maxLeverage: parseInt(env.GMX_MAX_LEVERAGE || "3"),
-                    slippageTolerance: parseInt(env.GMX_SLIPPAGE_TOLERANCE || "125")
-                },
-                activeStrategies: ["Risk Management", "Market Analysis"]
-            }
+            
+            // Risk configuration
+            maxPositionSize: parseFloat(env.GMX_MAX_POSITION_SIZE || "10"),
+            minPositionSize: parseFloat(env.GMX_MIN_POSITION_SIZE || "5"),
+            maxLeverage: parseInt(env.GMX_MAX_LEVERAGE || "3"),
+            slippageTolerance: parseInt(env.GMX_SLIPPAGE_TOLERANCE || "125"),
+            
+            // Trading strategy
+            activeStrategies: ["Risk Management", "Market Analysis"],
+            
+            // Synth intelligence data
+            synthLeaderboard: {
+                miners: [],
+                lastUpdated: null,
+                topMinerIds: []
+            },
+            synthPredictions: {}
         };
     },
 });
@@ -862,7 +571,7 @@ const gmxActions = [
     // Markets Info (Official SDK Method)
     action({
         name: "get_markets_info",
-        description: "Get detailed information about markets and tokens using official SDK method",
+        description: "Get detailed information about markets and tokens using official SDK method (volume data excluded - use get_daily_volumes for volume information)",
         async handler(data, ctx, agent) {                
             try {
                 // Use official SDK method with enhanced error handling following SDK patterns
@@ -896,36 +605,6 @@ const gmxActions = [
                     throw new Error("Invalid tokens data received from GMX SDK");
                 }
                 
-                // Fetch daily volumes using official method with error handling
-                const volumes = await sdk.markets.getDailyVolumes().catch(error => {
-                    console.warn("Failed to fetch daily volumes, continuing without volume data:", error);
-                    return []; // Continue without volume data rather than failing entire operation
-                });
-                
-                // Create a mapping of market addresses to volume data for easier lookup
-                const volumeByMarket: Record<string, {
-                    longVolumeUsd: number;
-                    shortVolumeUsd: number;
-                    totalVolumeUsd: number;
-                }> = {};
-                
-                if (volumes && Array.isArray(volumes)) {
-                    volumes.forEach(volumeData => {
-                        if (volumeData && volumeData.marketAddress) {
-                            // Convert BigInt to human-readable USD values
-                            const longVolumeUsd = Number(volumeData.longVolumeUsd ? 
-                                volumeData.longVolumeUsd / BigInt(10 ** USD_DECIMALS) : 0n);
-                            const shortVolumeUsd = Number(volumeData.shortVolumeUsd ?
-                                volumeData.shortVolumeUsd / BigInt(10 ** USD_DECIMALS) : 0n);
-                                
-                            volumeByMarket[volumeData.marketAddress] = {
-                                longVolumeUsd,
-                                shortVolumeUsd,
-                                totalVolumeUsd: longVolumeUsd + shortVolumeUsd
-                            };
-                        }
-                    });
-                }
                 
                 // Simplify token data to contain only essential information
                 const simplifiedTokensData: Record<string, any> = {};
@@ -950,21 +629,14 @@ const gmxActions = [
                     });
                 }
                 
-                // Simplify market data to contain only essential information + add volume data
+                // Simplify market data to contain only essential information
                 const simplifiedMarketsData: Record<string, any> = {};
-                const marketsWithVolume: any[] = [];
                 
                 if (marketsInfoData) {
                     Object.keys(marketsInfoData).forEach(address => {
                         const marketData = marketsInfoData[address];
-                        console.log(marketData, LogLevel.INFO);
+
                         if (marketData) {
-                            // Get volume data for this market if available
-                            const volumeData = volumeByMarket[address] || {
-                                longVolumeUsd: 0,
-                                shortVolumeUsd: 0,
-                                totalVolumeUsd: 0
-                            };
                             
                             const simplifiedMarket = {
                                 marketTokenAddress: marketData.marketTokenAddress,
@@ -992,66 +664,27 @@ const gmxActions = [
                                 shortTokenPrice: marketData.shortToken?.prices?.maxPrice
                                     ? Number(marketData.shortToken.prices.maxPrice / BigInt(10 ** USD_DECIMALS))
                                     : 0,
-                                isSpotOnly: marketData.isSpotOnly,
-                                // Include volume data
-                                volume: volumeData
+                                isSpotOnly: marketData.isSpotOnly
                             };
                             
                             simplifiedMarketsData[address] = simplifiedMarket;
-                            
-                            // Add to array for sorting
-                            marketsWithVolume.push({
-                                address,
-                                ...simplifiedMarket
-                            });
                         }
                     });
                 }
                 
-                // Sort markets by volume and get top markets
-                const topMarketsByVolume = [...marketsWithVolume]
-                    .sort((a, b) => (b.volume?.totalVolumeUsd || 0) - (a.volume?.totalVolumeUsd || 0))
-                    .slice(0, 10);
-                
                 // Sort markets by interest (open positions) and get top markets
-                const topMarketsByInterest = [...marketsWithVolume]
-                    .sort((a, b) => (b.longInterestUsd + b.shortInterestUsd) - (a.longInterestUsd + a.shortInterestUsd))
+                const topMarketsByInterest = Object.values(simplifiedMarketsData)
+                    .sort((a: any, b: any) => (b.longInterestUsd + b.shortInterestUsd) - (a.longInterestUsd + a.shortInterestUsd))
                     .slice(0, 10);
                                         
-                // Update state with simplified market data - safe memory management
-                const memory = ctx.memory as GmxTradingMemory;
+                // Update state with simplified market data - flat memory structure
+                const memory = ctx.memory as GmxMemory;
                 try {
-                    if (!memory.gmx) {
-                        console.warn("GMX memory state not initialized, creating default state");
-                        memory.gmx = {
-                            goal: "Autonomously trade and manage GMX portfolio",
-                            tasks: ["Monitor market conditions"],
-                            currentTask: "Processing market data",
-                            positions: [],
-                            orders: [],
-                            marketData: null,
-                            tradingHistory: {
-                                trades: [],
-                                performance: { totalPnl: 0, winRate: 0, averageProfit: 0, averageLoss: 0 }
-                            },
-                            riskParameters: {
-                                maxPositionSize: 20,
-                                minPositionSize: 5,
-                                maxLeverage: 5,
-                                slippageTolerance: 125
-                            },
-                            activeStrategies: ["Risk Management", "Market Analysis"]
-                        };
-                    }
-                    
-                    // Immutable update of market data
-                    memory.gmx = {
-                        ...memory.gmx,
-                        marketData: {
-                            markets: { ...simplifiedMarketsData },
-                            tokens: { ...simplifiedTokensData }
-                        }
-                    };
+                    // Direct assignment to flat memory structure
+                    memory.markets = { ...simplifiedMarketsData };
+                    memory.tokens = { ...simplifiedTokensData };
+                    memory.currentTask = "Processing market data";
+                    memory.lastResult = `Fetched ${Object.keys(simplifiedMarketsData).length} markets and ${Object.keys(simplifiedTokensData).length} tokens`;
                 } catch (error) {
                     console.error("Failed to update memory state:", error);
                     // Continue without updating memory rather than failing
@@ -1062,11 +695,6 @@ const gmxActions = [
                     message: `Successfully fetched markets info (${Object.keys(simplifiedMarketsData).length} markets) and tokens data (${Object.keys(simplifiedTokensData).length} tokens)`,
                     marketsSummary: {
                         count: Object.keys(simplifiedMarketsData).length,
-                        topMarketsByVolume: topMarketsByVolume.map(m => ({
-                            name: m.name,
-                            indexToken: m.indexToken,
-                            volume: m.volume.totalVolumeUsd
-                        })),
                         topMarketsByInterest: topMarketsByInterest.map(m => ({
                             name: m.name,
                             indexToken: m.indexToken,
@@ -1078,7 +706,6 @@ const gmxActions = [
                     tokensSummary: {
                         count: Object.keys(simplifiedTokensData).length,
                         sampleTokens: Object.values(simplifiedTokensData)
-                            .slice(0, 5)
                             .map(token => ({
                                 symbol: token.symbol,
                                 name: token.name,
@@ -1109,19 +736,22 @@ const gmxActions = [
                 // Use official SDK method
                 const markets = await sdk.markets.getMarkets(data.offset, data.limit);
                 
-                const memory = ctx.memory as GmxTradingMemory;
+                const memory = ctx.memory as GmxMemory;
                 
-                if (memory.gmx && memory.gmx.marketData) {
-                    memory.gmx.marketData = { ...memory.gmx.marketData, markets };
+                // Update memory with market data
+                if (markets.marketsData) {
+                    memory.markets = { ...memory.markets, ...markets.marketsData };
                 }
+                memory.currentTask = "getMarkets";
+                memory.lastResult = `Retrieved ${markets.marketsAddresses?.length || 0} markets`;
 
                 return {
                     success: true,
-                    message: `Retrieved ${markets.length} markets`,
+                    message: `Retrieved ${markets.marketsAddresses?.length || 0} markets`,
                     markets: markets,
                     pagination: {
                         offset: data.offset || 0,
-                        limit: data.limit || markets.length
+                        limit: data.limit || 100
                     }
                 };
             } catch (error) {
@@ -1140,11 +770,11 @@ const gmxActions = [
         description: "Get daily volume data for markets using official SDK method",
         async handler(data, ctx, agent) {
             try {
-                // Use official SDK method
+                // Use official SDK method - returns Record<string, bigint> | undefined
                 const volumes = await sdk.markets.getDailyVolumes();
                 
-                // Check if volumes is actually an array
-                if (!volumes || !Array.isArray(volumes)) {
+                // Check if volumes data exists (should be a Record, not array)
+                if (!volumes || typeof volumes !== 'object') {
                     return {
                         success: false,
                         message: "No volume data available or invalid data format",
@@ -1153,21 +783,17 @@ const gmxActions = [
                     };
                 }
 
-                // Convert BigInt values to readable numbers
-                const formattedVolumes = volumes.map(vol => {
+                // Convert Record<string, bigint> to array format
+                const formattedVolumes = Object.entries(volumes).map(([market, volumeBigInt]) => {
                     try {
-                        // Handle different possible data structures
-                        const volumeValue = vol.volume || vol.longVolumeUsd || vol.shortVolumeUsd || 0n;
-                        const marketIdentifier = vol.market || vol.marketAddress || vol.marketName || 'Unknown';
-                        
                         return {
-                            market: marketIdentifier,
-                            volume: Number(BigInt(volumeValue) / BigInt(10 ** USD_DECIMALS)).toFixed(2)
+                            market: market,
+                            volume: Number(volumeBigInt / BigInt(10 ** USD_DECIMALS)).toFixed(2)
                         };
                     } catch (err) {
-                        console.error("Error processing volume entry:", err, vol);
+                        console.error("Error processing volume entry:", err, { market, volumeBigInt });
                         return {
-                            market: 'Error',
+                            market: market || 'Error',
                             volume: '0.00'
                         };
                     }
@@ -1175,13 +801,22 @@ const gmxActions = [
 
                 const totalVolume = formattedVolumes.reduce((sum, vol) => sum + parseFloat(vol.volume), 0);
 
+                // Store volumes in memory
+                const memory = ctx.memory as GmxMemory;
+                memory.volumes = formattedVolumes.reduce((acc, vol) => {
+                    acc[vol.market] = vol;
+                    return acc;
+                }, {} as Record<string, { market: string; volume: string }>);
+                memory.currentTask = "getDailyVolumes";
+                memory.lastResult = `Retrieved daily volumes for ${formattedVolumes.length} markets (total: $${totalVolume.toFixed(2)})`;
+
                 return {
                     success: true,
-                    message: `Retrieved daily volumes for ${volumes.length} markets`,
+                    message: `Retrieved daily volumes for ${formattedVolumes.length} markets`,
                     volumes: formattedVolumes,
                     totalVolume: totalVolume.toFixed(2),
                     rawDataType: typeof volumes,
-                    rawDataLength: volumes.length
+                    marketCount: formattedVolumes.length
                 };
             } catch (error) {
                 return {
@@ -1251,7 +886,7 @@ const gmxActions = [
                     throw new Error(`Failed to get positions: ${error.message || error}`);
                 });
                 
-                const memory = ctx.memory as GmxTradingMemory;
+                const memory = ctx.memory as GmxMemory;
                 
                 // Extract and enhance positions data with complete calculations
                 const rawPositions = positionsResult.positionsData ? Object.values(positionsResult.positionsData) : [];
@@ -1402,10 +1037,10 @@ const gmxActions = [
                     }
                 }).filter(Boolean);
                 
-                // Update memory
-                if (memory.gmx) {
-                    memory.gmx.positions = enhancedPositions;
-                }
+                // Update memory with flat structure
+                memory.positions = enhancedPositions;
+                memory.currentTask = "Analyzed positions";
+                memory.lastResult = `Retrieved ${enhancedPositions.length} positions with complete analysis`;
 
                 // Calculate portfolio summary
                 const totalSizeUsd = enhancedPositions.reduce((sum, pos) => {
@@ -1468,7 +1103,7 @@ const gmxActions = [
                     tokensData
                 });
                 
-                const memory = ctx.memory as GmxTradingMemory;
+                const memory = ctx.memory as GmxMemory;
                 
                 // Extract orders data from structured result
                 const rawOrders = ordersResult.ordersInfoData ? Object.values(ordersResult.ordersInfoData) : [];
@@ -1628,9 +1263,9 @@ const gmxActions = [
                 const readyToExecute = enhancedOrders.filter(order => order.executionStatus === 'Ready to Execute').length;
                 
                 // Update memory with enhanced orders
-                if (memory.gmx) {
-                    memory.gmx.orders = enhancedOrders;
-                }
+                memory.orders = enhancedOrders;
+                memory.currentTask = "Analyzed orders";
+                memory.lastResult = `Retrieved ${enhancedOrders.length} orders with comprehensive analysis`;
 
                 return {
                     success: true,
@@ -1837,7 +1472,7 @@ const gmxActions = [
                             
                             if (positionTrade.sizeDeltaUsd && positionTrade.initialCollateralDeltaAmount) {
                                 try {
-                                    const sizeInTokens = convertToTokens(
+                                    const sizeInTokens = convertToTokenAmount(
                                         positionTrade.sizeDeltaUsd,
                                         positionTrade.indexToken.decimals,
                                         positionTrade.indexToken.prices?.maxPrice || 0n
@@ -1849,14 +1484,26 @@ const gmxActions = [
                                         positionTrade.initialCollateralToken.prices?.maxPrice || 0n
                                     );
                                     
+                                    if (!sizeInTokens || !collateralUsd) {
+                                        throw new Error("Failed to convert values");
+                                    }
+                                    
+                                    const collateralAmount = positionTrade.initialCollateralDeltaAmount;
+                                    const isSameCollateralAsIndex = positionTrade.initialCollateralToken.address === positionTrade.indexToken.address;
+                                    
                                     const liquidationPriceRaw = calculateLiquidationPrice({
                                         sizeInUsd: positionTrade.sizeDeltaUsd,
                                         sizeInTokens,
+                                        collateralAmount,
                                         collateralUsd,
-                                        isLong,
                                         markPrice: positionTrade.indexToken.prices?.maxPrice || 0n,
+                                        indexTokenDecimals: positionTrade.indexToken.decimals,
+                                        collateralTokenDecimals: positionTrade.initialCollateralToken.decimals,
+                                        isLong,
                                         minCollateralFactor: marketInfo.minCollateralFactor || 1000n,
-                                        indexTokenDecimals: positionTrade.indexToken.decimals
+                                        pendingBorrowingFeesUsd: 0n, // Not available in historical trade data
+                                        pendingFundingFeesUsd: 0n,   // Not available in historical trade data
+                                        isSameCollateralAsIndex
                                     });
                                     
                                     if (liquidationPriceRaw) {
@@ -1998,18 +1645,14 @@ const gmxActions = [
                 const riskAdjustedReturn = returnStdDev > 0 ? avgReturn / returnStdDev : 0;
                 
                 // Update memory with comprehensive data
-                const memory = ctx.memory as GmxTradingMemory;
-                if (memory.gmx) {
-                    memory.gmx.tradingHistory = {
-                        trades: simplifiedTrades,
-                        performance: {
-                            totalPnl: tradeMetrics.totalPnl,
-                            winRate,
-                            averageProfit,
-                            averageLoss
-                        }
-                    };
-                }
+                const memory = ctx.memory as GmxMemory;
+                memory.trades = simplifiedTrades;
+                memory.totalPnl = tradeMetrics.totalPnl;
+                memory.winRate = winRate;
+                memory.averageProfit = averageProfit;
+                memory.averageLoss = averageLoss;
+                memory.currentTask = "getAccountStats";
+                memory.lastResult = `Retrieved trading history with ${simplifiedTrades.length} trades, total PnL: ${tradeMetrics.totalPnl.toFixed(2)}, win rate: ${winRate}%`;
                 
                 return {
                     success: true,
@@ -2084,15 +1727,19 @@ const gmxActions = [
 
                 const leaderboard = await response.json();
                 
-                const memory = ctx.memory as GmxTradingMemory;
+                const memory = ctx.memory as GmxMemory;
                 
                 // Slice to get only the top 5 miners
                 const limitedLeaderboard = Array.isArray(leaderboard) ? leaderboard.slice(0, 5) : leaderboard;
                 
                 // Update memory with leaderboard data
-                if (memory.gmx) {
-                    memory.lastResult = `Retrieved Synth leaderboard with ${limitedLeaderboard.length || 0} miners`;
-                }
+                memory.synthLeaderboard = {
+                    miners: limitedLeaderboard,
+                    lastUpdated: new Date().toISOString(),
+                    topMinerIds: limitedLeaderboard.map((miner: any) => miner.uid || miner.id).filter(Boolean)
+                };
+                memory.currentTask = "getSynthLeaderboard";
+                memory.lastResult = `Retrieved Synth leaderboard with ${limitedLeaderboard.length || 0} miners`;
 
                 return {
                     success: true,
@@ -2124,9 +1771,9 @@ const gmxActions = [
         }),
         async handler(data, ctx, agent) {
             try {
-                // Miner IDs are required for this endpoint
-                if (!data.miner || data.miner.length === 0) {
-                    throw new Error('Miner IDs are required. Please call get_synth_leaderboard first to get active miner IDs.');
+                // Miner ID is required for this endpoint
+                if (!data.miner || data.miner <= 0) {
+                    throw new Error('Valid Miner ID is required. Please call get_synth_leaderboard first to get active miner IDs.');
                 }
                 let url = `https://dashboard.synthdata.co/api/predictionLatest/?asset=${data.asset}&miner=${data.miner}`;
 
@@ -2143,33 +1790,60 @@ const gmxActions = [
                 }
 
                 const predictions = await response.json();
-                
-                // Slice to get only the latest 12 predictions
-                const limitedPredictions = predictions[0].prediction.slice(0, 12);
-                
-                const memory = ctx.memory as GmxTradingMemory;
-                                
-                // Update memory with latest prediction data
-                if (memory.gmx) {
-                    memory.lastResult = `Retrieved latest ${data.asset} predictions from ${data.miner} miner`;
+                // Extract the next 144 predictions from prediction array
+                // Based on API structure: predictions[0].prediction contains array of prediction values
+                const predictionData = predictions[0].prediction[0];
+
+                const memory = ctx.memory as GmxMemory;
+
+                // Update memory with latest prediction data - ensure synthPredictions exists
+                if (!memory.synthPredictions) {
+                    memory.synthPredictions = {};
                 }
+                if (!memory.synthPredictions[data.asset]) {
+                    memory.synthPredictions[data.asset] = {};
+                }
+                memory.synthPredictions[data.asset][data.miner] = {
+                    predictions: predictionData,
+                    lastUpdated: new Date().toISOString(),
+                    asset: data.asset,
+                    minerId: data.miner
+                };
+                
+                memory.currentTask = "getLatestPredictions";
+                memory.lastResult = `Retrieved ${predictionData.length} ${data.asset} predictions from miner ${data.miner}`;
 
                 return {
                     success: true,
-                    message: `Retrieved latest ${data.asset} predictions from ${data.miner} miner`,
+                    message: `Retrieved ${predictionData.length} latest ${data.asset} predictions from miner ${data.miner}`,
                     data: {
                         asset: data.asset,
                         miner: data.miner,
-                        predictions: limitedPredictions,
+                        predictions: predictionData,
+                        totalPredictions: predictionData.length,
                         quality: "real_time",
                         source: "synth_selected_miners"
                     }
                 };
             } catch (error) {
+                // Enhanced error handling for API issues
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                
+                // Handle specific API errors
+                if (errorMessage.includes('500') && errorMessage.includes('Failed to fetch liquidation data')) {
+                    return {
+                        success: false,
+                        error: errorMessage,
+                        message: "Synth API is experiencing server issues (500 error). This may be temporary - try again later.",
+                        suggestion: "Check if the miner ID is valid by calling get_synth_leaderboard first"
+                    };
+                }
+                
                 return {
                     success: false,
-                    error: error instanceof Error ? error.message : String(error),
-                    message: "Failed to fetch latest predictions from Synth"
+                    error: errorMessage,
+                    message: "Failed to fetch latest predictions from Synth",
+                    suggestion: "Verify the asset (BTC/ETH) and miner ID are correct"
                 };
             }
         }
@@ -2191,12 +1865,11 @@ const gmxActions = [
                 // Use SDK's internal cancelOrders method (no manual wallet client needed)
                 const result = await sdk.orders.cancelOrders(data.orderKeys);
 
-                const memory = ctx.memory as GmxTradingMemory;
+                const memory = ctx.memory as GmxMemory;
                 
                 // Update memory with cancellation info
-                if (memory.gmx) {
-                    memory.lastResult = `Cancelled ${data.orderKeys.length} order(s)`;
-                }
+                memory.currentTask = "cancelOrders";
+                memory.lastResult = `Cancelled ${data.orderKeys.length} order(s)`;
 
                 return {
                     success: true,
@@ -2286,13 +1959,12 @@ const gmxActions = [
                     throw new Error(errorMessage);
                 });
 
-                const memory = ctx.memory as GmxTradingMemory;
+                const memory = ctx.memory as GmxMemory;
                 
                 // Update memory with order info
                 const leverageX = parseFloat(data.leverage) / 10000;
-                if (memory.gmx) {
-                    memory.lastResult = `Opened long position with ${leverageX}x leverage`;
-                }
+                memory.currentTask = "openLongPosition";
+                memory.lastResult = `Opened long position with ${leverageX}x leverage`;
 
                 return {
                     success: true,
@@ -2381,13 +2053,12 @@ const gmxActions = [
                     throw new Error(errorMessage);
                 });
 
-                const memory = ctx.memory as GmxTradingMemory;
+                const memory = ctx.memory as GmxMemory;
                 
                 // Update memory with order info
                 const leverageX = parseFloat(data.leverage) / 10000;
-                if (memory.gmx) {
-                    memory.lastResult = `Opened short position with ${leverageX}x leverage`;
-                }
+                memory.currentTask = "openShortPosition";
+                memory.lastResult = `Opened short position with ${leverageX}x leverage`;
 
                 return {
                     success: true,
@@ -2433,12 +2104,11 @@ const gmxActions = [
                     allowedSlippageBps: data.allowedSlippageBps,
                 });
 
-                const memory = ctx.memory as GmxTradingMemory;
+                const memory = ctx.memory as GmxMemory;
                 
                 // Update memory with swap info
-                if (memory.gmx) {
-                    memory.lastResult = `Swapped ${data.fromAmount} tokens: ${data.fromTokenAddress} → ${data.toTokenAddress}`;
-                }
+                memory.currentTask = "swapTokens";
+                memory.lastResult = `Swapped ${data.fromAmount} tokens: ${data.fromTokenAddress} → ${data.toTokenAddress}`;
 
                 return {
                     success: true,
@@ -2529,14 +2199,13 @@ const gmxActions = [
                     isTrigger: true, // This makes it a conditional order
                 });
 
-                const memory = ctx.memory as GmxTradingMemory;
+                const memory = ctx.memory as GmxMemory;
                 
                 // Update memory with order info
-                if (memory.gmx) {
-                    const triggerPriceFormatted = data.triggerPrice;
-                    const sizeUsdFormatted = data.sizeDeltaUsd;
-                    memory.lastResult = `Created take profit order: ${data.isLong ? 'Long' : 'Short'} TP at ${triggerPriceFormatted} for $${sizeUsdFormatted}`;
-                }
+                const triggerPriceFormatted = data.triggerPrice;
+                const sizeUsdFormatted = data.sizeDeltaUsd;
+                memory.currentTask = "createTakeProfitOrder";
+                memory.lastResult = `Created take profit order: ${data.isLong ? 'Long' : 'Short'} TP at ${triggerPriceFormatted} for $${sizeUsdFormatted}`;
 
                 return {
                     success: true,
@@ -2630,14 +2299,13 @@ const gmxActions = [
                     isTrigger: true, // This makes it a conditional order
                 });
 
-                const memory = ctx.memory as GmxTradingMemory;
+                const memory = ctx.memory as GmxMemory;
                 
                 // Update memory with order info
-                if (memory.gmx) {
-                    const triggerPriceFormatted = data.triggerPrice;
-                    const sizeUsdFormatted = data.sizeDeltaUsd;
-                    memory.lastResult = `Created stop loss order: ${data.isLong ? 'Long' : 'Short'} SL at ${triggerPriceFormatted} for $${sizeUsdFormatted}`;
-                }
+                const triggerPriceFormatted = data.triggerPrice;
+                const sizeUsdFormatted = data.sizeDeltaUsd;
+                memory.currentTask = "createStopLossOrder";
+                memory.lastResult = `Created stop loss order: ${data.isLong ? 'Long' : 'Short'} SL at ${triggerPriceFormatted} for $${sizeUsdFormatted}`;
 
                 return {
                     success: true,
@@ -2734,13 +2402,12 @@ const gmxActions = [
                     isTrigger: false, // Market order executes immediately
                 });
 
-                const memory = ctx.memory as GmxTradingMemory;
+                const memory = ctx.memory as GmxMemory;
                 
                 // Update memory with order info
-                if (memory.gmx) {
-                    const sizeUsdFormatted = data.sizeDeltaUsd;
-                    memory.lastResult = `Closed ${data.isLong ? 'long' : 'short'} position at market: $${sizeUsdFormatted}`;
-                }
+                const sizeUsdFormatted = data.sizeDeltaUsd;
+                memory.currentTask = "closePosition";
+                memory.lastResult = `Closed ${data.isLong ? 'long' : 'short'} position at market: $${sizeUsdFormatted}`;
 
                 return {
                     success: true,
@@ -2766,79 +2433,28 @@ const gmxActions = [
         }
     })
 ];
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 🚀 AGENT INITIALIZATION & STARTUP
-// ═══════════════════════════════════════════════════════════════════════════════
-
-async function initializeAgent() {
-    console.log("⚡ Initializing Vega trading agent with MongoDB persistence...", LogLevel.INFO);
-    
-    // Initialize MongoDB memory
-    const { memory, store } = await createMongoMemory();
-    
-    // Create the agent with MongoDB memory
-    const agent = createDreams({
-        model: openrouter("google/gemini-2.0-flash-001"),
-        logger: new Logger({ level: LogLevel.INFO }),
-        extensions: [discord],
-        context: gmxContext, // Use contexts array instead of single context
-        memory: memory,
-        defaultOutput: "discord:message",
-        actions: gmxActions,
-    });
-    
-    console.log("✅ Agent created successfully!");
-    
-    // Start the agent
-    await agent.start({
-        name: vegaCharacter.name,
-        role: vegaCharacter.description,
-    });
-    
-    console.log("🎯 Vega is now live and ready for GMX trading!");
-    
-    return { agent, mongoStore: store };
-}
-
 console.log("🚀 Starting GMX Trading Agent with Discord...");
 
 let currentAgent: any = null;
-let mongoStore: any = null;
 
-// Initialize and start the agent
-initializeAgent().then(({ agent, mongoStore: store }) => {
-    currentAgent = agent;
-    mongoStore = store;
-}).catch((error) => {
-    console.error("❌ Failed to initialize agent:", error);
-    process.exit(1);
+console.log("⚡ Initializing Vega trading agent...", LogLevel.INFO);
+
+// Create the agent with default memory
+const agent = createDreams({
+    model: openrouter("google/gemini-2.0-flash-001"),
+    logger: new Logger({ level: LogLevel.INFO }),
+    extensions: [discord],
+    context: gmxContext,
+    defaultOutput: "discord:message",
+    actions: gmxActions,
 });
 
-// Handle graceful shutdown
-async function gracefulShutdown() {
-    console.log("\n🛑 Shutting down Vega trading agent...");
-    
-    try {
-        if (currentAgent) {
-            console.log("📊 Stopping agent...");
-            await currentAgent.stop();
-        }
-        
-        // Close MongoDB connection if available
-        if (mongoStore && typeof mongoStore.close === 'function') {
-            console.log("🗄️ Closing MongoDB connection...");
-            await mongoStore.close();
-            console.log("✅ MongoDB connection closed");
-        }
-        
-        console.log("✅ Graceful shutdown completed");
-    } catch (error) {
-        console.error("❌ Error during shutdown:", error);
-    } finally {
-        process.exit(0);
-    }
-}
+console.log("✅ Agent created successfully!");
 
-process.on("SIGINT", gracefulShutdown);
-process.on("SIGTERM", gracefulShutdown);
+// Start the agent
+await agent.start({
+    name: vegaCharacter.name,
+    role: vegaCharacter.description,
+});
+
+console.log("🎯 Vega is now live and ready for GMX trading!");
