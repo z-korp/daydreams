@@ -433,7 +433,7 @@ if (env.GMX_WALLET_ADDRESS) {
 const vegaCharacter = {
     id: "vega-gmx-portfolio-manager-v2",
     name: "Vega",
-    description: "An elite autonomous GMX trader with access to data and thinks for itself",
+    description: "An elite autonomous GMX trader",
     speechExamples: [
         "🎯 Opening 3x long ETH at $3,100 - momentum breakout + oversold RSI confluence",
         "✅ ETH position +12% - raising stop to breakeven, taking partial profit at $3,400",
@@ -2441,7 +2441,7 @@ console.log("⚡ Initializing Vega trading agent...", LogLevel.INFO);
 
 // Create the agent with default memory
 const agent = createDreams({
-    model: openrouter("google/gemini-2.0-flash-001"),
+    model: openrouter("google/gemini-2.5-flash-preview-05-20"),
     logger: new Logger({ level: LogLevel.INFO }),
     extensions: [discord],
     context: gmxContext,
