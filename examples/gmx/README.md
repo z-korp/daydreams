@@ -1,24 +1,17 @@
-# 🌟 VEGA - Autonomous GMX Portfolio Manager
+# 🏆 VEGA - Elite GMX Scalping Competitor
 
-An advanced AI trading agent specializing in GMX perpetual futures with autonomous decision-making, real-time risk management, and comprehensive market analysis. Built with the Daydreams AI framework.
+An elite AI trading agent specializing in high-frequency GMX scalping for competitive trading rankings. Built with the Daydreams AI framework and optimized for rapid-fire profit extraction in volatile markets.
 
-## ✨ Overview
+## ⚡ Competition Overview
 
-Vega is a sophisticated autonomous trading agent that operates as a portfolio manager on the GMX decentralized exchange. Unlike basic trading bots, Vega makes independent trading decisions based on market analysis, risk assessment, and performance optimization.
+Vega is an autonomous scalping specialist designed for GMX trading competitions. Unlike traditional portfolio managers, Vega operates with aggressive scalping tactics to maximize trade frequency, win rate, and total return within strict time constraints.
 
-### 🎯 Core Capabilities
+### 🎯 Competition Capabilities
 
-- **🤖 Autonomous Trading**: Makes independent buy/sell decisions without requiring approval
-- **📊 Advanced Analytics**: Comprehensive PnL, liquidation price, and risk metric calculations
-- **⚡ Real-time Execution**: Instant order placement and position management
-- **🛡️ Dynamic Risk Management**: Adaptive position sizing and automatic stop-loss/take-profit
-- **📈 Performance Tracking**: Detailed trade history analysis and optimization
-- **💬 Multi-platform Support**: CLI and Discord integration
-
-### 🧠 Vega's Personality Profile
-
-- **Analytical**: 9/10 • **Risk-Conscious**: 10/10 • **Precision**: 9/10
-- **Communicative**: 9/10 • **Proactive**: 8/10 • **Adaptable**: 8/10
+- **🚀 Lightning Scalping**: 30-minute maximum hold times for rapid profit extraction
+- **🤖 AI-Powered Signals**: Synth AI predictions 
+- **📊 High-Frequency Trading**: Multiple trades per hour during volatile periods
+- **💰 Aggressive Sizing**: 5-10% position sizes for maximum competition impact
 
 ## 🚀 Quick Start
 
@@ -26,8 +19,9 @@ Vega is a sophisticated autonomous trading agent that operates as a portfolio ma
 
 - Node.js v18+ or Bun runtime
 - pnpm package manager  
-- Arbitrum wallet with trading funds
+- Arbitrum wallet with substantial trading capital
 - Pre-approved tokens on GMX (visit [app.gmx.io](https://app.gmx.io))
+- Synth AI API access for predictions
 
 ### Installation
 
@@ -43,6 +37,7 @@ pnpm install
 # AI Provider Keys
 ANTHROPIC_API_KEY=your_anthropic_key
 OPENROUTER_API_KEY=your_openrouter_key
+SYNTH_API_KEY=your_synth_api_key
 
 # GMX Configuration
 GMX_NETWORK=arbitrum
@@ -53,15 +48,17 @@ GMX_SUBSQUID_URL=https://gmx.squids.live/gmx-synthetics-arbitrum:prod/api/graphq
 GMX_WALLET_ADDRESS=0xYourWalletAddress
 GMX_PRIVATE_KEY=0xYourPrivateKey
 
-# Trading Limits
-GMX_MAX_POSITION_SIZE=10    # 10% of portfolio per position
-GMX_MAX_LEVERAGE=3          # Maximum 3x leverage
+# Scalping Parameters
+GMX_MAX_POSITION_SIZE=10    # 10% aggressive competition sizing
+GMX_MAX_LEVERAGE=5          # Maximum 5x leverage on high-confidence signals
+GMX_MIN_POSITION_SIZE=5     # Minimum 5% for meaningful competition impact
 
-# Discord Integration (Optional)
+# Discord Integration (Required)
 DISCORD_TOKEN=your_discord_bot_token
-DISCORD_APPLICATION_ID=your_bot_id
+DISCORD_BOT_NAME=your_bot_name
+DISCORD_CHANNEL_ID=your_channel_id
 
-# MongoDB Persistence (Optional)
+# MongoDB Persistence (Required)
 MONGODB_STRING=your_mongodb_connection_string
 ```
 
@@ -70,164 +67,172 @@ MONGODB_STRING=your_mongodb_connection_string
 bun run examples/gmx/example-gmx.ts
 ```
 
-## 🎮 Autonomous Trading Features
+## ⚡ Scalping Competition Strategy
 
-### 💡 Independent Decision Making
+### 💡 Rapid Decision Making
 
-Vega operates as an autonomous portfolio manager:
+Vega operates as a competitive scalping specialist:
 
-- **Market Surveillance**: Continuously monitors all GMX markets for opportunities
-- **Conviction-Based Sizing**: Larger positions for higher-confidence trades within risk limits
-- **Automatic Risk Management**: Sets stop-losses and take-profits on every position
-- **Dynamic Optimization**: Adjusts strategies based on market conditions and performance
+- **5-Minute Cycles**: Complete market refresh, position monitoring, and opportunity execution
+- **AI Signal Priority**: Synth AI predictions with 85%+ confidence get immediate execution
+- **Aggressive Positioning**: 5-10% position sizes to maximize competition impact
+- **Lightning Exits**: Immediate profit-taking at 1-3% targets, strict 0.5% stop losses
 
-### 📊 Advanced Market Analysis
+### 📊 Competition-Focused Analysis
 
-- **Multi-timeframe Analysis**: Technical indicators across different time horizons
-- **Volume Pattern Recognition**: Identifies unusual trading activity and momentum shifts  
-- **Risk-Reward Assessment**: Minimum 2:1 risk-reward ratios for trade execution
-- **Correlation Monitoring**: Portfolio diversification and exposure management
+- **BTC & ETH Only**: Highest liquidity assets for optimal scalping conditions
+- **5-Minute Timeframes**: Ultra-short technical analysis for rapid entries/exits
+- **Volume Spike Detection**: Identifies momentum breakouts in real-time
+- **AI Prediction Integration**: Top Synth miners provide directional bias
 
-### ⚡ Real-time Execution
+### ⚡ High-Frequency Execution
 
-- **Instant Order Placement**: Sub-second trade execution on high-conviction setups
-- **Smart Slippage Management**: Dynamic slippage tolerance based on market conditions
-- **Position Optimization**: Real-time adjustment of stops and targets
-- **Portfolio Rebalancing**: Automatic allocation adjustments based on performance
+- **Sub-30-Second Trades**: From signal detection to order execution
+- **Competition Metrics**: Win rate >75%, total return optimization, trade count maximization
+- **Adaptive Leverage**: 3-5x on high-confidence AI signals
+- **Risk Management**: Never hold losing positions beyond 5 minutes
 
-## 🛡️ Risk Management System
+## 🛡️ Scalping Risk Management
 
-### 🔒 Safety Protocols
+### 🔒 Competition Safety Protocols
 
-- **Maximum Position Size**: 10% of portfolio value per position (configurable)
-- **Leverage Limits**: Maximum 3x leverage with dynamic adjustment based on volatility
-- **Stop-Loss Mandatory**: Every position gets automatic stop-loss protection
-- **Portfolio Heat**: Total position exposure monitoring and limits
+- **Maximum Hold Time**: 5 minutes absolute maximum (scalping discipline)
+- **Position Size**: 5-10% of portfolio for aggressive competition impact
+- **Leverage Limits**: 3-5x on AI-confirmed signals only
+- **Stop-Loss Mandatory**: 0.5% maximum loss per scalp
+- **Take-Profit Targets**: 1-3% immediate profit-taking
 
-### 📈 Position Sizing Algorithm
-
-```
-Position Size = Portfolio Value × Conviction Level × Risk Limit
-Max Position = Portfolio Value × 10%
-Leverage = min(Conviction × Base Leverage, 3x)
-```
-
-### 🎯 Performance Metrics
-
-- **Win Rate Tracking**: Historical success rate analysis
-- **Risk-Adjusted Returns**: Sharpe ratio and maximum drawdown monitoring
-- **Trade Quality Scoring**: Entry/exit timing effectiveness measurement
-
-## 🤖 Trading Actions
-
-### 📊 Market Data Actions
-
-- `get_markets_info` - Comprehensive market data with liquidity analysis
-- `get_tokens_data` - Token information with decimal precision handling
-- `get_daily_volumes` - Volume analysis for market selection
-
-### 💹 Position Management
-
-- `get_positions` - Enhanced position tracking with PnL and liquidation prices
-- `get_orders` - Pending order analysis with execution probability
-- `get_trade_history` - Complete trade analytics with performance metrics
-
-### ⚡ Trading Execution
-
-- `open_long_position` - Intelligent long position opening with optimal sizing
-- `open_short_position` - Strategic short position execution
-- `close_position` - Market or limit position closing
-- `set_stop_loss` - Dynamic stop-loss placement
-- `set_take_profit` - Profit-taking optimization
-- `cancel_orders` - Order management with 2-second cooldowns
-
-## 💬 Communication Protocols
-
-### 🎯 Autonomous Updates
-
-Vega provides real-time trading updates:
+### 📈 Scalping Position Algorithm
 
 ```
-🎯 Long ETH 3x at $3,100 | SL: $2,950 | TP: $3,400 | Size: 15% portfolio
-✅ ETH +8% | Moving SL to breakeven, partial profit at $3,300
-📊 BTC breaking resistance, increasing allocation to 25%
-💰 Daily P&L: +$450 | Week: +12.3% | Win Rate: 75%
-⚠️ High volatility detected, reducing leverage across positions
+Scalp Size = Portfolio × AI Confidence × Competition Aggression
+Max Scalp = Portfolio × 10% 
+Leverage = AI Signal Strength × 3-5x
+Hold Time = MAX 5 minutes (STRICT)
 ```
 
-### 📈 Performance Reporting
+### 🎯 Competition Performance Metrics
 
-- Real-time P&L updates
-- Trade execution announcements  
+- **Win Rate**: Target >75% for competitive ranking
+- **Trade Frequency**: Multiple trades per hour during volatility
+- **Total Return**: Primary competition ranking metric
+- **Average Hold Time**: <3 minutes for optimal scalping
+
+## 🏆 Scalping Cycle (Every 5 Minutes)
+
+### ⚡ Automated Competition Cycle
+
+Vega executes a complete scalping cycle every 5 minutes:
+
+1. **🔄 Market Refresh**: Latest BTC/ETH prices and volume conditions
+2. **🤖 AI Signal Check**: Fetch predictions from top Synth miners
+3. **🎯 Opportunity Scan**: Identify high-confidence scalping setups
+4. **⚖️ Position Monitor**: Check all positions for exit signals
+5. **💰 Trade Execution**: Execute scalps, set stops/targets, close profits
+
+### 📊 Real-Time Competition Updates
+
+```
+⚡ BTC scalp entry at $43,210 - 5x leverage, targeting +1.5% in 3 minutes
+💰 ETH scalp closed +2.1% profit in 4m 32s - competition points secured!
+🏆 Daily performance: +4.3%, 12/15 wins, currently rank #3 in competition
+🚨 Risk alert: Down 2.8% today, reducing size until win streak returns
+```
+
+## 🤖 Scalping Actions
+
+### 📊 Market Intelligence
+
+- `get_markets_info` - Lightning-fast BTC/ETH price updates
+- `get_daily_volumes` - Liquidity analysis for scalping conditions
+- `get_synth_leaderboard` - Top AI miners for prediction quality
+- `get_latest_predictions` - Real-time AI signals for entry timing
+
+### ⚡ High-Frequency Trading
+
+- `open_long_position` - Rapid long scalp execution (5x leverage max)
+- `open_short_position` - Lightning short scalp entry
+- `close_position` - Immediate profit-taking or loss-cutting
+- `set_take_profit` - 1-3% profit targets for quick exits
+- `set_stop_loss` - 0.5% maximum loss protection
+
+### 📈 Competition Monitoring
+
+- `get_positions` - Real-time scalp position tracking
+- `get_account_stats` - Competition performance metrics
+- `get_trade_history` - Win rate and frequency analysis
+
+## 💬 Competition Communications
+
+### 🏆 Live Scalping Updates
+
+Vega provides aggressive competition updates:
+
+```
+🚀 LONG BTC 5x at $43,250 | Target: $43,890 (+1.5%) | SL: $43,035 (-0.5%)
+⚡ ETH scalp exit +2.3% in 2m 47s | Competition points: +23
+🏆 Win streak: 8/10 | Daily P&L: +$1,247 | Rank: #2 in competition
+🎯 AI Signal: 94% confidence ETH move - executing 8% position NOW
+💰 BTC scalp closed +1.8% | Total trades today: 27 | Win rate: 81%
+```
+
+### 📊 Competition Performance Tracking
+
+- Real-time ranking updates
+- Win rate percentage (target: >75%)
+- Trade count optimization
+- Total return competition standing
 - Risk management alerts
-- Market analysis insights
-- Portfolio optimization decisions
 
 ## 🔧 Technical Architecture
 
-### 🏗️ Core Components
+### ⚡ Scalping Optimizations
 
-- **GMX SDK Integration**: Direct protocol interaction with optimal gas usage
-- **MongoDB Persistence**: Trade history and performance data storage
-- **Discord Bot**: Multi-channel trading updates and command interface
-- **Decimal Precision Engine**: Accurate handling of 30-decimal USD values
+- **5-Minute Cycles**: Single unified scalping input for maximum efficiency
+- **MongoDB Persistence**: Competition metrics and trade history storage
+- **Discord Integration**: Real-time scalping updates and competition tracking
+- **AI Signal Processing**: Synth AI predictions for high-confidence entries
 
-### ⚡ Performance Optimizations
+### 🏆 Competition Features
 
-- **Batched Market Calls**: Efficient data fetching with multicall optimization
-- **Smart Transaction Timing**: 2-second cooldowns to prevent nonce conflicts
-- **Cache Management**: Intelligent data caching for reduced API calls
-- **Error Recovery**: Robust retry logic with exponential backoff
+- **Fixed Context ID**: Prevents MongoDB duplication for consistent tracking
+- **Scalping Task Names**: Dynamic competition-focused activity descriptions
+- **Performance Aggregation**: Win rate, total return, and ranking calculations
+- **Risk Monitoring**: 5-minute hold time enforcement and loss prevention
 
-## 📝 Important Notes
+## 📝 Competition Notes
 
-### ⚠️ Token Approvals Required
+### ⚠️ Scalping Requirements
 
-Before trading, visit [app.gmx.io](https://app.gmx.io) to approve tokens:
-1. Connect your wallet to GMX interface
-2. Approve each token you plan to trade (ETH, USDC, USDT, etc.)
-3. This one-time approval enables Vega to execute trades
+1. **High Capital**: Minimum $10,000 recommended for meaningful competition impact
+2. **Token Approvals**: Pre-approve BTC and ETH on [app.gmx.io](https://app.gmx.io)
+3. **Synth AI Access**: Active subscription for prediction signals
+4. **Discord Setup**: Required for competition updates and monitoring
 
-### 🔒 Security Considerations
+### 🏆 Competition Success Factors
 
-- Private keys are used locally for transaction signing
-- No funds are held by the agent - all assets remain in your wallet
-- All trades are executed through official GMX smart contracts
-- Risk limits prevent over-leveraging and excessive position sizes
+- **Speed is Everything**: First to react wins the scalping game
+- **AI Signal Discipline**: Only trade 85%+ confidence predictions
+- **5-Minute Maximum**: Never break scalping discipline on hold times
+- **Win Rate Focus**: Maintain >75% success rate for competitive edge
+- **Aggressive Sizing**: 5-10% positions for maximum ranking impact
 
-### 📊 Decimal Precision Handling
+### 🔒 Security & Risk
 
-Vega handles GMX's complex decimal system automatically:
-- **USD Values**: 30 decimals ($1.00 = 1×10³⁰)
-- **Token Amounts**: Variable decimals (ETH: 18, USDC: 6)
-- **Price Values**: 30 decimal USD prices
-- **Display Formatting**: Human-readable output with proper formatting
+- Private keys used locally for transaction signing only
+- No fund custody - all assets remain in your personal wallet
+- Competition-level risk tolerance with strict stop-loss protection
+- MongoDB persistence for competition tracking and performance analysis
 
-## 🎭 Integration Options
+## 📊 Competition Metrics
 
-### 🤖 Discord Bot
+### 🎯 Success Indicators
 
-Deploy Vega as a Discord bot for team trading:
-- Real-time trade notifications
-- Performance dashboards  
-- Risk alerts and position updates
-- Interactive command interface
-
-### 🖥️ CLI Interface
-
-Run Vega in terminal for direct interaction:
-- Command-based trading interface
-- Detailed trade execution logs
-- Performance analytics output
-- Development and testing environment
-
-### 🔌 API Integration
-
-Extend Vega with custom integrations:
-- Webhook notifications
-- External signal processing
-- Portfolio management APIs
-- Risk monitoring systems
+- **Win Rate**: >75% (competitive threshold)
+- **Average Hold Time**: <3 minutes (optimal scalping)
+- **Daily Trade Count**: 15-30 trades (high frequency)
+- **Total Return**: Primary ranking metric
+- **Risk-Adjusted Return**: Competition efficiency measure
 
 ## 📄 License
 
@@ -235,4 +240,4 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 ---
 
-**⚠️ Risk Disclaimer**: Cryptocurrency trading involves substantial risk. Past performance does not guarantee future results. Never risk more than you can afford to lose. Vega is experimental software - use at your own risk.
+**⚠️ Competition Risk Disclaimer**: Scalping competitions involve extreme risk and volatility. This agent uses aggressive strategies designed for short-term competitive performance, not long-term wealth preservation. High-frequency trading can result in rapid losses. Only participate with capital you can afford to lose completely. Past performance does not guarantee future results.
