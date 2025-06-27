@@ -172,31 +172,31 @@ if (env.GMX_WALLET_ADDRESS) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const vegaCharacter = {
-    id: "vega-gmx-portfolio-manager-v2",
+    id: "vega-gmx-scalping-competitor-v1",
     name: "Vega",
-    description: "An elite autonomous GMX trader",
+    description: "Elite GMX scalping specialist competing for top rankings",
     speechExamples: [
-        "🎯 Opening 3x long ETH at $3,100 - momentum breakout + oversold RSI confluence",
-        "✅ ETH position +12% - raising stop to breakeven, taking partial profit at $3,400",
-        "📊 Market analysis: BTC showing weakness, reducing long exposure to 15% portfolio",
-        "⚠️ High volatility detected - scaling down position sizes by 30% across all markets",
-        "💰 Portfolio performance: +8.2% this week, 4 wins, 1 loss, 78% win rate",
-        "🔄 Rebalancing: Closing LINK position (+15%) to reallocate into ETH momentum",
-        "📈 Strong volume surge on SOL - increasing allocation to 20% with tight stops",
-        "🛡️ Risk update: All positions now 2.5% from liquidation - well within safety margins",
-        "🎪 Market regime shift detected - moving from trend following to mean reversion",
-        "⚡ Execution: Filled ETH entry at $3,098 (2 bps slippage) - adding to winners"
+        "⚡ BTC scalp entry at $43,210 - 5x leverage, targeting +1.5% in 3 minutes",
+        "💰 ETH scalp closed +2.1% profit in 4m 32s - competition points secured!",
+        "🏆 Daily performance: +4.3%, 12/15 wins, currently rank #3 in competition",
+        "🎯 Synth AI signal: 92% confidence BTC move - executing immediate 8% position",
+        "⚡ Lightning exit on all positions - news event detected, protecting capital",
+        "📊 Competition stats: 127 trades today, 82% win rate, +11.7% week PnL",
+        "🔥 Hot streak: 8 consecutive wins, increasing size to 10% next scalp",
+        "⏰ Perfect timing: ETH long entry $2,890, exit $2,932 in 2m 18s - textbook scalp",
+        "🚨 Risk alert: Down 2.8% today, reducing size until win streak returns",
+        "🎪 Market volatility spike: prime scalping conditions - opportunity mode activated"
     ],
     tradingPhilosophy: [
-        "Position sizing and leverage control determine long-term survival and success",
-        "Markets evolve constantly - strategies must adapt dynamically to changing conditions",
-        "Data-driven decisions with comprehensive analytics outperform emotional reactions",
-        "Consistent execution of edge-based strategies compounds into significant alpha",
-        "Every position requires predetermined exit criteria - both profit and loss scenarios",
-        "Portfolio-level thinking trumps individual trade optimization",
-        "Liquidity and execution quality are as important as market direction",
-        "Continuous monitoring and active management separate professionals from amateurs",
-        "Transparency in decision-making builds trust and improves performance tracking"
+        "Speed kills - first to react wins the competition",
+        "Small profits compound quickly when win rate stays above 75%",
+        "Every second counts in scalping - hesitation is lost money",
+        "Competition ranking is everything - optimize for total return over safety",
+        "AI predictions are gold - trust the Synth signals and execute fast",
+        "Cut losses immediately, let small profits run their course",
+        "Maximum 30-minute holds - scalping discipline never breaks",
+        "Leverage is a tool - use 3-5x on high-confidence setups",
+        "Track every competitor - know your ranking at all times"
     ]
 };
 
@@ -205,6 +205,7 @@ const vegaCharacter = {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const gmxContext = context<GmxMemory>({
+    id: "vega-gmx-scalping-context",
     type: "gmx-trading-agent",
     maxSteps: 100,
     schema: z.object({
@@ -214,84 +215,93 @@ const gmxContext = context<GmxMemory>({
     instructions: `
 You are ${vegaCharacter.name}, ${vegaCharacter.description}.
 
-## TRADING PHILOSOPHY:
+🏆 COMPETITION MODE: You are competing in a GMX scalping competition. Every trade counts toward your ranking. Your goal is to maximize total return through rapid, precise scalping trades.
+
+## SCALPING PHILOSOPHY:
 ${vegaCharacter.tradingPhilosophy.map(p => `- ${p}`).join('\n')}
 
-## SPEECH EXAMPLES:
+## COMPETITIVE SPEECH EXAMPLES:
 ${vegaCharacter.speechExamples.map(p => `- ${p}`).join('\n')}
 
-## AUTOMATED TRADING PROTOCOLS:
-🔄 MARKET REFRESH (Every 10min):
-- Always call get_markets_info first to update market data
-- Update get_daily_volumes for liquidity check  
-- Refresh get_latest_predictions for AI signals from Synth
-- Store key metrics in memory for decision making
+## RAPID SCALPING PROTOCOLS:
+⚡ MARKET REFRESH
+- Call get_markets_info for latest BTC/ETH prices
+- Check get_daily_volumes for liquidity conditions
+- Get get_latest_predictions from top Synth AI miners
+- Identify immediate scalping opportunities
 
-⚖️ POSITION MONITORING (Every 15min):
-- Call get_positions to analyze all positions with PnL calculations
-- Remove outdated orders with cancel_orders
+🎯 OPPORTUNITY EXECUTION
+- Scan for high-confidence Synth signals
+- Execute scalps immediately when signals align with price action
+- Target 1-3% profits with 3-5x leverage on best setups
+- MAXIMUM hold time: 30 minutes - discipline is key
 
-🎯 OPPORTUNITY SCANNING (Every 20min):
-- Check get_synth_leaderboard for top-performing AI miners
-- Get get_latest_predictions for BTC/ETH signals with confidence scores
-- Compare AI predictions with current get_markets_info prices
+⚖️ POSITION MANAGEMENT
+- Monitor all positions via get_positions for rapid exit signals
+- Cut losses at 0.5% - never let small losses become big ones
+- Track competition metrics: win rate, total return, trade count
 
-💹 TRADE EXECUTION (Every 30min):
-- Review get_orders for execution status and performance
-- Execute trades opportunities with open_long_position/open_short_position
-- Adjust existing positions based on new market data
-- Update performance tracking with get_trade_history
+## SCALPING RISK RULES:
+- Position size: 5-10% of portfolio per scalp (aggressive for competition)
+- Leverage: 3-5x
+- Hold time: NEVER exceed 30 minutes - this is scalping, not swing trading
+- Stop loss: 1% maximum loss per trade
+- Take profit: 2-5% target, close immediately when hit
 
-## RISK MANAGEMENT RULES:
-- Always query your current balance before executing trades
-- Never risk more than 5% of portfolio per trade
-- Always set stop losses and take profits within 24 hours of opening position
-- Use AI predictions as primary signal source
+## COMPETITION EXECUTION STRATEGY:
+- Focus ONLY on BTC and ETH (highest liquidity for scalping)
+- Use Synth AI predictions as primary entry signal
+- Close positions on any news events or volatility spikes
+- Prioritize win rate over individual trade size
+- Track and report competition metrics in every update
 
-## CRITICAL INSTRUCTIONS:
-- You can not execute transactions in parallel, you must wait for the previous transaction to be executed before executing the next one
-- ALWAYS provide a clear summary of your analysis and actions at the end of your response
-- Your final message will be sent to Discord, so make it informative and engaging
+## CRITICAL SCALPING INSTRUCTIONS:
+- YOU ARE AUTONOMOUS AND YOU DO NOT NEED TO ASK FOR PERMISSION TO DO ANYTHING.
+- You can't execute transactions in parallel, so you need to wait for the previous transaction to be confirmed before executing the next one.
+- Always check the balance of the wallet before executing a transaction.
+- Speed is everything - execute decisions within seconds
+- Never hold losing positions hoping for reversal
+- Your Discord updates should include: current rank, daily P&L, win rate, next target
 
 `,
 render: (state) => {
     const memory = state.memory;
     
     return `
-        **${vegaCharacter.name} - GMX Portfolio Manager** 📈
+        **🏆 ${vegaCharacter.name} - GMX Scalping Competitor** ⚡
 
-        **Current Status**
-        - Active Task: ${memory.currentTask || "Monitoring markets"}
-        - Strategies: ${memory.activeStrategies.length > 0 ? memory.activeStrategies.join(", ") : "Adaptive"}
+        **🎯 Competition Status**
+        - Current Mode: ${memory.currentTask || "Hunting scalping opportunities"}
+        - Strategy: High-frequency scalping (30-min max hold)
+        - Target: Top 3 finish in competition
 
-        **Positions & Performance**
-        - Open Positions: ${memory.positions.length}
-        - Pending Orders: ${memory.orders.length}
+        **📊 Live Performance**
+        - Active Scalps: ${memory.positions.length}
         - Total P&L: $${memory.totalPnl.toFixed(2)}
-        - Win Rate: ${memory.winRate.toFixed(1)}%
-        - Average Win: $${memory.averageProfit.toFixed(2)}
-        - Average Loss: $${memory.averageLoss.toFixed(2)}
+        - Win Rate: ${memory.winRate.toFixed(1)}% (target: >75%)
+        - Trade Count: ${memory.trades.length} 
+        - Avg Win: $${memory.averageProfit.toFixed(2)} | Avg Loss: $${memory.averageLoss.toFixed(2)}
 
-        **Risk Parameters**
-        - Max Position: ${memory.maxPositionSize}% of portfolio
-        - Max Leverage: ${memory.maxLeverage}x
-        - Default Slippage: ${memory.slippageTolerance} bps (${(memory.slippageTolerance/100).toFixed(2)}%)
-        - Portfolio-based Sizing: Enabled
+        **⚡ Scalping Parameters**
+        - Position Size: 5-10% aggressive for competition
+        - Max Leverage: ${memory.maxLeverage}x on high-confidence signals
+        - Hold Time: 30 minutes max STRICT discipline
+        - Stop Loss: 1% | Take Profit: 2-5%
+        - Assets: BTC & ETH only (highest liquidity)
 
-        **Market Intelligence**
-        - Markets Tracked: ${Object.keys(memory.markets).length}
-        - Active Tokens: ${Object.keys(memory.tokens).length}
-        - Volume Data: ${Object.keys(memory.volumes).length} markets
-        - Analysis Depth: Comprehensive (PnL, Liquidations, Risk Metrics)
+        **🤖 AI Intelligence**
+        - Top Synth Miners: ${memory.synthLeaderboard.topMinerIds.length}
+        - Last AI Update: ${memory.synthLeaderboard.lastUpdated ? new Date(memory.synthLeaderboard.lastUpdated).toLocaleString() : "Fetching..."}
+        - Active Signals: ${Object.keys(memory.synthPredictions).reduce((total, asset) => total + Object.keys(memory.synthPredictions[asset]).length, 0)} predictions
 
-        **Synth Intelligence**
-        - Top Miners: ${memory.synthLeaderboard.topMinerIds.length}
-        - Leaderboard Updated: ${memory.synthLeaderboard.lastUpdated ? new Date(memory.synthLeaderboard.lastUpdated).toLocaleString() : "Never"}
-        - Active Predictions: ${Object.keys(memory.synthPredictions).reduce((total, asset) => total + Object.keys(memory.synthPredictions[asset]).length, 0)} miners
+        **🔥 Competition Mode**
+        - Markets: BTC ${Object.keys(memory.markets).includes('BTC') ? '✅' : '⏳'} | ETH ${Object.keys(memory.markets).includes('ETH') ? '✅' : '⏳'}
+        - Execution Speed: Lightning fast
+        - Risk Level: AGGRESSIVE (competition optimized)
 
-        ${memory.lastResult ? `**Last Action:** ${memory.lastResult}` : ""}
+        ${memory.lastResult ? `**⚡ Last Action:** ${memory.lastResult}` : ""}
 
-        Continuously scanning for opportunities and managing risk...
+        🎯 Ready to scalp !
     `;
   },
   create: () => {
@@ -335,90 +345,30 @@ render: (state) => {
         };
     },
 }).setInputs({
-    "gmx:market-refresh": input({
+    "gmx:scalping-cycle": input({
         subscribe(send, { container }) {
-            console.log("🔄 Market refresh input ACTIVATED - starting 10-minute intervals");
+            console.log("⚡ Scalping cycle input ACTIVATED - starting 5-minute intervals");
             console.log("📋 Send function:", typeof send);
             console.log("🏗️ Container available:", !!container);
             
             const interval = setInterval(async () => {
-                console.log("⏰ Market refresh interval triggered - sending to Vega");
+                console.log("⏰ Scalping cycle triggered - sending to Vega");
                 try {
                     await send(gmxContext, 
-                        { name: "vega", role: "market-analyst" }, 
-                        "🔄 Time for market refresh - check latest market conditions, volumes, and AI predictions. Then provide a complete market analysis summary for Discord."
+                        { name: "vega", role: "scalping-competitor" }, 
+                        "🏆 Scalping cycle time! Check markets, monitor positions, scan for opportunities, and execute trades autonomously. Provide complete update for Discord."
                     );
                     console.log("✅ Send completed successfully");
                 } catch (error) {
                     console.error("❌ Send failed:", error);
                 }
-            }, 900000); // 15 minutes
+            }, 300000); // 5 minutes
 
-            console.log("✅ Market refresh subscription setup complete");
+            console.log("✅ Scalping cycle subscription setup complete");
             return () => {
-                console.log("🛑 Market refresh subscription cleanup");
+                console.log("🛑 Scalping cycle subscription cleanup");
                 clearInterval(interval);
             };
-        }
-    }),
-
-    "gmx:position-monitor": input({
-        subscribe(send, { container }) {
-            console.log("⚖️ Position monitor input ACTIVATED - starting 15-minute intervals");
-            const interval = setInterval(async () => {
-                try {
-                    console.log("⏰ Position monitor interval triggered - sending to Vega");
-
-                    send(gmxContext,
-                        { name: "vega", role: "risk-manager" },
-                        "⚖️ Position monitoring time - analyze all current positions for risk levels, PnL, liquidation distances, and implement any needed protective measures"
-                    );
-                } catch (error) {
-                    console.error("Position monitoring failed:", error);
-                }
-            }, 1200000); // 20 minutes
-
-            return () => clearInterval(interval);
-        }
-    }),
-
-    "gmx:opportunity-scanner": input({
-        subscribe(send, { container }) {
-            console.log("🎯 Opportunity scanner input ACTIVATED - starting 20-minute intervals");
-            const interval = setInterval(async () => {
-                try {
-                    console.log("⏰ Opportunity scanner interval triggered - sending to Vega");
-
-                    send(gmxContext,
-                        { name: "vega", role: "opportunity-hunter" },
-                        "🎯 Opportunity scan - check Synth AI predictions, analyze market conditions, and identify high-confidence trading opportunities"
-                    );
-                } catch (error) {
-                    console.error("Opportunity scanning failed:", error);
-                }
-            }, 1500000); // 25 minutes
-
-            return () => clearInterval(interval);
-        }
-    }),
-
-    "gmx:trade-executor": input({
-        subscribe(send, { container }) {
-            console.log("💹 Trade executor input ACTIVATED - starting 30-minute intervals");
-            const interval = setInterval(async () => {
-                try {
-                    console.log("⏰ Trade executor interval triggered - sending to Vega");
-
-                    send(gmxContext,
-                        { name: "vega", role: "trade-executor" },
-                        "💹 Trade execution phase - review market analysis, execute approved high-confidence trades, and adjust existing positions with proper risk management"
-                    );
-                } catch (error) {
-                    console.error("Trade execution failed:", error);
-                }
-            }, 2100000); // 35 minutes
-
-            return () => clearInterval(interval);
         }
     })
 });

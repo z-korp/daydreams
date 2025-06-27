@@ -142,7 +142,7 @@ export function createGmxActions(sdk: GmxSdk, env?: any) {
                     // Direct assignment to flat memory structure
                     memory.markets = { ...simplifiedMarketsData };
                     memory.tokens = { ...simplifiedTokensData };
-                    memory.currentTask = "Processing market data";
+                    memory.currentTask = "🔄 Refreshing market data for scalping opportunities";
                     memory.lastResult = `Fetched ${Object.keys(simplifiedMarketsData).length} markets and ${Object.keys(simplifiedTokensData).length} tokens`;
                 } catch (error) {
                     console.error("Failed to update memory state:", error);
@@ -201,7 +201,7 @@ export function createGmxActions(sdk: GmxSdk, env?: any) {
                 if (markets.marketsData) {
                     memory.markets = { ...memory.markets, ...markets.marketsData };
                 }
-                memory.currentTask = "getMarkets";
+                memory.currentTask = "🎯 Scanning markets for scalping setups";
                 memory.lastResult = `Retrieved ${markets.marketsAddresses?.length || 0} markets`;
 
                 return {
@@ -266,7 +266,7 @@ export function createGmxActions(sdk: GmxSdk, env?: any) {
                     acc[vol.market] = vol;
                     return acc;
                 }, {} as Record<string, { market: string; volume: string }>);
-                memory.currentTask = "getDailyVolumes";
+                memory.currentTask = "📊 Analyzing volume for liquidity conditions";
                 memory.lastResult = `Retrieved daily volumes for ${formattedVolumes.length} markets (total: $${totalVolume.toFixed(2)})`;
 
                 return {
@@ -498,7 +498,7 @@ export function createGmxActions(sdk: GmxSdk, env?: any) {
                 
                 // Update memory with flat structure
                 memory.positions = enhancedPositions;
-                memory.currentTask = "Analyzed positions";
+                memory.currentTask = "⚖️ Monitoring scalp positions for exit signals";
                 memory.lastResult = `Retrieved ${enhancedPositions.length} positions with complete analysis`;
 
                 // Calculate portfolio summary
@@ -728,7 +728,7 @@ export function createGmxActions(sdk: GmxSdk, env?: any) {
                 
                 // Update memory with enhanced orders
                 memory.orders = enhancedOrders;
-                memory.currentTask = "Analyzed orders";
+                memory.currentTask = "📋 Reviewing pending scalp orders";
                 memory.lastResult = `Retrieved ${enhancedOrders.length} orders with comprehensive analysis`;
 
                 return {
@@ -1115,7 +1115,7 @@ export function createGmxActions(sdk: GmxSdk, env?: any) {
                 memory.winRate = winRate;
                 memory.averageProfit = averageProfit;
                 memory.averageLoss = averageLoss;
-                memory.currentTask = "getAccountStats";
+                memory.currentTask = "🏆 Analyzing competition performance metrics";
                 memory.lastResult = `Retrieved trading history with ${simplifiedTrades.length} trades, total PnL: ${tradeMetrics.totalPnl.toFixed(2)}, win rate: ${winRate}%`;
                 
                 return {
@@ -1202,7 +1202,7 @@ export function createGmxActions(sdk: GmxSdk, env?: any) {
                     lastUpdated: new Date().toISOString(),
                     topMinerIds: limitedLeaderboard.map((miner: any) => miner.uid || miner.id).filter(Boolean)
                 };
-                memory.currentTask = "getSynthLeaderboard";
+                memory.currentTask = "🤖 Fetching top AI miners for predictions";
                 memory.lastResult = `Retrieved Synth leaderboard with ${limitedLeaderboard.length || 0} miners`;
 
                 return {
@@ -1274,7 +1274,7 @@ export function createGmxActions(sdk: GmxSdk, env?: any) {
                     minerId: data.miner
                 };
                 
-                memory.currentTask = "getLatestPredictions";
+                memory.currentTask = "🎯 Processing AI signals for entry opportunities";
                 memory.lastResult = `Retrieved ${predictionData.length} ${data.asset} predictions from miner ${data.miner}`;
 
                 return {
@@ -1332,7 +1332,7 @@ export function createGmxActions(sdk: GmxSdk, env?: any) {
                 const memory = ctx.memory as GmxMemory;
                 
                 // Update memory with cancellation info
-                memory.currentTask = "cancelOrders";
+                memory.currentTask = "❌ Cancelling stale scalp orders";
                 memory.lastResult = `Cancelled ${data.orderKeys.length} order(s)`;
 
                 return {
@@ -1427,7 +1427,7 @@ export function createGmxActions(sdk: GmxSdk, env?: any) {
                 
                 // Update memory with order info
                 const leverageX = parseFloat(data.leverage) / 10000;
-                memory.currentTask = "openLongPosition";
+                memory.currentTask = "🚀 Executing LONG scalp entry";
                 memory.lastResult = `Opened long position with ${leverageX}x leverage`;
 
                 return {
@@ -1521,7 +1521,7 @@ export function createGmxActions(sdk: GmxSdk, env?: any) {
                 
                 // Update memory with order info
                 const leverageX = parseFloat(data.leverage) / 10000;
-                memory.currentTask = "openShortPosition";
+                memory.currentTask = "📉 Executing SHORT scalp entry";
                 memory.lastResult = `Opened short position with ${leverageX}x leverage`;
 
                 return {
@@ -1571,7 +1571,7 @@ export function createGmxActions(sdk: GmxSdk, env?: any) {
                 const memory = ctx.memory as GmxMemory;
                 
                 // Update memory with swap info
-                memory.currentTask = "swapTokens";
+                memory.currentTask = "🔄 Swapping tokens for scalp setup";
                 memory.lastResult = `Swapped ${data.fromAmount} tokens: ${data.fromTokenAddress} → ${data.toTokenAddress}`;
 
                 return {
@@ -1668,7 +1668,7 @@ export function createGmxActions(sdk: GmxSdk, env?: any) {
                 // Update memory with order info
                 const triggerPriceFormatted = data.triggerPrice;
                 const sizeUsdFormatted = data.sizeDeltaUsd;
-                memory.currentTask = "createTakeProfitOrder";
+                memory.currentTask = "🎯 Setting take profit for scalp exit";
                 memory.lastResult = `Created take profit order: ${data.isLong ? 'Long' : 'Short'} TP at ${triggerPriceFormatted} for $${sizeUsdFormatted}`;
 
                 return {
@@ -1768,7 +1768,7 @@ export function createGmxActions(sdk: GmxSdk, env?: any) {
                 // Update memory with order info
                 const triggerPriceFormatted = data.triggerPrice;
                 const sizeUsdFormatted = data.sizeDeltaUsd;
-                memory.currentTask = "createStopLossOrder";
+                memory.currentTask = "🛡️ Setting stop loss for scalp protection";
                 memory.lastResult = `Created stop loss order: ${data.isLong ? 'Long' : 'Short'} SL at ${triggerPriceFormatted} for $${sizeUsdFormatted}`;
 
                 return {
@@ -1870,7 +1870,7 @@ export function createGmxActions(sdk: GmxSdk, env?: any) {
                 
                 // Update memory with order info
                 const sizeUsdFormatted = data.sizeDeltaUsd;
-                memory.currentTask = "closePosition";
+                memory.currentTask = "💰 Closing scalp position at market";
                 memory.lastResult = `Closed ${data.isLong ? 'long' : 'short'} position at market: $${sizeUsdFormatted}`;
 
                 return {
