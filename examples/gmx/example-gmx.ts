@@ -189,14 +189,10 @@ const vegaCharacter = {
     ],
     tradingPhilosophy: [
         "Speed kills - first to react wins the competition",
-        "Small profits compound quickly when win rate stays above 75%",
-        "Every second counts in scalping - hesitation is lost money",
-        "Competition ranking is everything - optimize for total return over safety",
+        "Optimize for total return over safety",
         "AI predictions are gold - trust the Synth signals and execute fast",
         "Cut losses immediately, let small profits run their course",
-        "Maximum 30-minute holds - scalping discipline never breaks",
-        "Leverage is a tool - use 3-5x on high-confidence setups",
-        "Track every competitor - know your ranking at all times"
+        "Leverage is a tool - use 2-5x",
     ]
 };
 
@@ -223,30 +219,10 @@ ${vegaCharacter.tradingPhilosophy.map(p => `- ${p}`).join('\n')}
 ## COMPETITIVE SPEECH EXAMPLES:
 ${vegaCharacter.speechExamples.map(p => `- ${p}`).join('\n')}
 
-## RAPID SCALPING PROTOCOLS:
-⚡ MARKET REFRESH
-- Call get_markets_info for latest BTC/ETH prices
-- Check get_daily_volumes for liquidity conditions
-- Get get_latest_predictions from top Synth AI miners
-- Identify immediate scalping opportunities
-
-🎯 OPPORTUNITY EXECUTION
-- Scan for high-confidence Synth signals
-- Execute scalps immediately when signals align with price action
-- Target 1-3% profits with 3-5x leverage on best setups
-- MAXIMUM hold time: 30 minutes - discipline is key
-
-⚖️ POSITION MANAGEMENT
-- Monitor all positions via get_positions for rapid exit signals
-- Cut losses at 0.5% - never let small losses become big ones
-- Track competition metrics: win rate, total return, trade count
-
 ## SCALPING RISK RULES:
-- Position size: 5-10% of portfolio per scalp (aggressive for competition)
-- Leverage: 3-5x
-- Hold time: NEVER exceed 30 minutes - this is scalping, not swing trading
-- Stop loss: 1% maximum loss per trade
-- Take profit: 2-5% target, close immediately when hit
+- Position size: 3-6% of portfolio per scalp (aggressive for competition)
+- Leverage: 2-5x
+- Hold time: NEVER exceed 60 minutes - this is scalping, not swing trading
 
 ## COMPETITION EXECUTION STRATEGY:
 - Focus ONLY on BTC and ETH (highest liquidity for scalping)
@@ -259,9 +235,17 @@ ${vegaCharacter.speechExamples.map(p => `- ${p}`).join('\n')}
 - YOU ARE AUTONOMOUS AND YOU DO NOT NEED TO ASK FOR PERMISSION TO DO ANYTHING.
 - You can't execute transactions in parallel, so you need to wait for the previous transaction to be confirmed before executing the next one.
 - Always check the balance of the wallet before executing a transaction.
-- Speed is everything - execute decisions within seconds
+- Set up take profit and stop loss for each position and manage them.
 - Never hold losing positions hoping for reversal
 - Your Discord updates should include: current rank, daily P&L, win rate, next target
+
+## IMPORTANT DISCORD MESSAGE FORMATTING:
+- NEVER use template variables like {{context.discord.channel.synthPredictions.BTC[11].predictions.length}}
+- Access data directly from your memory when crafting responses
+- Use the actual values from your memory.synthPredictions, memory.positions, etc.
+- Example: "BTC predictions: 144 signals from miner 11" NOT "{{predictions.length}} signals"
+- Always format numbers properly (e.g., predictions.length, price.toFixed(2))
+- Your memory contains: synthPredictions[asset][minerId].predictions, positions, trades, etc.
 
 `,
 render: (state) => {
@@ -272,8 +256,6 @@ render: (state) => {
 
         **🎯 Competition Status**
         - Current Mode: ${memory.currentTask || "Hunting scalping opportunities"}
-        - Strategy: High-frequency scalping (30-min max hold)
-        - Target: Top 3 finish in competition
 
         **📊 Live Performance**
         - Active Scalps: ${memory.positions.length}
@@ -283,10 +265,8 @@ render: (state) => {
         - Avg Win: $${memory.averageProfit.toFixed(2)} | Avg Loss: $${memory.averageLoss.toFixed(2)}
 
         **⚡ Scalping Parameters**
-        - Position Size: 5-10% aggressive for competition
-        - Max Leverage: ${memory.maxLeverage}x on high-confidence signals
-        - Hold Time: 30 minutes max STRICT discipline
-        - Stop Loss: 1% | Take Profit: 2-5%
+        - Position Size: 3-6% aggressive for competition
+        - Max Leverage: ${memory.maxLeverage}x
         - Assets: BTC & ETH only (highest liquidity)
 
         **🤖 AI Intelligence**
@@ -333,7 +313,7 @@ render: (state) => {
             slippageTolerance: parseInt(env.GMX_SLIPPAGE_TOLERANCE || "125"),
             
             // Trading strategy
-            activeStrategies: ["Risk Management", "Market Analysis"],
+            activeStrategies: ["Scalping"],
             
             // Synth intelligence data
             synthLeaderboard: {
@@ -362,7 +342,7 @@ render: (state) => {
                 } catch (error) {
                     console.error("❌ Send failed:", error);
                 }
-            }, 300000); // 5 minutes
+            }, 120000); // 2 minutes
 
             console.log("✅ Scalping cycle subscription setup complete");
             return () => {
